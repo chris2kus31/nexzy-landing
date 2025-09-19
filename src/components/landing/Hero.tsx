@@ -1,6 +1,6 @@
 // ============================================
 // FILE: components/landing/Hero.tsx
-// Updated with Chakra v3 syntax
+// Enhanced Hero with AI & rewards focus
 // ============================================
 "use client";
 
@@ -16,9 +16,12 @@ import {
   Image,
   Badge,
   Icon,
+  VStack,
 } from "@chakra-ui/react";
-import { FaApple, FaGooglePlay } from "react-icons/fa";
-import { HiDownload, HiStar, HiUsers } from "react-icons/hi";
+import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
+import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
+import { IoGameController } from "react-icons/io5";
+import { BsFillLightningChargeFill } from "react-icons/bs";
 
 export default function Hero() {
   return (
@@ -30,7 +33,7 @@ export default function Hero() {
       position="relative"
       overflow="hidden"
     >
-      {/* Updated background decoration */}
+      {/* Background decoration */}
       <Box
         position="absolute"
         top="-20%"
@@ -60,54 +63,75 @@ export default function Hero() {
           align="center"
           gap={{ base: 8, lg: 12 }}
         >
-          {/* Update text colors in content */}
+          {/* Content */}
           <Stack
             flex={1}
             align={{ base: "center", lg: "start" }}
             textAlign={{ base: "center", lg: "left" }}
             gap={6}
           >
+            {/* New animated badge */}
             <Badge
               bg="nexzy.yellow/20"
               color="nexzy.gold"
-              px={3}
-              py={1}
+              px={4}
+              py={2}
               borderRadius="full"
               border="1px solid"
               borderColor="nexzy.yellow/30"
+              display="flex"
+              alignItems="center"
+              gap={2}
             >
-              🎮 The Ultimate Gaming Community Hub
+              <BsFillLightningChargeFill />
+              <Text>AI-Powered Gaming Assistant</Text>
             </Badge>
 
             <Heading
               as="h1"
-              size={{ base: '3xl', md: '4xl', lg: '5xl' }}
+              size={{ base: "3xl", md: "4xl", lg: "5xl" }}
               fontWeight="bold"
               lineHeight="shorter"
               color="nexzy.white"
             >
-              Game Together,{' '}
+              Never Get{" "}
               <Text as="span" color="nexzy.lightBlue">
-                Win
-              </Text>{' '}
-              Together,{' '}
-              <Text as="span" color="nexzy.yellow">
-                Earn
-              </Text>{' '}
-              Together
+                Stuck
+              </Text>{" "}
+              in a Game Again
             </Heading>
 
             <Text
-              fontSize={{ base: 'lg', md: 'xl' }}
+              fontSize={{ base: "lg", md: "xl" }}
               color="nexzy.gray.100"
               maxW="xl"
             >
-              Join the ultimate gaming community where you can discover games,
-              connect with players, stay updated with gaming news, and earn
-              rewards for your passion 🏆
+              Your personal AI gaming assistant helps you beat any level, find
+              hidden secrets, and optimize your gameplay. Plus earn coins daily,
+              track your game library, and never miss a deal on your wishlist!
             </Text>
 
-            {/* Update button colors */}
+            {/* Value props */}
+            <Stack gap={3}>
+              <HStack gap={3}>
+                <Icon color="nexzy.yellow" boxSize={5}>
+                  <FaRobot />
+                </Icon>
+                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                  Instant AI help for any game, any level
+                </Text>
+              </HStack>
+              <HStack gap={3}>
+                <Icon color="nexzy.yellow" boxSize={5}>
+                  <HiLibrary />
+                </Icon>
+                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                  Track your library & wishlist prices
+                </Text>
+              </HStack>
+            </Stack>
+
+            {/* CTA Buttons */}
             <Stack
               direction={{ base: "column", sm: "row" }}
               gap={4}
@@ -121,6 +145,7 @@ export default function Hero() {
                 px={8}
                 _hover={{ bg: "nexzy.gray.100", transform: "translateY(-2px)" }}
                 transition="all 0.2s"
+                boxShadow="0 4px 14px rgba(255,255,255,0.2)"
               >
                 <HStack gap={2}>
                   <FaApple />
@@ -136,6 +161,7 @@ export default function Hero() {
                 fontWeight="600"
                 _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
                 transition="all 0.2s"
+                boxShadow="0 4px 14px rgba(255,183,77,0.4)"
               >
                 <HStack gap={2}>
                   <FaGooglePlay />
@@ -144,32 +170,62 @@ export default function Hero() {
               </Button>
             </Stack>
 
-            {/* Update stats colors */}
+            {/* Social proof */}
             <HStack gap={8} pt={4}>
               <Stack gap={0}>
                 <HStack>
-                  <Icon color="nexzy.lightBlue">
-                    <HiUsers />
+                  <Icon color="nexzy.yellow" boxSize={5}>
+                    <HiSparkles />
                   </Icon>
-                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">New</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
+                    Free
+                  </Text>
                 </HStack>
-                <Text fontSize="sm" color="nexzy.gray.100">Platform</Text>
+                <Text fontSize="sm" color="nexzy.gray.100">
+                  Download
+                </Text>
               </Stack>
               <Stack gap={0}>
                 <HStack>
-                  <Icon color="nexzy.yellow">
-                    <HiStar />
+                  <Icon color="nexzy.lightBlue" boxSize={5}>
+                    <IoGameController />
                   </Icon>
-                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">100%</Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
+                    1000+
+                  </Text>
                 </HStack>
-                <Text fontSize="sm" color="nexzy.gray.100">Rewards</Text>
+                <Text fontSize="sm" color="nexzy.gray.100">
+                  Games Supported
+                </Text>
               </Stack>
               <Stack gap={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">24/7</Text>
-                <Text fontSize="sm" color="nexzy.gray.100">Gaming News</Text>
+                <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
+                  24/7
+                </Text>
+                <Text fontSize="sm" color="nexzy.gray.100">
+                  AI Assistant
+                </Text>
               </Stack>
             </HStack>
           </Stack>
+
+          {/* Hero Image/Mockup placeholder */}
+          <Box flex={1} display={{ base: "none", lg: "block" }}>
+            {/* You can add your app mockup image here */}
+            <Box
+              bg="nexzy.blue/10"
+              borderRadius="2xl"
+              p={8}
+              border="1px solid"
+              borderColor="nexzy.blue/20"
+              minH="400px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Text color="nexzy.gray.200">App Mockup Placeholder</Text>
+            </Box>
+          </Box>
         </Flex>
       </Container>
     </Box>
