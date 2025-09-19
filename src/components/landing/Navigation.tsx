@@ -1,6 +1,6 @@
 // ============================================
 // FILE: components/landing/Navigation.tsx
-// Using Chakra v3 components correctly
+// REPLACE the entire Navigation component
 // ============================================
 "use client";
 
@@ -32,10 +32,9 @@ export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { label: "Download App", href: "#download" },
-    { label: "Why Nexzy?", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "About Us", href: "#about" },
+    { label: "Features", href: "#features" },
+    { label: "How it Works", href: "#how-it-works" },
+    { label: "Download", href: "#download" },
   ];
 
   return (
@@ -44,9 +43,9 @@ export default function Navigation() {
       position="fixed"
       top={0}
       w="full"
-      bg="white"
+      bg="nexzy.navy"
       borderBottom="1px solid"
-      borderColor="gray.200"
+      borderColor="nexzy.blue/20"
       zIndex={1000}
       backdropFilter="blur(10px)"
     >
@@ -54,9 +53,10 @@ export default function Navigation() {
         <Flex h={16} alignItems="center" justifyContent="space-between">
           {/* Logo */}
           <HStack gap={2}>
-            <Box fontWeight="bold" fontSize="xl" color="blue.500">
+            <Image src="/nexzy-logo.png" alt="Nexzy" h={10} w={10} />
+            <Text fontWeight="bold" fontSize="xl" color="nexzy.white">
               Nexzy
-            </Box>
+            </Text>
           </HStack>
 
           {/* Desktop Navigation */}
@@ -67,7 +67,9 @@ export default function Navigation() {
                 href={item.href}
                 fontSize="sm"
                 fontWeight="medium"
-                _hover={{ color: "blue.500" }}
+                color="nexzy.white"
+                _hover={{ color: "nexzy.lightBlue" }}
+                transition="color 0.2s"
               >
                 {item.label}
               </Link>
@@ -77,11 +79,25 @@ export default function Navigation() {
           {/* Desktop CTA */}
           <HStack gap={4} display={{ base: "none", md: "flex" }}>
             <NextLink href="/login" passHref>
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                color="nexzy.white"
+                _hover={{ bg: "nexzy.blue/20" }}
+              >
                 Sign In
               </Button>
             </NextLink>
-            <Button colorScheme="green" size="sm" borderRadius="full" px={6}>
+            <Button
+              size="sm"
+              bg="nexzy.yellow"
+              color="nexzy.navy"
+              borderRadius="full"
+              px={6}
+              fontWeight="600"
+              _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
+              transition="all 0.2s"
+            >
               Get Started
             </Button>
           </HStack>
@@ -92,21 +108,29 @@ export default function Navigation() {
             onClick={() => setIsOpen(true)}
             variant="ghost"
             aria-label="Open menu"
+            color="nexzy.white"
           >
             <HiMenu />
           </IconButton>
         </Flex>
       </Container>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer - Keeping same structure, updating colors */}
       <DrawerRoot open={isOpen} onOpenChange={(e) => setIsOpen(e.open)}>
         <DrawerBackdrop />
-        <DrawerContent>
+        <DrawerContent bg="nexzy.navy">
           <DrawerHeader>
             <Flex justify="space-between" align="center">
-              <Text fontWeight="bold">Menu</Text>
+              <Text fontWeight="bold" color="nexzy.white">
+                Menu
+              </Text>
               <DrawerCloseTrigger asChild>
-                <IconButton variant="ghost" size="sm" aria-label="Close">
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Close"
+                  color="nexzy.white"
+                >
                   <HiX />
                 </IconButton>
               </DrawerCloseTrigger>
@@ -119,15 +143,22 @@ export default function Navigation() {
                   key={item.href}
                   href={item.href}
                   fontSize="lg"
+                  color="nexzy.white"
                   onClick={() => setIsOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
-              <Button variant="outline" size="lg" mt={4}>
+              <Button
+                variant="outline"
+                size="lg"
+                mt={4}
+                color="nexzy.white"
+                borderColor="nexzy.blue"
+              >
                 Sign In
               </Button>
-              <Button colorScheme="green" size="lg">
+              <Button size="lg" bg="nexzy.yellow" color="nexzy.navy">
                 Get Started
               </Button>
             </Stack>

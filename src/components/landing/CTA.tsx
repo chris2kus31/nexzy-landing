@@ -20,13 +20,25 @@ export default function CTA() {
     <Box
       as="section"
       py={{ base: 16, md: 24 }}
-      bgGradient="to-r"
-      gradientFrom="blue.400"
-      gradientTo="green.400"
+      bg="nexzy.blue"
+      position="relative"
       color="white"
       id="download"
+      overflow="hidden"
     >
-      <Container maxW="container.md" textAlign="center">
+      {/* Add pattern overlay */}
+      <Box
+        position="absolute"
+        top="0"
+        left="0"
+        right="0"
+        bottom="0"
+        opacity={0.1}
+        bgImage="radial-gradient(circle at 1px 1px, white 1px, transparent 1px)"
+        backgroundSize="40px 40px"
+      />
+
+      <Container maxW="container.md" textAlign="center" position="relative">
         <Stack gap={8}>
           <Stack gap={4}>
             <Heading as="h2" size={{ base: "xl", md: "2xl" }}>
@@ -41,22 +53,31 @@ export default function CTA() {
             <Button
               size="lg"
               bg="white"
-              color="black"
+              color="nexzy.navy"
               borderRadius="full"
               px={8}
-              _hover={{ bg: "gray.100" }}
+              _hover={{ bg: "nexzy.gray.50", transform: "translateY(-2px)" }}
+              transition="all 0.2s"
             >
-              <FaApple /> App Store
+              <HStack gap={2}>
+                <FaApple />
+                <Text>App Store</Text>
+              </HStack>
             </Button>
             <Button
               size="lg"
-              bg="white"
-              color="green.500"
+              bg="nexzy.yellow"
+              color="nexzy.navy"
               borderRadius="full"
               px={8}
-              _hover={{ bg: "gray.100" }}
+              fontWeight="600"
+              _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
+              transition="all 0.2s"
             >
-              <FaGooglePlay /> Google Play
+              <HStack gap={2}>
+                <FaGooglePlay />
+                <Text>Google Play</Text>
+              </HStack>
             </Button>
           </HStack>
         </Stack>
