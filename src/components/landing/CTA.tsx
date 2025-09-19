@@ -17,7 +17,7 @@ import {
   Badge,
   Flex,
 } from "@chakra-ui/react";
-import { FaApple, FaGooglePlay, FaRobot, FaUsers } from "react-icons/fa";
+import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiLightningBolt } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";

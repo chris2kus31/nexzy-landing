@@ -15,16 +15,9 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { Card } from "@/components/ui/card";
-import {
-  HiOutlineSparkles,
-  HiOutlineLightningBolt,
-  HiOutlineCurrencyDollar,
-  HiOutlineBookOpen,
-  HiOutlineChartBar,
-  HiOutlineBell,
-} from "react-icons/hi";
-import { FaRobot, FaGamepad, FaCoins } from "react-icons/fa";
-import { IoLibrary, IoPricetag, IoTrophy } from "react-icons/io5";
+import { HiOutlineChartBar } from "react-icons/hi";
+import { FaRobot, FaCoins } from "react-icons/fa";
+import { IoLibrary, IoPricetag } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
 
 const features = [

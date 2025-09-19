@@ -16,10 +16,9 @@ import {
   Image,
   Badge,
   Icon,
-  VStack,
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
-import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
+import { HiSparkles, HiLibrary } from "react-icons/hi";
 import { IoGameController } from "react-icons/io5";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 
