@@ -1,13 +1,25 @@
-import { Container, Heading, Text, Button, Stack } from "@chakra-ui/react";
+// ============================================
+// FILE: app/page.tsx
+// Main landing page that USES our components!
+// ============================================
+import Navigation from "@/components/landing/Navigation";
+import Hero from "@/components/landing/Hero";
+import Features from "@/components/landing/Features";
+import HowItWorks from "@/components/landing/HowItWorks";
+import CTA from "@/components/landing/CTA";
+import Footer from "@/components/landing/Footer";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <Container maxW="container.xl" py={10}>
-      <Stack>
-        <Heading>Welcome to Nexzy</Heading>
-        <Text>Your Chakra UI is working!</Text>
-        <Button colorScheme="blue">Get Started</Button>
-      </Stack>
-    </Container>
+    <>
+      <Navigation />
+      <main>
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <CTA />
+      </main>
+      <Footer />
+    </>
   );
 }
