@@ -16,21 +16,21 @@ import {
 
 const steps = [
   {
-    number: "1",
-    title: "Download the App",
-    description: "Get Nexzy from App Store or Google Play",
+    number: '1',
+    title: 'Download Nexzy',
+    description: 'Get the app from App Store or Google Play',
   },
   {
-    number: "2",
-    title: "Create Your Profile",
-    description: "Sign up with your email or phone number",
+    number: '2',
+    title: 'Create Your Gamer Profile',
+    description: 'Sign up and customize your gaming profile',
   },
   {
-    number: "3",
-    title: "Start Chatting",
-    description: "Connect with friends and join conversations",
+    number: '3',
+    title: 'Start Earning',
+    description: 'Play games, join discussions, and earn rewards',
   },
-];
+]
 
 export default function HowItWorks() {
   return (

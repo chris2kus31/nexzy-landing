@@ -41,11 +41,11 @@ export default function CTA() {
       <Container maxW="container.md" textAlign="center" position="relative">
         <Stack gap={8}>
           <Stack gap={4}>
-            <Heading as="h2" size={{ base: "xl", md: "2xl" }}>
-              Ready to Connect?
+            <Heading as="h2" size={{ base: 'xl', md: '2xl' }}>
+              Ready to Level Up Your Gaming?
             </Heading>
-            <Text fontSize={{ base: "md", md: "lg" }} opacity={0.9}>
-              Join millions of users already enjoying seamless communication
+            <Text fontSize={{ base: 'md', md: 'lg' }} opacity={0.9}>
+              Join Nexzy today and start earning rewards for doing what you love
             </Text>
           </Stack>
 

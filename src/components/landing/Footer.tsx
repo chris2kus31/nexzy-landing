@@ -17,11 +17,11 @@ import {
 
 export default function Footer() {
   const footerLinks = {
-    Product: ["Features", "Pricing", "Security", "Updates"],
-    Company: ["About", "Blog", "Careers", "Press"],
-    Resources: ["Support", "Contact", "FAQ", "Status"],
-    Legal: ["Privacy", "Terms", "Cookie Policy", "Licenses"],
-  };
+    Gaming: ['Game Library', 'News Feed', 'Forums', 'Rewards'],
+    Community: ['About', 'Blog', 'Discord', 'Support'],
+    Resources: ['Help Center', 'FAQ', 'API', 'Status'],
+    Legal: ['Privacy', 'Terms', 'Guidelines', 'Safety'],
+  }
 
   return (
     <Box as="footer" bg="gray.50" pt={16} pb={8}>
@@ -33,7 +33,7 @@ export default function Footer() {
               Nexzy
             </Text>
             <Text fontSize="sm" color="gray.600">
-              Connect with the world
+              Your Ultimate Gaming Community
             </Text>
           </Stack>
 

@@ -15,54 +15,52 @@ import {
 } from "@chakra-ui/react";
 import { Card } from "@/components/ui/card";
 import {
-  HiOutlineChat,
   HiOutlineUserGroup,
   HiOutlineShieldCheck,
-  HiOutlineLightningBolt,
-  HiOutlineGlobe,
-  HiOutlineVideoCamera,
+  HiOutlineSparkles,
+  HiOutlineNewspaper,
+  HiOutlineGift,
+  HiOutlineDeviceMobile,
 } from "react-icons/hi";
 
 const features = [
   {
-    icon: HiOutlineChat,
-    title: "Instant Messaging",
-    description:
-      "Send messages instantly with read receipts and typing indicators",
-    color: "blue.500",
+    icon: HiOutlineSparkles,
+    title: 'Gaming Hub',
+    description: 'Access curated games, get personalized recommendations, and track your gaming progress',
+    color: "blue.500"
+  },
+  {
+    icon: HiOutlineNewspaper,
+    title: 'Gaming News Feed',
+    description: 'Stay updated with the latest gaming news and industry updates from trusted sources',
+    color: 'yellow.500',
   },
   {
     icon: HiOutlineUserGroup,
-    title: "Group Rooms",
-    description: "Create separate rooms for different topics and conversations",
-    color: "green.500",
+    title: 'Community Forum',
+    description: 'Connect with gamers, share strategies, and join topic-specific discussion threads',
+    color: 'purple.500',
+  },
+  {
+    icon: HiOutlineGift,
+    title: 'Rewards System',
+    description: 'Earn Nexzy Tokens through daily logins, activities, and gaming achievements',
+    color: 'green.500',
   },
   {
     icon: HiOutlineShieldCheck,
-    title: "Secure & Private",
-    description: "End-to-end encryption keeps your conversations private",
-    color: "purple.500",
+    title: 'Secure Platform',
+    description: 'JWT authentication, secure storage, and device-specific session management',
+    color: 'red.500',
   },
   {
-    icon: HiOutlineLightningBolt,
-    title: "Lightning Fast",
-    description: "Optimized for speed with minimal data usage",
-    color: "yellow.500",
+    icon: HiOutlineDeviceMobile,
+    title: 'Cross-Platform',
+    description: 'Available on iOS and Android with console integration for PlayStation and Xbox',
+    color: 'cyan.500',
   },
-  {
-    icon: HiOutlineGlobe,
-    title: "Global Reach",
-    description: "Connect with anyone, anywhere in the world",
-    color: "cyan.500",
-  },
-  {
-    icon: HiOutlineVideoCamera,
-    title: "Video Calls",
-    description:
-      "Crystal clear video and voice calls with multiple participants",
-    color: "red.500",
-  },
-];
+]
 
 export default function Features() {
   return (
@@ -71,11 +69,11 @@ export default function Features() {
         <Stack gap={12}>
           {/* Header */}
           <Stack gap={4} textAlign="center" maxW="2xl" mx="auto">
-            <Heading as="h2" size={{ base: "xl", md: "2xl" }}>
-              Why Choose Nexzy?
+            <Heading as="h2" size={{ base: 'xl', md: '2xl' }}>
+              Why Nexzy is Different
             </Heading>
-            <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
-              Everything you need for seamless communication, all in one place
+            <Text fontSize={{ base: 'md', md: 'lg' }} color="gray.600">
+              Everything gamers need in one powerful mobile app
             </Text>
           </Stack>
 

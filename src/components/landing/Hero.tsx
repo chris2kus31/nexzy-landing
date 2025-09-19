@@ -18,7 +18,7 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay } from "react-icons/fa";
-import { HiDownload, HiUsers } from "react-icons/hi";
+import { HiDownload, HiStar, HiUsers } from "react-icons/hi";
 
 export default function Hero() {
   return (
@@ -76,33 +76,35 @@ export default function Hero() {
               border="1px solid"
               borderColor="nexzy.yellow/30"
             >
-              🎉 Over 5 Million Users Worldwide
+              🎮 The Ultimate Gaming Community Hub
             </Badge>
 
             <Heading
               as="h1"
-              size={{ base: "3xl", md: "4xl", lg: "5xl" }}
+              size={{ base: '3xl', md: '4xl', lg: '5xl' }}
               fontWeight="bold"
               lineHeight="shorter"
               color="nexzy.white"
             >
-              Talk Easily,{" "}
+              Game Together,{' '}
               <Text as="span" color="nexzy.lightBlue">
-                Organized
-              </Text>{" "}
-              and{" "}
+                Win
+              </Text>{' '}
+              Together,{' '}
               <Text as="span" color="nexzy.yellow">
-                Fast
-              </Text>
+                Earn
+              </Text>{' '}
+              Together
             </Heading>
 
             <Text
-              fontSize={{ base: "lg", md: "xl" }}
+              fontSize={{ base: 'lg', md: 'xl' }}
               color="nexzy.gray.100"
               maxW="xl"
             >
-              Stay connected with people from all over the world and interact
-              with them easily with Nexzy app 🤝
+              Join the ultimate gaming community where you can discover games,
+              connect with players, stay updated with gaming news, and earn
+              rewards for your passion 🏆
             </Text>
 
             {/* Update button colors */}
@@ -149,15 +151,23 @@ export default function Hero() {
                   <Icon color="nexzy.lightBlue">
                     <HiUsers />
                   </Icon>
-                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
-                    5M+
-                  </Text>
+                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">New</Text>
                 </HStack>
-                <Text fontSize="sm" color="nexzy.gray.100">
-                  Active Users
-                </Text>
+                <Text fontSize="sm" color="nexzy.gray.100">Platform</Text>
               </Stack>
-              {/* Similar updates for other stats... */}
+              <Stack gap={0}>
+                <HStack>
+                  <Icon color="nexzy.yellow">
+                    <HiStar />
+                  </Icon>
+                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">100%</Text>
+                </HStack>
+                <Text fontSize="sm" color="nexzy.gray.100">Rewards</Text>
+              </Stack>
+              <Stack gap={0}>
+                <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">24/7</Text>
+                <Text fontSize="sm" color="nexzy.gray.100">Gaming News</Text>
+              </Stack>
             </HStack>
           </Stack>
         </Flex>

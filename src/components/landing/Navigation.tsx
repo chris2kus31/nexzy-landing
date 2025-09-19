@@ -53,7 +53,7 @@ export default function Navigation() {
         <Flex h={16} alignItems="center" justifyContent="space-between">
           {/* Logo */}
           <HStack gap={2}>
-            <Image src="/nexzy-logo.png" alt="Nexzy" h={10} w={10} />
+            <Image src="/NexzyLogo.png" alt="Nexzy" h={10} w={10} />
             <Text fontWeight="bold" fontSize="xl" color="nexzy.white">
               Nexzy
             </Text>
