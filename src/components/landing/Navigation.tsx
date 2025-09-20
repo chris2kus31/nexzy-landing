@@ -78,7 +78,7 @@ export default function Navigation() {
 
           {/* Desktop CTA */}
           <HStack gap={4} display={{ base: "none", md: "flex" }}>
-            <NextLink href="/login" passHref>
+            <NextLink href="#" passHref>
               <Button
                 variant="ghost"
                 size="sm"
