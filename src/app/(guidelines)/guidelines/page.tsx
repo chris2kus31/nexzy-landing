@@ -24,7 +24,7 @@ export default function GuidelinesPage() {
       <Box bg="nexzy.navy" py={4}>
         <Container maxW="container.xl">
           <HStack justify="space-between">
-            <NextLink href="/">
+            <NextLink href="/public">
               <Button
                 variant="ghost"
                 size="sm"
