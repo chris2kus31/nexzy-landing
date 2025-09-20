@@ -16,9 +16,14 @@ import {
   Image,
   Badge,
   Icon,
+  VStack,
 } from "@chakra-ui/react";
+import dynamic from "next/dynamic";
+
+// Dynamically import to avoid SSR issues
+const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
-import { HiSparkles, HiLibrary } from "react-icons/hi";
+import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
 import { IoGameController } from "react-icons/io5";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 
@@ -122,6 +127,14 @@ export default function Hero() {
               </HStack>
               <HStack gap={3}>
                 <Icon color="nexzy.yellow" boxSize={5}>
+                  <HiCurrencyDollar />
+                </Icon>
+                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                  Earn coins daily just for gaming
+                </Text>
+              </HStack>
+              <HStack gap={3}>
+                <Icon color="nexzy.yellow" boxSize={5}>
                   <HiLibrary />
                 </Icon>
                 <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
@@ -208,22 +221,9 @@ export default function Hero() {
             </HStack>
           </Stack>
 
-          {/* Hero Image/Mockup placeholder */}
+          {/* Hero Image/Mockup */}
           <Box flex={1} display={{ base: "none", lg: "block" }}>
-            {/* You can add your app mockup image here */}
-            <Box
-              bg="nexzy.blue/10"
-              borderRadius="2xl"
-              p={8}
-              border="1px solid"
-              borderColor="nexzy.blue/20"
-              minH="400px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Text color="nexzy.gray.200">App Mockup Placeholder</Text>
-            </Box>
+            <AppShowcase />
           </Box>
         </Flex>
       </Container>
