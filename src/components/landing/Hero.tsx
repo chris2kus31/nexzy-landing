@@ -13,10 +13,8 @@ import {
   HStack,
   Stack,
   Flex,
-  Image,
   Badge,
   Icon,
-  VStack,
 } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 

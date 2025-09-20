@@ -11,12 +11,9 @@ import {
   HStack,
   IconButton,
   Text,
-  Badge,
-  Container,
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
-import { IoPhonePortraitOutline } from "react-icons/io5";
 
 const appScreenshots = [
   {
