@@ -1,6 +1,6 @@
 // ============================================
 // FILE: components/landing/Navigation.tsx
-// REPLACE the entire Navigation component
+// Fixed mobile menu layout
 // ============================================
 "use client";
 
@@ -115,10 +115,24 @@ export default function Navigation() {
         </Flex>
       </Container>
 
-      {/* Mobile Drawer - Keeping same structure, updating colors */}
-      <DrawerRoot open={isOpen} onOpenChange={(e) => setIsOpen(e.open)}>
+      {/* Mobile Drawer - Overlay style */}
+      <DrawerRoot
+        open={isOpen}
+        onOpenChange={(e) => setIsOpen(e.open)}
+        placement="end"
+        size="sm"
+      >
         <DrawerBackdrop />
-        <DrawerContent bg="nexzy.navy">
+        <DrawerContent
+          bg="nexzy.navy"
+          position="fixed"
+          right={0}
+          top={0}
+          h="100vh"
+          w="80%"
+          maxW="320px"
+          zIndex={1500}
+        >
           <DrawerHeader>
             <Flex justify="space-between" align="center">
               <Text fontWeight="bold" color="nexzy.white">

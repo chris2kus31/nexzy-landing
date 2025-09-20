@@ -221,11 +221,22 @@ export default function Hero() {
             </HStack>
           </Stack>
 
-          {/* Hero Image/Mockup */}
+          {/* Hero Image/Mockup - Desktop */}
           <Box flex={1} display={{ base: "none", lg: "block" }}>
             <AppShowcase />
           </Box>
         </Flex>
+
+        {/* Mobile App Showcase - Below content on mobile */}
+        <Box
+          display={{ base: "block", lg: "none" }}
+          mt={12}
+          pt={8}
+          borderTop="2px solid"
+          borderColor="nexzy.blue/20"
+        >
+          <AppShowcase />
+        </Box>
       </Container>
     </Box>
   );
