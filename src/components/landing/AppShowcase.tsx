@@ -220,18 +220,6 @@ export default function AppShowcase() {
             <HiChevronRight />
           </IconButton>
         </HStack>
-
-        {/* Auto-play indicator - smaller and subtler */}
-        {isAutoPlaying && (
-          <Text
-            fontSize="xs"
-            color="nexzy.gray.200"
-            textAlign="center"
-            opacity={0.7}
-          >
-            Auto-playing • Click arrows to control
-          </Text>
-        )}
       </Stack>
     </Box>
   );
