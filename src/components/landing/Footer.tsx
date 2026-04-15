@@ -171,7 +171,7 @@ export default function Footer() {
           {/* Contact/Social */}
           <HStack gap={4}>
             <Link
-              href="mailto:hello@nexzy.app"
+              href="mailto:nexzy.app@gmail.com"
               display="flex"
               alignItems="center"
               gap={2}
@@ -180,7 +180,7 @@ export default function Footer() {
               _hover={{ color: "nexzy.blue" }}
             >
               <HiMail />
-              support@nexzy.app
+              nexzy.app@gmail.com
             </Link>
           </HStack>
         </Stack>

@@ -78,16 +78,6 @@ export default function Navigation() {
 
           {/* Desktop CTA */}
           <HStack gap={4} display={{ base: "none", md: "flex" }}>
-            <NextLink href="#" passHref>
-              <Button
-                variant="ghost"
-                size="sm"
-                color="nexzy.white"
-                _hover={{ bg: "nexzy.blue/20" }}
-              >
-                Sign In
-              </Button>
-            </NextLink>
             <Button
               size="sm"
               bg="nexzy.yellow"
@@ -163,16 +153,7 @@ export default function Navigation() {
                   {item.label}
                 </Link>
               ))}
-              <Button
-                variant="outline"
-                size="lg"
-                mt={4}
-                color="nexzy.white"
-                borderColor="nexzy.blue"
-              >
-                Sign In
-              </Button>
-              <Button size="lg" bg="nexzy.yellow" color="nexzy.navy">
+              <Button size="lg" mt={4} bg="nexzy.yellow" color="nexzy.navy">
                 Get Started
               </Button>
             </Stack>
