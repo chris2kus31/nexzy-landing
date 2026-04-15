@@ -35,7 +35,7 @@ export default function TermsPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: January 2025
+              Last updated: April 2026
             </Text>
           </HStack>
         </Container>
@@ -176,15 +176,58 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                7. User Content
+                7. User-Generated Content & Community Guidelines
               </Heading>
-              <Text color="gray.700">
-                You retain ownership of content you post but grant us a
-                worldwide, non-exclusive, royalty-free license to use, display,
-                and distribute your content within the service. You are
-                responsible for ensuring you have the rights to any content you
-                share.
-              </Text>
+              <Stack gap={3}>
+                <Text color="gray.700">
+                  You retain ownership of content you post but grant us a
+                  worldwide, non-exclusive, royalty-free license to use, display,
+                  and distribute your content within the service. You are
+                  responsible for ensuring you have the rights to any content you
+                  share.
+                </Text>
+                <Text color="gray.700" fontWeight="bold">
+                  Zero Tolerance Policy:
+                </Text>
+                <Text color="gray.700">
+                  Nexzy has zero tolerance for objectionable content or abusive users. 
+                  This includes but is not limited to: hate speech, harassment, bullying, 
+                  threats, sexually explicit content, content harmful to minors, spam, 
+                  misinformation, and any illegal activity.
+                </Text>
+                <Text color="gray.700" fontWeight="bold">
+                  Content Moderation:
+                </Text>
+                <Text color="gray.700">
+                  All user-generated content is subject to automated moderation and human review. 
+                  We reserve the right to remove any content that violates these Terms without notice.
+                </Text>
+                <Text color="gray.700" fontWeight="bold">
+                  Reporting & Blocking:
+                </Text>
+                <Stack gap={2}>
+                  <Text color="gray.700">
+                    • Users can report objectionable content using the flag/report feature
+                  </Text>
+                  <Text color="gray.700">
+                    • Users can block other users to prevent seeing their content
+                  </Text>
+                  <Text color="gray.700">
+                    • We will review all reports within 24 hours and take appropriate action
+                  </Text>
+                  <Text color="gray.700">
+                    • Reported content may be removed and the offending user may be banned
+                  </Text>
+                </Stack>
+                <Text color="gray.700" fontWeight="bold">
+                  Consequences for Violations:
+                </Text>
+                <Text color="gray.700">
+                  Users who post objectionable content or engage in abusive behavior will have 
+                  their content removed immediately and may face temporary suspension or permanent 
+                  account termination at our sole discretion.
+                </Text>
+              </Stack>
             </Box>
 
             <Box>
