@@ -21,6 +21,7 @@ import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiLightningBolt } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 export default function CTA() {
   return (
@@ -135,6 +136,7 @@ export default function CTA() {
             w={{ base: "full", sm: "auto" }}
           >
             <Button
+              asChild
               size="lg"
               bg="white"
               color="nexzy.navy"
@@ -149,20 +151,27 @@ export default function CTA() {
               transition="all 0.3s"
               boxShadow="0 4px 20px rgba(255,255,255,0.2)"
             >
-              <HStack gap={3}>
-                <FaApple size={24} />
-                <VStack gap={0} align="start">
-                  <Text fontSize="xs" opacity={0.9}>
-                    Download on the
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold">
-                    App Store
-                  </Text>
-                </VStack>
-              </HStack>
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <HStack gap={3}>
+                  <FaApple size={24} />
+                  <VStack gap={0} align="start">
+                    <Text fontSize="xs" opacity={0.9}>
+                      Download on the
+                    </Text>
+                    <Text fontSize="lg" fontWeight="bold">
+                      App Store
+                    </Text>
+                  </VStack>
+                </HStack>
+              </a>
             </Button>
 
             <Button
+              asChild
               size="lg"
               bg="nexzy.yellow"
               color="nexzy.navy"
@@ -179,17 +188,23 @@ export default function CTA() {
               boxShadow="0 4px 20px rgba(255,183,77,0.3)"
               position="relative"
             >
-              <HStack gap={3}>
-                <FaGooglePlay size={24} />
-                <VStack gap={0} align="start">
-                  <Text fontSize="xs" opacity={0.9}>
-                    Get it on
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold">
-                    Google Play
-                  </Text>
-                </VStack>
-              </HStack>
+              <a
+                href={GOOGLE_PLAY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <HStack gap={3}>
+                  <FaGooglePlay size={24} />
+                  <VStack gap={0} align="start">
+                    <Text fontSize="xs" opacity={0.9}>
+                      Get it on
+                    </Text>
+                    <Text fontSize="lg" fontWeight="bold">
+                      Google Play
+                    </Text>
+                  </VStack>
+                </HStack>
+              </a>
             </Button>
           </Stack>
 

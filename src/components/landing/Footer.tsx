@@ -19,6 +19,7 @@ import {
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { IoGameController } from "react-icons/io5";
 import { HiMail } from "react-icons/hi";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -67,7 +68,9 @@ export default function Footer() {
               </Text>
               <HStack gap={3}>
                 <Link
-                  href="#"
+                  href={APP_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   display="flex"
                   alignItems="center"
                   gap={2}
@@ -79,7 +82,9 @@ export default function Footer() {
                   iOS
                 </Link>
                 <Link
-                  href="#"
+                  href={GOOGLE_PLAY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   display="flex"
                   alignItems="center"
                   gap={2}

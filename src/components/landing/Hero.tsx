@@ -24,6 +24,7 @@ import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
 import { IoGameController } from "react-icons/io5";
 import { BsFillLightningChargeFill } from "react-icons/bs";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 export default function Hero() {
   return (
@@ -148,6 +149,7 @@ export default function Hero() {
               w={{ base: "full", sm: "auto" }}
             >
               <Button
+                asChild
                 size="lg"
                 bg="white"
                 color="nexzy.navy"
@@ -157,12 +159,19 @@ export default function Hero() {
                 transition="all 0.2s"
                 boxShadow="0 4px 14px rgba(255,255,255,0.2)"
               >
-                <HStack gap={2}>
-                  <FaApple />
-                  <Text>App Store</Text>
-                </HStack>
+                <a
+                  href={APP_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <HStack gap={2}>
+                    <FaApple />
+                    <Text>App Store</Text>
+                  </HStack>
+                </a>
               </Button>
               <Button
+                asChild
                 size="lg"
                 bg="nexzy.yellow"
                 color="nexzy.navy"
@@ -173,10 +182,16 @@ export default function Hero() {
                 transition="all 0.2s"
                 boxShadow="0 4px 14px rgba(255,183,77,0.4)"
               >
-                <HStack gap={2}>
-                  <FaGooglePlay />
-                  <Text>Google Play</Text>
-                </HStack>
+                <a
+                  href={GOOGLE_PLAY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <HStack gap={2}>
+                    <FaGooglePlay />
+                    <Text>Google Play</Text>
+                  </HStack>
+                </a>
               </Button>
             </Stack>
 
