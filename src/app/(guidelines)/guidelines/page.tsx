@@ -278,7 +278,7 @@ export default function GuidelinesPage() {
                 Questions about these guidelines? Contact us at:
               </Text>
               <Text color="nexzy.blue" fontWeight="medium">
-                nexzy.app@gmail.com
+                support@nexzy.com or nexzy.app@gmail.com
               </Text>
             </Box>
           </Stack>

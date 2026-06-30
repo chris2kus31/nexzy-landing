@@ -1,0 +1,460 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Box,
+  Flex,
+  Grid,
+  GridItem,
+  HStack,
+  VStack,
+  Heading,
+  Text,
+  Input,
+  Textarea,
+  Button,
+  Image,
+  Spinner,
+  Separator,
+} from "@chakra-ui/react";
+import AdminShell from "@/components/admin/AdminShell";
+import StatusBadge from "@/components/admin/StatusBadge";
+import {
+  getPost,
+  updatePost,
+  approvePost,
+  rejectPost,
+  sendBackPost,
+  unpublishPost,
+  regenerateImage,
+  type BlogPost,
+} from "@/lib/admin/client";
+
+interface FormState {
+  title: string;
+  seoTitle: string;
+  excerpt: string;
+  seoDescription: string;
+  bodyMarkdown: string;
+  imageAlt: string;
+  tags: string;
+}
+
+function toForm(p: BlogPost): FormState {
+  return {
+    title: p.title || "",
+    seoTitle: p.seoTitle || "",
+    excerpt: p.excerpt || "",
+    seoDescription: p.seoDescription || "",
+    bodyMarkdown: p.bodyMarkdown || "",
+    imageAlt: p.imageAlt || "",
+    tags: (p.tags || []).join(", "),
+  };
+}
+
+const labelProps = {
+  fontSize: "xs",
+  fontWeight: "600",
+  color: "nexzy.gray.100",
+  mb: 1,
+  textTransform: "uppercase" as const,
+  letterSpacing: "wide",
+};
+
+const inputProps = {
+  bg: "whiteAlpha.50",
+  color: "nexzy.white",
+  borderColor: "whiteAlpha.300",
+  _placeholder: { color: "whiteAlpha.500" },
+};
+
+function EditorReport({ report }: { report: Record<string, unknown> | null }) {
+  if (!report) return null;
+  const verdict = String(report.verdict ?? "—");
+  const score = report.styleScore != null ? String(report.styleScore) : "—";
+  const factCheck = Array.isArray(report.factCheck)
+    ? (report.factCheck as { claim: string; supported: boolean }[])
+    : [];
+  const issues = Array.isArray(report.issues)
+    ? (report.issues as string[])
+    : [];
+
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="lg"
+      p={4}
+    >
+      <Heading size="sm" color="nexzy.white" mb={2}>
+        Editor report
+      </Heading>
+      <HStack gap={4} mb={3}>
+        <Text fontSize="sm" color="nexzy.gray.100">
+          Verdict:{" "}
+          <Text as="span" color="nexzy.white" fontWeight="600">
+            {verdict}
+          </Text>
+        </Text>
+        <Text fontSize="sm" color="nexzy.gray.100">
+          Style:{" "}
+          <Text as="span" color="nexzy.white">
+            {score}
+          </Text>
+        </Text>
+      </HStack>
+      {factCheck.length > 0 && (
+        <VStack align="stretch" gap={1} mb={issues.length ? 3 : 0}>
+          {factCheck.map((f, i) => (
+            <Text
+              key={i}
+              fontSize="xs"
+              color={f.supported ? "green.300" : "red.300"}
+            >
+              {f.supported ? "✓" : "✕"} {f.claim}
+            </Text>
+          ))}
+        </VStack>
+      )}
+      {issues.length > 0 && (
+        <VStack align="stretch" gap={1}>
+          {issues.map((it, i) => (
+            <Text key={i} fontSize="xs" color="orange.300">
+              • {it}
+            </Text>
+          ))}
+        </VStack>
+      )}
+    </Box>
+  );
+}
+
+function EditorContent({ id }: { id: string }) {
+  const router = useRouter();
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [form, setForm] = useState<FormState | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState<string>("");
+  const [notice, setNotice] = useState("");
+
+  const load = () =>
+    getPost(id)
+      .then((p) => {
+        setPost(p);
+        setForm(toForm(p));
+      })
+      .catch((e) => setError(e?.message || "Failed to load."));
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const set = (k: keyof FormState, v: string) =>
+    setForm((f) => (f ? { ...f, [k]: v } : f));
+
+  const run = async (label: string, fn: () => Promise<BlogPost>) => {
+    setBusy(label);
+    setNotice("");
+    setError("");
+    try {
+      const updated = await fn();
+      setPost(updated);
+      setForm(toForm(updated));
+      setNotice(`${label} ✓`);
+    } catch (e) {
+      setError((e as Error)?.message || `${label} failed.`);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const save = () =>
+    run("Saved", () =>
+      updatePost(id, {
+        title: form!.title,
+        seoTitle: form!.seoTitle,
+        excerpt: form!.excerpt,
+        seoDescription: form!.seoDescription,
+        bodyMarkdown: form!.bodyMarkdown,
+        imageAlt: form!.imageAlt,
+        tags: form!.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+      }),
+    );
+
+  if (error && !post) {
+    return (
+      <Text color="red.300" fontSize="sm">
+        {error}
+      </Text>
+    );
+  }
+  if (!post || !form) {
+    return (
+      <Flex justify="center" py={12}>
+        <Spinner color="nexzy.blue" size="lg" />
+      </Flex>
+    );
+  }
+
+  const isPublished = post.status === "published";
+
+  return (
+    <>
+      <Flex align="center" justify="space-between" mb={5} gap={4} wrap="wrap">
+        <HStack gap={3}>
+          <Button
+            size="sm"
+            variant="ghost"
+            color="nexzy.gray.100"
+            onClick={() => router.push("/admin")}
+            _hover={{ bg: "whiteAlpha.100" }}
+          >
+            ← Queue
+          </Button>
+          <StatusBadge status={post.status} />
+        </HStack>
+        <HStack gap={2} wrap="wrap">
+          <Button
+            size="sm"
+            onClick={save}
+            loading={busy === "Saved"}
+            bg="whiteAlpha.200"
+            color="nexzy.white"
+            _hover={{ bg: "whiteAlpha.300" }}
+          >
+            Save edits
+          </Button>
+          {!isPublished && (
+            <Button
+              size="sm"
+              onClick={() => run("Published", () => approvePost(id))}
+              loading={busy === "Published"}
+              bg="green.500"
+              color="white"
+              _hover={{ bg: "green.600" }}
+            >
+              Approve & publish
+            </Button>
+          )}
+          {isPublished && (
+            <Button
+              size="sm"
+              onClick={() => run("Unpublished", () => unpublishPost(id))}
+              loading={busy === "Unpublished"}
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+            >
+              Unpublish
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => {
+              const reason = window.prompt("Reason (optional):") || undefined;
+              run("Sent back", () => sendBackPost(id, reason));
+            }}
+            loading={busy === "Sent back"}
+            variant="outline"
+            color="orange.300"
+            borderColor="orange.400/40"
+            _hover={{ bg: "whiteAlpha.100" }}
+          >
+            Send back
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              const reason = window.prompt("Reason (optional):") || undefined;
+              run("Rejected", () => rejectPost(id, reason));
+            }}
+            loading={busy === "Rejected"}
+            variant="outline"
+            color="red.300"
+            borderColor="red.400/40"
+            _hover={{ bg: "whiteAlpha.100" }}
+          >
+            Reject
+          </Button>
+        </HStack>
+      </Flex>
+
+      {notice && (
+        <Text color="green.300" fontSize="sm" mb={3}>
+          {notice}
+        </Text>
+      )}
+      {error && (
+        <Text color="red.300" fontSize="sm" mb={3}>
+          {error}
+        </Text>
+      )}
+
+      <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={6}>
+        <GridItem>
+          <VStack align="stretch" gap={4}>
+            <Box>
+              <Text {...labelProps}>Title</Text>
+              <Input
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                {...inputProps}
+              />
+            </Box>
+            <Box>
+              <Text {...labelProps}>Excerpt</Text>
+              <Textarea
+                value={form.excerpt}
+                onChange={(e) => set("excerpt", e.target.value)}
+                rows={2}
+                {...inputProps}
+              />
+            </Box>
+            <Box>
+              <Text {...labelProps}>Body (markdown)</Text>
+              <Textarea
+                value={form.bodyMarkdown}
+                onChange={(e) => set("bodyMarkdown", e.target.value)}
+                rows={20}
+                fontFamily="mono"
+                fontSize="sm"
+                {...inputProps}
+              />
+            </Box>
+            <Box>
+              <Text {...labelProps}>Tags (comma separated)</Text>
+              <Input
+                value={form.tags}
+                onChange={(e) => set("tags", e.target.value)}
+                {...inputProps}
+              />
+            </Box>
+          </VStack>
+        </GridItem>
+
+        <GridItem>
+          <VStack align="stretch" gap={4}>
+            <Box>
+              <Text {...labelProps}>Hero image</Text>
+              {post.heroImageUrl ? (
+                <Image
+                  src={post.heroImageUrl}
+                  alt={post.imageAlt || ""}
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  w="full"
+                />
+              ) : (
+                <Box
+                  bg="whiteAlpha.50"
+                  border="1px dashed"
+                  borderColor="whiteAlpha.300"
+                  borderRadius="lg"
+                  p={6}
+                  textAlign="center"
+                >
+                  <Text color="nexzy.gray.100" fontSize="sm">
+                    No image yet
+                  </Text>
+                </Box>
+              )}
+              <Button
+                mt={2}
+                size="xs"
+                w="full"
+                variant="outline"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: "whiteAlpha.100" }}
+                loading={busy === "Image re-queued"}
+                onClick={() =>
+                  run("Image re-queued", async () => {
+                    await regenerateImage(id);
+                    return getPost(id);
+                  })
+                }
+              >
+                Regenerate image
+              </Button>
+              <Text color="nexzy.gray.100" fontSize="xs" mt={2}>
+                {post.imageCredit}
+              </Text>
+            </Box>
+
+            <Box>
+              <Text {...labelProps}>Image alt</Text>
+              <Input
+                value={form.imageAlt}
+                onChange={(e) => set("imageAlt", e.target.value)}
+                {...inputProps}
+              />
+            </Box>
+
+            <Separator borderColor="whiteAlpha.200" />
+
+            <EditorReport report={post.editorReport} />
+
+            {post.sources && post.sources.length > 0 && (
+              <Box>
+                <Text {...labelProps}>Sources</Text>
+                <VStack align="stretch" gap={1}>
+                  {post.sources.map((s, i) => (
+                    <a
+                      key={i}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Text fontSize="xs" color="nexzy.lightBlue" lineClamp={1}>
+                        {s.name}: {s.url}
+                      </Text>
+                    </a>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+
+            <Box>
+              <Text {...labelProps}>SEO title</Text>
+              <Input
+                value={form.seoTitle}
+                onChange={(e) => set("seoTitle", e.target.value)}
+                {...inputProps}
+              />
+              <Text {...labelProps} mt={3}>
+                SEO description
+              </Text>
+              <Textarea
+                value={form.seoDescription}
+                onChange={(e) => set("seoDescription", e.target.value)}
+                rows={3}
+                {...inputProps}
+              />
+            </Box>
+          </VStack>
+        </GridItem>
+      </Grid>
+    </>
+  );
+}
+
+export default function AdminPostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  return (
+    <AdminShell>
+      <EditorContent id={id} />
+    </AdminShell>
+  );
+}

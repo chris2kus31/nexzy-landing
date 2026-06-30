@@ -20,6 +20,7 @@ import dynamic from "next/dynamic";
 
 // Dynamically import to avoid SSR issues
 const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
+import EmailCapture from "./EmailCapture";
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
 import { IoGameController } from "react-icons/io5";
@@ -194,6 +195,11 @@ export default function Hero() {
                 </a>
               </Button>
             </Stack>
+
+            {/* Launch-updates email capture */}
+            <Box pt={2} w={{ base: "full", lg: "auto" }}>
+              <EmailCapture variant="hero" source="hero" />
+            </Box>
 
             {/* Social proof */}
             <HStack gap={8} pt={4}>

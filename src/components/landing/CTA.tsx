@@ -21,6 +21,7 @@ import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiLightningBolt } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
+import EmailCapture from "./EmailCapture";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 export default function CTA() {
@@ -207,6 +208,9 @@ export default function CTA() {
               </a>
             </Button>
           </Stack>
+
+          {/* Launch-updates email capture */}
+          <EmailCapture variant="cta" source="cta" />
 
           {/* Social Proof */}
           <Stack gap={4} align="center">

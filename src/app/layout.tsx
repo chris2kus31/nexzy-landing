@@ -13,6 +13,11 @@ const inter = Inter({
   display: "swap", // Better font loading performance
 });
 
+// Set NEXT_PUBLIC_SITE_URL in your env to your canonical root domain
+// (e.g. https://nexzy.app). Falls back to the current subdomain.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+
 export const metadata: Metadata = {
   title: "Nexzy - AI-Powered Gaming Assistant",
   description:
@@ -22,21 +27,15 @@ export const metadata: Metadata = {
   authors: [{ name: "Nexzy" }],
   creator: "Nexzy",
   publisher: "Nexzy",
-  metadataBase: new URL("https://landing.nexzyapp.com"),
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: "/" },
   openGraph: {
     title: "Nexzy - AI-Powered Gaming Assistant",
     description:
       "Never get stuck in a game again. Your personal AI gaming assistant helps you beat any level, find hidden secrets, and earn rewards daily.",
-    url: "https://landing.nexzyapp.com",
+    url: SITE_URL,
     siteName: "Nexzy",
-    images: [
-      {
-        url: "/android-chrome-512x512.png",
-        width: 512,
-        height: 512,
-        alt: "Nexzy Logo",
-      },
-    ],
+    // og:image is generated automatically by app/opengraph-image.tsx (1200x630)
     locale: "en_US",
     type: "website",
   },
@@ -45,7 +44,7 @@ export const metadata: Metadata = {
     title: "Nexzy - AI-Powered Gaming Assistant",
     description:
       "Never get stuck in a game again with your AI gaming assistant",
-    images: ["/android-chrome-512x512.png"],
+    // twitter:image is generated automatically by app/twitter-image.tsx
   },
   robots: {
     index: true,
@@ -72,10 +71,10 @@ export const metadata: Metadata = {
       },
     ],
   },
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION (from Google Search Console)
+  // to verify ownership and unlock organic search reporting.
   verification: {
-    // Add these when you have them
-    // google: 'your-google-verification-code',
-    // yandex: 'your-yandex-verification-code',
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 
