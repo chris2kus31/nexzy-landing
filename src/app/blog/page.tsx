@@ -1,15 +1,24 @@
 import type { Metadata } from "next";
-import { Box, Container, Heading, Text, SimpleGrid } from "@chakra-ui/react";
-import { fetchPosts } from "@/lib/blog/api";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  SimpleGrid,
+  Grid,
+  GridItem,
+} from "@chakra-ui/react";
+import { fetchPosts, fetchTrending } from "@/lib/blog/api";
 import { beatLabel } from "@/lib/blog/beats";
 import NewsControls from "@/components/blog/NewsControls";
 import FeaturedCard from "@/components/blog/FeaturedCard";
 import BlogCard from "@/components/blog/BlogCard";
 import Pagination from "@/components/blog/Pagination";
+import MostRead from "@/components/blog/MostRead";
 
 const PAGE_SIZE = 12;
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type SP = Promise<{ page?: string; beat?: string; q?: string }>;
 
@@ -23,7 +32,6 @@ export async function generateMetadata({
   const beat = sp.beat || "";
   const q = sp.q || "";
 
-  // Self-referencing canonical (beat + page; never collapse pages 2+ to /blog).
   const cp = new URLSearchParams();
   if (beat) cp.set("beat", beat);
   if (page > 1) cp.set("page", String(page));
@@ -41,7 +49,6 @@ export async function generateMetadata({
     description:
       "The latest gaming news across PC and every console, plus hardware, game adaptations, and deals — by the Nexzy newsroom.",
     alternates: { canonical },
-    // Keep category + numbered pages indexable; don't index internal search results.
     robots: q ? { index: false, follow: true } : undefined,
     openGraph: { title: "Nexzy News", type: "website" },
   };
@@ -57,14 +64,16 @@ export default async function BlogIndexPage({
   const beat = sp.beat || "";
   const q = sp.q || "";
 
-  const { items, total } = await fetchPosts({
-    beat: beat || undefined,
-    q: q || undefined,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const [{ items, total }, trending] = await Promise.all([
+    fetchPosts({
+      beat: beat || undefined,
+      q: q || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    fetchTrending(5),
+  ]);
 
-  // Featured hero only on the unfiltered first page.
   const showFeatured = page === 1 && !beat && !q && items.length > 0;
   const featured = showFeatured ? items[0] : null;
   const grid = featured ? items.slice(1) : items;
@@ -90,26 +99,38 @@ export default async function BlogIndexPage({
             : "No articles published yet. Check back soon."}
         </Text>
       ) : (
-        <>
-          {featured && (
-            <Box mb={8}>
-              <FeaturedCard post={featured} />
-            </Box>
-          )}
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6}>
-            {grid.map((post) => (
-              <BlogCard key={post.slug} post={post} />
-            ))}
-          </SimpleGrid>
+        <Grid
+          templateColumns={{ base: "1fr", lg: "1fr 300px" }}
+          gap={{ base: 10, lg: 8 }}
+          alignItems="start"
+        >
+          <GridItem minW={0}>
+            {featured && (
+              <Box mb={8}>
+                <FeaturedCard post={featured} />
+              </Box>
+            )}
+            <SimpleGrid columns={{ base: 1, sm: 2 }} gap={6}>
+              {grid.map((post) => (
+                <BlogCard key={post.slug} post={post} />
+              ))}
+            </SimpleGrid>
 
-          <Pagination
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={total}
-            beat={beat}
-            q={q}
-          />
-        </>
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              beat={beat}
+              q={q}
+            />
+          </GridItem>
+
+          <GridItem>
+            <Box position={{ lg: "sticky" }} top="84px">
+              <MostRead posts={trending} />
+            </Box>
+          </GridItem>
+        </Grid>
       )}
     </Container>
   );

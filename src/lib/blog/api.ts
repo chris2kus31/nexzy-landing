@@ -21,6 +21,7 @@ export interface PublicPost {
   sources: { name: string; url: string }[];
   author: string | null;
   publishedAt: string | null;
+  viewCount: number;
 }
 
 export interface PostList {
@@ -55,10 +56,20 @@ export async function fetchPosts(params?: {
   return res.json();
 }
 
+export async function fetchTrending(limit = 5): Promise<PublicPost[]> {
+  // Live — reflects read counts immediately.
+  const res = await fetch(`${API}/newsroom/public/trending?limit=${limit}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function fetchPost(slug: string): Promise<PublicPost | null> {
+  // Live — so the article's read count is current on each load.
   const res = await fetch(
     `${API}/newsroom/public/posts/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    { cache: "no-store" },
   );
   if (res.status === 404) return null;
   if (!res.ok) return null;

@@ -2,6 +2,7 @@ import NextLink from "next/link";
 import { Box, Image, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
+import { formatCount } from "@/lib/blog/format";
 
 function fmt(date: string | null): string {
   if (!date) return "";
@@ -69,9 +70,15 @@ export default function BlogCard({ post }: { post: PublicPost }) {
               {post.excerpt}
             </Text>
           )}
-          <Text color="gray.500" fontSize="xs" mt="auto">
-            {fmt(post.publishedAt)}
-          </Text>
+          <HStack gap={2} mt="auto" color="gray.500" fontSize="xs">
+            <Text>{fmt(post.publishedAt)}</Text>
+            {post.viewCount > 0 && (
+              <>
+                <Text>·</Text>
+                <Text>{formatCount(post.viewCount)} reads</Text>
+              </>
+            )}
+          </HStack>
         </Box>
       </Box>
     </NextLink>

@@ -15,14 +15,16 @@ import {
   Separator,
   Icon,
 } from "@chakra-ui/react";
-import { HiCalendar, HiClock } from "react-icons/hi";
+import { HiCalendar, HiClock, HiEye } from "react-icons/hi";
 import { fetchPost, fetchPosts } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
+import { formatCount } from "@/lib/blog/format";
 import Markdown from "@/components/blog/Markdown";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
+import ViewPing from "@/components/blog/ViewPing";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
@@ -135,6 +137,14 @@ export default async function BlogArticlePage({
             </Icon>
             <Text>{minutes} min read</Text>
           </HStack>
+          {post.viewCount > 0 && (
+            <HStack gap={1} color="gray.400" fontSize="sm">
+              <Icon>
+                <HiEye />
+              </Icon>
+              <Text>{formatCount(post.viewCount)} reads</Text>
+            </HStack>
+          )}
           <Box ml="auto">
             <ShareRow url={shareUrl} title={post.title} />
           </Box>
@@ -224,6 +234,8 @@ export default async function BlogArticlePage({
           </Container>
         </Box>
       )}
+
+      <ViewPing slug={post.slug} />
 
       <script
         type="application/ld+json"
