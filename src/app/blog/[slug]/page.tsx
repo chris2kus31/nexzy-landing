@@ -78,14 +78,13 @@ export default async function BlogArticlePage({
   return (
     <Container maxW="container.md" py={{ base: 8, md: 12 }}>
       <Link
-        as={NextLink}
-        href="/blog"
+        asChild
         color="nexzy.lightBlue"
         fontSize="sm"
         mb={6}
         display="inline-block"
       >
-        ← All news
+        <NextLink href="/blog">← All news</NextLink>
       </Link>
 
       <HStack gap={3} mb={4}>
