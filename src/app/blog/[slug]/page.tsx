@@ -8,22 +8,30 @@ import {
   Text,
   HStack,
   VStack,
+  SimpleGrid,
   Image,
   Badge,
   Link,
   Separator,
+  Icon,
 } from "@chakra-ui/react";
-import { fetchPost } from "@/lib/blog/api";
+import { HiCalendar, HiClock } from "react-icons/hi";
+import { fetchPost, fetchPosts } from "@/lib/blog/api";
+import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import Markdown from "@/components/blog/Markdown";
+import ShareRow from "@/components/blog/ShareRow";
+import BlogCard from "@/components/blog/BlogCard";
 
 export const revalidate = 300;
 
-const BEAT_LABEL: Record<string, string> = {
-  game_news: "Game News",
-  console_hardware: "Hardware",
-  game_movies_tv: "Movies & TV",
-  deals: "Deals",
-};
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+
+function readingMinutes(markdown?: string): number {
+  if (!markdown) return 1;
+  const words = markdown.trim().split(/\s+/).length;
+  return Math.max(1, Math.round(words / 200));
+}
 
 export async function generateMetadata({
   params,
@@ -65,6 +73,20 @@ export default async function BlogArticlePage({
   const post = await fetchPost(slug);
   if (!post) notFound();
 
+  // Related: same beat, newest, excluding this article.
+  const related = (await fetchPosts({ beat: post.beat, pageSize: 4 })).items
+    .filter((p) => p.slug !== post.slug)
+    .slice(0, 3);
+
+  const shareUrl = `${SITE_URL}/blog/${post.slug}`;
+  const minutes = readingMinutes(post.bodyMarkdown);
+  // Normalize any older credit like "AI-generated (Gemini …)" to a clean label.
+  const imageCredit = post.imageCredit
+    ? post.imageCredit
+        .replace(/\s*\(.*?\)\s*$/, "")
+        .replace(/^AI-generated$/i, "Generated with AI")
+    : null;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -76,84 +98,137 @@ export default async function BlogArticlePage({
   };
 
   return (
-    <Container maxW="container.md" py={{ base: 8, md: 12 }}>
-      <Link
-        asChild
-        color="nexzy.lightBlue"
-        fontSize="sm"
-        mb={6}
-        display="inline-block"
-      >
-        <NextLink href="/blog">← All news</NextLink>
-      </Link>
+    <Box>
+      <Container maxW="3xl" py={{ base: 8, md: 12 }}>
+        <Link
+          asChild
+          color="nexzy.lightBlue"
+          fontSize="sm"
+          mb={6}
+          display="inline-block"
+        >
+          <NextLink href="/blog">← All news</NextLink>
+        </Link>
 
-      <HStack gap={3} mb={4}>
-        <Badge colorPalette="blue" variant="subtle">
-          {BEAT_LABEL[post.beat] || post.beat}
-        </Badge>
-        {post.publishedAt && (
-          <Text color="gray.400" fontSize="sm">
-            {new Date(post.publishedAt).toLocaleDateString(undefined, {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
+        {/* Meta row */}
+        <HStack gap={4} mb={4} flexWrap="wrap">
+          <Badge colorPalette={beatPalette(post.beat)} variant="solid">
+            {beatLabel(post.beat)}
+          </Badge>
+          {post.publishedAt && (
+            <HStack gap={1} color="gray.400" fontSize="sm">
+              <Icon>
+                <HiCalendar />
+              </Icon>
+              <Text>
+                {new Date(post.publishedAt).toLocaleDateString(undefined, {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+            </HStack>
+          )}
+          <HStack gap={1} color="gray.400" fontSize="sm">
+            <Icon>
+              <HiClock />
+            </Icon>
+            <Text>{minutes} min read</Text>
+          </HStack>
+          <Box ml="auto">
+            <ShareRow url={shareUrl} title={post.title} />
+          </Box>
+        </HStack>
+
+        <Heading
+          as="h1"
+          size={{ base: "2xl", md: "4xl" }}
+          color="white"
+          mb={2}
+          lineHeight="1.15"
+        >
+          {post.title}
+        </Heading>
+        {post.excerpt && (
+          <Text color="gray.300" fontSize="lg" mb={6} lineHeight="1.6">
+            {post.excerpt}
           </Text>
         )}
-      </HStack>
 
-      <Heading as="h1" size="3xl" color="white" mb={4} lineHeight="1.2">
-        {post.title}
-      </Heading>
+        {post.heroImageUrl && (
+          <Image
+            src={post.heroImageUrl}
+            alt={post.imageAlt || post.title}
+            w="full"
+            borderRadius="2xl"
+            mb={2}
+          />
+        )}
+        {imageCredit && (
+          <Text color="gray.500" fontSize="xs" mb={8}>
+            {imageCredit}
+          </Text>
+        )}
 
-      {post.heroImageUrl && (
-        <Image
-          src={post.heroImageUrl}
-          alt={post.imageAlt || post.title}
-          w="full"
-          borderRadius="xl"
-          mb={2}
-        />
-      )}
-      {post.imageCredit && (
-        <Text color="gray.500" fontSize="xs" mb={6}>
-          {post.imageCredit}
-        </Text>
-      )}
+        {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
 
-      {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
+        {post.sources && post.sources.length > 0 && (
+          <Box mt={10}>
+            <Separator borderColor="whiteAlpha.200" mb={4} />
+            <Heading as="h2" size="sm" color="gray.300" mb={3}>
+              Sources
+            </Heading>
+            <VStack align="stretch" gap={2}>
+              {post.sources.map((s, i) => (
+                <Link
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  color="nexzy.lightBlue"
+                  fontSize="sm"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </VStack>
+          </Box>
+        )}
 
-      {post.sources && post.sources.length > 0 && (
-        <Box mt={10}>
-          <Separator borderColor="whiteAlpha.200" mb={4} />
-          <Heading as="h2" size="sm" color="gray.300" mb={3}>
-            Sources
-          </Heading>
-          <VStack align="stretch" gap={2}>
-            {post.sources.map((s, i) => (
-              <Link
-                key={i}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                color="nexzy.lightBlue"
-                fontSize="sm"
-              >
-                {s.name}
-              </Link>
-            ))}
-          </VStack>
+        <HStack
+          justify="space-between"
+          mt={10}
+          pt={6}
+          borderTop="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text color="gray.500" fontSize="xs">
+            {post.author || "Nexzy Editorial"}
+          </Text>
+          <ShareRow url={shareUrl} title={post.title} />
+        </HStack>
+      </Container>
+
+      {/* Related news */}
+      {related.length > 0 && (
+        <Box borderTop="1px solid" borderColor="whiteAlpha.100" py={12}>
+          <Container maxW="container.xl">
+            <Heading as="h2" size="lg" color="white" mb={6}>
+              More {beatLabel(post.beat)}
+            </Heading>
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
+              {related.map((p) => (
+                <BlogCard key={p.slug} post={p} />
+              ))}
+            </SimpleGrid>
+          </Container>
         </Box>
       )}
-
-      <Text color="gray.500" fontSize="xs" mt={10}>
-        {post.author || "Nexzy Editorial"}
-      </Text>
 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-    </Container>
+    </Box>
   );
 }

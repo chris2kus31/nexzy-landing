@@ -35,11 +35,13 @@ const REVALIDATE = 300; // 5 min
 
 export async function fetchPosts(params?: {
   beat?: string;
+  q?: string;
   page?: number;
   pageSize?: number;
 }): Promise<PostList> {
   const q = new URLSearchParams();
   if (params?.beat) q.set("beat", params.beat);
+  if (params?.q) q.set("q", params.q);
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
   const qs = q.toString();
