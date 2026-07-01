@@ -31,9 +31,7 @@ export default function Footer() {
       { label: "Download", href: "#download" },
       { label: "Pricing", href: "#" },
     ],
-    Company: [
-      { label: "About Us", href: "#" },
-    ],
+    Company: [{ label: "About Us", href: "#" }],
     Legal: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },
@@ -176,7 +174,7 @@ export default function Footer() {
           {/* Contact/Social */}
           <HStack gap={4}>
             <Link
-              href="mailto:support@nexzy.com"
+              href="mailto:support@nexzyapp.com"
               display="flex"
               alignItems="center"
               gap={2}
@@ -185,7 +183,7 @@ export default function Footer() {
               _hover={{ color: "nexzy.blue" }}
             >
               <HiMail />
-              support@nexzy.com
+              support@nexzyapp.com
             </Link>
             <Link
               href="mailto:nexzy.app@gmail.com"
