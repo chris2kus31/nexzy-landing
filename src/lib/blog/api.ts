@@ -57,19 +57,21 @@ export async function fetchPosts(params?: {
 }
 
 export async function fetchTrending(limit = 5): Promise<PublicPost[]> {
-  // Live — reflects read counts immediately.
+  // ISR-cached: "Most read" can be a few minutes stale — fine, and much faster.
   const res = await fetch(`${API}/newsroom/public/trending?limit=${limit}`, {
-    cache: "no-store",
+    next: { revalidate: REVALIDATE },
   });
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchPost(slug: string): Promise<PublicPost | null> {
-  // Live — so the article's read count is current on each load.
+  // ISR-cached so article pages serve fast/static to crawlers; the read count
+  // may be up to REVALIDATE seconds stale (the increment itself still fires via
+  // the client ViewPing).
   const res = await fetch(
     `${API}/newsroom/public/posts/${encodeURIComponent(slug)}`,
-    { cache: "no-store" },
+    { next: { revalidate: REVALIDATE } },
   );
   if (res.status === 404) return null;
   if (!res.ok) return null;

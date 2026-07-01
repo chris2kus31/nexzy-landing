@@ -1,5 +1,6 @@
 import NextLink from "next/link";
-import { Box, Image, Heading, Text, HStack, Badge } from "@chakra-ui/react";
+import NextImage from "next/image";
+import { Box, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { formatCount } from "@/lib/blog/format";
@@ -36,19 +37,29 @@ export default function BlogCard({ post }: { post: PublicPost }) {
         display="flex"
         flexDirection="column"
       >
-        <Box position="relative" overflow="hidden">
+        <Box
+          position="relative"
+          overflow="hidden"
+          w="full"
+          aspectRatio={16 / 9}
+        >
           {post.heroImageUrl ? (
-            <Image
-              src={post.heroImageUrl}
-              alt={post.imageAlt || post.title}
-              w="full"
-              aspectRatio={16 / 9}
-              objectFit="cover"
+            <Box
+              position="absolute"
+              inset={0}
               transition="transform 0.3s"
               _groupHover={{ transform: "scale(1.04)" }}
-            />
+            >
+              <NextImage
+                src={post.heroImageUrl}
+                alt={post.imageAlt || post.title}
+                fill
+                sizes="(max-width: 640px) 100vw, 400px"
+                style={{ objectFit: "cover" }}
+              />
+            </Box>
           ) : (
-            <Box w="full" aspectRatio={16 / 9} bg="nexzy.blue/10" />
+            <Box position="absolute" inset={0} bg="nexzy.blue/10" />
           )}
           <Badge
             position="absolute"

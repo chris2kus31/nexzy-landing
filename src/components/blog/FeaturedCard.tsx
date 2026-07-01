@@ -1,5 +1,6 @@
 import NextLink from "next/link";
-import { Box, Image, Heading, Text, HStack, Badge } from "@chakra-ui/react";
+import NextImage from "next/image";
+import { Box, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 
@@ -17,14 +18,13 @@ export default function FeaturedCard({ post }: { post: PublicPost }) {
         _hover={{ borderColor: "nexzy.blue/60", transform: "translateY(-3px)" }}
       >
         {post.heroImageUrl ? (
-          <Image
+          <NextImage
             src={post.heroImageUrl}
             alt={post.imageAlt || post.title}
-            position="absolute"
-            inset={0}
-            w="full"
-            h="full"
-            objectFit="cover"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 800px"
+            style={{ objectFit: "cover" }}
           />
         ) : (
           <Box position="absolute" inset={0} bg="nexzy.blue/15" />

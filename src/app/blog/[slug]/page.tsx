@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
+import NextImage from "next/image";
 import {
   Box,
   Container,
@@ -9,7 +10,6 @@ import {
   HStack,
   VStack,
   SimpleGrid,
-  Image,
   Badge,
   Link,
   Separator,
@@ -24,7 +24,8 @@ import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
 
-export const dynamic = "force-dynamic";
+// ISR: article pages are cached and rebuilt in the background (fast + crawlable).
+export const revalidate = 300;
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
@@ -166,13 +167,23 @@ export default async function BlogArticlePage({
         )}
 
         {post.heroImageUrl && (
-          <Image
-            src={post.heroImageUrl}
-            alt={post.imageAlt || post.title}
+          <Box
+            position="relative"
             w="full"
+            aspectRatio={16 / 9}
             borderRadius="2xl"
+            overflow="hidden"
             mb={2}
-          />
+          >
+            <NextImage
+              src={post.heroImageUrl}
+              alt={post.imageAlt || post.title}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 768px"
+              style={{ objectFit: "cover" }}
+            />
+          </Box>
         )}
         {imageCredit && (
           <Text color="gray.500" fontSize="xs" mb={8}>

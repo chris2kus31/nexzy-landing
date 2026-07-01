@@ -19,7 +19,9 @@ import NewsletterSignup from "@/components/blog/NewsletterSignup";
 
 const PAGE_SIZE = 12;
 
-export const dynamic = "force-dynamic";
+// ISR: cached, rebuilt in the background. (Renders dynamically when search/
+// filter params are present; data is cached either way.)
+export const revalidate = 300;
 
 type SP = Promise<{ page?: string; beat?: string; q?: string }>;
 
