@@ -78,6 +78,29 @@ export async function getPublished(): Promise<BlogPost[]> {
   return handle(await fetch("/api/newsroom/admin/published"));
 }
 
+export interface AdminStats {
+  awaitingReview: number;
+  inProgress: number;
+  published: number;
+}
+
+export async function getStats(): Promise<AdminStats> {
+  return handle(await fetch("/api/newsroom/admin/stats"));
+}
+
+/** Kick off the pipeline for one beat, or all beats when beat is omitted. */
+export async function runPipeline(
+  beat?: string,
+): Promise<{ enqueued: string[] }> {
+  return handle(
+    await fetch("/api/newsroom/admin/run-pipeline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(beat ? { beat } : {}),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
