@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import NextLink from "next/link";
 import { Heading, Text, Link, List, Box } from "@chakra-ui/react";
 
 /**
@@ -29,17 +30,33 @@ export default function Markdown({ children }: { children: string }) {
             </Heading>
           ),
           p: ({ children }) => <Text mb={4}>{children}</Text>,
-          a: ({ href, children }) => (
-            <Link
-              href={href}
-              color="nexzy.lightBlue"
-              textDecoration="underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {children}
-            </Link>
-          ),
+          a: ({ href, children }) => {
+            // Internal links (/blog/...) navigate in-tab via Next's router;
+            // external links open in a new tab.
+            const isInternal = typeof href === "string" && href.startsWith("/");
+            if (isInternal) {
+              return (
+                <Link
+                  asChild
+                  color="nexzy.lightBlue"
+                  textDecoration="underline"
+                >
+                  <NextLink href={href}>{children}</NextLink>
+                </Link>
+              );
+            }
+            return (
+              <Link
+                href={href}
+                color="nexzy.lightBlue"
+                textDecoration="underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {children}
+              </Link>
+            );
+          },
           ul: ({ children }) => (
             <List.Root mb={4} pl={6}>
               {children}
