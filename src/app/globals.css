@@ -16,6 +16,13 @@ body {
   overflow-x: hidden;
 }
 
+/* Smooth anchor scrolling, offset so the fixed nav (h=64px) doesn't cover
+   the target section heading. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

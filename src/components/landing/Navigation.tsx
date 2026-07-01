@@ -31,11 +31,12 @@ import NextLink from "next/link";
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
   const navItems = [
-    { label: "Features", href: "#features" },
-    { label: "How it Works", href: "#how-it-works" },
+    { label: "Features", href: "/#features" },
+    { label: "How it Works", href: "/#how-it-works" },
     { label: "News", href: "/blog" },
-    { label: "Download", href: "#download" },
+    { label: "Download", href: "/#download" },
   ];
 
   return (
@@ -52,27 +53,31 @@ export default function Navigation() {
     >
       <Container maxW="container.xl">
         <Flex h={16} alignItems="center" justifyContent="space-between">
-          {/* Logo */}
-          <HStack gap={2}>
-            <Image src="/NexzyLogo.png" alt="Nexzy" h={10} w={10} />
-            <Text fontWeight="bold" fontSize="xl" color="nexzy.white">
-              Nexzy
-            </Text>
-          </HStack>
+          {/* Logo — links home */}
+          <Link asChild _hover={{ textDecoration: "none" }}>
+            <NextLink href="/">
+              <HStack gap={2}>
+                <Image src="/NexzyLogo.png" alt="Nexzy" h={10} w={10} />
+                <Text fontWeight="bold" fontSize="xl" color="nexzy.white">
+                  Nexzy
+                </Text>
+              </HStack>
+            </NextLink>
+          </Link>
 
           {/* Desktop Navigation */}
           <HStack gap={8} display={{ base: "none", md: "flex" }}>
             {navItems.map((item) => (
               <Link
                 key={item.href}
-                href={item.href}
+                asChild
                 fontSize="sm"
                 fontWeight="medium"
                 color="nexzy.white"
                 _hover={{ color: "nexzy.lightBlue" }}
                 transition="color 0.2s"
               >
-                {item.label}
+                <NextLink href={item.href}>{item.label}</NextLink>
               </Link>
             ))}
           </HStack>
@@ -80,6 +85,7 @@ export default function Navigation() {
           {/* Desktop CTA */}
           <HStack gap={4} display={{ base: "none", md: "flex" }}>
             <Button
+              asChild
               size="sm"
               bg="nexzy.yellow"
               color="nexzy.navy"
@@ -89,7 +95,7 @@ export default function Navigation() {
               _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
               transition="all 0.2s"
             >
-              Get Started
+              <NextLink href="/#download">Get Started</NextLink>
             </Button>
           </HStack>
 
@@ -144,18 +150,22 @@ export default function Navigation() {
           <DrawerBody>
             <Stack gap={4}>
               {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  fontSize="lg"
-                  color="nexzy.white"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.label}
+                <Link key={item.href} asChild fontSize="lg" color="nexzy.white">
+                  <NextLink href={item.href} onClick={() => setIsOpen(false)}>
+                    {item.label}
+                  </NextLink>
                 </Link>
               ))}
-              <Button size="lg" mt={4} bg="nexzy.yellow" color="nexzy.navy">
-                Get Started
+              <Button
+                asChild
+                size="lg"
+                mt={4}
+                bg="nexzy.yellow"
+                color="nexzy.navy"
+              >
+                <NextLink href="/#download" onClick={() => setIsOpen(false)}>
+                  Get Started
+                </NextLink>
               </Button>
             </Stack>
           </DrawerBody>
