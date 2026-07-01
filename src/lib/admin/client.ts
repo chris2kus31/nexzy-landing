@@ -88,6 +88,23 @@ export async function getStats(): Promise<AdminStats> {
   return handle(await fetch("/api/newsroom/admin/stats"));
 }
 
+export interface AdminHealth {
+  last24h: { runs: number; errors: number; cost: number };
+  last7d: { runs: number; errors: number; cost: number };
+  byAgent: { agent: string; runs: number; errors: number; cost: number }[];
+  recentErrors: {
+    agent: string;
+    model: string | null;
+    error: string | null;
+    at: string;
+  }[];
+  lastRunAt: string | null;
+}
+
+export async function getHealth(): Promise<AdminHealth> {
+  return handle(await fetch("/api/newsroom/admin/health"));
+}
+
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,

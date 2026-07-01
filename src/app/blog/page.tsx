@@ -15,6 +15,7 @@ import FeaturedCard from "@/components/blog/FeaturedCard";
 import BlogCard from "@/components/blog/BlogCard";
 import Pagination from "@/components/blog/Pagination";
 import MostRead from "@/components/blog/MostRead";
+import NewsletterSignup from "@/components/blog/NewsletterSignup";
 
 const PAGE_SIZE = 12;
 
@@ -132,6 +133,10 @@ export default async function BlogIndexPage({
           </GridItem>
         </Grid>
       )}
+
+      <Box mt={{ base: 12, md: 16 }}>
+        <NewsletterSignup />
+      </Box>
     </Container>
   );
 }

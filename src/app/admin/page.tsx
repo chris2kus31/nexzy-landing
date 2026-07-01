@@ -17,6 +17,7 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
+import HealthPanel from "@/components/admin/HealthPanel";
 import {
   getQueue,
   getPublished,
@@ -199,6 +200,8 @@ function QueueContent() {
         posts={published}
         empty="No published articles yet."
       />
+
+      <HealthPanel />
     </>
   );
 }
