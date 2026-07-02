@@ -11,7 +11,7 @@ import { pingIndexNow } from "@/lib/seo/indexnow";
 export const dynamic = "force-dynamic";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export async function POST(req: NextRequest): Promise<Response> {
   const secret = process.env.NEWSROOM_WEBHOOK_SECRET;

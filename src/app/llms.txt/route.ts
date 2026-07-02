@@ -4,7 +4,7 @@
 export const revalidate = 3600;
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export function GET(): Response {
   const body = `# Nexzy

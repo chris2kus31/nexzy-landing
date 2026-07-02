@@ -6,7 +6,7 @@ import type { MetadataRoute } from "next";
 import { fetchPosts } from "@/lib/blog/api";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const revalidate = 300;
 

@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
   title: "How We Use AI — Nexzy News",

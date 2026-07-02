@@ -16,7 +16,7 @@ const inter = Inter({
 // Set NEXT_PUBLIC_SITE_URL in your env to your canonical root domain
 // (e.g. https://nexzy.app). Falls back to the current subdomain.
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://landing.nexzyapp.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
   title: "Nexzy - AI-Powered Gaming Assistant",
