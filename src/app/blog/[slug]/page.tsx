@@ -90,28 +90,70 @@ export default async function BlogArticlePage({
         .replace(/^AI-generated$/i, "Generated with AI")
     : null;
 
+  const articleUrl = `${SITE_URL}/blog/${post.slug}`;
+  const sectionLabel = beatLabel(post.beat);
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: post.title,
+    description: post.seoDescription || post.excerpt || undefined,
     image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
     datePublished: post.publishedAt || undefined,
+    dateModified: post.updatedAt || post.publishedAt || undefined,
+    articleSection: sectionLabel,
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
     author: { "@type": "Organization", name: post.author || "Nexzy Editorial" },
-    publisher: { "@type": "Organization", name: "Nexzy" },
+    publisher: {
+      "@type": "Organization",
+      name: "Nexzy",
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/android-chrome-512x512.png`,
+        width: 512,
+        height: 512,
+      },
+    },
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "News",
+        item: `${SITE_URL}/blog`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: sectionLabel,
+        item: `${SITE_URL}/blog?beat=${post.beat}`,
+      },
+      { "@type": "ListItem", position: 4, name: post.title, item: articleUrl },
+    ],
   };
 
   return (
     <Box>
       <Container maxW="3xl" py={{ base: 8, md: 12 }}>
-        <Link
-          asChild
-          color="nexzy.lightBlue"
-          fontSize="sm"
-          mb={6}
-          display="inline-block"
-        >
-          <NextLink href="/blog">← All news</NextLink>
-        </Link>
+        {/* Visible breadcrumb (matches BreadcrumbList JSON-LD) */}
+        <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
+          <Link asChild color="nexzy.lightBlue">
+            <NextLink href="/blog">News</NextLink>
+          </Link>
+          <Text>/</Text>
+          <Link asChild color="nexzy.lightBlue">
+            <NextLink href={`/blog?beat=${post.beat}`}>{sectionLabel}</NextLink>
+          </Link>
+          <Text>/</Text>
+          <Text color="gray.500" lineClamp={1}>
+            {post.title}
+          </Text>
+        </HStack>
 
         {/* Meta row */}
         <HStack gap={4} mb={4} flexWrap="wrap">
@@ -251,6 +293,10 @@ export default async function BlogArticlePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
     </Box>
   );

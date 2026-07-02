@@ -21,6 +21,7 @@ export interface PublicPost {
   sources: { name: string; url: string }[];
   author: string | null;
   publishedAt: string | null;
+  updatedAt: string | null;
   viewCount: number;
 }
 

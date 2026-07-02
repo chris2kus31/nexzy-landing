@@ -10,9 +10,21 @@ const SITE_URL =
 
 export const revalidate = 300;
 
+// Safety cap so the sitemap can grow with the archive without an unbounded
+// crawl of the API. 20 pages x 50 = up to 1,000 most-recent articles.
+const MAX_PAGES = 20;
+const PAGE_SIZE = 50;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const staticRoutes = ["", "/privacy", "/terms", "/guidelines", "/blog"];
+  const staticRoutes = [
+    "",
+    "/privacy",
+    "/terms",
+    "/guidelines",
+    "/how-we-use-ai",
+    "/blog",
+  ];
 
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
@@ -21,18 +33,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === "" ? 1 : path === "/blog" ? 0.8 : 0.5,
   }));
 
-  // Published articles (best-effort — never break the sitemap if the API is down).
-  let articleEntries: MetadataRoute.Sitemap = [];
+  // Published articles (best-effort — never break the sitemap if the API is
+  // down). Paginate so the whole archive stays listed as volume grows.
+  const articleEntries: MetadataRoute.Sitemap = [];
   try {
-    const { items } = await fetchPosts({ pageSize: 50 });
-    articleEntries = items.map((p) => ({
-      url: `${SITE_URL}/blog/${p.slug}`,
-      lastModified: p.publishedAt ? new Date(p.publishedAt) : now,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    }));
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const { items, total } = await fetchPosts({ page, pageSize: PAGE_SIZE });
+      for (const p of items) {
+        articleEntries.push({
+          url: `${SITE_URL}/blog/${p.slug}`,
+          lastModified: p.updatedAt
+            ? new Date(p.updatedAt)
+            : p.publishedAt
+              ? new Date(p.publishedAt)
+              : now,
+          changeFrequency: "weekly",
+          priority: 0.7,
+        });
+      }
+      if (items.length < PAGE_SIZE || articleEntries.length >= total) break;
+    }
   } catch {
-    articleEntries = [];
+    // keep whatever we already collected
   }
 
   return [...staticEntries, ...articleEntries];

@@ -118,6 +118,26 @@ export async function runPipeline(
   );
 }
 
+export interface CommissionInput {
+  beat: string;
+  instructions: string;
+  sourceUrl?: string;
+  workingTitle?: string;
+}
+
+/** Commission a specific story for the AI staff to research + write. */
+export async function commissionStory(
+  input: CommissionInput,
+): Promise<{ queued: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/commission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }

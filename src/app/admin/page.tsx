@@ -17,6 +17,7 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
+import CommissionPanel from "@/components/admin/CommissionPanel";
 import HealthPanel from "@/components/admin/HealthPanel";
 import {
   getQueue,
@@ -170,6 +171,7 @@ function QueueContent() {
       </SimpleGrid>
 
       <RunPipelinePanel onRan={load} />
+      <CommissionPanel onRan={load} />
 
       <Flex align="center" justify="space-between" mb={3}>
         <Heading size="lg" color="nexzy.white">
