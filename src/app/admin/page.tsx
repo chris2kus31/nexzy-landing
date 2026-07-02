@@ -1,24 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import NextLink from "next/link";
 import {
   Box,
   Flex,
   HStack,
-  VStack,
   SimpleGrid,
   Heading,
   Text,
   Button,
   Spinner,
-  Separator,
 } from "@chakra-ui/react";
 import AdminShell from "@/components/admin/AdminShell";
-import StatusBadge from "@/components/admin/StatusBadge";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
 import HealthPanel from "@/components/admin/HealthPanel";
+import SubscribersPanel from "@/components/admin/SubscribersPanel";
+import PostBrowser from "@/components/admin/PostBrowser";
 import {
   getQueue,
   getPublished,
@@ -26,6 +24,8 @@ import {
   type BlogPost,
   type AdminStats,
 } from "@/lib/admin/client";
+
+type Tab = "queue" | "published" | "subscribers" | "tools";
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -52,77 +52,56 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PostRow({ post }: { post: BlogPost }) {
-  return (
-    <NextLink href={`/admin/posts/${post.id}`} style={{ width: "100%" }}>
-      <Flex
-        align="center"
-        justify="space-between"
-        bg="whiteAlpha.50"
-        _hover={{ bg: "whiteAlpha.100" }}
-        border="1px solid"
-        borderColor="whiteAlpha.200"
-        borderRadius="lg"
-        p={4}
-        gap={4}
-      >
-        <Box flex={1} minW={0}>
-          <Text color="nexzy.white" fontWeight="600" lineClamp={1}>
-            {post.title || "(untitled)"}
-          </Text>
-          <HStack gap={3} mt={1}>
-            <Text color="nexzy.gray.100" fontSize="xs">
-              {post.beat}
-            </Text>
-            <Text color="nexzy.gray.100" fontSize="xs">
-              {new Date(post.createdAt).toLocaleDateString()}
-            </Text>
-          </HStack>
-        </Box>
-        <StatusBadge status={post.status} />
-      </Flex>
-    </NextLink>
-  );
-}
-
-function Section({
-  title,
-  posts,
-  empty,
+function TabButton({
+  label,
+  count,
+  active,
+  onClick,
 }: {
-  title: string;
-  posts: BlogPost[];
-  empty: string;
+  label: string;
+  count?: number;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <Box mb={8}>
-      <Heading size="md" color="nexzy.white" mb={3}>
-        {title}{" "}
-        <Text as="span" color="nexzy.gray.100" fontSize="md" fontWeight="400">
-          ({posts.length})
-        </Text>
-      </Heading>
-      {posts.length === 0 ? (
-        <Text color="nexzy.gray.100" fontSize="sm">
-          {empty}
-        </Text>
-      ) : (
-        <VStack gap={3} align="stretch">
-          {posts.map((p) => (
-            <PostRow key={p.id} post={p} />
-          ))}
-        </VStack>
+    <Button
+      onClick={onClick}
+      size="sm"
+      variant="ghost"
+      borderRadius="0"
+      borderBottom="2px solid"
+      borderColor={active ? "nexzy.blue" : "transparent"}
+      color={active ? "nexzy.white" : "nexzy.gray.100"}
+      fontWeight={active ? "700" : "500"}
+      _hover={{ bg: "whiteAlpha.100" }}
+      px={3}
+    >
+      {label}
+      {typeof count === "number" && (
+        <Box
+          as="span"
+          ml={2}
+          px={2}
+          py="1px"
+          borderRadius="full"
+          bg={active ? "nexzy.blue" : "whiteAlpha.200"}
+          color={active ? "white" : "nexzy.gray.100"}
+          fontSize="xs"
+        >
+          {count}
+        </Box>
       )}
-    </Box>
+    </Button>
   );
 }
 
-function QueueContent() {
+function AdminContent() {
   const [queue, setQueue] = useState<BlogPost[] | null>(null);
   const [published, setPublished] = useState<BlogPost[] | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [tab, setTab] = useState<Tab>("queue");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -170,40 +149,91 @@ function QueueContent() {
         <StatCard label="Published" value={stats.published} />
       </SimpleGrid>
 
-      <RunPipelinePanel onRan={load} />
-      <CommissionPanel onRan={load} />
-
-      <Flex align="center" justify="space-between" mb={3}>
-        <Heading size="lg" color="nexzy.white">
-          Review queue
-        </Heading>
-        <Button
-          size="sm"
-          variant="outline"
-          color="nexzy.white"
-          borderColor="whiteAlpha.300"
-          _hover={{ bg: "whiteAlpha.100" }}
-          onClick={load}
-          loading={refreshing}
-          loadingText="Refreshing…"
-        >
-          Refresh
-        </Button>
+      {/* Tab bar */}
+      <Flex
+        align="center"
+        justify="space-between"
+        borderBottom="1px solid"
+        borderColor="whiteAlpha.200"
+        mb={6}
+        gap={2}
+        wrap="wrap"
+      >
+        <HStack gap={1} wrap="wrap">
+          <TabButton
+            label="Review queue"
+            count={queue.length}
+            active={tab === "queue"}
+            onClick={() => setTab("queue")}
+          />
+          <TabButton
+            label="Published"
+            count={published.length}
+            active={tab === "published"}
+            onClick={() => setTab("published")}
+          />
+          <TabButton
+            label="Subscribers"
+            active={tab === "subscribers"}
+            onClick={() => setTab("subscribers")}
+          />
+          <TabButton
+            label="Tools & health"
+            active={tab === "tools"}
+            onClick={() => setTab("tools")}
+          />
+        </HStack>
+        {(tab === "queue" || tab === "published") && (
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={load}
+            loading={refreshing}
+            loadingText="Refreshing…"
+          >
+            Refresh
+          </Button>
+        )}
       </Flex>
 
-      <Section
-        title="Awaiting review"
-        posts={queue}
-        empty="Nothing in the queue right now."
-      />
-      <Separator borderColor="whiteAlpha.200" mb={8} />
-      <Section
-        title="Published"
-        posts={published}
-        empty="No published articles yet."
-      />
+      {tab === "queue" && (
+        <Box>
+          <Heading size="md" color="nexzy.white" mb={3}>
+            Awaiting review
+          </Heading>
+          <PostBrowser
+            posts={queue}
+            empty="Nothing in the queue right now."
+            dateField="createdAt"
+          />
+        </Box>
+      )}
 
-      <HealthPanel />
+      {tab === "published" && (
+        <Box>
+          <Heading size="md" color="nexzy.white" mb={3}>
+            Published articles
+          </Heading>
+          <PostBrowser
+            posts={published}
+            empty="No published articles yet."
+            dateField="publishedAt"
+          />
+        </Box>
+      )}
+
+      {tab === "subscribers" && <SubscribersPanel />}
+
+      {tab === "tools" && (
+        <Box>
+          <RunPipelinePanel onRan={load} />
+          <CommissionPanel onRan={load} />
+          <HealthPanel />
+        </Box>
+      )}
     </>
   );
 }
@@ -211,7 +241,7 @@ function QueueContent() {
 export default function AdminQueuePage() {
   return (
     <AdminShell>
-      <QueueContent />
+      <AdminContent />
     </AdminShell>
   );
 }

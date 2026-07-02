@@ -183,7 +183,7 @@ export default function PrivacyPage() {
                 us at:
               </Text>
               <Text color="nexzy.blue" fontWeight="medium">
-                support@nexzyapp.com or nexzy.app@gmail.com
+                support@nexzyapp.com
               </Text>
             </Box>
           </Stack>

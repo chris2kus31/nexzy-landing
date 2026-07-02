@@ -294,7 +294,7 @@ export default function TermsPage() {
                 For questions about these Terms, please contact us at:
               </Text>
               <Text color="nexzy.blue" fontWeight="medium">
-                support@nexzyapp.com or nexzy.app@gmail.com
+                support@nexzyapp.com
               </Text>
             </Box>
           </Stack>

@@ -186,18 +186,6 @@ export default function Footer() {
               <HiMail />
               support@nexzyapp.com
             </Link>
-            <Link
-              href="mailto:nexzy.app@gmail.com"
-              display="flex"
-              alignItems="center"
-              gap={2}
-              fontSize="sm"
-              color="gray.600"
-              _hover={{ color: "nexzy.blue" }}
-            >
-              <HiMail />
-              nexzy.app@gmail.com
-            </Link>
           </HStack>
         </Stack>
 

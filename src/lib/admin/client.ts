@@ -105,6 +105,27 @@ export async function getHealth(): Promise<AdminHealth> {
   return handle(await fetch("/api/newsroom/admin/health"));
 }
 
+export interface Subscriber {
+  id: string;
+  email: string;
+  source: string;
+  status: "active" | "unsubscribed";
+  createdAt: string;
+  unsubscribedAt: string | null;
+}
+
+export interface SubscribersResult {
+  total: number;
+  active: number;
+  unsubscribed: number;
+  bySource: { source: string; count: number }[];
+  subscribers: Subscriber[];
+}
+
+export async function getSubscribers(): Promise<SubscribersResult> {
+  return handle(await fetch("/api/newsroom/admin/subscribers"));
+}
+
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,
