@@ -31,7 +31,7 @@ export default function Footer() {
       { label: "Download", href: "#download" },
       { label: "Pricing", href: "#" },
     ],
-    Company: [{ label: "About Us", href: "#" }],
+    Company: [{ label: "About Us", href: "/about" }],
     Legal: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },

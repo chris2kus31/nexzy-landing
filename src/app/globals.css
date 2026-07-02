@@ -47,3 +47,34 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Image loading skeleton: an animated sheen shown behind news images while
+   they load. The image paints on top once ready, covering it — so no JS and
+   no risk of an invisible image. Tuned for the dark navy theme. */
+.nexzy-img-skeleton {
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.11) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 936px 100%;
+  animation: nexzy-shimmer 1.6s linear infinite;
+}
+
+@keyframes nexzy-shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+/* Respect users who prefer reduced motion: keep a static placeholder tint. */
+@media (prefers-reduced-motion: reduce) {
+  .nexzy-img-skeleton {
+    animation: none;
+  }
+}

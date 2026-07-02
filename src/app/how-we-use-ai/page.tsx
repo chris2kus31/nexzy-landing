@@ -9,9 +9,9 @@ import {
   Stack,
   Separator,
 } from "@chakra-ui/react";
+import Navigation from "@/components/landing/Navigation";
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
   title: "How We Use AI — Nexzy News",
@@ -53,7 +53,8 @@ export default function HowWeUseAIPage() {
   };
 
   return (
-    <Box>
+    <Box bg="nexzy.navy" minH="100vh">
+      <Navigation />
       <Container maxW="3xl" py={{ base: 10, md: 16 }}>
         <Link
           asChild

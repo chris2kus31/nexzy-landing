@@ -5,8 +5,7 @@
 import type { MetadataRoute } from "next";
 import { fetchPosts } from "@/lib/blog/api";
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const revalidate = 300;
 
@@ -19,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticRoutes = [
     "",
+    "/about",
     "/privacy",
     "/terms",
     "/guidelines",

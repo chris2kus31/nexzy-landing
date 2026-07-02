@@ -43,6 +43,9 @@ export default function BlogCard({ post }: { post: PublicPost }) {
           w="full"
           aspectRatio={16 / 9}
         >
+          {post.heroImageUrl && (
+            <Box position="absolute" inset={0} className="nexzy-img-skeleton" />
+          )}
           {post.heroImageUrl ? (
             <Box
               position="absolute"

@@ -27,8 +27,7 @@ import ViewPing from "@/components/blog/ViewPing";
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 function readingMinutes(markdown?: string): number {
   if (!markdown) return 1;
@@ -217,6 +216,7 @@ export default async function BlogArticlePage({
             overflow="hidden"
             mb={2}
           >
+            <Box position="absolute" inset={0} className="nexzy-img-skeleton" />
             <NextImage
               src={post.heroImageUrl}
               alt={post.imageAlt || post.title}

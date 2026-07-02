@@ -17,6 +17,9 @@ export default function FeaturedCard({ post }: { post: PublicPost }) {
         transition="all 0.2s"
         _hover={{ borderColor: "nexzy.blue/60", transform: "translateY(-3px)" }}
       >
+        {post.heroImageUrl && (
+          <Box position="absolute" inset={0} className="nexzy-img-skeleton" />
+        )}
         {post.heroImageUrl ? (
           <NextImage
             src={post.heroImageUrl}
