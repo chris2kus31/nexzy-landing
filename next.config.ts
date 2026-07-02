@@ -14,6 +14,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Force the old landing.nexzyapp.com subdomain to 301-redirect to the
+  // canonical www domain (Netlify auto-redirects the apex, but not plain
+  // subdomain aliases — this avoids duplicate-content on two live URLs).
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "landing.nexzyapp.com" }],
+        destination: "https://www.nexzyapp.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
