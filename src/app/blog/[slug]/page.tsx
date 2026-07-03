@@ -16,10 +16,13 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { HiCalendar, HiClock, HiEye } from "react-icons/hi";
-import { fetchPost, fetchPosts } from "@/lib/blog/api";
+import { fetchPost, fetchRelated } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
+import { slugifyTag } from "@/lib/blog/tags";
+import { getAuthorByName } from "@/lib/blog/authors";
 import { formatCount } from "@/lib/blog/format";
 import Markdown from "@/components/blog/Markdown";
+import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
@@ -75,10 +78,11 @@ export default async function BlogArticlePage({
   const post = await fetchPost(slug);
   if (!post) notFound();
 
-  // Related: same beat, newest, excluding this article.
-  const related = (await fetchPosts({ beat: post.beat, pageSize: 4 })).items
-    .filter((p) => p.slug !== post.slug)
-    .slice(0, 3);
+  // Related: tag-aware (shared topic first, then same beat), excluding self.
+  const related = await fetchRelated(post.slug, 3);
+  const topics = (post.tags || [])
+    .map((t) => ({ label: t, slug: slugifyTag(t) }))
+    .filter((t) => t.slug);
 
   const shareUrl = `${SITE_URL}/blog/${post.slug}`;
   const minutes = readingMinutes(post.bodyMarkdown);
@@ -91,6 +95,7 @@ export default async function BlogArticlePage({
 
   const articleUrl = `${SITE_URL}/blog/${post.slug}`;
   const sectionLabel = beatLabel(post.beat);
+  const authorPersona = getAuthorByName(post.author);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -102,7 +107,21 @@ export default async function BlogArticlePage({
     dateModified: post.updatedAt || post.publishedAt || undefined,
     articleSection: sectionLabel,
     mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
-    author: { "@type": "Organization", name: post.author || "Nexzy Editorial" },
+    author: authorPersona
+      ? {
+          "@type": "Person",
+          name: authorPersona.name,
+          jobTitle: authorPersona.role,
+          url: `${SITE_URL}/author/${authorPersona.slug}`,
+          ...(authorPersona.x || authorPersona.instagram
+            ? {
+                sameAs: [authorPersona.x, authorPersona.instagram].filter(
+                  Boolean,
+                ),
+              }
+            : {}),
+        }
+      : { "@type": "Organization", name: post.author || "Nexzy Editorial" },
     publisher: {
       "@type": "Organization",
       name: "Nexzy",
@@ -207,6 +226,10 @@ export default async function BlogArticlePage({
           </Text>
         )}
 
+        <Box mb={8}>
+          <Byline author={post.author} date={post.publishedAt} />
+        </Box>
+
         {post.heroImageUrl && (
           <Box
             position="relative"
@@ -264,6 +287,38 @@ export default async function BlogArticlePage({
           </Box>
         )}
 
+        {topics.length > 0 && (
+          <Box mt={10}>
+            <Heading as="h2" size="sm" color="gray.300" mb={3}>
+              Topics
+            </Heading>
+            <HStack gap={2} flexWrap="wrap">
+              {topics.map((t) => (
+                <Link
+                  key={t.slug}
+                  asChild
+                  px={3}
+                  py={1}
+                  borderRadius="full"
+                  border="1px solid"
+                  borderColor="whiteAlpha.300"
+                  color="gray.200"
+                  fontSize="sm"
+                  fontWeight="600"
+                  _hover={{
+                    bg: "whiteAlpha.100",
+                    color: "white",
+                    borderColor: "nexzy.lightBlue",
+                    textDecoration: "none",
+                  }}
+                >
+                  <NextLink href={`/blog/topic/${t.slug}`}>#{t.label}</NextLink>
+                </Link>
+              ))}
+            </HStack>
+          </Box>
+        )}
+
         <HStack
           justify="space-between"
           mt={10}
@@ -283,7 +338,7 @@ export default async function BlogArticlePage({
         <Box borderTop="1px solid" borderColor="whiteAlpha.100" py={12}>
           <Container maxW="container.xl">
             <Heading as="h2" size="lg" color="white" mb={6}>
-              More {beatLabel(post.beat)}
+              Keep reading
             </Heading>
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
               {related.map((p) => (

@@ -3,7 +3,8 @@
 // Generates /sitemap.xml for search engines.
 // ============================================
 import type { MetadataRoute } from "next";
-import { fetchPosts } from "@/lib/blog/api";
+import { fetchPosts, fetchTags } from "@/lib/blog/api";
+import { AUTHORS } from "@/lib/blog/authors";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -57,5 +58,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
-  return [...staticEntries, ...articleEntries];
+  // Author pages (E-E-A-T) — stable, low-churn.
+  const authorEntries: MetadataRoute.Sitemap = Object.values(AUTHORS).map(
+    (a) => ({
+      url: `${SITE_URL}/author/${a.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    }),
+  );
+
+  // Topic hubs — one per published tag; builds topical authority + internal
+  // links. Best-effort so a tags-API hiccup never breaks the sitemap.
+  const topicEntries: MetadataRoute.Sitemap = [];
+  try {
+    const tags = await fetchTags(200);
+    for (const t of tags) {
+      topicEntries.push({
+        url: `${SITE_URL}/blog/topic/${t.slug}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.6,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
+  return [
+    ...staticEntries,
+    ...articleEntries,
+    ...authorEntries,
+    ...topicEntries,
+  ];
 }

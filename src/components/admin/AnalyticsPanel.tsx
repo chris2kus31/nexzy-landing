@@ -9,6 +9,7 @@ import {
   SimpleGrid,
   Heading,
   Text,
+  Button,
   Spinner,
   Link,
 } from "@chakra-ui/react";
@@ -22,6 +23,34 @@ import {
   type CostBreakdownRow,
 } from "@/lib/admin/client";
 import { beatLabel } from "@/lib/blog/beats";
+import HealthPanel from "./HealthPanel";
+
+type Section = "content" | "cost" | "health";
+
+function SegButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      size="sm"
+      onClick={onClick}
+      borderRadius="md"
+      bg={active ? "nexzy.blue" : "transparent"}
+      color={active ? "white" : "nexzy.gray.100"}
+      fontWeight={active ? "700" : "500"}
+      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+      px={4}
+    >
+      {label}
+    </Button>
+  );
+}
 
 function usd(n: number): string {
   if (!n || n <= 0) return "$0";
@@ -185,37 +214,31 @@ export default function AnalyticsPanel() {
   const [cost, setCost] = useState<CostAnalytics | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [section, setSection] = useState<Section>("content");
+
+  const load = async () => {
+    setRefreshing(true);
+    try {
+      const [c, k] = await Promise.all([
+        getContentAnalytics(),
+        getCostAnalytics(),
+      ]);
+      setContent(c);
+      setCost(k);
+      setError("");
+    } catch (e) {
+      setError((e as Error)?.message || "Failed.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.all([getContentAnalytics(), getCostAnalytics()])
-      .then(([c, k]) => {
-        if (cancelled) return;
-        setContent(c);
-        setCost(k);
-        setError("");
-      })
-      .catch((e) => !cancelled && setError((e as Error)?.message || "Failed."))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  if (loading) {
-    return (
-      <Flex justify="center" py={10}>
-        <Spinner color="nexzy.blue" size="lg" />
-      </Flex>
-    );
-  }
-  if (error) {
-    return (
-      <Text color="red.300" fontSize="sm">
-        {error}
-      </Text>
-    );
-  }
 
   const delta =
     cost && cost.prev7d > 0
@@ -226,13 +249,69 @@ export default function AnalyticsPanel() {
   const up = delta >= 0;
 
   return (
-    <VStack align="stretch" gap={8}>
+    <VStack align="stretch" gap={6}>
+      {/* Sub-nav: one focused view at a time, keeps this tab from becoming a
+          giant scroll. Refresh only applies to the data views, not Health. */}
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={2}
+        wrap="wrap"
+        bg="whiteAlpha.50"
+        border="1px solid"
+        borderColor="whiteAlpha.200"
+        borderRadius="xl"
+        p={2}
+      >
+        <HStack gap={1} wrap="wrap">
+          <SegButton
+            label="Content"
+            active={section === "content"}
+            onClick={() => setSection("content")}
+          />
+          <SegButton
+            label="Cost"
+            active={section === "cost"}
+            onClick={() => setSection("cost")}
+          />
+          <SegButton
+            label="Pipeline health"
+            active={section === "health"}
+            onClick={() => setSection("health")}
+          />
+        </HStack>
+        {section !== "health" && (
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={load}
+            loading={refreshing}
+            loadingText="Refreshing…"
+          >
+            ↻ Refresh
+          </Button>
+        )}
+      </Flex>
+
+      {loading && section !== "health" && (
+        <Flex justify="center" py={10}>
+          <Spinner color="nexzy.blue" size="lg" />
+        </Flex>
+      )}
+      {error && section !== "health" && (
+        <Text color="red.300" fontSize="sm">
+          {error}
+        </Text>
+      )}
+
+      {section === "health" && <HealthPanel />}
+
       {/* CONTENT */}
-      {content && (
+      {section === "content" && content && (
         <Box>
-          <Heading size="md" color="nexzy.white" mb={3}>
-            Content
-          </Heading>
           <SimpleGrid columns={{ base: 3 }} gap={3} mb={4}>
             <Metric label="Reads today" value={num(content.readsToday)} />
             <Metric label="Reads · 7 days" value={num(content.reads7d)} />
@@ -268,18 +347,9 @@ export default function AnalyticsPanel() {
       )}
 
       {/* COST */}
-      {cost && (
+      {section === "cost" && cost && (
         <Box>
-          <Flex
-            align="center"
-            justify="space-between"
-            mb={3}
-            wrap="wrap"
-            gap={2}
-          >
-            <Heading size="md" color="nexzy.white">
-              Cost
-            </Heading>
+          <Flex align="center" justify="flex-end" mb={3} wrap="wrap" gap={2}>
             <Link
               href={COST_CSV_URL}
               px={3}

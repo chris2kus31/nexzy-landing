@@ -31,8 +31,12 @@ import {
   regeneratePost,
   uploadArticleImage,
   setFeatured,
+  setPostAuthor,
   type BlogPost,
 } from "@/lib/admin/client";
+
+/** Byline options for the author override. */
+const BYLINES = ["Chuy", "Eli", "Nexzy Editorial"];
 
 interface FormState {
   title: string;
@@ -141,6 +145,7 @@ function EditorContent({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
+  const [authorSel, setAuthorSel] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
@@ -148,6 +153,7 @@ function EditorContent({ id }: { id: string }) {
       .then((p) => {
         setPost(p);
         setForm(toForm(p));
+        setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
 
@@ -167,6 +173,7 @@ function EditorContent({ id }: { id: string }) {
       const updated = await fn();
       setPost(updated);
       setForm(toForm(updated));
+      setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
       setError((e as Error)?.message || `${label} failed.`);
@@ -425,6 +432,71 @@ function EditorContent({ id }: { id: string }) {
 
         <GridItem>
           <VStack align="stretch" gap={4}>
+            <Box
+              bg="whiteAlpha.50"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+            >
+              <Text {...labelProps}>Author / byline</Text>
+              <HStack gap={1} wrap="wrap" mb={2}>
+                {BYLINES.map((a) => {
+                  const active = authorSel === a;
+                  return (
+                    <Button
+                      key={a}
+                      size="xs"
+                      onClick={() => setAuthorSel(a)}
+                      bg={active ? "nexzy.blue" : "transparent"}
+                      color={active ? "white" : "nexzy.gray.100"}
+                      borderWidth="1px"
+                      borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                    >
+                      {a}
+                    </Button>
+                  );
+                })}
+              </HStack>
+              <HStack gap={2} wrap="wrap">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  loading={busy === "Byline updated"}
+                  disabled={authorSel === (post.author || "Nexzy Editorial")}
+                  onClick={() =>
+                    run("Byline updated", () => setPostAuthor(id, authorSel))
+                  }
+                >
+                  Set byline
+                </Button>
+                {!isPublished && authorSel !== "Nexzy Editorial" && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="nexzy.lightBlue"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    loading={busy === "Rewritten in voice"}
+                    onClick={() =>
+                      run("Rewritten in voice", () =>
+                        regeneratePost(id, "all", authorSel),
+                      )
+                    }
+                  >
+                    ↻ Rewrite in this voice
+                  </Button>
+                )}
+              </HStack>
+              <Text color="nexzy.gray.100" fontSize="10px" mt={2}>
+                “Set byline” relabels only. “Rewrite in this voice” regenerates
+                the draft in that author’s tone (drafts only).
+              </Text>
+            </Box>
+
             <Box>
               <Text {...labelProps}>Hero image</Text>
               {post.heroImageUrl ? (

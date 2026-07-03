@@ -36,7 +36,17 @@ export interface BlogPost {
 export class AuthError extends Error {}
 
 async function handle<T>(res: Response): Promise<T> {
-  if (res.status === 401) throw new AuthError("Not signed in");
+  if (res.status === 401) {
+    // Session expired / not signed in → bounce to the login page instead of
+    // leaving "Not signed in" scattered across the admin panels.
+    if (
+      typeof window !== "undefined" &&
+      !location.pathname.startsWith("/admin/login")
+    ) {
+      location.href = "/admin/login";
+    }
+    throw new AuthError("Not signed in");
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
@@ -104,6 +114,54 @@ export interface AdminHealth {
 
 export async function getHealth(): Promise<AdminHealth> {
   return handle(await fetch("/api/newsroom/admin/health"));
+}
+
+/** Quick: assign named authors (Chuy/Eli) to legacy/unbylined articles.
+ *  Guarded server-side by the maintenance secret. */
+export async function backfillAuthors(secret: string): Promise<{
+  scanned: number;
+  updated: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/backfill/authors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret }),
+    }),
+  );
+}
+
+/** Bulk reprocess: regenerate all published articles in their author's voice.
+ *  Guarded by the maintenance secret. `review:true` routes each into the review
+ *  queue instead of updating it live. */
+export async function reprocessPublished(
+  secret: string,
+  review = false,
+): Promise<{
+  published: number;
+  queued: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/reprocess/published", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret, review }),
+    }),
+  );
+}
+
+/** Reassign an article's byline (Chuy/Eli/Nexzy Editorial). Relabel only. */
+export async function setPostAuthor(
+  id: string,
+  author: string,
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/author`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author }),
+    }),
+  );
 }
 
 // ---- Analytics (Phase 7) ----
@@ -199,6 +257,7 @@ export interface Lead {
   sources: { name: string; url: string }[] | null;
   confidenceFacts: "high" | "medium" | "low" | null;
   status: string;
+  suggestedAuthor?: string;
   createdAt: string;
 }
 
@@ -213,10 +272,25 @@ export async function runDesk(): Promise<{ queued: true }> {
   );
 }
 
-/** "Write this": assign a lead to the writer. */
-export async function writeLead(id: string): Promise<Lead> {
+/** Email the current leads digest to the admin allowlist (both editors). */
+export async function sendLeadDigest(): Promise<{
+  leads: number;
+  sent: number;
+  failed: number;
+}> {
   return handle(
-    await fetch(`/api/newsroom/admin/leads/${id}/write`, { method: "POST" }),
+    await fetch("/api/newsroom/admin/leads/digest", { method: "POST" }),
+  );
+}
+
+/** "Write this": assign a lead to the writer, optionally choosing the author. */
+export async function writeLead(id: string, author?: string): Promise<Lead> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/write`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(author ? { author } : {}),
+    }),
   );
 }
 
@@ -322,16 +396,18 @@ export async function uploadArticleImage(
   );
 }
 
-/** Regenerate a draft's excerpt, body, or the whole article from its brief. */
+/** Regenerate a draft's excerpt, body, or the whole article from its brief.
+ *  Optional author rewrites the draft in that persona's voice (Chuy/Eli). */
 export async function regeneratePost(
   id: string,
   scope: "excerpt" | "body" | "all",
+  author?: string,
 ): Promise<BlogPost> {
   return handle(
     await fetch(`/api/newsroom/admin/posts/${id}/regenerate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scope }),
+      body: JSON.stringify(author ? { scope, author } : { scope }),
     }),
   );
 }

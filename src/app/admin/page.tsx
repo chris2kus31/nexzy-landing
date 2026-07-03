@@ -15,9 +15,9 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
-import HealthPanel from "@/components/admin/HealthPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
+import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import {
@@ -28,7 +28,13 @@ import {
   type AdminStats,
 } from "@/lib/admin/client";
 
-type Tab = "leads" | "queue" | "published" | "subscribers" | "tools";
+type Tab =
+  | "leads"
+  | "queue"
+  | "published"
+  | "subscribers"
+  | "analytics"
+  | "tools";
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -186,7 +192,12 @@ function AdminContent() {
             onClick={() => setTab("subscribers")}
           />
           <TabButton
-            label="Analytics & tools"
+            label="Analytics"
+            active={tab === "analytics"}
+            onClick={() => setTab("analytics")}
+          />
+          <TabButton
+            label="Tools"
             active={tab === "tools"}
             onClick={() => setTab("tools")}
           />
@@ -237,22 +248,22 @@ function AdminContent() {
 
       {tab === "subscribers" && <SubscribersPanel />}
 
+      {tab === "analytics" && <AnalyticsPanel />}
+
       {tab === "tools" && (
-        <VStack align="stretch" gap={8}>
-          <AnalyticsPanel />
+        <VStack align="stretch" gap={6}>
           <Box>
-            <Heading size="md" color="nexzy.white" mb={3}>
-              Pipeline health
+            <Heading size="md" color="nexzy.white" mb={1}>
+              Newsroom tools
             </Heading>
-            <HealthPanel />
+            <Text color="nexzy.gray.100" fontSize="sm">
+              Run the pipeline, commission a story, and maintain the article
+              archive.
+            </Text>
           </Box>
-          <Box>
-            <Heading size="md" color="nexzy.white" mb={3}>
-              Tools
-            </Heading>
-            <RunPipelinePanel onRan={load} />
-            <CommissionPanel onRan={load} />
-          </Box>
+          <RunPipelinePanel onRan={load} />
+          <CommissionPanel onRan={load} />
+          <BackfillAuthorsButton />
         </VStack>
       )}
     </>

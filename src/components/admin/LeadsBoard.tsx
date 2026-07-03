@@ -15,6 +15,7 @@ import {
 import {
   getLeads,
   runDesk,
+  sendLeadDigest,
   writeLead,
   skipLead,
   type Lead,
@@ -38,6 +39,8 @@ function trendColor(score: number): string {
   return "whiteAlpha.400";
 }
 
+const LEAD_AUTHORS = ["Chuy", "Eli"];
+
 function LeadCard({
   lead,
   onWrite,
@@ -45,11 +48,12 @@ function LeadCard({
   busy,
 }: {
   lead: Lead;
-  onWrite: (id: string) => void;
+  onWrite: (id: string, author: string) => void;
   onSkip: (id: string) => void;
   busy: boolean;
 }) {
   const [showSources, setShowSources] = useState(false);
+  const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
   const hot = lead.trendScore >= 60;
   return (
     <Box
@@ -128,11 +132,46 @@ function LeadCard({
             </Box>
           )}
         </Box>
-        <VStack gap={2} align="stretch" minW="110px">
+        <VStack gap={2} align="stretch" minW="120px">
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+              Write as{" "}
+              {lead.suggestedAuthor ? (
+                <Text as="span" color="nexzy.lightBlue" fontWeight="700">
+                  · {lead.suggestedAuthor} suggested ★
+                </Text>
+              ) : null}
+            </Text>
+            <HStack gap={1}>
+              {LEAD_AUTHORS.map((a) => {
+                const active = author === a;
+                return (
+                  <Box
+                    as="button"
+                    key={a}
+                    onClick={() => setAuthor(a)}
+                    flex={1}
+                    px={2}
+                    py="3px"
+                    borderRadius="md"
+                    fontSize="xs"
+                    fontWeight="600"
+                    borderWidth="1px"
+                    bg={active ? "nexzy.blue" : "transparent"}
+                    color={active ? "white" : "nexzy.gray.100"}
+                    borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                  >
+                    {a}
+                    {lead.suggestedAuthor === a ? " ★" : ""}
+                  </Box>
+                );
+              })}
+            </HStack>
+          </Box>
           <Button
             size="sm"
             colorPalette="blue"
-            onClick={() => onWrite(lead.id)}
+            onClick={() => onWrite(lead.id, author)}
             loading={busy}
           >
             Write this
@@ -163,6 +202,7 @@ export default function LeadsBoard() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [emailing, setEmailing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [beat, setBeat] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -195,10 +235,27 @@ export default function LeadsBoard() {
     }
   };
 
-  const doWrite = async (id: string) => {
+  const emailDigest = async () => {
+    setEmailing(true);
+    setMsg("");
+    try {
+      const r = await sendLeadDigest();
+      setMsg(
+        r.sent > 0
+          ? `Emailed ${r.leads} lead${r.leads === 1 ? "" : "s"} to ${r.sent} inbox${r.sent === 1 ? "" : "es"}.`
+          : "No leads to email right now.",
+      );
+    } catch (e) {
+      setMsg((e as Error)?.message || "Could not send the digest.");
+    } finally {
+      setEmailing(false);
+    }
+  };
+
+  const doWrite = async (id: string, author: string) => {
     setBusyId(id);
     try {
-      await writeLead(id);
+      await writeLead(id, author);
       setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
     } catch (e) {
       setMsg((e as Error)?.message || "Could not assign the lead.");
@@ -245,6 +302,18 @@ export default function LeadsBoard() {
             loadingText="…"
           >
             Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={emailDigest}
+            loading={emailing}
+            loadingText="Emailing…"
+          >
+            ✉ Email leads
           </Button>
           <Button
             size="sm"

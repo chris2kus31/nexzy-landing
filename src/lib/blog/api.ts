@@ -2,6 +2,7 @@
 // unauthenticated /newsroom/public endpoints and are safe to call from server
 // components (SSR/SEO).
 import "server-only";
+import type { TagInfo } from "./tags";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
@@ -41,12 +42,16 @@ export async function fetchPosts(params?: {
   q?: string;
   page?: number;
   pageSize?: number;
+  author?: string;
+  tag?: string;
 }): Promise<PostList> {
   const q = new URLSearchParams();
   if (params?.beat) q.set("beat", params.beat);
   if (params?.q) q.set("q", params.q);
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  if (params?.author) q.set("author", params.author);
+  if (params?.tag) q.set("tag", params.tag);
   // Web opts into featured-first ordering so a pinned story wins the hero. The
   // mobile app omits this and keeps strict newest-first.
   q.set("hero", "1");
@@ -71,6 +76,29 @@ export async function fetchTrending(
     `${API}/newsroom/public/trending?limit=${limit}&sort=${sort}`,
     { next: { revalidate: REVALIDATE } },
   );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchRelated(
+  slug: string,
+  limit = 3,
+): Promise<PublicPost[]> {
+  // Tag-aware related articles (shared tag first, then same beat) — the
+  // "Keep reading" rail + internal linking for topical authority.
+  const res = await fetch(
+    `${API}/newsroom/public/posts/${encodeURIComponent(slug)}/related?limit=${limit}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchTags(limit = 200): Promise<TagInfo[]> {
+  // Distinct published tags + counts, for the topic-hub index and sitemap.
+  const res = await fetch(`${API}/newsroom/public/tags?limit=${limit}`, {
+    next: { revalidate: REVALIDATE },
+  });
   if (!res.ok) return [];
   return res.json();
 }

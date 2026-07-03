@@ -47,7 +47,6 @@ export default function RunPipelinePanel({ onRan }: { onRan?: () => void }) {
       borderColor="whiteAlpha.200"
       borderRadius="xl"
       p={5}
-      mb={8}
     >
       <Heading size="md" color="nexzy.white" mb={1}>
         Run the pipeline
