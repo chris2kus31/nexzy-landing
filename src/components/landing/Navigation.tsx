@@ -35,7 +35,7 @@ export default function Navigation() {
   const navItems = [
     { label: "Features", href: "/#features" },
     { label: "How it Works", href: "/#how-it-works" },
-    { label: "News", href: "/blog" },
+    { label: "Game News", href: "/blog" },
     { label: "Download", href: "/#download" },
   ];
 

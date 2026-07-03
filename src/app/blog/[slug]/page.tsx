@@ -123,7 +123,7 @@ export default async function BlogArticlePage({
       {
         "@type": "ListItem",
         position: 2,
-        name: "News",
+        name: "Game News",
         item: `${SITE_URL}/blog`,
       },
       {
@@ -142,7 +142,7 @@ export default async function BlogArticlePage({
         {/* Visible breadcrumb (matches BreadcrumbList JSON-LD) */}
         <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
           <Link asChild color="nexzy.lightBlue">
-            <NextLink href="/blog">News</NextLink>
+            <NextLink href="/blog">Game News</NextLink>
           </Link>
           <Text>/</Text>
           <Link asChild color="nexzy.lightBlue">
