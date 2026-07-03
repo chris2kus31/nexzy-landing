@@ -6,6 +6,7 @@ import Navigation from "@/components/landing/Navigation";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
+import LatestNews from "@/components/landing/LatestNews";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 
@@ -17,6 +18,7 @@ export default function HomePage() {
         <Hero />
         <Features />
         <HowItWorks />
+        <LatestNews />
         <CTA />
       </main>
       <Footer />

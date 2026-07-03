@@ -1,12 +1,20 @@
 // ============================================
 // FILE: components/landing/EmailCapture.tsx
-// Reusable launch-updates email capture.
+// Reusable newsletter email capture (gaming tips, deals + bonus coins).
 // Posts to /api/subscribe (Next.js route handler).
 // ============================================
 "use client";
 
 import { useState } from "react";
-import { Box, Stack, HStack, Input, Button, Text, Icon } from "@chakra-ui/react";
+import {
+  Box,
+  Stack,
+  HStack,
+  Input,
+  Button,
+  Text,
+  Icon,
+} from "@chakra-ui/react";
 import { HiSparkles } from "react-icons/hi";
 import { IoCheckmarkCircle } from "react-icons/io5";
 
@@ -41,7 +49,9 @@ export default function EmailCapture({
       });
       if (!res.ok) throw new Error("Request failed");
       setStatus("success");
-      setMessage("You're in! Watch your inbox for launch updates and bonus coins. 🎮");
+      setMessage(
+        "You're in! Watch your inbox for gaming tips, deals, and bonus coins. 🎮",
+      );
       setEmail("");
     } catch {
       setStatus("error");
@@ -73,14 +83,18 @@ export default function EmailCapture({
   }
 
   return (
-    <Box as="form" onSubmit={onSubmit} w={{ base: "full", sm: onCta ? "lg" : "md" }}>
+    <Box
+      as="form"
+      onSubmit={onSubmit}
+      w={{ base: "full", sm: onCta ? "lg" : "md" }}
+    >
       <Stack gap={2}>
         <HStack gap={2} justify={onCta ? "center" : "flex-start"}>
           <Icon color="nexzy.yellow" boxSize={4}>
             <HiSparkles />
           </Icon>
           <Text fontSize="sm" fontWeight="medium" color="nexzy.white">
-            Get launch updates + bonus coins at sign-up
+            Get gaming tips, deals + bonus coins in your inbox
           </Text>
         </HStack>
         <Stack direction={{ base: "column", sm: "row" }} gap={3} w="full">
@@ -113,7 +127,7 @@ export default function EmailCapture({
             _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
             transition="all 0.2s"
           >
-            Notify Me
+            Sign Up
           </Button>
         </Stack>
         {status === "error" && (

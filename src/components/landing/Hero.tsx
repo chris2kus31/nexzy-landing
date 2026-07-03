@@ -196,7 +196,7 @@ export default function Hero() {
               </Button>
             </Stack>
 
-            {/* Launch-updates email capture */}
+            {/* Newsletter email capture (tips, deals + bonus coins) */}
             <Box pt={2} w={{ base: "full", lg: "auto" }}>
               <EmailCapture variant="hero" source="hero" />
             </Box>

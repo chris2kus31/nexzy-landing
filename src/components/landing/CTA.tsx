@@ -28,7 +28,8 @@ export default function CTA() {
   return (
     <Box
       as="section"
-      py={{ base: 16, md: 24 }}
+      pt={{ base: 10, md: 14 }}
+      pb={{ base: 16, md: 24 }}
       bg="nexzy.navy"
       position="relative"
       id="download"
@@ -152,11 +153,7 @@ export default function CTA() {
               transition="all 0.3s"
               boxShadow="0 4px 20px rgba(255,255,255,0.2)"
             >
-              <a
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
                 <HStack gap={3}>
                   <FaApple size={24} />
                   <VStack gap={0} align="start">
@@ -209,7 +206,7 @@ export default function CTA() {
             </Button>
           </Stack>
 
-          {/* Launch-updates email capture */}
+          {/* Newsletter email capture (tips, deals + bonus coins) */}
           <EmailCapture variant="cta" source="cta" />
 
           {/* Social Proof */}
@@ -222,7 +219,8 @@ export default function CTA() {
               ))}
             </HStack>
             <Text color="nexzy.gray.100" fontSize="sm">
-              Be among the first to experience gaming with AI assistance
+              Now live on iOS and Android — download free and start playing
+              smarter today.
             </Text>
 
             {/* Features highlight */}

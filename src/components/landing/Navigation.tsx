@@ -95,7 +95,7 @@ export default function Navigation() {
               _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
               transition="all 0.2s"
             >
-              <NextLink href="/#download">Get Started</NextLink>
+              <NextLink href="/#download">Download</NextLink>
             </Button>
           </HStack>
 
@@ -164,7 +164,7 @@ export default function Navigation() {
                 color="nexzy.navy"
               >
                 <NextLink href="/#download" onClick={() => setIsOpen(false)}>
-                  Get Started
+                  Download
                 </NextLink>
               </Button>
             </Stack>
