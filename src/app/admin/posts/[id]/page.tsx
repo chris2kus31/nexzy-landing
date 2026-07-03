@@ -28,6 +28,7 @@ import {
   sendBackPost,
   unpublishPost,
   regenerateImage,
+  regeneratePost,
   setFeatured,
   type BlogPost,
 } from "@/lib/admin/client";
@@ -277,10 +278,13 @@ function EditorContent({ id }: { id: string }) {
           <Button
             size="sm"
             onClick={() => {
-              const reason = window.prompt("Reason (optional):") || undefined;
-              run("Sent back", () => sendBackPost(id, reason));
+              const reason =
+                window.prompt(
+                  "What should the writer fix? (guides the AI rewrite)",
+                ) || undefined;
+              run("Sent back — rewriting", () => sendBackPost(id, reason));
             }}
-            loading={busy === "Sent back"}
+            loading={busy === "Sent back — rewriting"}
             variant="outline"
             color="orange.300"
             borderColor="orange.400/40"
@@ -328,7 +332,27 @@ function EditorContent({ id }: { id: string }) {
               />
             </Box>
             <Box>
-              <Text {...labelProps}>Excerpt</Text>
+              <Flex align="center" justify="space-between" mb={1}>
+                <Text {...labelProps} mb={0}>
+                  Excerpt
+                </Text>
+                {!isPublished && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="nexzy.lightBlue"
+                    loading={busy === "Excerpt regenerated"}
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() =>
+                      run("Excerpt regenerated", () =>
+                        regeneratePost(id, "excerpt"),
+                      )
+                    }
+                  >
+                    ↻ Regenerate
+                  </Button>
+                )}
+              </Flex>
               <Textarea
                 value={form.excerpt}
                 onChange={(e) => set("excerpt", e.target.value)}
@@ -337,7 +361,25 @@ function EditorContent({ id }: { id: string }) {
               />
             </Box>
             <Box>
-              <Text {...labelProps}>Body (markdown)</Text>
+              <Flex align="center" justify="space-between" mb={1}>
+                <Text {...labelProps} mb={0}>
+                  Body (markdown)
+                </Text>
+                {!isPublished && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="nexzy.lightBlue"
+                    loading={busy === "Body regenerated"}
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() =>
+                      run("Body regenerated", () => regeneratePost(id, "body"))
+                    }
+                  >
+                    ↻ Regenerate
+                  </Button>
+                )}
+              </Flex>
               <Textarea
                 value={form.bodyMarkdown}
                 onChange={(e) => set("bodyMarkdown", e.target.value)}

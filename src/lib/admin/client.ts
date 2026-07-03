@@ -250,6 +250,20 @@ export async function regenerateImage(
   );
 }
 
+/** Regenerate a draft's excerpt, body, or the whole article from its brief. */
+export async function regeneratePost(
+  id: string,
+  scope: "excerpt" | "body" | "all",
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/regenerate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scope }),
+    }),
+  );
+}
+
 /** Pin/unpin an article as the front-page hero (single-featured). */
 export async function setFeatured(
   id: string,
