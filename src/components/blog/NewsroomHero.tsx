@@ -7,6 +7,10 @@ import TrendingRail from "@/components/blog/TrendingRail";
  * Front-page hero: the top story as a large visual card on the left, with a
  * tabbed popularity rail (🔥 Trending / Most read) on the right. Server-rendered
  * shell; the rail itself is a client component so tab switching is instant.
+ *
+ * The rail shows the TRUE ranking (it does not hide the hero story) — on a small
+ * blog the hero is often the most-read piece, so excluding it made the real #1
+ * look missing. A little overlap between the hero and the list is expected.
  */
 export default function NewsroomHero({
   featured,
@@ -28,7 +32,7 @@ export default function NewsroomHero({
           <FeaturedCard post={featured} />
         </GridItem>
         <GridItem minW={0}>
-          <TrendingRail hot={hot} reads={reads} excludeSlug={featured.slug} />
+          <TrendingRail hot={hot} reads={reads} />
         </GridItem>
       </Grid>
     </Box>

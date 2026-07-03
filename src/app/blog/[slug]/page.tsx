@@ -228,7 +228,13 @@ export default async function BlogArticlePage({
           </Box>
         )}
         {imageCredit && (
-          <Text color="gray.500" fontSize="xs" mb={8}>
+          <Text
+            color="gray.600"
+            fontSize="11px"
+            fontStyle="italic"
+            textAlign="right"
+            mb={8}
+          >
             {imageCredit}
           </Text>
         )}
