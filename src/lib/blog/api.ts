@@ -47,6 +47,9 @@ export async function fetchPosts(params?: {
   if (params?.q) q.set("q", params.q);
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  // Web opts into featured-first ordering so a pinned story wins the hero. The
+  // mobile app omits this and keeps strict newest-first.
+  q.set("hero", "1");
   const qs = q.toString();
 
   const res = await fetch(`${API}/newsroom/public/posts${qs ? `?${qs}` : ""}`, {

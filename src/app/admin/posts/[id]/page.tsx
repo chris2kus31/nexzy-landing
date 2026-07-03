@@ -275,37 +275,41 @@ function EditorContent({ id }: { id: string }) {
               Unpublish
             </Button>
           )}
-          <Button
-            size="sm"
-            onClick={() => {
-              const reason =
-                window.prompt(
-                  "What should the writer fix? (guides the AI rewrite)",
-                ) || undefined;
-              run("Sent back — rewriting", () => sendBackPost(id, reason));
-            }}
-            loading={busy === "Sent back — rewriting"}
-            variant="outline"
-            color="orange.300"
-            borderColor="orange.400/40"
-            _hover={{ bg: "whiteAlpha.100" }}
-          >
-            Send back
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              const reason = window.prompt("Reason (optional):") || undefined;
-              run("Rejected", () => rejectPost(id, reason));
-            }}
-            loading={busy === "Rejected"}
-            variant="outline"
-            color="red.300"
-            borderColor="red.400/40"
-            _hover={{ bg: "whiteAlpha.100" }}
-          >
-            Reject
-          </Button>
+          {!isPublished && (
+            <Button
+              size="sm"
+              onClick={() => {
+                const reason =
+                  window.prompt(
+                    "What should the writer fix? (guides the AI rewrite)",
+                  ) || undefined;
+                run("Sent back — rewriting", () => sendBackPost(id, reason));
+              }}
+              loading={busy === "Sent back — rewriting"}
+              variant="outline"
+              color="orange.300"
+              borderColor="orange.400/40"
+              _hover={{ bg: "whiteAlpha.100" }}
+            >
+              Send back
+            </Button>
+          )}
+          {!isPublished && (
+            <Button
+              size="sm"
+              onClick={() => {
+                const reason = window.prompt("Reason (optional):") || undefined;
+                run("Rejected", () => rejectPost(id, reason));
+              }}
+              loading={busy === "Rejected"}
+              variant="outline"
+              color="red.300"
+              borderColor="red.400/40"
+              _hover={{ bg: "whiteAlpha.100" }}
+            >
+              Reject
+            </Button>
+          )}
         </HStack>
       </Flex>
 
