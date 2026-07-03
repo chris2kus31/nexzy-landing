@@ -106,6 +106,64 @@ export async function getHealth(): Promise<AdminHealth> {
   return handle(await fetch("/api/newsroom/admin/health"));
 }
 
+// ---- Analytics (Phase 7) ----
+
+export interface TopArticle {
+  slug: string;
+  title: string;
+  beat: string;
+  reads: number;
+}
+
+export interface ContentAnalytics {
+  readsToday: number;
+  reads7d: number;
+  reads30d: number;
+  topToday: TopArticle[];
+  top7d: TopArticle[];
+  topAllTime: TopArticle[];
+  byBeat: { beat: string; reads: number }[];
+}
+
+export interface CostBreakdownRow {
+  key: string;
+  runs: number;
+  cost: number;
+}
+
+export interface CostAnalytics {
+  costToday: number;
+  cost7d: number;
+  cost30d: number;
+  costMtd: number;
+  projectedMonth: number;
+  prev7d: number;
+  curr7d: number;
+  costPerArticle30d: number;
+  publishedArticles30d: number;
+  byModel: CostBreakdownRow[];
+  byAgent: CostBreakdownRow[];
+  byBeat: CostBreakdownRow[];
+  priciestRuns: {
+    agent: string;
+    model: string | null;
+    cost: number;
+    at: string;
+    articleId: string | null;
+  }[];
+}
+
+export async function getContentAnalytics(): Promise<ContentAnalytics> {
+  return handle(await fetch("/api/newsroom/admin/analytics/content"));
+}
+
+export async function getCostAnalytics(): Promise<CostAnalytics> {
+  return handle(await fetch("/api/newsroom/admin/analytics/cost"));
+}
+
+/** Direct download URL for the cost CSV (goes through the admin proxy). */
+export const COST_CSV_URL = "/api/newsroom/admin/analytics/cost.csv";
+
 export interface Subscriber {
   id: string;
   email: string;

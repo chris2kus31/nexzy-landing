@@ -5,6 +5,7 @@ import {
   Box,
   Flex,
   HStack,
+  VStack,
   SimpleGrid,
   Heading,
   Text,
@@ -16,6 +17,7 @@ import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
 import HealthPanel from "@/components/admin/HealthPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
+import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import {
@@ -184,7 +186,7 @@ function AdminContent() {
             onClick={() => setTab("subscribers")}
           />
           <TabButton
-            label="Tools & health"
+            label="Analytics & tools"
             active={tab === "tools"}
             onClick={() => setTab("tools")}
           />
@@ -236,11 +238,22 @@ function AdminContent() {
       {tab === "subscribers" && <SubscribersPanel />}
 
       {tab === "tools" && (
-        <Box>
-          <RunPipelinePanel onRan={load} />
-          <CommissionPanel onRan={load} />
-          <HealthPanel />
-        </Box>
+        <VStack align="stretch" gap={8}>
+          <AnalyticsPanel />
+          <Box>
+            <Heading size="md" color="nexzy.white" mb={3}>
+              Pipeline health
+            </Heading>
+            <HealthPanel />
+          </Box>
+          <Box>
+            <Heading size="md" color="nexzy.white" mb={3}>
+              Tools
+            </Heading>
+            <RunPipelinePanel onRan={load} />
+            <CommissionPanel onRan={load} />
+          </Box>
+        </VStack>
       )}
     </>
   );
