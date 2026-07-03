@@ -308,6 +308,20 @@ export async function regenerateImage(
   );
 }
 
+/** Upload a custom hero image (base64 data URL) — swaps the article's image. */
+export async function uploadArticleImage(
+  id: string,
+  dataUrl: string,
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    }),
+  );
+}
+
 /** Regenerate a draft's excerpt, body, or the whole article from its brief. */
 export async function regeneratePost(
   id: string,

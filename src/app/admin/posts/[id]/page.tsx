@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -29,6 +29,7 @@ import {
   unpublishPost,
   regenerateImage,
   regeneratePost,
+  uploadArticleImage,
   setFeatured,
   type BlogPost,
 } from "@/lib/admin/client";
@@ -140,6 +141,7 @@ function EditorContent({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
     getPost(id)
@@ -171,6 +173,23 @@ function EditorContent({ id }: { id: string }) {
     } finally {
       setBusy("");
     }
+  };
+
+  const onPickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image is too large (max 10 MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      run("Image uploaded", () => uploadArticleImage(id, dataUrl));
+    };
+    reader.onerror = () => setError("Could not read that file.");
+    reader.readAsDataURL(file);
   };
 
   const save = () =>
@@ -431,24 +450,44 @@ function EditorContent({ id }: { id: string }) {
                   </Text>
                 </Box>
               )}
-              <Button
-                mt={2}
-                size="xs"
-                w="full"
-                variant="outline"
-                color="nexzy.white"
-                borderColor="whiteAlpha.300"
-                _hover={{ bg: "whiteAlpha.100" }}
-                loading={busy === "Image re-queued"}
-                onClick={() =>
-                  run("Image re-queued", async () => {
-                    await regenerateImage(id);
-                    return getPost(id);
-                  })
-                }
-              >
-                Regenerate image
-              </Button>
+              <HStack mt={2} gap={2}>
+                <Button
+                  size="xs"
+                  flex={1}
+                  variant="outline"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  loading={busy === "Image uploaded"}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  ↑ Upload image
+                </Button>
+                <Button
+                  size="xs"
+                  flex={1}
+                  variant="outline"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  loading={busy === "Image re-queued"}
+                  onClick={() =>
+                    run("Image re-queued", async () => {
+                      await regenerateImage(id);
+                      return getPost(id);
+                    })
+                  }
+                >
+                  ↻ Regenerate
+                </Button>
+              </HStack>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={onPickImage}
+              />
               <Text color="nexzy.gray.100" fontSize="xs" mt={2}>
                 {post.imageCredit}
               </Text>
