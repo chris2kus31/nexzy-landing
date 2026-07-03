@@ -23,6 +23,7 @@ export interface PublicPost {
   publishedAt: string | null;
   updatedAt: string | null;
   viewCount: number;
+  featured: boolean;
 }
 
 export interface PostList {
@@ -57,11 +58,16 @@ export async function fetchPosts(params?: {
   return res.json();
 }
 
-export async function fetchTrending(limit = 5): Promise<PublicPost[]> {
-  // ISR-cached: "Most read" can be a few minutes stale — fine, and much faster.
-  const res = await fetch(`${API}/newsroom/public/trending?limit=${limit}`, {
-    next: { revalidate: REVALIDATE },
-  });
+export async function fetchTrending(
+  limit = 5,
+  sort: "hot" | "reads" = "hot",
+): Promise<PublicPost[]> {
+  // ISR-cached: the popularity rail can be a few minutes stale — fine, and much
+  // faster. sort=hot = time-decayed trending; sort=reads = lifetime "Most read".
+  const res = await fetch(
+    `${API}/newsroom/public/trending?limit=${limit}&sort=${sort}`,
+    { next: { revalidate: REVALIDATE } },
+  );
   if (!res.ok) return [];
   return res.json();
 }

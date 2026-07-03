@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Flex, HStack, Button, Input, Icon } from "@chakra-ui/react";
 import { HiSearch, HiX } from "react-icons/hi";
-import { BEATS } from "@/lib/blog/beats";
+import { BEATS, beatPalette } from "@/lib/blog/beats";
 
 /**
  * Category pills + search box. State lives in the URL (?beat=&q=) so every
@@ -46,21 +46,30 @@ export default function NewsControls({ beat, q }: { beat: string; q: string }) {
       mb={8}
     >
       <HStack gap={2} flexWrap="wrap">
-        {[{ key: "all", label: "All" }, ...BEATS].map((b) => (
-          <Button
-            key={b.key}
-            size="sm"
-            borderRadius="full"
-            variant={active === b.key ? "solid" : "outline"}
-            bg={active === b.key ? "nexzy.blue" : "transparent"}
-            color="white"
-            borderColor="nexzy.blue/40"
-            onClick={() => go(b.key, term)}
-            _hover={{ bg: active === b.key ? "nexzy.blue" : "whiteAlpha.100" }}
-          >
-            {b.label}
-          </Button>
-        ))}
+        {[{ key: "all", label: "All" }, ...BEATS].map((b) => {
+          const isActive = active === b.key;
+          // "All" stays on the house blue; each beat wears its own accent so the
+          // filter row reads like a color-coded newsstand.
+          const palette = b.key === "all" ? "blue" : beatPalette(b.key);
+          return (
+            <Button
+              key={b.key}
+              size="sm"
+              borderRadius="full"
+              colorPalette={palette}
+              variant={isActive ? "solid" : "outline"}
+              color="white"
+              borderColor={isActive ? "transparent" : "colorPalette.400/40"}
+              onClick={() => go(b.key, term)}
+              _hover={{
+                bg: isActive ? undefined : "colorPalette.400/15",
+                borderColor: "colorPalette.400/70",
+              }}
+            >
+              {b.label}
+            </Button>
+          );
+        })}
       </HStack>
 
       <Box position="relative" w={{ base: "full", md: "320px" }}>

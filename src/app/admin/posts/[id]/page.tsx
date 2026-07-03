@@ -28,6 +28,7 @@ import {
   sendBackPost,
   unpublishPost,
   regenerateImage,
+  setFeatured,
   type BlogPost,
 } from "@/lib/admin/client";
 
@@ -240,6 +241,24 @@ function EditorContent({ id }: { id: string }) {
               _hover={{ bg: "green.600" }}
             >
               Approve & publish
+            </Button>
+          )}
+          {isPublished && (
+            <Button
+              size="sm"
+              onClick={() =>
+                run(post.featured ? "Unfeatured" : "Featured", () =>
+                  setFeatured(id, !post.featured),
+                )
+              }
+              loading={busy === "Featured" || busy === "Unfeatured"}
+              variant={post.featured ? "solid" : "outline"}
+              bg={post.featured ? "orange.400" : "transparent"}
+              color={post.featured ? "nexzy.navy" : "orange.300"}
+              borderColor="orange.400/50"
+              _hover={{ bg: post.featured ? "orange.300" : "whiteAlpha.100" }}
+            >
+              {post.featured ? "★ Featured" : "☆ Feature"}
             </Button>
           )}
           {isPublished && (

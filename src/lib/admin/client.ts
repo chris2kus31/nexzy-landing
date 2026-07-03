@@ -28,6 +28,7 @@ export interface BlogPost {
   reviewedBy: string | null;
   reviewedAt: string | null;
   publishedAt: string | null;
+  featured: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -245,6 +246,20 @@ export async function regenerateImage(
   return handle(
     await fetch(`/api/newsroom/admin/posts/${id}/regenerate-image`, {
       method: "POST",
+    }),
+  );
+}
+
+/** Pin/unpin an article as the front-page hero (single-featured). */
+export async function setFeatured(
+  id: string,
+  featured: boolean,
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/feature`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ featured }),
     }),
   );
 }

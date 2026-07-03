@@ -10,6 +10,8 @@ export const BEATS: Beat[] = [
   { key: "console_hardware", label: "Hardware", colorPalette: "purple" },
   { key: "game_movies_tv", label: "Movies & TV", colorPalette: "pink" },
   { key: "deals", label: "Deals", colorPalette: "green" },
+  { key: "patch_notes", label: "Patch Notes", colorPalette: "orange" },
+  { key: "reviews", label: "Reviews", colorPalette: "teal" },
 ];
 
 export function beatLabel(key: string): string {

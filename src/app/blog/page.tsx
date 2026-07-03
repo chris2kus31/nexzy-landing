@@ -4,17 +4,15 @@ import {
   Container,
   Heading,
   Text,
+  HStack,
   SimpleGrid,
-  Grid,
-  GridItem,
 } from "@chakra-ui/react";
 import { fetchPosts, fetchTrending } from "@/lib/blog/api";
 import { beatLabel } from "@/lib/blog/beats";
 import NewsControls from "@/components/blog/NewsControls";
-import FeaturedCard from "@/components/blog/FeaturedCard";
+import NewsroomHero from "@/components/blog/NewsroomHero";
 import BlogCard from "@/components/blog/BlogCard";
 import Pagination from "@/components/blog/Pagination";
-import MostRead from "@/components/blog/MostRead";
 import NewsletterSignup from "@/components/blog/NewsletterSignup";
 
 const PAGE_SIZE = 12;
@@ -67,73 +65,82 @@ export default async function BlogIndexPage({
   const beat = sp.beat || "";
   const q = sp.q || "";
 
-  const [{ items, total }, trending] = await Promise.all([
+  const [{ items, total }, hot, reads] = await Promise.all([
     fetchPosts({
       beat: beat || undefined,
       q: q || undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
-    fetchTrending(5),
+    fetchTrending(5, "hot"),
+    fetchTrending(5, "reads"),
   ]);
 
-  const showFeatured = page === 1 && !beat && !q && items.length > 0;
-  const featured = showFeatured ? items[0] : null;
+  const showHero = page === 1 && !beat && !q && items.length > 0;
+  const featured = showHero ? items[0] : null;
   const grid = featured ? items.slice(1) : items;
 
   return (
     <Container maxW="container.xl" py={{ base: 8, md: 14 }}>
       <Box mb={{ base: 8, md: 10 }}>
-        <Heading as="h1" size={{ base: "2xl", md: "4xl" }} color="white" mb={3}>
-          Nexzy News
-        </Heading>
+        <HStack gap={3} align="baseline" wrap="wrap" mb={3}>
+          <Heading as="h1" size={{ base: "2xl", md: "4xl" }} color="white">
+            Nexzy{" "}
+            <Text as="span" color="nexzy.blue">
+              News
+            </Text>
+          </Heading>
+          <HStack
+            gap={2}
+            px={2.5}
+            py={1}
+            borderRadius="full"
+            bg="orange.400/12"
+            alignSelf="center"
+          >
+            <Box w="6px" h="6px" borderRadius="full" bg="orange.300" />
+            <Text
+              color="orange.300"
+              fontSize="xs"
+              fontWeight="700"
+              letterSpacing="wide"
+            >
+              Live desk
+            </Text>
+          </HStack>
+        </HStack>
         <Text color="gray.300" fontSize={{ base: "md", md: "lg" }} maxW="2xl">
-          Gaming news across PC and every console — plus hardware, game
-          adaptations, and the best deals. Written by the Nexzy newsroom.
+          Every console, every launch, every leak — the games desk that reports
+          it straight and never buries the lede.
         </Text>
       </Box>
+
+      {featured && <NewsroomHero featured={featured} hot={hot} reads={reads} />}
 
       <NewsControls beat={beat} q={q} />
 
       {items.length === 0 ? (
         <Text color="gray.400" py={10}>
           {beat || q
-            ? "No articles match your search."
-            : "No articles published yet. Check back soon."}
+            ? "Nothing matches — even our newsroom draws a blank sometimes. Try another filter."
+            : "The presses are warm but the ink's still drying. Check back soon."}
         </Text>
       ) : (
-        <Grid
-          templateColumns={{ base: "1fr", lg: "1fr 300px" }}
-          gap={{ base: 10, lg: 8 }}
-          alignItems="start"
-        >
-          <GridItem minW={0}>
-            {featured && (
-              <Box mb={8}>
-                <FeaturedCard post={featured} />
-              </Box>
-            )}
-            <SimpleGrid columns={{ base: 1, sm: 2 }} gap={6}>
-              {grid.map((post) => (
-                <BlogCard key={post.slug} post={post} />
-              ))}
-            </SimpleGrid>
+        <>
+          <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={6}>
+            {grid.map((post) => (
+              <BlogCard key={post.slug} post={post} />
+            ))}
+          </SimpleGrid>
 
-            <Pagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              total={total}
-              beat={beat}
-              q={q}
-            />
-          </GridItem>
-
-          <GridItem>
-            <Box position={{ lg: "sticky" }} top="84px">
-              <MostRead posts={trending} />
-            </Box>
-          </GridItem>
-        </Grid>
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            beat={beat}
+            q={q}
+          />
+        </>
       )}
 
       <Box mt={{ base: 12, md: 16 }}>

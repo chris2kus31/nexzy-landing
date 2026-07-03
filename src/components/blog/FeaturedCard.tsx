@@ -8,6 +8,7 @@ export default function FeaturedCard({ post }: { post: PublicPost }) {
   return (
     <NextLink href={`/blog/${post.slug}`} style={{ display: "block" }}>
       <Box
+        className="group"
         position="relative"
         borderRadius="2xl"
         overflow="hidden"
@@ -21,14 +22,21 @@ export default function FeaturedCard({ post }: { post: PublicPost }) {
           <Box position="absolute" inset={0} className="nexzy-img-skeleton" />
         )}
         {post.heroImageUrl ? (
-          <NextImage
-            src={post.heroImageUrl}
-            alt={post.imageAlt || post.title}
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 800px"
-            style={{ objectFit: "cover" }}
-          />
+          <Box
+            position="absolute"
+            inset={0}
+            transition="transform 0.4s"
+            _groupHover={{ transform: "scale(1.04)" }}
+          >
+            <NextImage
+              src={post.heroImageUrl}
+              alt={post.imageAlt || post.title}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 800px"
+              style={{ objectFit: "cover" }}
+            />
+          </Box>
         ) : (
           <Box position="absolute" inset={0} bg="nexzy.blue/15" />
         )}
