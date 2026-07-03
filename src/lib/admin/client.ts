@@ -126,6 +126,48 @@ export async function getSubscribers(): Promise<SubscribersResult> {
   return handle(await fetch("/api/newsroom/admin/subscribers"));
 }
 
+// ---- Assignment Desk: Leads Board ----
+
+export interface Lead {
+  id: string;
+  beat: string;
+  headline: string | null;
+  workingTitle: string;
+  whyItMatters: string | null;
+  trendScore: number;
+  sourceCount: number;
+  latestSourceDate: string | null;
+  sources: { name: string; url: string }[] | null;
+  confidenceFacts: "high" | "medium" | "low" | null;
+  status: string;
+  createdAt: string;
+}
+
+export async function getLeads(): Promise<Lead[]> {
+  return handle(await fetch("/api/newsroom/admin/leads"));
+}
+
+/** Trigger an Assignment Desk scan right now. */
+export async function runDesk(): Promise<{ queued: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/desk/run", { method: "POST" }),
+  );
+}
+
+/** "Write this": assign a lead to the writer. */
+export async function writeLead(id: string): Promise<Lead> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/write`, { method: "POST" }),
+  );
+}
+
+/** "Skip": bury a lead. */
+export async function skipLead(id: string): Promise<Lead> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/skip`, { method: "POST" }),
+  );
+}
+
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,

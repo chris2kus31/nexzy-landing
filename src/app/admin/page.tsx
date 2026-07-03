@@ -16,6 +16,7 @@ import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
 import HealthPanel from "@/components/admin/HealthPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
+import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import {
   getQueue,
@@ -25,7 +26,7 @@ import {
   type AdminStats,
 } from "@/lib/admin/client";
 
-type Tab = "queue" | "published" | "subscribers" | "tools";
+type Tab = "leads" | "queue" | "published" | "subscribers" | "tools";
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -101,7 +102,7 @@ function AdminContent() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<Tab>("queue");
+  const [tab, setTab] = useState<Tab>("leads");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -161,6 +162,11 @@ function AdminContent() {
       >
         <HStack gap={1} wrap="wrap">
           <TabButton
+            label="Leads"
+            active={tab === "leads"}
+            onClick={() => setTab("leads")}
+          />
+          <TabButton
             label="Review queue"
             count={queue.length}
             active={tab === "queue"}
@@ -198,6 +204,8 @@ function AdminContent() {
           </Button>
         )}
       </Flex>
+
+      {tab === "leads" && <LeadsBoard />}
 
       {tab === "queue" && (
         <Box>
