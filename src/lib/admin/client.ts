@@ -189,18 +189,23 @@ export interface MarketingRecommendation {
   captions: Partial<Record<SocialChannel, string>>;
 }
 
-/** Which channels have credentials configured. */
+/** Which channels have credentials configured + whether auto-post is on. */
 export async function getMarketingChannels(): Promise<{
   enabled: SocialChannel[];
+  autoPost: boolean;
 }> {
   return handle(await fetch("/api/newsroom/admin/marketing/channels"));
 }
 
-/** Publicist recommendations: what to post, where, with draft captions. */
-export async function getMarketingRecommendations(): Promise<
-  MarketingRecommendation[]
-> {
-  return handle(await fetch("/api/newsroom/admin/marketing/recommendations"));
+/** Publicist recommendations. Optionally limit to specific channels (saves tokens). */
+export async function getMarketingRecommendations(
+  channels?: SocialChannel[],
+): Promise<MarketingRecommendation[]> {
+  const qs =
+    channels && channels.length ? `?channels=${channels.join(",")}` : "";
+  return handle(
+    await fetch(`/api/newsroom/admin/marketing/recommendations${qs}`),
+  );
 }
 
 /** Draft a caption per channel from a free topic, in an author's voice.

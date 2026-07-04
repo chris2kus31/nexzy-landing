@@ -532,13 +532,20 @@ function Composer({ enabled }: { enabled: SocialChannel[] }) {
 
 export default function MarketingPanel() {
   const [enabled, setEnabled] = useState<SocialChannel[]>([]);
+  const [autoPost, setAutoPost] = useState(false);
+  const [genChannels, setGenChannels] = useState<SocialChannel[]>([]);
   const [recs, setRecs] = useState<MarketingRecommendation[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     getMarketingChannels()
-      .then((r) => setEnabled(r.enabled))
+      .then((r) => {
+        setEnabled(r.enabled);
+        setAutoPost(r.autoPost);
+        // Default generation to the configured channels (or all if none yet).
+        setGenChannels(r.enabled.length ? r.enabled : CHANNELS);
+      })
       .catch(() => setEnabled([]));
   }, []);
 
@@ -546,7 +553,7 @@ export default function MarketingPanel() {
     setLoading(true);
     setErr("");
     try {
-      setRecs(await getMarketingRecommendations());
+      setRecs(await getMarketingRecommendations(genChannels));
     } catch (e) {
       setErr((e as Error)?.message || "Could not generate recommendations.");
     } finally {
@@ -562,17 +569,22 @@ export default function MarketingPanel() {
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
           The publicist recommends what to post and where; you adjust the
-          channels + captions and post. Configured channels:{" "}
-          {enabled.length
-            ? enabled.map((c) => LABEL[c]).join(", ")
-            : "none yet"}
-          .
+          channels + captions and post.
         </Text>
+        <HStack gap={2} mt={2} wrap="wrap">
+          <Badge colorPalette="gray" variant="subtle">
+            Configured:{" "}
+            {enabled.length ? enabled.map((c) => LABEL[c]).join(", ") : "none"}
+          </Badge>
+          <Badge colorPalette={autoPost ? "green" : "gray"} variant="subtle">
+            Auto-post on publish: {autoPost ? "ON" : "OFF"}
+          </Badge>
+        </HStack>
       </Box>
 
       {/* Recommendations */}
       <Box>
-        <Flex align="center" justify="space-between" mb={3} gap={2} wrap="wrap">
+        <Flex align="center" justify="space-between" mb={2} gap={2} wrap="wrap">
           <Heading size="sm" color="nexzy.white">
             Recommended posts
           </Heading>
@@ -582,10 +594,32 @@ export default function MarketingPanel() {
             onClick={generate}
             loading={loading}
             loadingText="Thinking…"
+            disabled={genChannels.length === 0}
           >
             {recs ? "↻ Regenerate ideas" : "Generate ideas"}
           </Button>
         </Flex>
+
+        {/* Which channels to draft ideas for — keeps token spend to what you post. */}
+        <HStack gap={2} mb={3} wrap="wrap">
+          <Text color="nexzy.gray.100" fontSize="xs">
+            Draft for:
+          </Text>
+          {CHANNELS.map((c) => (
+            <ChannelToggle
+              key={c}
+              channel={c}
+              active={genChannels.includes(c)}
+              onClick={() =>
+                setGenChannels(
+                  genChannels.includes(c)
+                    ? genChannels.filter((x) => x !== c)
+                    : [...genChannels, c],
+                )
+              }
+            />
+          ))}
+        </HStack>
 
         {err && (
           <Text color="red.300" fontSize="sm" mb={2}>
