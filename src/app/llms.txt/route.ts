@@ -3,8 +3,7 @@
 // signal of what Nexzy is and what's worth citing.
 export const revalidate = 3600;
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export function GET(): Response {
   const body = `# Nexzy

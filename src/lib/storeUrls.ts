@@ -1,6 +1,5 @@
 /** Public App Store listing (Nexzy on Apple). */
-export const APP_STORE_URL =
-  "https://apps.apple.com/app/nexzy/id6744055635";
+export const APP_STORE_URL = "https://apps.apple.com/app/nexzy/id6744055635";
 
 /**
  * Google Play listing URL uses the Android application ID.

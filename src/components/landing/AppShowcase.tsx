@@ -4,14 +4,7 @@
 // ============================================
 "use client";
 
-import {
-  Box,
-  Image,
-  Stack,
-  HStack,
-  IconButton,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Image, Stack, HStack, IconButton, Text } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
 

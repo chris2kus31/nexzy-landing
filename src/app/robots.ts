@@ -4,8 +4,7 @@
 // ============================================
 import type { MetadataRoute } from "next";
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 // AI answer-engine crawlers. Nexzy's model is reach → traffic → installs, so we
 // ALLOW these: being crawled is what makes Nexzy eligible to be cited inside AI

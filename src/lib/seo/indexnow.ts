@@ -3,8 +3,7 @@
 //
 // Requires INDEXNOW_KEY (any 8–128 hex-ish string). The key is also served at
 // /indexnow-key.txt so engines can verify ownership.
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export function indexNowKey(): string | undefined {
   return process.env.INDEXNOW_KEY || undefined;

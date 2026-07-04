@@ -5,8 +5,7 @@ import { fetchPosts } from "@/lib/blog/api";
 
 export const revalidate = 300;
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PUBLICATION = "Nexzy News";
 
 function xmlEscape(s: string): string {
