@@ -63,7 +63,12 @@ function LeadCard({
       borderRadius="xl"
       p={4}
     >
-      <Flex justify="space-between" align="flex-start" gap={4}>
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        justify="space-between"
+        align={{ base: "stretch", md: "flex-start" }}
+        gap={4}
+      >
         <Box flex={1} minW={0}>
           <HStack gap={2} mb={1} wrap="wrap">
             <Box
@@ -132,7 +137,12 @@ function LeadCard({
             </Box>
           )}
         </Box>
-        <VStack gap={2} align="stretch" minW="120px">
+        <VStack
+          gap={2}
+          align="stretch"
+          minW={{ base: "auto", md: "120px" }}
+          w={{ base: "full", md: "auto" }}
+        >
           <Box>
             <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
               Write as{" "}

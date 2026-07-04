@@ -36,18 +36,29 @@ type Tab =
   | "analytics"
   | "tools";
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  alert,
+  hint,
+}: {
+  label: string;
+  value: number;
+  alert?: boolean;
+  hint?: string;
+}) {
+  const on = alert && value > 0;
   return (
     <Box
-      bg="whiteAlpha.50"
+      bg={on ? "red.500/10" : "whiteAlpha.50"}
       border="1px solid"
-      borderColor="whiteAlpha.200"
+      borderColor={on ? "red.400/50" : "whiteAlpha.200"}
       borderRadius="lg"
       px={4}
       py={3}
     >
       <Text
-        color="nexzy.white"
+        color={on ? "red.300" : "nexzy.white"}
         fontSize="2xl"
         fontWeight="700"
         lineHeight="1.1"
@@ -57,6 +68,11 @@ function StatCard({ label, value }: { label: string; value: number }) {
       <Text color="nexzy.gray.100" fontSize="xs">
         {label}
       </Text>
+      {hint && on && (
+        <Text color="red.300" fontSize="10px" mt={0.5}>
+          {hint}
+        </Text>
+      )}
     </Box>
   );
 }
@@ -152,10 +168,16 @@ function AdminContent() {
 
   return (
     <>
-      <SimpleGrid columns={{ base: 3 }} gap={3} mb={6}>
+      <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={6}>
         <StatCard label="Awaiting review" value={stats.awaitingReview} />
         <StatCard label="In progress" value={stats.inProgress} />
         <StatCard label="Published" value={stats.published} />
+        <StatCard
+          label="Stuck / failed jobs"
+          value={stats.failedJobs}
+          alert
+          hint="Check Bull Board → Retry"
+        />
       </SimpleGrid>
 
       {/* Tab bar */}

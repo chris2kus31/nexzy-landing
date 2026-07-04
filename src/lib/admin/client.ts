@@ -93,6 +93,7 @@ export interface AdminStats {
   awaitingReview: number;
   inProgress: number;
   published: number;
+  failedJobs: number;
 }
 
 export async function getStats(): Promise<AdminStats> {

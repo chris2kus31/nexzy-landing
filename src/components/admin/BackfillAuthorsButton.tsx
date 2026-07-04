@@ -12,9 +12,6 @@ import {
 } from "@chakra-ui/react";
 import { backfillAuthors, reprocessPublished } from "@/lib/admin/client";
 
-/** Maintenance passphrase — required before either destructive action runs. */
-const MAINTENANCE_PASSWORD = "abracadabra";
-
 /**
  * Maintenance actions for the article archive:
  *  - "Assign authors" — fast: just stamps Chuy/Eli bylines onto legacy posts.
@@ -30,7 +27,10 @@ export default function BackfillAuthorsButton() {
   const [pass, setPass] = useState("");
   const [routeReview, setRouteReview] = useState(false);
 
-  const unlocked = pass.trim() === MAINTENANCE_PASSWORD;
+  // The password is validated server-side (against NEWSROOM_MAINTENANCE_SECRET);
+  // here we only require a non-empty value so changing the server secret never
+  // breaks the button. A wrong password returns 403 and shows below.
+  const unlocked = pass.trim().length > 0;
 
   const gate = (): boolean => {
     if (!unlocked) {
@@ -105,7 +105,7 @@ export default function BackfillAuthorsButton() {
         maxW="260px"
         mb={3}
         bg="whiteAlpha.100"
-        borderColor={unlocked ? "green.400" : "whiteAlpha.300"}
+        borderColor={unlocked ? "nexzy.blue" : "whiteAlpha.300"}
         color="nexzy.white"
         _placeholder={{ color: "nexzy.gray.100" }}
       />
