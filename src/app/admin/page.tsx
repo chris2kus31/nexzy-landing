@@ -17,6 +17,7 @@ import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
+import MarketingPanel from "@/components/admin/MarketingPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
@@ -33,6 +34,7 @@ type Tab =
   | "queue"
   | "published"
   | "subscribers"
+  | "marketing"
   | "analytics"
   | "tools";
 
@@ -214,6 +216,11 @@ function AdminContent() {
             onClick={() => setTab("subscribers")}
           />
           <TabButton
+            label="Marketing"
+            active={tab === "marketing"}
+            onClick={() => setTab("marketing")}
+          />
+          <TabButton
             label="Analytics"
             active={tab === "analytics"}
             onClick={() => setTab("analytics")}
@@ -269,6 +276,8 @@ function AdminContent() {
       )}
 
       {tab === "subscribers" && <SubscribersPanel />}
+
+      {tab === "marketing" && <MarketingPanel />}
 
       {tab === "analytics" && <AnalyticsPanel />}
 

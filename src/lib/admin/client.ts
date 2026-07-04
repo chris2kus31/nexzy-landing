@@ -165,6 +165,83 @@ export async function setPostAuthor(
   );
 }
 
+// ---- Marketing Desk (social publicist) ----
+
+export type SocialChannel = "x" | "facebook" | "discord" | "reddit";
+
+export interface SocialPostResult {
+  channel: string;
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+  id?: string;
+}
+
+export interface MarketingRecommendation {
+  id: string;
+  source: "article" | "lead";
+  title: string;
+  url: string | null;
+  imageUrl: string | null;
+  author: string;
+  reason: string;
+  recommendedChannels: SocialChannel[];
+  captions: Partial<Record<SocialChannel, string>>;
+}
+
+/** Which channels have credentials configured. */
+export async function getMarketingChannels(): Promise<{
+  enabled: SocialChannel[];
+}> {
+  return handle(await fetch("/api/newsroom/admin/marketing/channels"));
+}
+
+/** Publicist recommendations: what to post, where, with draft captions. */
+export async function getMarketingRecommendations(): Promise<
+  MarketingRecommendation[]
+> {
+  return handle(await fetch("/api/newsroom/admin/marketing/recommendations"));
+}
+
+/** Draft a caption per channel from a free topic, in an author's voice.
+ *  Optional reference image (data URL) informs the caption. */
+export async function marketingDraft(
+  topic: string,
+  channels: SocialChannel[],
+  opts?: { url?: string; author?: string; imageDataUrl?: string },
+): Promise<{ captions: Partial<Record<SocialChannel, string>> }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic,
+        channels,
+        url: opts?.url,
+        author: opts?.author,
+        imageDataUrl: opts?.imageDataUrl,
+      }),
+    }),
+  );
+}
+
+/** Post the chosen captions to the chosen channels. */
+export async function marketingPost(input: {
+  channels: SocialChannel[];
+  captions: Partial<Record<SocialChannel, string>>;
+  url?: string;
+  imageUrl?: string | null;
+  title?: string;
+}): Promise<{ posted: SocialPostResult[] }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 // ---- Analytics (Phase 7) ----
 
 export interface TopArticle {
