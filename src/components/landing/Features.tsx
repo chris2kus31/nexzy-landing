@@ -80,7 +80,7 @@ const features = [
 export default function Features() {
   return (
     <Box as="section" py={{ base: 16, md: 24 }} id="features" bg="gray.50">
-      <Container maxW="container.xl">
+      <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Stack gap={12}>
           {/* Header */}
           <Stack gap={4} textAlign="center" maxW="3xl" mx="auto">

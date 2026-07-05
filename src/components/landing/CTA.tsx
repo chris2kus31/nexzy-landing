@@ -58,7 +58,11 @@ export default function CTA() {
         backgroundSize="40px 40px"
       />
 
-      <Container maxW="container.lg" position="relative">
+      <Container
+        maxW="container.lg"
+        position="relative"
+        px={{ base: 5, md: 6 }}
+      >
         <Stack gap={12} align="center">
           {/* Special Offer Banner */}
           <Badge
@@ -86,7 +90,7 @@ export default function CTA() {
               color="nexzy.white"
               lineHeight="shorter"
             >
-              Stop Googling Game Guides.
+              Beat Any Game, Any Level.
               <br />
               <Text as="span" color="nexzy.yellow">
                 Start Playing Smarter.

@@ -6,19 +6,30 @@ import Navigation from "@/components/landing/Navigation";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
-import LatestNews from "@/components/landing/LatestNews";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
+import { fetchPosts } from "@/lib/blog/api";
 
-export default function HomePage() {
+// Cache the home page (with its hero headlines) — rebuilt in the background.
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const { items } = await fetchPosts({ pageSize: 3 });
+  const latest = items.slice(0, 3).map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    beat: p.beat,
+    imageUrl: p.heroImageUrl ?? null,
+  }));
+
   return (
     <>
       <Navigation />
       <main>
-        <Hero />
+        {/* Latest news now lives IN the hero, so no separate news section here. */}
+        <Hero latest={latest} />
         <Features />
         <HowItWorks />
-        <LatestNews />
         <CTA />
       </main>
       <Footer />

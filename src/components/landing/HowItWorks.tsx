@@ -65,7 +65,7 @@ const steps = [
 export default function HowItWorks() {
   return (
     <Box as="section" py={{ base: 16, md: 24 }} bg="white" id="how-it-works">
-      <Container maxW="container.xl">
+      <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Stack gap={16}>
           {/* Header */}
           <Stack gap={4} textAlign="center" maxW="3xl" mx="auto">

@@ -41,11 +41,11 @@ export default function Footer() {
   };
 
   return (
-    <Box as="footer" bg="gray.50" pt={16} pb={8}>
-      <Container maxW="container.xl">
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={8} mb={12}>
+    <Box as="footer" bg="gray.50" pt={{ base: 12, md: 16 }} pb={8}>
+      <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={8} mb={12}>
           {/* Logo & Brand Column */}
-          <Stack gap={4} pr={8}>
+          <Stack gap={4} pr={{ base: 0, lg: 8 }}>
             <HStack gap={3}>
               <Image src="/NexzyLogo.png" alt="Nexzy" h={12} w={12} />
               <Stack gap={0}>

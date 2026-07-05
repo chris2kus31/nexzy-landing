@@ -14,6 +14,7 @@ import NewsroomHero from "@/components/blog/NewsroomHero";
 import BlogCard from "@/components/blog/BlogCard";
 import Pagination from "@/components/blog/Pagination";
 import NewsletterSignup from "@/components/blog/NewsletterSignup";
+import AppCta from "@/components/blog/AppCta";
 
 const PAGE_SIZE = 12;
 
@@ -142,6 +143,10 @@ export default async function BlogIndexPage({
           />
         </>
       )}
+
+      <Box mt={{ base: 12, md: 16 }}>
+        <AppCta variant="band" />
+      </Box>
 
       <Box mt={{ base: 12, md: 16 }}>
         <NewsletterSignup />

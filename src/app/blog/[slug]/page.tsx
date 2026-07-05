@@ -22,6 +22,7 @@ import { slugifyTag } from "@/lib/blog/tags";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { formatCount } from "@/lib/blog/format";
 import Markdown from "@/components/blog/Markdown";
+import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
@@ -318,6 +319,11 @@ export default async function BlogArticlePage({
             </HStack>
           </Box>
         )}
+
+        {/* Turn readers into installs — the newsroom's app funnel. */}
+        <Box mt={10}>
+          <AppCta variant="inline" />
+        </Box>
 
         <HStack
           justify="space-between"

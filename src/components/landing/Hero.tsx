@@ -15,8 +15,21 @@ import {
   Flex,
   Badge,
   Icon,
+  Link,
+  SimpleGrid,
 } from "@chakra-ui/react";
+import NextLink from "next/link";
+import NextImage from "next/image";
 import dynamic from "next/dynamic";
+import { beatLabel, beatPalette } from "@/lib/blog/beats";
+
+/** Minimal shape for the hero's latest-news strip (passed from the server page). */
+export interface HeroNewsItem {
+  slug: string;
+  title: string;
+  beat: string;
+  imageUrl: string | null;
+}
 
 // Dynamically import to avoid SSR issues
 const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
@@ -27,7 +40,7 @@ import { IoGameController } from "react-icons/io5";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
-export default function Hero() {
+export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
   return (
     <Box
       as="section"
@@ -61,7 +74,11 @@ export default function Hero() {
         filter="blur(100px)"
       />
 
-      <Container maxW="container.xl" position="relative">
+      <Container
+        maxW="container.xl"
+        position="relative"
+        px={{ base: 5, md: 6 }}
+      >
         <Flex
           direction={{ base: "column", lg: "row" }}
           align="center"
@@ -196,13 +213,31 @@ export default function Hero() {
               </Button>
             </Stack>
 
+            {/* Secondary door to the newsroom — download stays the primary CTA */}
+            <Link
+              asChild
+              color="nexzy.lightBlue"
+              fontWeight="600"
+              fontSize="sm"
+              _hover={{ textDecoration: "underline" }}
+            >
+              <NextLink href="/blog">
+                or catch up on today&apos;s game news →
+              </NextLink>
+            </Link>
+
             {/* Newsletter email capture (tips, deals + bonus coins) */}
             <Box pt={2} w={{ base: "full", lg: "auto" }}>
               <EmailCapture variant="hero" source="hero" />
             </Box>
 
             {/* Social proof */}
-            <HStack gap={8} pt={4}>
+            <HStack
+              gap={{ base: 6, md: 8 }}
+              pt={4}
+              wrap="wrap"
+              justify={{ base: "center", lg: "start" }}
+            >
               <Stack gap={0}>
                 <HStack>
                   <Icon color="nexzy.yellow" boxSize={5}>
@@ -256,6 +291,102 @@ export default function Hero() {
         >
           <AppShowcase />
         </Box>
+
+        {/* Latest Game News — built into the hero so news + app share the top */}
+        {latest.length > 0 && (
+          <Box
+            mt={{ base: 10, md: 14 }}
+            pt={8}
+            borderTop="1px solid"
+            borderColor="nexzy.blue/20"
+          >
+            <Flex
+              align="center"
+              justify="space-between"
+              mb={4}
+              gap={2}
+              wrap="wrap"
+            >
+              <HStack gap={2}>
+                <Text fontSize="lg">🔥</Text>
+                <Heading as="h2" size="md" color="nexzy.white">
+                  Latest Game News
+                </Heading>
+              </HStack>
+              <Link
+                asChild
+                color="nexzy.lightBlue"
+                fontWeight="600"
+                fontSize="sm"
+                _hover={{ textDecoration: "underline" }}
+              >
+                <NextLink href="/blog">All news →</NextLink>
+              </Link>
+            </Flex>
+            <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap={4}>
+              {latest.map((n) => (
+                <Link key={n.slug} asChild _hover={{ textDecoration: "none" }}>
+                  <NextLink href={`/blog/${n.slug}`}>
+                    <Flex
+                      direction={{ base: "row", sm: "column" }}
+                      bg="whiteAlpha.50"
+                      border="1px solid"
+                      borderColor="nexzy.blue/20"
+                      borderRadius="xl"
+                      overflow="hidden"
+                      h="full"
+                      transition="all 0.2s"
+                      _hover={{
+                        borderColor: "nexzy.blue/60",
+                        transform: "translateY(-2px)",
+                      }}
+                    >
+                      {/* Thumbnail: beside the title on phones, on top on wider */}
+                      <Box
+                        position="relative"
+                        flexShrink={0}
+                        w={{ base: "104px", sm: "full" }}
+                        aspectRatio={{ base: 1, sm: 16 / 9 }}
+                        bg="nexzy.blue/10"
+                      >
+                        {n.imageUrl && (
+                          <NextImage
+                            src={n.imageUrl}
+                            alt={n.title}
+                            fill
+                            sizes="(max-width: 640px) 104px, 360px"
+                            style={{ objectFit: "cover" }}
+                          />
+                        )}
+                        <Badge
+                          position="absolute"
+                          top={2}
+                          left={2}
+                          colorPalette={beatPalette(n.beat)}
+                          variant="solid"
+                          size="sm"
+                        >
+                          {beatLabel(n.beat)}
+                        </Badge>
+                      </Box>
+                      <Box p={{ base: 3, sm: 4 }} flex={1} minW={0}>
+                        <Text
+                          color="nexzy.white"
+                          fontWeight="600"
+                          fontSize={{ base: "sm", sm: "md" }}
+                          lineClamp={3}
+                          textAlign="left"
+                        >
+                          {n.title}
+                        </Text>
+                      </Box>
+                    </Flex>
+                  </NextLink>
+                </Link>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
       </Container>
     </Box>
   );

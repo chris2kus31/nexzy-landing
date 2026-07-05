@@ -86,7 +86,8 @@ export default function EmailCapture({
     <Box
       as="form"
       onSubmit={onSubmit}
-      w={{ base: "full", sm: onCta ? "lg" : "md" }}
+      w="full"
+      maxW={{ base: "full", sm: onCta ? "lg" : "md" }}
     >
       <Stack gap={2}>
         <HStack gap={2} justify={onCta ? "center" : "flex-start"}>
