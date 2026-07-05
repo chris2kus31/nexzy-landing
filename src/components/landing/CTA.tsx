@@ -23,6 +23,7 @@ import { IoGameController, IoGift } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
 import EmailCapture from "./EmailCapture";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { trackDownload } from "@/lib/analytics";
 
 export default function CTA() {
   return (
@@ -157,7 +158,12 @@ export default function CTA() {
               transition="all 0.3s"
               boxShadow="0 4px 20px rgba(255,255,255,0.2)"
             >
-              <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackDownload("ios", "cta")}
+              >
                 <HStack gap={3}>
                   <FaApple size={24} />
                   <VStack gap={0} align="start">
@@ -194,6 +200,7 @@ export default function CTA() {
                 href={GOOGLE_PLAY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackDownload("android", "cta")}
               >
                 <HStack gap={3}>
                   <FaGooglePlay size={24} />

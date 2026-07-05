@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Box,
   Container,
@@ -8,6 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay } from "react-icons/fa";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { trackDownload } from "@/lib/analytics";
 
 /**
  * "Get the Nexzy app" band for the news pages — turns readers into installs.
@@ -62,7 +65,12 @@ export default function AppCta({
             px={6}
             _hover={{ bg: "nexzy.gray.100" }}
           >
-            <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackDownload("ios", "news")}
+            >
               <HStack gap={2}>
                 <FaApple />
                 <Text>App Store</Text>
@@ -78,7 +86,12 @@ export default function AppCta({
             fontWeight="600"
             _hover={{ bg: "nexzy.gold" }}
           >
-            <a href={GOOGLE_PLAY_URL} target="_blank" rel="noopener noreferrer">
+            <a
+              href={GOOGLE_PLAY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackDownload("android", "news")}
+            >
               <HStack gap={2}>
                 <FaGooglePlay />
                 <Text>Google Play</Text>

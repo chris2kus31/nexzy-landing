@@ -39,6 +39,7 @@ import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
 import { IoGameController } from "react-icons/io5";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { trackDownload, track } from "@/lib/analytics";
 
 export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
   return (
@@ -181,6 +182,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                   href={APP_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackDownload("ios", "hero")}
                 >
                   <HStack gap={2}>
                     <FaApple />
@@ -204,6 +206,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                   href={GOOGLE_PLAY_URL}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackDownload("android", "hero")}
                 >
                   <HStack gap={2}>
                     <FaGooglePlay />
@@ -221,7 +224,10 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
               fontSize="sm"
               _hover={{ textDecoration: "underline" }}
             >
-              <NextLink href="/blog">
+              <NextLink
+                href="/blog"
+                onClick={() => track("news_click", { location: "hero_link" })}
+              >
                 or catch up on today&apos;s game news →
               </NextLink>
             </Link>
@@ -326,7 +332,15 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
             <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap={4}>
               {latest.map((n) => (
                 <Link key={n.slug} asChild _hover={{ textDecoration: "none" }}>
-                  <NextLink href={`/blog/${n.slug}`}>
+                  <NextLink
+                    href={`/blog/${n.slug}`}
+                    onClick={() =>
+                      track("news_click", {
+                        location: "hero_card",
+                        slug: n.slug,
+                      })
+                    }
+                  >
                     <Flex
                       direction={{ base: "row", sm: "column" }}
                       bg="whiteAlpha.50"

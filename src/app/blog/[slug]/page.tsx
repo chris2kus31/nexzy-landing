@@ -27,6 +27,7 @@ import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
+import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -356,6 +357,7 @@ export default async function BlogArticlePage({
       )}
 
       <ViewPing slug={post.slug} />
+      <ArticleAnalytics slug={post.slug} />
 
       <script
         type="application/ld+json"

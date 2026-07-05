@@ -17,6 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { HiSparkles } from "react-icons/hi";
 import { IoCheckmarkCircle } from "react-icons/io5";
+import { track } from "@/lib/analytics";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -48,6 +49,7 @@ export default function EmailCapture({
         body: JSON.stringify({ email, source }),
       });
       if (!res.ok) throw new Error("Request failed");
+      track("newsletter_signup", { source });
       setStatus("success");
       setMessage(
         "You're in! Watch your inbox for gaming tips, deals, and bonus coins. 🎮",
