@@ -17,6 +17,9 @@ import {
 import {
   getMarketingChannels,
   getMarketingRecommendations,
+  generateMarketingRecommendations,
+  skipMarketingRecommendation,
+  postMarketingRecommendation,
   marketingDraft,
   marketingPost,
   type SocialChannel,
@@ -171,39 +174,48 @@ function PostEditor({
   );
 }
 
-/** A single recommendation card (article or trending lead). */
+/** A single recommendation card (persisted; post or skip like a lead). */
 function RecCard({
   rec,
   enabled,
+  onDone,
 }: {
   rec: MarketingRecommendation;
   enabled: SocialChannel[];
+  onDone: (id: string) => void;
 }) {
   const [channels, setChannels] = useState<SocialChannel[]>(
-    rec.recommendedChannels.filter((c) => enabled.includes(c)),
+    (rec.recommendedChannels || []).filter((c) => enabled.includes(c)),
   );
   const [captions, setCaptions] = useState<
     Partial<Record<SocialChannel, string>>
-  >({ ...rec.captions });
+  >({ ...(rec.captions || {}) });
   const [posting, setPosting] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [posted, setPosted] = useState<SocialPostResult[] | null>(null);
 
   const post = async () => {
     setPosting(true);
     setPosted(null);
     try {
-      const r = await marketingPost({
-        channels,
-        captions,
-        url: rec.url ?? undefined,
-        imageUrl: rec.imageUrl,
-        title: rec.title,
-      });
+      const r = await postMarketingRecommendation(rec.id, channels, captions);
       setPosted(r.posted);
+      // If anything posted, drop the card from the open board after a beat.
+      if (r.posted.some((x) => x.ok)) setTimeout(() => onDone(rec.id), 1200);
     } catch {
       setPosted([{ channel: "error", ok: false, error: "post failed" }]);
     } finally {
       setPosting(false);
+    }
+  };
+
+  const skip = async () => {
+    setSkipping(true);
+    try {
+      await skipMarketingRecommendation(rec.id);
+      onDone(rec.id);
+    } catch {
+      setSkipping(false);
     }
   };
 
@@ -215,20 +227,33 @@ function RecCard({
       borderRadius="xl"
       p={4}
     >
-      <HStack gap={2} mb={1} wrap="wrap">
-        <Badge
-          colorPalette={rec.source === "article" ? "green" : "orange"}
-          variant="subtle"
+      <Flex justify="space-between" align="flex-start" gap={3} mb={1}>
+        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
+          <Badge
+            colorPalette={rec.source === "article" ? "green" : "orange"}
+            variant="subtle"
+          >
+            {rec.source === "article" ? "Article" : "Trending"}
+          </Badge>
+          <Badge colorPalette="blue" variant="subtle">
+            {rec.author}’s voice
+          </Badge>
+          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
+            {rec.title}
+          </Text>
+        </HStack>
+        <Button
+          size="xs"
+          variant="ghost"
+          color="nexzy.gray.100"
+          _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+          onClick={skip}
+          loading={skipping}
+          loadingText="…"
         >
-          {rec.source === "article" ? "Article" : "Trending"}
-        </Badge>
-        <Badge colorPalette="blue" variant="subtle">
-          {rec.author}’s voice
-        </Badge>
-        <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-          {rec.title}
-        </Text>
-      </HStack>
+          Skip
+        </Button>
+      </Flex>
       {rec.reason && (
         <Text color="nexzy.gray.100" fontSize="sm" mb={3}>
           {rec.reason}
@@ -547,19 +572,26 @@ export default function MarketingPanel() {
         setGenChannels(r.enabled.length ? r.enabled : CHANNELS);
       })
       .catch(() => setEnabled([]));
+    // Load the persisted board so it survives a refresh.
+    getMarketingRecommendations()
+      .then(setRecs)
+      .catch(() => setRecs([]));
   }, []);
 
   const generate = async () => {
     setLoading(true);
     setErr("");
     try {
-      setRecs(await getMarketingRecommendations(genChannels));
+      setRecs(await generateMarketingRecommendations(genChannels));
     } catch (e) {
       setErr((e as Error)?.message || "Could not generate recommendations.");
     } finally {
       setLoading(false);
     }
   };
+
+  const removeRec = (id: string) =>
+    setRecs((rs) => (rs ? rs.filter((r) => r.id !== id) : rs));
 
   return (
     <VStack align="stretch" gap={6}>
@@ -644,7 +676,12 @@ export default function MarketingPanel() {
         ) : (
           <VStack align="stretch" gap={4}>
             {recs.map((rec) => (
-              <RecCard key={rec.id} rec={rec} enabled={enabled} />
+              <RecCard
+                key={rec.id}
+                rec={rec}
+                enabled={enabled}
+                onDone={removeRec}
+              />
             ))}
           </VStack>
         )}

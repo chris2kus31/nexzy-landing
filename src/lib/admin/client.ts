@@ -178,15 +178,16 @@ export interface SocialPostResult {
 }
 
 export interface MarketingRecommendation {
-  id: string;
+  id: string; // persisted social_post id (used for skip/post)
   source: "article" | "lead";
   title: string;
   url: string | null;
   imageUrl: string | null;
   author: string;
-  reason: string;
-  recommendedChannels: SocialChannel[];
-  captions: Partial<Record<SocialChannel, string>>;
+  reason: string | null;
+  recommendedChannels: SocialChannel[] | null;
+  captions: Partial<Record<SocialChannel, string>> | null;
+  status: "open" | "posted" | "skipped";
 }
 
 /** Which channels have credentials configured + whether auto-post is on. */
@@ -197,14 +198,49 @@ export async function getMarketingChannels(): Promise<{
   return handle(await fetch("/api/newsroom/admin/marketing/channels"));
 }
 
-/** Publicist recommendations. Optionally limit to specific channels (saves tokens). */
-export async function getMarketingRecommendations(
+/** The persisted recommendation board (open items) — survives a refresh. */
+export async function getMarketingRecommendations(): Promise<
+  MarketingRecommendation[]
+> {
+  return handle(await fetch("/api/newsroom/admin/marketing/recommendations"));
+}
+
+/** Generate + persist fresh ideas, then return the open board. */
+export async function generateMarketingRecommendations(
   channels?: SocialChannel[],
 ): Promise<MarketingRecommendation[]> {
   const qs =
     channels && channels.length ? `?channels=${channels.join(",")}` : "";
   return handle(
-    await fetch(`/api/newsroom/admin/marketing/recommendations${qs}`),
+    await fetch(`/api/newsroom/admin/marketing/recommendations/generate${qs}`, {
+      method: "POST",
+    }),
+  );
+}
+
+/** Bury a recommendation. */
+export async function skipMarketingRecommendation(
+  id: string,
+): Promise<MarketingRecommendation> {
+  return handle(
+    await fetch(`/api/newsroom/admin/marketing/recommendations/${id}/skip`, {
+      method: "POST",
+    }),
+  );
+}
+
+/** Post a persisted recommendation (with any edited channels/captions). */
+export async function postMarketingRecommendation(
+  id: string,
+  channels: SocialChannel[],
+  captions: Partial<Record<SocialChannel, string>>,
+): Promise<{ posted: SocialPostResult[] }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/marketing/recommendations/${id}/post`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channels, captions }),
+    }),
   );
 }
 
