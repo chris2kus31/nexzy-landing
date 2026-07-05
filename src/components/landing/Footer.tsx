@@ -192,6 +192,21 @@ export default function Footer() {
           </HStack>
         </Stack>
 
+        {/* Cookie / analytics disclosure (Microsoft Clarity + Google Analytics) */}
+        <Text fontSize="xs" color="gray.500" textAlign="center" mt={8} px={4}>
+          We use cookies, Google Analytics, and Microsoft Clarity to see how you
+          use our site so we can improve it. By using our site, you agree that
+          we and these providers can collect and use this data.{" "}
+          <Link
+            href="/privacy"
+            color="nexzy.blue"
+            _hover={{ textDecoration: "underline" }}
+          >
+            See our Privacy Policy
+          </Link>
+          .
+        </Text>
+
         {/* App Features Reminder - Optional bottom banner */}
         <Box mt={8} pt={8} borderTop="1px solid" borderColor="gray.200">
           <HStack justify="center" gap={8} wrap="wrap" opacity={0.6}>

@@ -12,6 +12,7 @@ import {
   Stack,
   Button,
   HStack,
+  Link,
 } from "@chakra-ui/react";
 import { HiArrowLeft } from "react-icons/hi";
 import NextLink from "next/link";
@@ -133,7 +134,50 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                5. Your Rights
+                5. Cookies, Analytics &amp; Tracking Technologies
+              </Heading>
+              <Stack gap={3}>
+                <Text color="gray.700">
+                  We use cookies and similar technologies to understand how
+                  visitors use our website so we can improve it:
+                </Text>
+                <Text color="gray.700">
+                  <strong>Google Analytics</strong> — measures traffic and how
+                  our pages and features are used, in aggregate.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Microsoft Clarity</strong> — we partner with Microsoft
+                  Clarity and Microsoft Advertising to capture how you use and
+                  interact with our website through behavioral metrics,
+                  heatmaps, and session replay to improve and market our
+                  products and services. Website usage data is captured using
+                  first- and third-party cookies and other tracking technologies
+                  to determine the popularity of content and online activity,
+                  and for site optimization, fraud/security, and advertising
+                  purposes. For more information about how Microsoft collects
+                  and uses your data, visit the{" "}
+                  <Link
+                    href="https://www.microsoft.com/privacy/privacystatement"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    color="nexzy.blue"
+                    textDecoration="underline"
+                  >
+                    Microsoft Privacy Statement
+                  </Link>
+                  .
+                </Text>
+                <Text color="gray.700">
+                  By using our site, you agree that we and these providers can
+                  collect and use this data as described. You can limit tracking
+                  through your browser settings or privacy tools.
+                </Text>
+              </Stack>
+            </Box>
+
+            <Box>
+              <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
+                6. Your Rights
               </Heading>
               <Stack gap={2}>
                 <Text color="gray.700">You have the right to:</Text>
@@ -153,7 +197,7 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                6. Children's Privacy
+                7. Children's Privacy
               </Heading>
               <Text color="gray.700">
                 Our service is not directed to children under 13. We do not
@@ -165,7 +209,7 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                7. Changes to This Policy
+                8. Changes to This Policy
               </Heading>
               <Text color="gray.700">
                 We may update this Privacy Policy from time to time. We will
@@ -176,7 +220,7 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                8. Contact Us
+                9. Contact Us
               </Heading>
               <Text color="gray.700">
                 If you have questions about this Privacy Policy, please contact
