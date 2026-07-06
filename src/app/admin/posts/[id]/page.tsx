@@ -89,6 +89,10 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
   const issues = Array.isArray(report.issues)
     ? (report.issues as string[])
     : [];
+  const revisionLog = Array.isArray(report.revisionLog)
+    ? (report.revisionLog as { before: string; after: string; why: string }[])
+    : [];
+  const autoRevised = !!report.autoRevised;
 
   return (
     <Box
@@ -136,6 +140,51 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
             </Text>
           ))}
         </VStack>
+      )}
+      {(autoRevised || revisionLog.length > 0) && (
+        <Box mt={4} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Text
+            fontSize="xs"
+            fontWeight="700"
+            color="nexzy.lightBlue"
+            mb={2}
+            textTransform="uppercase"
+            letterSpacing="wide"
+          >
+            ✎ Auto-revised — what the editor changed
+          </Text>
+          {revisionLog.length === 0 ? (
+            <Text fontSize="xs" color="nexzy.gray.100">
+              This draft was auto-revised to clear the editor's flags before
+              reaching you.
+            </Text>
+          ) : (
+            <VStack align="stretch" gap={3}>
+              {revisionLog.map((r, i) => (
+                <Box key={i}>
+                  <Text fontSize="xs" color="red.300" lineHeight="1.4">
+                    <Text as="span" color="nexzy.gray.100">
+                      Before:
+                    </Text>{" "}
+                    {r.before}
+                  </Text>
+                  <Text fontSize="xs" color="green.300" lineHeight="1.4">
+                    <Text as="span" color="nexzy.gray.100">
+                      After:
+                    </Text>{" "}
+                    {r.after}
+                  </Text>
+                  <Text fontSize="xs" color="nexzy.gray.100" lineHeight="1.4">
+                    <Text as="span" color="whiteAlpha.500">
+                      Why:
+                    </Text>{" "}
+                    {r.why}
+                  </Text>
+                </Box>
+              ))}
+            </VStack>
+          )}
+        </Box>
       )}
     </Box>
   );
