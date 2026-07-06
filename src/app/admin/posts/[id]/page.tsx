@@ -34,6 +34,7 @@ import {
   setPostAuthor,
   type BlogPost,
 } from "@/lib/admin/client";
+import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 
 /** Byline options for the author override. */
 const BYLINES = ["Chuy", "Eli", "Nexzy Editorial"];
@@ -45,6 +46,7 @@ interface FormState {
   seoDescription: string;
   bodyMarkdown: string;
   imageAlt: string;
+  youtubeUrl: string;
   tags: string;
 }
 
@@ -56,6 +58,7 @@ function toForm(p: BlogPost): FormState {
     seoDescription: p.seoDescription || "",
     bodyMarkdown: p.bodyMarkdown || "",
     imageAlt: p.imageAlt || "",
+    youtubeUrl: p.youtubeUrl || "",
     tags: (p.tags || []).join(", "),
   };
 }
@@ -208,6 +211,7 @@ function EditorContent({ id }: { id: string }) {
         seoDescription: form!.seoDescription,
         bodyMarkdown: form!.bodyMarkdown,
         imageAlt: form!.imageAlt,
+        youtubeUrl: form!.youtubeUrl.trim(),
         tags: form!.tags
           .split(",")
           .map((t) => t.trim())
@@ -572,6 +576,68 @@ function EditorContent({ id }: { id: string }) {
                 onChange={(e) => set("imageAlt", e.target.value)}
                 {...inputProps}
               />
+            </Box>
+
+            <Box>
+              <Text {...labelProps}>YouTube video (optional)</Text>
+              <Input
+                value={form.youtubeUrl}
+                onChange={(e) => set("youtubeUrl", e.target.value)}
+                placeholder="Paste a YouTube link — watch, share, or Shorts"
+                {...inputProps}
+              />
+              {(() => {
+                const vid = youtubeId(form.youtubeUrl);
+                if (!vid) return null;
+                const short = isYoutubeShort(form.youtubeUrl);
+                return (
+                  <a
+                    href={
+                      form.youtubeUrl.includes("/shorts/")
+                        ? `https://www.youtube.com/shorts/${vid}`
+                        : `https://www.youtube.com/watch?v=${vid}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <Box
+                      position="relative"
+                      w={short ? "48px" : "120px"}
+                      h="68px"
+                      flexShrink={0}
+                      borderRadius="md"
+                      overflow="hidden"
+                      bg="black"
+                    >
+                      <img
+                        src={`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`}
+                        alt="Matched video"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    </Box>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="xs"
+                      fontWeight="600"
+                    >
+                      🎬 {short ? "Short — portrait player" : "Preview video"}
+                    </Text>
+                  </a>
+                );
+              })()}
+              <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+                Embeds a player under the article. Leave blank for none.
+              </Text>
             </Box>
 
             <Separator borderColor="whiteAlpha.200" />

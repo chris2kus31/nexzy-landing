@@ -21,6 +21,7 @@ import {
   type Lead,
 } from "@/lib/admin/client";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
+import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "unknown";
@@ -103,6 +104,68 @@ function LeadCard({
               {lead.whyItMatters}
             </Text>
           )}
+          {(() => {
+            const vid = youtubeId(lead.youtubeUrl);
+            if (!vid) return null;
+            const short = isYoutubeShort(lead.youtubeUrl);
+            return (
+              <Link
+                href={
+                  lead.youtubeUrl || `https://www.youtube.com/watch?v=${vid}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                mt={2}
+                display="inline-flex"
+                alignItems="center"
+                gap={2}
+                _hover={{ textDecoration: "none", opacity: 0.9 }}
+              >
+                <Box
+                  position="relative"
+                  w={short ? "48px" : "120px"}
+                  h="68px"
+                  flexShrink={0}
+                  borderRadius="md"
+                  overflow="hidden"
+                  bg="black"
+                >
+                  <img
+                    src={`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`}
+                    alt="Trending video"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <Flex
+                    position="absolute"
+                    inset={0}
+                    align="center"
+                    justify="center"
+                  >
+                    <Box
+                      w="26px"
+                      h="18px"
+                      borderRadius="4px"
+                      bg="#FF0000"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="white"
+                      fontSize="10px"
+                    >
+                      ▶
+                    </Box>
+                  </Flex>
+                </Box>
+                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="600">
+                  🎬 {short ? "Trending Short" : "Trending video"}
+                </Text>
+              </Link>
+            );
+          })()}
           {lead.sources && lead.sources.length > 0 && (
             <Box mt={2}>
               <Button

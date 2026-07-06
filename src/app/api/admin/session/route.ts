@@ -11,7 +11,8 @@ import {
   clientIp,
 } from "@/lib/admin/server";
 
-const EIGHT_HOURS = 8 * 60 * 60;
+// Cookie lifetime — keep this in sync with the API's NEWSROOM_ADMIN_SESSION_TTL.
+const SESSION_SECONDS = 24 * 60 * 60; // 24h
 
 export async function POST(req: NextRequest) {
   let body: { token?: string };
@@ -57,7 +58,11 @@ export async function POST(req: NextRequest) {
 
   const data = (await apiRes.json()) as { token: string; email: string };
   const res = NextResponse.json({ ok: true, email: data.email });
-  res.cookies.set(ADMIN_COOKIE, data.token, adminCookieOptions(EIGHT_HOURS));
+  res.cookies.set(
+    ADMIN_COOKIE,
+    data.token,
+    adminCookieOptions(SESSION_SECONDS),
+  );
   return res;
 }
 

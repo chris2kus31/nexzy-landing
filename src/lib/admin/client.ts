@@ -15,6 +15,7 @@ export interface BlogPost {
   appImageUrl: string | null;
   imageAlt: string | null;
   imageCredit: string | null;
+  youtubeUrl: string | null;
   beat: string;
   tags: string[] | null;
   sources: { name: string; url: string }[] | null;
@@ -377,6 +378,7 @@ export interface Lead {
   confidenceFacts: "high" | "medium" | "low" | null;
   status: string;
   suggestedAuthor?: string;
+  youtubeUrl: string | null;
   createdAt: string;
 }
 

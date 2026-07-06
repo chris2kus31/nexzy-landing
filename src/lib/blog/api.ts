@@ -17,6 +17,7 @@ export interface PublicPost {
   appImageUrl: string | null;
   imageAlt: string | null;
   imageCredit: string | null;
+  youtubeUrl: string | null;
   beat: string;
   tags: string[];
   sources: { name: string; url: string }[];

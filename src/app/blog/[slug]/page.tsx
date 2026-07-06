@@ -21,6 +21,7 @@ import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { formatCount } from "@/lib/blog/format";
+import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import Markdown from "@/components/blog/Markdown";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
@@ -88,6 +89,8 @@ export default async function BlogArticlePage({
 
   const shareUrl = `${SITE_URL}/blog/${post.slug}`;
   const minutes = readingMinutes(post.bodyMarkdown);
+  const videoEmbed = youtubeEmbedUrl(post.youtubeUrl);
+  const videoIsShort = isYoutubeShort(post.youtubeUrl);
   // Normalize any older credit like "AI-generated (Gemini …)" to a clean label.
   const imageCredit = post.imageCredit
     ? post.imageCredit
@@ -265,6 +268,39 @@ export default async function BlogArticlePage({
         )}
 
         {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
+
+        {videoEmbed && (
+          <Box mt={10}>
+            <Heading as="h2" size="sm" color="gray.300" mb={3}>
+              Watch
+            </Heading>
+            <Box
+              position="relative"
+              // Shorts are vertical (9:16) and capped in width so they don't
+              // tower over the article; regular videos fill the column at 16:9.
+              w={videoIsShort ? { base: "full", sm: "340px" } : "full"}
+              aspectRatio={videoIsShort ? 9 / 16 : 16 / 9}
+              borderRadius="2xl"
+              overflow="hidden"
+              bg="black"
+            >
+              <iframe
+                src={videoEmbed}
+                title={`${post.title} — video`}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  border: 0,
+                }}
+              />
+            </Box>
+          </Box>
+        )}
 
         {post.sources && post.sources.length > 0 && (
           <Box mt={10}>
