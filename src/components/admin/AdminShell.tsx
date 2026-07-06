@@ -52,7 +52,7 @@ export default function AdminShell({
   if (!email) return null; // redirecting
 
   return (
-    <Box minH="100vh" bg="nexzy.navy">
+    <Box minH="100vh" bg="nexzy.navy" overflowX="hidden">
       <Flex
         as="header"
         align="center"
@@ -91,7 +91,7 @@ export default function AdminShell({
           </Button>
         </HStack>
       </Flex>
-      <Box px={{ base: 4, md: 8 }} py={6} maxW="6xl" mx="auto">
+      <Box px={{ base: 4, md: 8 }} py={6} maxW="6xl" mx="auto" minW={0}>
         {children}
       </Box>
     </Box>

@@ -77,6 +77,8 @@ const inputProps = {
   color: "nexzy.white",
   borderColor: "whiteAlpha.300",
   _placeholder: { color: "whiteAlpha.500" },
+  w: "full",
+  maxW: "full",
 };
 
 function EditorReport({ report }: { report: Record<string, unknown> | null }) {
@@ -403,8 +405,14 @@ function EditorContent({ id }: { id: string }) {
         </Text>
       )}
 
-      <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={6}>
-        <GridItem>
+      <Grid
+        templateColumns={{
+          base: "minmax(0, 1fr)",
+          lg: "minmax(0, 2fr) minmax(0, 1fr)",
+        }}
+        gap={6}
+      >
+        <GridItem minW={0}>
           <VStack align="stretch" gap={4}>
             <Box>
               <Text {...labelProps}>Title</Text>
@@ -483,7 +491,7 @@ function EditorContent({ id }: { id: string }) {
           </VStack>
         </GridItem>
 
-        <GridItem>
+        <GridItem minW={0}>
           <VStack align="stretch" gap={4}>
             <Box
               bg="whiteAlpha.50"
