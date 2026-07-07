@@ -4,6 +4,7 @@
 // ============================================
 import type { MetadataRoute } from "next";
 import { fetchPosts, fetchGuides, fetchTags } from "@/lib/blog/api";
+import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -73,12 +74,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
-  // Topic hubs — one per published tag; builds topical authority + internal
-  // links. Best-effort so a tags-API hiccup never breaks the sitemap.
+  // Topic hubs — only the SUBSTANTIAL ones (>= MIN_TOPIC_ARTICLES). Thin,
+  // single-article tags are noindex,follow and deliberately excluded here so we
+  // don't advertise ~100 near-duplicate pages to Google. Best-effort so a
+  // tags-API hiccup never breaks the sitemap.
   const topicEntries: MetadataRoute.Sitemap = [];
   try {
-    const tags = await fetchTags(200);
+    const tags = await fetchTags(500);
     for (const t of tags) {
+      if (t.count < MIN_TOPIC_ARTICLES) continue;
       topicEntries.push({
         url: `${SITE_URL}/blog/topic/${t.slug}`,
         lastModified: now,
