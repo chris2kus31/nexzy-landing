@@ -15,11 +15,13 @@ function fmt(date: string | null): string {
 }
 
 export default function BlogCard({ post }: { post: PublicPost }) {
+  // Guides live under /guides with a distinct badge; articles keep their beat.
+  const isGuide = post.type === "guide";
+  const href = isGuide ? `/guides/${post.slug}` : `/blog/${post.slug}`;
+  const badgeLabel = isGuide ? "Guide" : beatLabel(post.beat);
+  const badgePalette = isGuide ? "cyan" : beatPalette(post.beat);
   return (
-    <NextLink
-      href={`/blog/${post.slug}`}
-      style={{ display: "block", height: "100%" }}
-    >
+    <NextLink href={href} style={{ display: "block", height: "100%" }}>
       <Box
         className="group"
         bg="whiteAlpha.50"
@@ -68,11 +70,11 @@ export default function BlogCard({ post }: { post: PublicPost }) {
             position="absolute"
             top={3}
             left={3}
-            colorPalette={beatPalette(post.beat)}
+            colorPalette={badgePalette}
             variant="solid"
             size="sm"
           >
-            {beatLabel(post.beat)}
+            {badgeLabel}
           </Badge>
         </Box>
         <Box p={5} flex={1} display="flex" flexDirection="column">

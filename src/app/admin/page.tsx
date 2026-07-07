@@ -15,12 +15,14 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
+import GuidePanel from "@/components/admin/GuidePanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
+import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import {
   getQueue,
   getPublished,
@@ -35,6 +37,7 @@ type Tab =
   | "published"
   | "subscribers"
   | "marketing"
+  | "forum"
   | "analytics"
   | "tools";
 
@@ -221,6 +224,11 @@ function AdminContent() {
             onClick={() => setTab("marketing")}
           />
           <TabButton
+            label="Forum"
+            active={tab === "forum"}
+            onClick={() => setTab("forum")}
+          />
+          <TabButton
             label="Analytics"
             active={tab === "analytics"}
             onClick={() => setTab("analytics")}
@@ -294,6 +302,7 @@ function AdminContent() {
           </Box>
           <RunPipelinePanel onRan={load} />
           <CommissionPanel onRan={load} />
+          <GuidePanel onRan={load} />
           <BackfillAuthorsButton />
         </VStack>
       )}

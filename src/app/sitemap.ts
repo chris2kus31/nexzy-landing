@@ -3,7 +3,7 @@
 // Generates /sitemap.xml for search engines.
 // ============================================
 import type { MetadataRoute } from "next";
-import { fetchPosts, fetchTags } from "@/lib/blog/api";
+import { fetchPosts, fetchGuides, fetchTags } from "@/lib/blog/api";
 import { AUTHORS } from "@/lib/blog/authors";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -25,13 +25,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guidelines",
     "/how-we-use-ai",
     "/blog",
+    "/guides",
   ];
 
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
-    changeFrequency: path === "" || path === "/blog" ? "daily" : "monthly",
-    priority: path === "" ? 1 : path === "/blog" ? 0.8 : 0.5,
+    changeFrequency:
+      path === "" || path === "/blog" || path === "/guides"
+        ? "daily"
+        : "monthly",
+    priority:
+      path === "" ? 1 : path === "/blog" || path === "/guides" ? 0.8 : 0.5,
   }));
 
   // Published articles (best-effort — never break the sitemap if the API is

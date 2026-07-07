@@ -80,6 +80,9 @@ export default async function BlogArticlePage({
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
+  // Guides have their own home at /guides/[slug] (with HowTo schema) — keep the
+  // canonical URL single by 404-ing a guide slug here.
+  if (post.type === "guide") notFound();
 
   // Related: tag-aware (shared topic first, then same beat), excluding self.
   const related = await fetchRelated(post.slug, 3);

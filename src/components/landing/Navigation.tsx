@@ -36,6 +36,7 @@ export default function Navigation() {
     { label: "Features", href: "/#features" },
     { label: "How it Works", href: "/#how-it-works" },
     { label: "Game News", href: "/blog" },
+    { label: "Guides", href: "/guides" },
     { label: "Download", href: "/#download" },
   ];
 

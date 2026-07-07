@@ -17,6 +17,7 @@ export interface BlogPost {
   imageCredit: string | null;
   youtubeUrl: string | null;
   beat: string;
+  type?: string;
   tags: string[] | null;
   sources: { name: string; url: string }[] | null;
   status: string;
@@ -455,6 +456,25 @@ export async function commissionStory(
   );
 }
 
+export interface GuideInput {
+  game: string;
+  focus?: string;
+  instructions?: string;
+}
+
+/** Generate an evergreen "how to beat X" guide (lands in the review queue). */
+export async function generateGuide(
+  input: GuideInput,
+): Promise<{ queued: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/guides/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
@@ -546,3 +566,67 @@ export async function setFeatured(
     }),
   );
 }
+
+// ---- Forum Moderation ----
+
+export interface ForumReport {
+  reason: string | null;
+  additionalDetails: string | null;
+  createdAt: string;
+}
+
+export interface ForumQueuePost {
+  id: string;
+  title: string;
+  content: string;
+  platform: string | null;
+  console: string | null;
+  author: { id: string; username: string } | null;
+  flagged: boolean;
+  reportCount: number;
+  reports: ForumReport[];
+  createdAt: string;
+}
+
+export interface ForumQueueComment {
+  id: string;
+  content: string;
+  author: { id: string; username: string } | null;
+  post: { id: string; title: string } | null;
+  flagged: boolean;
+  reportCount: number;
+  reports: ForumReport[];
+  createdAt: string;
+}
+
+export interface ForumQueue {
+  posts: ForumQueuePost[];
+  comments: ForumQueueComment[];
+  counts: { posts: number; comments: number };
+}
+
+export async function getForumQueue(): Promise<ForumQueue> {
+  return handle(await fetch("/api/newsroom/admin/forum/queue"));
+}
+
+async function forumAction(
+  path: string,
+  reason?: string,
+): Promise<{ success: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/forum/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reason ? { reason } : {}),
+    }),
+  );
+}
+
+export const removeForumPost = (id: string, reason?: string) =>
+  forumAction(`posts/${id}/remove`, reason);
+export const approveForumPost = (id: string) =>
+  forumAction(`posts/${id}/approve`);
+export const removeForumComment = (id: string, reason?: string) =>
+  forumAction(`comments/${id}/remove`, reason);
+export const approveForumComment = (id: string) =>
+  forumAction(`comments/${id}/approve`);

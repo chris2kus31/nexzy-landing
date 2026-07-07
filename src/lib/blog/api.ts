@@ -19,6 +19,7 @@ export interface PublicPost {
   imageCredit: string | null;
   youtubeUrl: string | null;
   beat: string;
+  type?: string;
   tags: string[];
   sources: { name: string; url: string }[];
   author: string | null;
@@ -45,6 +46,7 @@ export async function fetchPosts(params?: {
   pageSize?: number;
   author?: string;
   tag?: string;
+  type?: string;
 }): Promise<PostList> {
   const q = new URLSearchParams();
   if (params?.beat) q.set("beat", params.beat);
@@ -53,6 +55,8 @@ export async function fetchPosts(params?: {
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
   if (params?.author) q.set("author", params.author);
   if (params?.tag) q.set("tag", params.tag);
+  // Content type: omit for news (API defaults to 'article'); 'guide' for /guides.
+  if (params?.type) q.set("type", params.type);
   // Web opts into featured-first ordering so a pinned story wins the hero. The
   // mobile app omits this and keeps strict newest-first.
   q.set("hero", "1");
@@ -65,6 +69,15 @@ export async function fetchPosts(params?: {
     return { items: [], total: 0, page: 1, pageSize: 20 };
   }
   return res.json();
+}
+
+/** Evergreen guides index ("how to beat X"). Newest first, paginated. */
+export async function fetchGuides(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PostList> {
+  return fetchPosts({ ...params, type: "guide" });
 }
 
 export async function fetchTrending(
