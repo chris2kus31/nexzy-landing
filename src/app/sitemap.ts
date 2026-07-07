@@ -3,7 +3,7 @@
 // Generates /sitemap.xml for search engines.
 // ============================================
 import type { MetadataRoute } from "next";
-import { fetchPosts, fetchGuides, fetchTags } from "@/lib/blog/api";
+import { fetchPosts, fetchGuides, fetchLists, fetchTags } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 
@@ -27,17 +27,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/how-we-use-ai",
     "/blog",
     "/guides",
+    "/lists",
   ];
 
+  const hubRoutes = new Set(["/blog", "/guides", "/lists"]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
-    changeFrequency:
-      path === "" || path === "/blog" || path === "/guides"
-        ? "daily"
-        : "monthly",
-    priority:
-      path === "" ? 1 : path === "/blog" || path === "/guides" ? 0.8 : 0.5,
+    changeFrequency: path === "" || hubRoutes.has(path) ? "daily" : "monthly",
+    priority: path === "" ? 1 : hubRoutes.has(path) ? 0.8 : 0.5,
   }));
 
   // Published articles (best-effort — never break the sitemap if the API is
@@ -62,6 +60,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {
     // keep whatever we already collected
+  }
+
+  // Evergreen guides (/guides/[slug]) and lists (/lists/[slug]). Best-effort,
+  // paginated, and each mapped to its own URL home so crawlers index them apart
+  // from dated /blog articles.
+  const evergreenEntries: MetadataRoute.Sitemap = [];
+  const evergreen: {
+    prefix: string;
+    fetch: typeof fetchGuides;
+  }[] = [
+    { prefix: "/guides", fetch: fetchGuides },
+    { prefix: "/lists", fetch: fetchLists },
+  ];
+  for (const { prefix, fetch } of evergreen) {
+    try {
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const { items, total } = await fetch({ page, pageSize: PAGE_SIZE });
+        for (const p of items) {
+          evergreenEntries.push({
+            url: `${SITE_URL}${prefix}/${p.slug}`,
+            lastModified: p.updatedAt
+              ? new Date(p.updatedAt)
+              : p.publishedAt
+                ? new Date(p.publishedAt)
+                : now,
+            changeFrequency: "weekly",
+            priority: 0.7,
+          });
+        }
+        if (items.length < PAGE_SIZE || page * PAGE_SIZE >= total) break;
+      }
+    } catch {
+      // keep whatever we already collected
+    }
   }
 
   // Author pages (E-E-A-T) — stable, low-churn.
@@ -97,6 +129,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticEntries,
     ...articleEntries,
+    ...evergreenEntries,
     ...authorEntries,
     ...topicEntries,
   ];

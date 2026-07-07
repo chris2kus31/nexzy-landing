@@ -539,6 +539,24 @@ export async function generateGuide(
   );
 }
 
+export type ListKind = "upcoming" | "new";
+
+/**
+ * Generate an evergreen LIST article ("upcoming" games or "new this week")
+ * straight from the games DB. Lands in the review queue as a draft.
+ */
+export async function generateList(
+  kind: ListKind = "upcoming",
+): Promise<{ queued: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/lists/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind }),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }

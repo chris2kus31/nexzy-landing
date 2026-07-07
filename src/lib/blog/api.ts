@@ -80,6 +80,15 @@ export async function fetchGuides(params?: {
   return fetchPosts({ ...params, type: "guide" });
 }
 
+/** Evergreen lists index ("upcoming" + "new this week"). Newest first. */
+export async function fetchLists(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PostList> {
+  return fetchPosts({ ...params, type: "list" });
+}
+
 export async function fetchTrending(
   limit = 5,
   sort: "hot" | "reads" = "hot",

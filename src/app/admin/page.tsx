@@ -16,6 +16,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
 import GuidePanel from "@/components/admin/GuidePanel";
+import ListPanel from "@/components/admin/ListPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
@@ -312,6 +313,7 @@ function AdminContent() {
           <RunPipelinePanel onRan={load} />
           <CommissionPanel onRan={load} />
           <GuidePanel onRan={load} />
+          <ListPanel onRan={load} />
           <BackfillAuthorsButton />
         </VStack>
       )}

@@ -15,11 +15,9 @@ import {
   Separator,
   Icon,
 } from "@chakra-ui/react";
-import { HiCalendar, HiClock, HiEye } from "react-icons/hi";
+import { HiClock, HiEye } from "react-icons/hi";
 import { fetchPost, fetchRelated } from "@/lib/blog/api";
-import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
-import { getAuthorByName } from "@/lib/blog/authors";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import Markdown from "@/components/blog/Markdown";
@@ -30,7 +28,7 @@ import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
-// ISR: article pages are cached and rebuilt in the background (fast + crawlable).
+// ISR: list pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -41,6 +39,35 @@ function readingMinutes(markdown?: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
+/**
+ * Parse the list body into items: each "## " heading is an entry name and the
+ * prose beneath it (stripped of markdown) is its blurb. Powers the ItemList
+ * JSON-LD so the list can win rich results for "upcoming / best games" queries.
+ */
+function toListItems(markdown?: string): { name: string; text: string }[] {
+  if (!markdown) return [];
+  const lines = markdown.split(/\r?\n/);
+  const items: { name: string; text: string }[] = [];
+  let current: { name: string; text: string } | null = null;
+  for (const line of lines) {
+    const h = line.match(/^##\s+(.+?)\s*$/); // top-level sections only
+    if (h && !line.startsWith("###")) {
+      if (current) items.push(current);
+      current = { name: h[1].replace(/[#*`]/g, "").trim(), text: "" };
+    } else if (current) {
+      const clean = line
+        .replace(/[#*_`>[\]()]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (clean) current.text += (current.text ? " " : "") + clean;
+    }
+  }
+  if (current) items.push(current);
+  return items
+    .map((s) => ({ name: s.name, text: s.text.slice(0, 500) }))
+    .filter((s) => s.name);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -48,19 +75,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = await fetchPost(slug);
-  if (!post) return { title: "Article not found — Nexzy News" };
+  if (!post || post.type !== "list") return { title: "List not found — Nexzy" };
 
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || post.excerpt || undefined;
   return {
-    title: `${title} — Nexzy News`,
+    title: `${title} — Nexzy Lists`,
     description,
-    alternates: { canonical: `/blog/${post.slug}` },
+    alternates: { canonical: `/lists/${post.slug}` },
     openGraph: {
       title,
       description,
       type: "article",
-      publishedTime: post.publishedAt || undefined,
       images: post.heroImageUrl ? [{ url: post.heroImageUrl }] : undefined,
     },
     twitter: {
@@ -72,7 +98,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function BlogArticlePage({
+export default async function ListPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -80,67 +106,39 @@ export default async function BlogArticlePage({
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
-  // Guides (/guides/[slug], HowTo schema) and lists (/lists/[slug], ItemList
-  // schema) have their own homes — keep the canonical URL single by 404-ing
-  // those slugs here.
-  if (post.type === "guide" || post.type === "list") notFound();
+  // Only lists live here; any other type 404s (each has its own home).
+  if (post.type !== "list") notFound();
 
-  // Related: tag-aware (shared topic first, then same beat), excluding self.
   const related = await fetchRelated(post.slug, 3);
   const topics = (post.tags || [])
     .map((t) => ({ label: t, slug: slugifyTag(t) }))
     .filter((t) => t.slug);
 
-  const shareUrl = `${SITE_URL}/blog/${post.slug}`;
+  const shareUrl = `${SITE_URL}/lists/${post.slug}`;
   const minutes = readingMinutes(post.bodyMarkdown);
   const videoEmbed = youtubeEmbedUrl(post.youtubeUrl);
   const videoIsShort = isYoutubeShort(post.youtubeUrl);
-  // Normalize any older credit like "AI-generated (Gemini …)" to a clean label.
   const imageCredit = post.imageCredit
     ? post.imageCredit
         .replace(/\s*\(.*?\)\s*$/, "")
         .replace(/^AI-generated$/i, "Generated with AI")
     : null;
 
-  const articleUrl = `${SITE_URL}/blog/${post.slug}`;
-  const sectionLabel = beatLabel(post.beat);
-  const authorPersona = getAuthorByName(post.author);
+  const listUrl = `${SITE_URL}/lists/${post.slug}`;
+  const entries = toListItems(post.bodyMarkdown);
 
-  const jsonLd = {
+  const itemListLd = {
     "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: post.title,
+    "@type": "ItemList",
+    name: post.title,
     description: post.seoDescription || post.excerpt || undefined,
-    image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
-    datePublished: post.publishedAt || undefined,
-    dateModified: post.updatedAt || post.publishedAt || undefined,
-    articleSection: sectionLabel,
-    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
-    author: authorPersona
-      ? {
-          "@type": "Person",
-          name: authorPersona.name,
-          jobTitle: authorPersona.role,
-          url: `${SITE_URL}/author/${authorPersona.slug}`,
-          ...(authorPersona.x || authorPersona.instagram
-            ? {
-                sameAs: [authorPersona.x, authorPersona.instagram].filter(
-                  Boolean,
-                ),
-              }
-            : {}),
-        }
-      : { "@type": "Organization", name: post.author || "Nexzy Editorial" },
-    publisher: {
-      "@type": "Organization",
-      name: "Nexzy",
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
-    },
+    url: listUrl,
+    numberOfItems: entries.length,
+    itemListElement: entries.map((e, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: e.name,
+    })),
   };
 
   const breadcrumbLd = {
@@ -151,16 +149,10 @@ export default async function BlogArticlePage({
       {
         "@type": "ListItem",
         position: 2,
-        name: "Game News",
-        item: `${SITE_URL}/blog`,
+        name: "Lists",
+        item: `${SITE_URL}/lists`,
       },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: sectionLabel,
-        item: `${SITE_URL}/blog?beat=${post.beat}`,
-      },
-      { "@type": "ListItem", position: 4, name: post.title, item: articleUrl },
+      { "@type": "ListItem", position: 3, name: post.title, item: listUrl },
     ],
   };
 
@@ -170,11 +162,7 @@ export default async function BlogArticlePage({
         {/* Visible breadcrumb (matches BreadcrumbList JSON-LD) */}
         <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
           <Link asChild color="nexzy.lightBlue">
-            <NextLink href="/blog">Game News</NextLink>
-          </Link>
-          <Text>/</Text>
-          <Link asChild color="nexzy.lightBlue">
-            <NextLink href={`/blog?beat=${post.beat}`}>{sectionLabel}</NextLink>
+            <NextLink href="/lists">Lists</NextLink>
           </Link>
           <Text>/</Text>
           <Text color="gray.500" lineClamp={1}>
@@ -184,23 +172,9 @@ export default async function BlogArticlePage({
 
         {/* Meta row */}
         <HStack gap={4} mb={4} flexWrap="wrap">
-          <Badge colorPalette={beatPalette(post.beat)} variant="solid">
-            {beatLabel(post.beat)}
+          <Badge colorPalette="purple" variant="solid">
+            List
           </Badge>
-          {post.publishedAt && (
-            <HStack gap={1} color="gray.400" fontSize="sm">
-              <Icon>
-                <HiCalendar />
-              </Icon>
-              <Text>
-                {new Date(post.publishedAt).toLocaleDateString(undefined, {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-            </HStack>
-          )}
           <HStack gap={1} color="gray.400" fontSize="sm">
             <Icon>
               <HiClock />
@@ -280,8 +254,6 @@ export default async function BlogArticlePage({
             </Heading>
             <Box
               position="relative"
-              // Shorts are vertical (9:16) and capped in width so they don't
-              // tower over the article; regular videos fill the column at 16:9.
               w={videoIsShort ? { base: "full", sm: "340px" } : "full"}
               aspectRatio={videoIsShort ? 9 / 16 : 16 / 9}
               borderRadius="2xl"
@@ -361,7 +333,7 @@ export default async function BlogArticlePage({
           </Box>
         )}
 
-        {/* Turn readers into installs — the newsroom's app funnel. */}
+        {/* Turn readers into installs — the app tracks every game on this list. */}
         <Box mt={10}>
           <AppCta variant="inline" />
         </Box>
@@ -380,12 +352,12 @@ export default async function BlogArticlePage({
         </HStack>
       </Container>
 
-      {/* Related news */}
+      {/* Related lists */}
       {related.length > 0 && (
         <Box borderTop="1px solid" borderColor="whiteAlpha.100" py={12}>
           <Container maxW="container.xl">
             <Heading as="h2" size="lg" color="white" mb={6}>
-              Keep reading
+              More lists
             </Heading>
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
               {related.map((p) => (
@@ -401,7 +373,7 @@ export default async function BlogArticlePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
       />
       <script
         type="application/ld+json"

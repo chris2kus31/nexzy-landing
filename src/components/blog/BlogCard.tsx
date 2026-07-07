@@ -15,11 +15,21 @@ function fmt(date: string | null): string {
 }
 
 export default function BlogCard({ post }: { post: PublicPost }) {
-  // Guides live under /guides with a distinct badge; articles keep their beat.
+  // Guides live under /guides and lists under /lists, each with a distinct
+  // badge; articles keep their beat.
   const isGuide = post.type === "guide";
-  const href = isGuide ? `/guides/${post.slug}` : `/blog/${post.slug}`;
-  const badgeLabel = isGuide ? "Guide" : beatLabel(post.beat);
-  const badgePalette = isGuide ? "cyan" : beatPalette(post.beat);
+  const isList = post.type === "list";
+  const href = isGuide
+    ? `/guides/${post.slug}`
+    : isList
+      ? `/lists/${post.slug}`
+      : `/blog/${post.slug}`;
+  const badgeLabel = isGuide ? "Guide" : isList ? "List" : beatLabel(post.beat);
+  const badgePalette = isGuide
+    ? "cyan"
+    : isList
+      ? "purple"
+      : beatPalette(post.beat);
   return (
     <NextLink href={href} style={{ display: "block", height: "100%" }}>
       <Box
