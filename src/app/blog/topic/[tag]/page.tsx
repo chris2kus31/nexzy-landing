@@ -12,7 +12,7 @@ import {
   Link,
 } from "@chakra-ui/react";
 import { fetchPosts, fetchTags } from "@/lib/blog/api";
-import { slugifyTag } from "@/lib/blog/tags";
+import { slugifyTag, MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import BlogCard from "@/components/blog/BlogCard";
 import Pager from "@/components/blog/Pager";
 
@@ -41,6 +41,12 @@ async function resolveLabel(slug: string): Promise<string | null> {
   return null;
 }
 
+/** How many published articles carry this tag (0 if unknown). */
+async function tagCount(slug: string): Promise<number> {
+  const tags = await fetchTags(500);
+  return tags.find((t) => t.slug === slug)?.count ?? 0;
+}
+
 // Pre-render the busiest topics for SEO; the rest render on-demand (ISR).
 export async function generateStaticParams(): Promise<{ tag: string }[]> {
   const tags = await fetchTags(50);
@@ -53,15 +59,26 @@ export async function generateMetadata({
   params: Promise<{ tag: string }>;
 }): Promise<Metadata> {
   const { tag } = await params;
-  const label = (await resolveLabel(tag)) || prettifySlug(tag);
-  const title = `${label} — Nexzy News`;
-  const description = `The latest ${label} news, updates, and coverage from the Nexzy newsroom.`;
+  const slug = slugifyTag(tag);
+  const [label, count] = await Promise.all([
+    resolveLabel(slug),
+    tagCount(slug),
+  ]);
+  const displayLabel = label || prettifySlug(tag);
+  const title = `${displayLabel} — Nexzy News`;
+  const description = `The latest ${displayLabel} news, updates, and coverage from the Nexzy newsroom.`;
   return {
     title,
     description,
-    alternates: { canonical: `/blog/topic/${tag}` },
+    alternates: { canonical: `/blog/topic/${slug}` },
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary_large_image", title, description },
+    // Thin hubs (too few articles) are rendered for humans but kept out of the
+    // index so Google isn't judging the site on ~100 near-duplicate tag pages.
+    // 'follow' keeps link equity flowing to the articles they list.
+    ...(count < MIN_TOPIC_ARTICLES
+      ? { robots: { index: false, follow: true } }
+      : {}),
   };
 }
 
