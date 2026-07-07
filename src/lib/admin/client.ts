@@ -285,6 +285,70 @@ export async function marketingPost(input: {
   );
 }
 
+// ---- Content Desk (short-form video suggestions) ----
+
+export interface PlatformKit {
+  title?: string;
+  description?: string;
+  caption?: string;
+  hashtags?: string[];
+}
+
+export interface ContentSuggestion {
+  id: string;
+  kind: string;
+  lane: string | null;
+  title: string;
+  hook: string | null;
+  script: string | null;
+  rationale: string | null;
+  sourceType: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  author: string;
+  payload: {
+    broll?: string;
+    cta?: string;
+    platforms?: {
+      youtube?: PlatformKit;
+      tiktok?: PlatformKit;
+      reels?: PlatformKit;
+    };
+  } | null;
+  status: string;
+  createdAt: string;
+}
+
+/** The open board of content suggestions (survives a refresh). */
+export async function getContentSuggestions(): Promise<ContentSuggestion[]> {
+  return handle(await fetch("/api/newsroom/admin/content"));
+}
+
+/** Generate fresh suggestions now, then return the open board. */
+export async function suggestContentNow(): Promise<ContentSuggestion[]> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/suggest-now", { method: "POST" }),
+  );
+}
+
+/** Bury a suggestion. */
+export async function skipContentSuggestion(
+  id: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/skip`, { method: "POST" }),
+  );
+}
+
+/** Mark a suggestion used (you shot/posted it). */
+export async function useContentSuggestion(
+  id: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/use`, { method: "POST" }),
+  );
+}
+
 // ---- Analytics (Phase 7) ----
 
 export interface TopArticle {

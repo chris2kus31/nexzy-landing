@@ -19,6 +19,7 @@ import GuidePanel from "@/components/admin/GuidePanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
+import ContentPanel from "@/components/admin/ContentPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
@@ -37,6 +38,7 @@ type Tab =
   | "published"
   | "subscribers"
   | "marketing"
+  | "content"
   | "forum"
   | "analytics"
   | "tools";
@@ -224,6 +226,11 @@ function AdminContent() {
             onClick={() => setTab("marketing")}
           />
           <TabButton
+            label="Content"
+            active={tab === "content"}
+            onClick={() => setTab("content")}
+          />
+          <TabButton
             label="Forum"
             active={tab === "forum"}
             onClick={() => setTab("forum")}
@@ -286,6 +293,8 @@ function AdminContent() {
       {tab === "subscribers" && <SubscribersPanel />}
 
       {tab === "marketing" && <MarketingPanel />}
+
+      {tab === "content" && <ContentPanel />}
 
       {tab === "analytics" && <AnalyticsPanel />}
 
