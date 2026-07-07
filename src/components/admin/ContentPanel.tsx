@@ -11,6 +11,7 @@ import {
   Button,
   Badge,
   Link,
+  Input,
   Spinner,
 } from "@chakra-ui/react";
 import {
@@ -18,6 +19,7 @@ import {
   suggestContentNow,
   skipContentSuggestion,
   useContentSuggestion,
+  approveContentGuide,
   type ContentSuggestion,
   type PlatformKit,
 } from "@/lib/admin/client";
@@ -27,6 +29,7 @@ const LANE_COLOR: Record<string, string> = {
   news: "blue",
   tip: "cyan",
   upcoming: "purple",
+  guide: "cyan",
 };
 
 /** Copy-to-clipboard button with a brief "Copied" confirmation. */
@@ -108,6 +111,117 @@ function KitBlock({
           —
         </Text>
       )}
+    </Box>
+  );
+}
+
+/**
+ * A guide LEAD (kind === "guide"): a recently-released game worth a how-to.
+ * "Generate guide" kicks off the grounded GuideWriter → review queue. An
+ * optional focus lets you steer the angle (e.g. a specific boss) first.
+ */
+function GuideLeadCard({
+  s,
+  onDone,
+}: {
+  s: ContentSuggestion;
+  onDone: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState<"skip" | "gen" | null>(null);
+  const [focus, setFocus] = useState("");
+  const angles = s.payload?.angles ?? [];
+  const game = s.payload?.game ?? s.title.replace(/^Guide:\s*/i, "");
+
+  const generate = async () => {
+    setBusy("gen");
+    try {
+      await approveContentGuide(s.id, { focus: focus.trim() || undefined });
+      onDone(s.id);
+    } catch {
+      setBusy(null);
+    }
+  };
+  const skip = async () => {
+    setBusy("skip");
+    try {
+      await skipContentSuggestion(s.id);
+      onDone(s.id);
+    } catch {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="xl"
+      p={4}
+    >
+      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
+        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
+          <Badge colorPalette="cyan" variant="solid">
+            GUIDE LEAD
+          </Badge>
+          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
+            {game}
+          </Text>
+        </HStack>
+      </Flex>
+
+      {s.rationale && (
+        <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
+          {s.rationale}
+        </Text>
+      )}
+
+      {angles.length > 0 && (
+        <HStack gap={2} wrap="wrap" mb={3}>
+          {angles.map((a) => (
+            <Badge key={a} colorPalette="gray" variant="subtle">
+              {a}
+            </Badge>
+          ))}
+        </HStack>
+      )}
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Optional focus (boss / level / system) — leave blank for a general guide
+      </Text>
+      <Input
+        value={focus}
+        onChange={(e) => setFocus(e.target.value)}
+        placeholder={`e.g. a specific boss in ${game}`}
+        color="nexzy.white"
+        bg="whiteAlpha.50"
+        borderColor="whiteAlpha.300"
+        _placeholder={{ color: "nexzy.gray.100" }}
+        mb={3}
+      />
+
+      <HStack gap={2} justify="flex-end">
+        <Button
+          size="xs"
+          colorPalette="cyan"
+          onClick={generate}
+          loading={busy === "gen"}
+          loadingText="Generating…"
+        >
+          Generate guide
+        </Button>
+        <Button
+          size="xs"
+          variant="ghost"
+          color="nexzy.gray.100"
+          _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+          onClick={skip}
+          loading={busy === "skip"}
+          loadingText="…"
+        >
+          Skip
+        </Button>
+      </HStack>
     </Box>
   );
 }
@@ -261,10 +375,10 @@ export default function ContentPanel() {
           Content Desk
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
-          Ready-to-shoot short-form clips from your published content — each
-          with a 3-beat script and a per-platform posting kit (title, caption,
-          hashtags tuned to each platform&apos;s SEO). Approve what you&apos;ll
-          shoot; skip the rest.
+          Ready-to-shoot short-form clips from your published content (3-beat
+          script + per-platform posting kit), plus guide leads for
+          recently-released games. Shoot the clips; hit &ldquo;Generate
+          guide&rdquo; to turn a lead into a full guide in your review queue.
         </Text>
       </Box>
 
@@ -307,9 +421,13 @@ export default function ContentPanel() {
         </Text>
       ) : (
         <VStack align="stretch" gap={4}>
-          {items.map((s) => (
-            <SuggestionCard key={s.id} s={s} onDone={remove} />
-          ))}
+          {items.map((s) =>
+            s.kind === "guide" ? (
+              <GuideLeadCard key={s.id} s={s} onDone={remove} />
+            ) : (
+              <SuggestionCard key={s.id} s={s} onDone={remove} />
+            ),
+          )}
         </VStack>
       )}
     </VStack>

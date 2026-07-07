@@ -314,6 +314,12 @@ export interface ContentSuggestion {
       tiktok?: PlatformKit;
       reels?: PlatformKit;
     };
+    // Guide-lead fields (kind === "guide")
+    game?: string;
+    released?: string;
+    genres?: string[];
+    angles?: string[];
+    focus?: string;
   } | null;
   status: string;
   createdAt: string;
@@ -346,6 +352,23 @@ export async function useContentSuggestion(
 ): Promise<ContentSuggestion> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/use`, { method: "POST" }),
+  );
+}
+
+/**
+ * Approve a guide LEAD → generate the real guide (lands in the review queue).
+ * Optional focus/instructions steer the angle before generating.
+ */
+export async function approveContentGuide(
+  id: string,
+  overrides?: { focus?: string; instructions?: string },
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/approve-guide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(overrides ?? {}),
+    }),
   );
 }
 
