@@ -14,6 +14,7 @@ import {
   Input,
   Textarea,
   Button,
+  Badge,
   Image,
   Spinner,
   Separator,
@@ -96,6 +97,19 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
     : [];
   const autoRevised = !!report.autoRevised;
 
+  // Guide Editor extras (guides only). Absent on news articles.
+  const isGuideEditor = report.agent === "guide-editor";
+  const suspectClaims = Array.isArray(report.suspectClaims)
+    ? (report.suspectClaims as string[])
+    : [];
+  const gScores: [string, unknown][] = [
+    ["Originality", report.originalityScore],
+    ["Usefulness", report.usefulnessScore],
+    ["Slop (lower=better)", report.slopScore],
+  ].filter(([, v]) => v != null) as [string, unknown][];
+  const gameInDb =
+    typeof report.gameInDb === "boolean" ? (report.gameInDb as boolean) : null;
+
   return (
     <Box
       bg="whiteAlpha.50"
@@ -121,6 +135,29 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
           </Text>
         </Text>
       </HStack>
+
+      {/* Guide Editor: scores + games-DB status */}
+      {isGuideEditor && (gScores.length > 0 || gameInDb !== null) && (
+        <HStack gap={4} mb={3} flexWrap="wrap">
+          {gScores.map(([label, v]) => (
+            <Text key={label} fontSize="sm" color="nexzy.gray.100">
+              {label}:{" "}
+              <Text as="span" color="nexzy.white" fontWeight="600">
+                {String(v)}
+              </Text>
+            </Text>
+          ))}
+          {gameInDb !== null && (
+            <Badge
+              colorPalette={gameInDb ? "green" : "orange"}
+              variant="subtle"
+            >
+              {gameInDb ? "Game in Nexzy DB ✓" : "Game NOT in DB"}
+            </Badge>
+          )}
+        </HStack>
+      )}
+
       {factCheck.length > 0 && (
         <VStack align="stretch" gap={1} mb={issues.length ? 3 : 0}>
           {factCheck.map((f, i) => (
@@ -130,6 +167,19 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
               color={f.supported ? "green.300" : "red.300"}
             >
               {f.supported ? "✓" : "✕"} {f.claim}
+            </Text>
+          ))}
+        </VStack>
+      )}
+
+      {suspectClaims.length > 0 && (
+        <VStack align="stretch" gap={1} mb={issues.length ? 3 : 0}>
+          <Text fontSize="xs" color="nexzy.gray.100" fontWeight="600">
+            ⚠ Suspect specifics (verify before publishing):
+          </Text>
+          {suspectClaims.map((c, i) => (
+            <Text key={i} fontSize="xs" color="red.300">
+              • {c}
             </Text>
           ))}
         </VStack>
@@ -596,23 +646,26 @@ function EditorContent({ id }: { id: string }) {
                 >
                   ↑ Upload image
                 </Button>
-                <Button
-                  size="xs"
-                  flex={1}
-                  variant="outline"
-                  color="nexzy.white"
-                  borderColor="whiteAlpha.300"
-                  _hover={{ bg: "whiteAlpha.100" }}
-                  loading={busy === "Image re-queued"}
-                  onClick={() =>
-                    run("Image re-queued", async () => {
-                      await regenerateImage(id);
-                      return getPost(id);
-                    })
-                  }
-                >
-                  ↻ Regenerate
-                </Button>
+                {/* Guides are upload-only (no AI hero) — hide Regenerate for them. */}
+                {post.type !== "guide" && (
+                  <Button
+                    size="xs"
+                    flex={1}
+                    variant="outline"
+                    color="nexzy.white"
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    loading={busy === "Image re-queued"}
+                    onClick={() =>
+                      run("Image re-queued", async () => {
+                        await regenerateImage(id);
+                        return getPost(id);
+                      })
+                    }
+                  >
+                    ↻ Regenerate
+                  </Button>
+                )}
               </HStack>
               <input
                 ref={fileRef}
