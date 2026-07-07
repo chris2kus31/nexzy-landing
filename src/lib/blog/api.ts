@@ -27,6 +27,8 @@ export interface PublicPost {
   updatedAt: string | null;
   viewCount: number;
   featured: boolean;
+  // Guides only: is this game in the Nexzy library? Drives the app CTA.
+  appGame?: { inDb: boolean; name: string } | null;
 }
 
 export interface PostList {

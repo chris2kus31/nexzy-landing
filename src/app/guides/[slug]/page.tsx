@@ -350,9 +350,18 @@ export default async function GuidePage({
           </Box>
         )}
 
-        {/* Turn readers into installs — the app is where the AI beats the game. */}
+        {/* Turn readers into installs. When we actually have this game in the
+            Nexzy library, make the CTA game-specific (track it + in-app AI). */}
         <Box mt={10}>
-          <AppCta variant="inline" />
+          {post.appGame?.inDb ? (
+            <AppCta
+              variant="inline"
+              heading={`Playing ${post.appGame.name || post.title}? Get Nexzy.`}
+              subtext={`Track ${post.appGame.name || "this game"}, get step-by-step AI help for any stuck moment, and earn coins — free on iOS & Android.`}
+            />
+          ) : (
+            <AppCta variant="inline" />
+          )}
         </Box>
 
         <HStack

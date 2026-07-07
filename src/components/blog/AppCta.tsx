@@ -19,8 +19,14 @@ import { trackDownload } from "@/lib/analytics";
  */
 export default function AppCta({
   variant = "band",
+  heading,
+  subtext,
 }: {
   variant?: "band" | "inline";
+  /** Optional override headline (e.g. game-specific guide CTA). */
+  heading?: string;
+  /** Optional override subtext. */
+  subtext?: string;
 }) {
   const compact = variant === "inline";
   return (
@@ -50,11 +56,11 @@ export default function AppCta({
           color="white"
           mb={2}
         >
-          Stuck in a game? Nexzy&apos;s AI has the answer.
+          {heading ?? "Stuck in a game? Nexzy's AI has the answer."}
         </Heading>
         <Text color="gray.300" fontSize="sm" mb={5}>
-          Instant help for any game, earn coins daily, and track your library —
-          free on iOS &amp; Android.
+          {subtext ??
+            "Instant help for any game, earn coins daily, and track your library — free on iOS & Android."}
         </Text>
         <HStack gap={3} justify="center" flexWrap="wrap">
           <Button
