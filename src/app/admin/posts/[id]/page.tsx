@@ -617,7 +617,7 @@ function EditorContent({ id }: { id: string }) {
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
                 style={{ display: "none" }}
                 onChange={onPickImage}
               />
