@@ -19,23 +19,30 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   let slug = "";
+  let type = "article";
   try {
     const body = await req.json();
     slug = typeof body?.slug === "string" ? body.slug : "";
+    if (body?.type === "guide" || body?.type === "list") type = body.type;
   } catch {
     // no body / bad JSON — still refresh the index + feeds below
   }
 
-  // Refresh the affected pages + feeds.
-  if (slug) revalidatePath(`/blog/${slug}`);
-  revalidatePath("/blog");
+  // Content type → its own URL home, so we revalidate + ping the RIGHT path
+  // (a guide lives at /guides/<slug>, a list at /lists/<slug>, not /blog).
+  const base =
+    type === "guide" ? "/guides" : type === "list" ? "/lists" : "/blog";
+
+  // Refresh the affected page + its index + feeds.
+  if (slug) revalidatePath(`${base}/${slug}`);
+  revalidatePath(base);
   revalidatePath("/sitemap.xml");
   revalidatePath("/news-sitemap.xml");
   revalidatePath("/rss.xml");
 
-  // Nudge IndexNow (best-effort).
-  const urls = [`${SITE_URL}/blog`];
-  if (slug) urls.unshift(`${SITE_URL}/blog/${slug}`);
+  // Nudge IndexNow (best-effort) with the correct URLs.
+  const urls = [`${SITE_URL}${base}`];
+  if (slug) urls.unshift(`${SITE_URL}${base}/${slug}`);
   const indexNowStatus = await pingIndexNow(urls);
 
   return NextResponse.json({ ok: true, revalidated: true, indexNowStatus });
