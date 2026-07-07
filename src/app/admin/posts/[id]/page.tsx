@@ -128,12 +128,16 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
             {verdict}
           </Text>
         </Text>
-        <Text fontSize="sm" color="nexzy.gray.100">
-          Style:{" "}
-          <Text as="span" color="nexzy.white">
-            {score}
+        {/* News uses a single Style score; guides show their own scores below,
+            so hide the (empty) Style stat on guide reports to avoid clutter. */}
+        {!isGuideEditor && (
+          <Text fontSize="sm" color="nexzy.gray.100">
+            Style:{" "}
+            <Text as="span" color="nexzy.white">
+              {score}
+            </Text>
           </Text>
-        </Text>
+        )}
       </HStack>
 
       {/* Guide Editor: scores + games-DB status */}
