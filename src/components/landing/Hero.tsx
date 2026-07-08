@@ -330,7 +330,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
               </Link>
             </Flex>
             <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap={4}>
-              {latest.map((n) => (
+              {latest.map((n, i) => (
                 <Link key={n.slug} asChild _hover={{ textDecoration: "none" }}>
                   <NextLink
                     href={`/blog/${n.slug}`}
@@ -370,6 +370,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                             fill
                             sizes="(max-width: 640px) 104px, 360px"
                             style={{ objectFit: "cover" }}
+                            priority={i === 0}
                           />
                         )}
                         <Badge

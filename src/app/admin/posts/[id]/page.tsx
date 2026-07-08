@@ -17,7 +17,6 @@ import {
   Badge,
   Image,
   Spinner,
-  Separator,
 } from "@chakra-ui/react";
 import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
@@ -82,10 +81,15 @@ const inputProps = {
   maxW: "full",
 };
 
-function EditorReport({ report }: { report: Record<string, unknown> | null }) {
+function EditorReport({
+  report,
+  wide = false,
+}: {
+  report: Record<string, unknown> | null;
+  wide?: boolean;
+}) {
   if (!report) return null;
   const verdict = String(report.verdict ?? "—");
-  const score = report.styleScore != null ? String(report.styleScore) : "—";
   const factCheck = Array.isArray(report.factCheck)
     ? (report.factCheck as { claim: string; supported: boolean }[])
     : [];
@@ -110,6 +114,37 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
   const gameInDb =
     typeof report.gameInDb === "boolean" ? (report.gameInDb as boolean) : null;
 
+  // Verdict → color: pass/publish = green, reject/fail = red, revise = amber.
+  const v = verdict.toLowerCase();
+  const verdictPalette =
+    v.includes("pass") ||
+    v.includes("publish") ||
+    v.includes("approve") ||
+    v === "ok"
+      ? "green"
+      : v.includes("reject") || v.includes("fail")
+        ? "red"
+        : v === "—"
+          ? "gray"
+          : "orange";
+
+  // Score chips: guides show Originality/Usefulness/Slop; news shows Style.
+  const scoreChips: [string, unknown][] = isGuideEditor
+    ? gScores
+    : report.styleScore != null
+      ? [["Style", report.styleScore]]
+      : [];
+
+  // Tone a score value: higher is better, except "slop" where lower is better.
+  const scoreTone = (label: string, val: unknown): string => {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return "gray";
+    const lowerBetter = label.toLowerCase().includes("slop");
+    const good = lowerBetter ? n <= 20 : n >= 80;
+    const bad = lowerBetter ? n >= 50 : n <= 50;
+    return good ? "green" : bad ? "red" : "yellow";
+  };
+
   return (
     <Box
       bg="whiteAlpha.50"
@@ -118,57 +153,86 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
       borderRadius="lg"
       p={4}
     >
-      <Heading size="sm" color="nexzy.white" mb={2}>
-        Editor report
-      </Heading>
-      <HStack gap={4} mb={3}>
-        <Text fontSize="sm" color="nexzy.gray.100">
-          Verdict:{" "}
-          <Text as="span" color="nexzy.white" fontWeight="600">
-            {verdict}
-          </Text>
-        </Text>
-        {/* News uses a single Style score; guides show their own scores below,
-            so hide the (empty) Style stat on guide reports to avoid clutter. */}
-        {!isGuideEditor && (
-          <Text fontSize="sm" color="nexzy.gray.100">
-            Style:{" "}
-            <Text as="span" color="nexzy.white">
-              {score}
-            </Text>
-          </Text>
-        )}
+      {/* Header: title + verdict badge */}
+      <HStack justify="space-between" align="center" mb={4}>
+        <Heading size="sm" color="nexzy.white">
+          Editor report
+        </Heading>
+        <Badge
+          colorPalette={verdictPalette}
+          variant="solid"
+          textTransform="capitalize"
+          px={2.5}
+          py={1}
+          borderRadius="md"
+          fontSize="xs"
+        >
+          {verdict}
+        </Badge>
       </HStack>
 
-      {/* Guide Editor: scores + games-DB status */}
-      {isGuideEditor && (gScores.length > 0 || gameInDb !== null) && (
-        <HStack gap={4} mb={3} flexWrap="wrap">
-          {gScores.map(([label, v]) => (
-            <Text key={label} fontSize="sm" color="nexzy.gray.100">
-              {label}:{" "}
-              <Text as="span" color="nexzy.white" fontWeight="600">
-                {String(v)}
-              </Text>
-            </Text>
-          ))}
+      {/* Score chips + games-DB status */}
+      {(scoreChips.length > 0 || gameInDb !== null) && (
+        <Flex gap={2} mb={4} flexWrap="wrap">
+          {scoreChips.map(([label, val]) => {
+            const tone = scoreTone(label, val);
+            return (
+              <Box
+                key={label}
+                bg={`${tone}.400/10`}
+                border="1px solid"
+                borderColor={`${tone}.400/25`}
+                borderRadius="md"
+                px={3}
+                py={1.5}
+                minW="88px"
+              >
+                <Text
+                  fontSize="10px"
+                  color="nexzy.gray.100"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                  lineHeight="1.2"
+                >
+                  {label}
+                </Text>
+                <Text fontSize="lg" fontWeight="700" color={`${tone}.300`}>
+                  {String(val)}
+                </Text>
+              </Box>
+            );
+          })}
           {gameInDb !== null && (
-            <Badge
-              colorPalette={gameInDb ? "green" : "orange"}
-              variant="subtle"
+            <Flex
+              align="center"
+              bg={gameInDb ? "green.400/10" : "orange.400/10"}
+              border="1px solid"
+              borderColor={gameInDb ? "green.400/25" : "orange.400/25"}
+              borderRadius="md"
+              px={3}
+              py={1.5}
             >
-              {gameInDb ? "Game in Nexzy DB ✓" : "Game NOT in DB"}
-            </Badge>
+              <Text
+                fontSize="xs"
+                fontWeight="600"
+                color={gameInDb ? "green.300" : "orange.300"}
+              >
+                {gameInDb ? "Game in Nexzy DB ✓" : "Game NOT in DB"}
+              </Text>
+            </Flex>
           )}
-        </HStack>
+        </Flex>
       )}
 
+      {/* Fact check (news) */}
       {factCheck.length > 0 && (
-        <VStack align="stretch" gap={1} mb={issues.length ? 3 : 0}>
+        <VStack align="stretch" gap={1.5} mb={3}>
           {factCheck.map((f, i) => (
             <Text
               key={i}
               fontSize="xs"
               color={f.supported ? "green.300" : "red.300"}
+              lineHeight="1.4"
             >
               {f.supported ? "✓" : "✕"} {f.claim}
             </Text>
@@ -176,34 +240,74 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
         </VStack>
       )}
 
-      {suspectClaims.length > 0 && (
-        <VStack align="stretch" gap={1} mb={issues.length ? 3 : 0}>
-          <Text fontSize="xs" color="nexzy.gray.100" fontWeight="600">
-            ⚠ Suspect specifics (verify before publishing):
-          </Text>
-          {suspectClaims.map((c, i) => (
-            <Text key={i} fontSize="xs" color="red.300">
-              • {c}
-            </Text>
-          ))}
-        </VStack>
+      {/* Flags: suspect specifics + editor notes (side-by-side when wide) */}
+      {(suspectClaims.length > 0 || issues.length > 0) && (
+        <Box
+          display="grid"
+          gridTemplateColumns={
+            wide && suspectClaims.length > 0 && issues.length > 0
+              ? { base: "1fr", lg: "1fr 1fr" }
+              : "1fr"
+          }
+          gap={3}
+          mb={3}
+        >
+          {suspectClaims.length > 0 && (
+            <Box
+              bg="red.400/8"
+              border="1px solid"
+              borderColor="red.400/25"
+              borderRadius="md"
+              p={3}
+            >
+              <Text fontSize="xs" color="red.200" fontWeight="700" mb={1.5}>
+                ⚠ Suspect specifics — verify before publishing
+              </Text>
+              <VStack align="stretch" gap={1}>
+                {suspectClaims.map((c, i) => (
+                  <Text key={i} fontSize="xs" color="red.300" lineHeight="1.4">
+                    • {c}
+                  </Text>
+                ))}
+              </VStack>
+            </Box>
+          )}
+          {issues.length > 0 && (
+            <Box
+              bg="orange.400/8"
+              border="1px solid"
+              borderColor="orange.400/25"
+              borderRadius="md"
+              p={3}
+            >
+              <Text fontSize="xs" color="orange.200" fontWeight="700" mb={1.5}>
+                Editor notes
+              </Text>
+              <VStack align="stretch" gap={1}>
+                {issues.map((it, i) => (
+                  <Text
+                    key={i}
+                    fontSize="xs"
+                    color="orange.300"
+                    lineHeight="1.4"
+                  >
+                    • {it}
+                  </Text>
+                ))}
+              </VStack>
+            </Box>
+          )}
+        </Box>
       )}
-      {issues.length > 0 && (
-        <VStack align="stretch" gap={1}>
-          {issues.map((it, i) => (
-            <Text key={i} fontSize="xs" color="orange.300">
-              • {it}
-            </Text>
-          ))}
-        </VStack>
-      )}
+
+      {/* Auto-revised diff log */}
       {(autoRevised || revisionLog.length > 0) && (
         <Box mt={4} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Text
             fontSize="xs"
             fontWeight="700"
             color="nexzy.lightBlue"
-            mb={2}
+            mb={2.5}
             textTransform="uppercase"
             letterSpacing="wide"
           >
@@ -215,30 +319,74 @@ function EditorReport({ report }: { report: Record<string, unknown> | null }) {
               reaching you.
             </Text>
           ) : (
-            <VStack align="stretch" gap={3}>
+            <Box
+              display="grid"
+              gridTemplateColumns={
+                wide ? { base: "1fr", xl: "1fr 1fr" } : "1fr"
+              }
+              gap={2.5}
+            >
               {revisionLog.map((r, i) => (
-                <Box key={i}>
-                  <Text fontSize="xs" color="red.300" lineHeight="1.4">
-                    <Text as="span" color="nexzy.gray.100">
-                      Before:
-                    </Text>{" "}
-                    {r.before}
-                  </Text>
-                  <Text fontSize="xs" color="green.300" lineHeight="1.4">
-                    <Text as="span" color="nexzy.gray.100">
-                      After:
-                    </Text>{" "}
-                    {r.after}
-                  </Text>
-                  <Text fontSize="xs" color="nexzy.gray.100" lineHeight="1.4">
-                    <Text as="span" color="whiteAlpha.500">
-                      Why:
-                    </Text>{" "}
-                    {r.why}
-                  </Text>
+                <Box
+                  key={i}
+                  bg="whiteAlpha.50"
+                  borderRadius="md"
+                  p={2.5}
+                  borderLeft="2px solid"
+                  borderColor="nexzy.lightBlue"
+                >
+                  <HStack align="start" gap={2} mb={1}>
+                    <Text
+                      fontSize="9px"
+                      fontWeight="700"
+                      color="red.300"
+                      textTransform="uppercase"
+                      mt="2px"
+                      minW="38px"
+                    >
+                      Before
+                    </Text>
+                    <Text fontSize="xs" color="red.200" lineHeight="1.45">
+                      {r.before}
+                    </Text>
+                  </HStack>
+                  <HStack align="start" gap={2} mb={1}>
+                    <Text
+                      fontSize="9px"
+                      fontWeight="700"
+                      color="green.300"
+                      textTransform="uppercase"
+                      mt="2px"
+                      minW="38px"
+                    >
+                      After
+                    </Text>
+                    <Text fontSize="xs" color="green.200" lineHeight="1.45">
+                      {r.after}
+                    </Text>
+                  </HStack>
+                  <HStack align="start" gap={2}>
+                    <Text
+                      fontSize="9px"
+                      fontWeight="700"
+                      color="whiteAlpha.600"
+                      textTransform="uppercase"
+                      mt="2px"
+                      minW="38px"
+                    >
+                      Why
+                    </Text>
+                    <Text
+                      fontSize="xs"
+                      color="nexzy.gray.100"
+                      lineHeight="1.45"
+                    >
+                      {r.why}
+                    </Text>
+                  </HStack>
                 </Box>
               ))}
-            </VStack>
+            </Box>
           )}
         </Box>
       )}
@@ -467,7 +615,7 @@ function EditorContent({ id }: { id: string }) {
         gap={6}
       >
         <GridItem minW={0}>
-          <VStack align="stretch" gap={4}>
+          <VStack align="stretch" gap={4} h="full">
             <Box>
               <Text {...labelProps}>Title</Text>
               <Input
@@ -505,7 +653,7 @@ function EditorContent({ id }: { id: string }) {
                 {...inputProps}
               />
             </Box>
-            <Box>
+            <Box flex="1" display="flex" flexDirection="column" minH={0}>
               <Flex align="center" justify="space-between" mb={1}>
                 <Text {...labelProps} mb={0}>
                   Body (markdown)
@@ -528,7 +676,8 @@ function EditorContent({ id }: { id: string }) {
               <Textarea
                 value={form.bodyMarkdown}
                 onChange={(e) => set("bodyMarkdown", e.target.value)}
-                rows={20}
+                flex="1"
+                minH="420px"
                 fontFamily="mono"
                 fontSize="sm"
                 {...inputProps}
@@ -754,10 +903,6 @@ function EditorContent({ id }: { id: string }) {
               </Text>
             </Box>
 
-            <Separator borderColor="whiteAlpha.200" />
-
-            <EditorReport report={post.editorReport} />
-
             {post.sources && post.sources.length > 0 && (
               <Box>
                 <Text {...labelProps}>Sources</Text>
@@ -798,6 +943,14 @@ function EditorContent({ id }: { id: string }) {
           </VStack>
         </GridItem>
       </Grid>
+
+      {/* Editor report — full width below the form to use the space + give the
+          scores, flags, and diff log room to breathe (two-column when wide). */}
+      {post.editorReport && (
+        <Box mt={6}>
+          <EditorReport report={post.editorReport} wide />
+        </Box>
+      )}
     </>
   );
 }
