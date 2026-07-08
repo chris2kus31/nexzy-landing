@@ -270,7 +270,7 @@ function LeadCard({
  * The Leads Board — the Editor-in-Chief's desk. Ranked story leads from the
  * Assignment Desk; pick "Write this" to send one into the writer, or "Skip".
  */
-export default function LeadsBoard() {
+export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -278,6 +278,7 @@ export default function LeadsBoard() {
   const [emailing, setEmailing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [beat, setBeat] = useState<string | null>(null);
+  const [writer, setWriter] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
 
   const load = () => {
@@ -350,8 +351,13 @@ export default function LeadsBoard() {
   };
 
   const filtered = useMemo(
-    () => (leads || []).filter((l) => !beat || l.beat === beat),
-    [leads, beat],
+    () =>
+      (leads || []).filter(
+        (l) =>
+          (!beat || l.beat === beat) &&
+          (!writer || (l.suggestedAuthor || "") === writer),
+      ),
+    [leads, beat, writer],
   );
 
   return (
@@ -376,27 +382,31 @@ export default function LeadsBoard() {
           >
             Refresh
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            color="nexzy.white"
-            borderColor="whiteAlpha.300"
-            _hover={{ bg: "whiteAlpha.100" }}
-            onClick={emailDigest}
-            loading={emailing}
-            loadingText="Emailing…"
-          >
-            ✉ Email leads
-          </Button>
-          <Button
-            size="sm"
-            colorPalette="blue"
-            onClick={scan}
-            loading={scanning}
-            loadingText="Scanning…"
-          >
-            Scan now
-          </Button>
+          {isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={emailDigest}
+              loading={emailing}
+              loadingText="Emailing…"
+            >
+              ✉ Email leads
+            </Button>
+          )}
+          {isOwner && (
+            <Button
+              size="sm"
+              colorPalette="blue"
+              onClick={scan}
+              loading={scanning}
+              loadingText="Scanning…"
+            >
+              Scan now
+            </Button>
+          )}
         </HStack>
       </Flex>
 
@@ -427,6 +437,41 @@ export default function LeadsBoard() {
               _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
             >
               {b.label}
+            </Button>
+          );
+        })}
+      </HStack>
+
+      {/* Writer filter — filter leads by their suggested author (extensible). */}
+      <HStack gap={2} wrap="wrap" mb={4}>
+        <Text color="nexzy.gray.100" fontSize="xs" fontWeight="600" mr={1}>
+          Writer:
+        </Text>
+        <Button
+          size="xs"
+          onClick={() => setWriter(null)}
+          bg={writer === null ? "nexzy.blue" : "transparent"}
+          color={writer === null ? "white" : "nexzy.gray.100"}
+          borderWidth="1px"
+          borderColor={writer === null ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: writer === null ? "nexzy.blue" : "whiteAlpha.100" }}
+        >
+          All writers
+        </Button>
+        {LEAD_AUTHORS.map((a) => {
+          const active = writer === a;
+          return (
+            <Button
+              key={a}
+              size="xs"
+              onClick={() => setWriter(active ? null : a)}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              {a}
             </Button>
           );
         })}

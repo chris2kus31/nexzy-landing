@@ -123,9 +123,11 @@ function KitBlock({
 function GuideLeadCard({
   s,
   onDone,
+  isOwner,
 }: {
   s: ContentSuggestion;
   onDone: (id: string) => void;
+  isOwner: boolean;
 }) {
   const [busy, setBusy] = useState<"skip" | "gen" | null>(null);
   const [focus, setFocus] = useState("");
@@ -201,15 +203,17 @@ function GuideLeadCard({
       />
 
       <HStack gap={2} justify="flex-end">
-        <Button
-          size="xs"
-          colorPalette="cyan"
-          onClick={generate}
-          loading={busy === "gen"}
-          loadingText="Generating…"
-        >
-          Generate guide
-        </Button>
+        {isOwner && (
+          <Button
+            size="xs"
+            colorPalette="cyan"
+            onClick={generate}
+            loading={busy === "gen"}
+            loadingText="Generating…"
+          >
+            Generate guide
+          </Button>
+        )}
         <Button
           size="xs"
           variant="ghost"
@@ -342,7 +346,11 @@ function SuggestionCard({
   );
 }
 
-export default function ContentPanel() {
+export default function ContentPanel({
+  isOwner = false,
+}: {
+  isOwner?: boolean;
+}) {
   const [items, setItems] = useState<ContentSuggestion[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -388,15 +396,17 @@ export default function ContentPanel() {
             ? ""
             : `${items.length} open suggestion${items.length === 1 ? "" : "s"}`}
         </Text>
-        <Button
-          size="sm"
-          colorPalette="blue"
-          onClick={suggest}
-          loading={loading}
-          loadingText="Thinking…"
-        >
-          {items && items.length ? "↻ Suggest more" : "Suggest now"}
-        </Button>
+        {isOwner && (
+          <Button
+            size="sm"
+            colorPalette="blue"
+            onClick={suggest}
+            loading={loading}
+            loadingText="Thinking…"
+          >
+            {items && items.length ? "↻ Suggest more" : "Suggest now"}
+          </Button>
+        )}
       </Flex>
 
       {err && (
@@ -423,7 +433,12 @@ export default function ContentPanel() {
         <VStack align="stretch" gap={4}>
           {items.map((s) =>
             s.kind === "guide" ? (
-              <GuideLeadCard key={s.id} s={s} onDone={remove} />
+              <GuideLeadCard
+                key={s.id}
+                s={s}
+                onDone={remove}
+                isOwner={isOwner}
+              />
             ) : (
               <SuggestionCard key={s.id} s={s} onDone={remove} />
             ),

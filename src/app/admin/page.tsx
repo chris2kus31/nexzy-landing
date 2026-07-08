@@ -29,6 +29,7 @@ import {
   getQueue,
   getPublished,
   getStats,
+  getMe,
   type BlogPost,
   type AdminStats,
 } from "@/lib/admin/client";
@@ -135,6 +136,16 @@ function AdminContent() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("leads");
+  // Owner = the account allowed to trigger token-spending actions (scans,
+  // pipeline runs, content generation). A second admin (editor) sees a
+  // review-only UI. Enforced server-side too — this just hides the buttons.
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    getMe()
+      .then((m) => setIsOwner(!!m.isOwner))
+      .catch(() => setIsOwner(false));
+  }, []);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -241,11 +252,13 @@ function AdminContent() {
             active={tab === "analytics"}
             onClick={() => setTab("analytics")}
           />
-          <TabButton
-            label="Tools"
-            active={tab === "tools"}
-            onClick={() => setTab("tools")}
-          />
+          {isOwner && (
+            <TabButton
+              label="Tools"
+              active={tab === "tools"}
+              onClick={() => setTab("tools")}
+            />
+          )}
         </HStack>
         {(tab === "queue" || tab === "published") && (
           <Button
@@ -263,7 +276,7 @@ function AdminContent() {
         )}
       </Flex>
 
-      {tab === "leads" && <LeadsBoard />}
+      {tab === "leads" && <LeadsBoard isOwner={isOwner} />}
 
       {tab === "queue" && (
         <Box>
@@ -295,11 +308,11 @@ function AdminContent() {
 
       {tab === "marketing" && <MarketingPanel />}
 
-      {tab === "content" && <ContentPanel />}
+      {tab === "content" && <ContentPanel isOwner={isOwner} />}
 
       {tab === "analytics" && <AnalyticsPanel />}
 
-      {tab === "tools" && (
+      {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>
           <Box>
             <Heading size="md" color="nexzy.white" mb={1}>

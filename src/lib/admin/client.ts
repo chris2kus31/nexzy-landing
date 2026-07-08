@@ -79,7 +79,7 @@ export async function signOut(): Promise<void> {
   await fetch("/api/admin/session", { method: "DELETE" });
 }
 
-export async function getMe(): Promise<{ email: string }> {
+export async function getMe(): Promise<{ email: string; isOwner: boolean }> {
   return handle(await fetch("/api/newsroom/admin/me"));
 }
 
