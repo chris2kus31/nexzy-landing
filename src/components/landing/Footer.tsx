@@ -32,6 +32,13 @@ export default function Footer() {
       { label: "Download", href: "#download" },
       { label: "Pricing", href: "#" },
     ],
+    // Site-wide internal links to the three content hubs — every page now
+    // passes crawl + link authority to /blog, /guides, /lists (SEO).
+    Explore: [
+      { label: "Gaming News", href: "/blog" },
+      { label: "Game Guides", href: "/guides" },
+      { label: "Game Lists", href: "/lists" },
+    ],
     Company: [{ label: "About Us", href: "/about" }],
     Legal: [
       { label: "Privacy Policy", href: "/privacy" },
@@ -44,7 +51,7 @@ export default function Footer() {
   return (
     <Box as="footer" bg="gray.50" pt={{ base: 12, md: 16 }} pb={8}>
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
-        <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={8} mb={12}>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 5 }} gap={8} mb={12}>
           {/* Logo & Brand Column */}
           <Stack gap={4} pr={{ base: 0, lg: 8 }}>
             <HStack gap={3}>

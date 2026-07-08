@@ -19,20 +19,22 @@ const inter = Inter({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Nexzy - AI-Powered Gaming Assistant",
+  // Title still LEADS with the AI hook, but now names the other rankable
+  // wedges (library, deals) so we can rank for more than "AI assistant".
+  title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
   description:
-    "Never get stuck in a game again. Your personal AI gaming assistant helps you beat any level, find hidden secrets, and earn rewards daily.",
+    "Never get stuck in a game again. Nexzy is your AI gaming assistant — beat any game, sync your library across Steam, PlayStation & Xbox, track wishlist price drops, get what-to-play picks, and earn rewards daily.",
   keywords:
-    "gaming assistant, AI gaming help, game walkthrough, gaming rewards, game library tracker",
+    "AI gaming assistant, game walkthrough, how to beat, game library tracker, cross-platform library, wishlist price tracker, game deal alerts, what to play next, gaming news, gaming rewards",
   authors: [{ name: "Nexzy" }],
   creator: "Nexzy",
   publisher: "Nexzy",
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Nexzy - AI-Powered Gaming Assistant",
+    title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
     description:
-      "Never get stuck in a game again. Your personal AI gaming assistant helps you beat any level, find hidden secrets, and earn rewards daily.",
+      "Your AI gaming companion: beat any game, sync your whole library, track wishlist deals, find what to play next, and earn rewards — all in one app.",
     url: SITE_URL,
     siteName: "Nexzy",
     // og:image is generated automatically by app/opengraph-image.tsx (1200x630)
@@ -41,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nexzy - AI-Powered Gaming Assistant",
+    title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
     description:
-      "Never get stuck in a game again with your AI gaming assistant",
+      "Beat any game with AI help, sync your library, and catch every wishlist deal — all in one app.",
     // twitter:image is generated automatically by app/twitter-image.tsx
   },
   robots: {
