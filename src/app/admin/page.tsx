@@ -25,6 +25,7 @@ import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
+import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
 import {
   getQueue,
   getPublished,
@@ -136,6 +137,7 @@ function AdminContent() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("leads");
+  const [forumView, setForumView] = useState<"seeds" | "moderation">("seeds");
   // Owner = the account allowed to trigger token-spending actions (scans,
   // pipeline runs, content generation). A second admin (editor) sees a
   // review-only UI. Enforced server-side too — this just hides the buttons.
@@ -309,6 +311,45 @@ function AdminContent() {
       {tab === "marketing" && <MarketingPanel />}
 
       {tab === "content" && <ContentPanel isOwner={isOwner} />}
+
+      {tab === "forum" && (
+        <VStack align="stretch" gap={6}>
+          <HStack gap={2}>
+            <Button
+              size="sm"
+              variant={forumView === "seeds" ? "solid" : "outline"}
+              bg={forumView === "seeds" ? "nexzy.blue" : "transparent"}
+              color={forumView === "seeds" ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{
+                bg: forumView === "seeds" ? "nexzy.blue" : "whiteAlpha.100",
+              }}
+              onClick={() => setForumView("seeds")}
+            >
+              Seeds to approve
+            </Button>
+            <Button
+              size="sm"
+              variant={forumView === "moderation" ? "solid" : "outline"}
+              bg={forumView === "moderation" ? "nexzy.blue" : "transparent"}
+              color={forumView === "moderation" ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{
+                bg:
+                  forumView === "moderation" ? "nexzy.blue" : "whiteAlpha.100",
+              }}
+              onClick={() => setForumView("moderation")}
+            >
+              Moderation
+            </Button>
+          </HStack>
+          {forumView === "seeds" ? (
+            <ForumSeedsPanel />
+          ) : (
+            <ForumModerationPanel />
+          )}
+        </VStack>
+      )}
 
       {tab === "analytics" && <AnalyticsPanel />}
 

@@ -735,3 +735,44 @@ export const removeForumComment = (id: string, reason?: string) =>
   forumAction(`comments/${id}/remove`, reason);
 export const approveForumComment = (id: string) =>
   forumAction(`comments/${id}/approve`);
+
+// ---- Forum seed suggestions (approve-first bot threads) ----
+
+export interface ForumSeed {
+  id: string;
+  blogPostId: string;
+  postType: string | null;
+  slug: string | null;
+  title: string;
+  content: string;
+  status: "pending" | "approved" | "skipped";
+  communityPostId: string | null;
+  createdAt: string;
+}
+
+export async function getForumSeeds(): Promise<ForumSeed[]> {
+  return handle(await fetch("/api/newsroom/admin/forum/seeds"));
+}
+
+export async function approveForumSeed(
+  id: string,
+  edits?: { title?: string; content?: string },
+): Promise<ForumSeed | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/forum/seeds/${id}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(edits ?? {}),
+    }),
+  );
+}
+
+export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/forum/seeds/${id}/skip`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }),
+  );
+}
