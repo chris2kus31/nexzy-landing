@@ -19,6 +19,7 @@ import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
+import GrowthPanel from "@/components/admin/GrowthPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
@@ -44,6 +45,7 @@ type Tab =
   | "content"
   | "forum"
   | "analytics"
+  | "growth"
   | "tools";
 
 function StatCard({
@@ -254,6 +256,11 @@ function AdminContent() {
             active={tab === "analytics"}
             onClick={() => setTab("analytics")}
           />
+          <TabButton
+            label="Growth"
+            active={tab === "growth"}
+            onClick={() => setTab("growth")}
+          />
           {isOwner && (
             <TabButton
               label="Tools"
@@ -352,6 +359,7 @@ function AdminContent() {
       )}
 
       {tab === "analytics" && <AnalyticsPanel />}
+      {tab === "growth" && <GrowthPanel isOwner={isOwner} />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>

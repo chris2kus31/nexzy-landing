@@ -776,3 +776,50 @@ export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
     }),
   );
 }
+
+// ---- Growth Intelligence (daily marketing brief) ----
+
+export interface GrowthBriefResponse {
+  day: string | null;
+  briefMarkdown: string | null;
+  brief: Record<string, unknown> | null;
+  briefModel?: string | null;
+  briefCostEstimate?: number | null;
+  generatedAt?: string | null;
+  kpis?: Record<string, number>;
+  sources?: Record<string, unknown>;
+}
+
+export async function getGrowthBrief(
+  day?: string,
+): Promise<GrowthBriefResponse> {
+  const qs = day ? `?day=${encodeURIComponent(day)}` : "";
+  return handle(await fetch(`/api/newsroom/admin/growth/brief${qs}`));
+}
+
+export interface GrowthBriefMeta {
+  day: string;
+  generatedAt: string | null;
+  briefModel: string | null;
+}
+
+export async function getGrowthBriefs(limit = 30): Promise<GrowthBriefMeta[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/growth/briefs?limit=${limit}`),
+  );
+}
+
+export async function getGrowthMetrics(
+  days = 30,
+): Promise<Array<{ day: string; kpis: Record<string, number> }>> {
+  return handle(await fetch(`/api/newsroom/admin/growth/metrics?days=${days}`));
+}
+
+export async function runGrowth(): Promise<{
+  ok: boolean;
+  day: string | null;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/growth/run", { method: "POST" }),
+  );
+}
