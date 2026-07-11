@@ -13,6 +13,8 @@ const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 export default function Clarity() {
   const pathname = usePathname();
   if (!CLARITY_ID) return null; // not configured yet — no-op
+  // Only load analytics in production — keeps local dev (next dev) out of the prod GA/Clarity property.
+  if (process.env.NODE_ENV !== "production") return null;
   if (pathname?.startsWith("/admin")) return null; // never record admin
 
   return (

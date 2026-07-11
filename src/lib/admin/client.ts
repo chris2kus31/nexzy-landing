@@ -823,3 +823,72 @@ export async function runGrowth(): Promise<{
     await fetch("/api/newsroom/admin/growth/run", { method: "POST" }),
   );
 }
+
+// --- Game-Linked Content Graph: missing-games queue (Phase 2) ---
+
+export interface UnresolvedGameRef {
+  id: string;
+  rawName: string;
+  normalized: string;
+  sourceType: string;
+  sourceId: string | null;
+  context: Record<string, unknown> | null;
+  candidateGameIds: { gameId: string; name: string; score: number }[] | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface GameLite {
+  id: string;
+  name: string;
+  slug: string;
+  backgroundImage: string | null;
+  released: string | null;
+}
+
+export async function getUnresolvedGames(): Promise<UnresolvedGameRef[]> {
+  return handle(await fetch("/api/newsroom/admin/games/unresolved"));
+}
+
+export async function searchGamesForLink(q: string): Promise<GameLite[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/search?q=${encodeURIComponent(q)}`),
+  );
+}
+
+export async function mapUnresolvedGame(
+  id: string,
+  gameId: string,
+): Promise<{ ok: boolean; gameId?: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/${id}/map`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    }),
+  );
+}
+
+export async function importUnresolvedGame(id: string): Promise<{
+  result: {
+    imported: boolean;
+    reason?: string;
+    game?: GameLite | null;
+  } | null;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/${id}/import`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function skipUnresolvedGame(
+  id: string,
+): Promise<UnresolvedGameRef | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/${id}/skip`, {
+      method: "POST",
+    }),
+  );
+}

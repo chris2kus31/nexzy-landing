@@ -14,6 +14,8 @@ export default function GoogleAnalytics() {
   const pathname = usePathname();
 
   // Don't load or fire GA anywhere under /admin (login, queue, editor, etc.).
+  // Only load analytics in production — keeps local dev (next dev) out of the prod GA/Clarity property.
+  if (process.env.NODE_ENV !== "production") return null;
   if (pathname?.startsWith("/admin")) return null;
 
   return (
