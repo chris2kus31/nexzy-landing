@@ -949,18 +949,41 @@ export async function removePostGame(
   );
 }
 
+export interface BackfillDetail {
+  postId: string;
+  title: string;
+  type: string;
+  result:
+    | "linked-confirmed"
+    | "linked-suggested"
+    | "already-linked"
+    | "no-match";
+  gameName?: string;
+  matchedOn?: string;
+}
+
 export async function backfillGameLinks(): Promise<{
   scanned: number;
   linked: number;
+  details: BackfillDetail[];
 }> {
   return handle(
     await fetch(`/api/newsroom/admin/backfill/game-links`, { method: "POST" }),
   );
 }
 
-export async function importAllUnresolved(
-  limit = 25,
-): Promise<{ attempted: number; imported: number; failed: number }> {
+export interface ImportDetail {
+  rawName: string;
+  result: string;
+  gameName?: string;
+}
+
+export async function importAllUnresolved(limit = 25): Promise<{
+  attempted: number;
+  imported: number;
+  failed: number;
+  details: ImportDetail[];
+}> {
   return handle(
     await fetch(`/api/newsroom/admin/games/unresolved/import-all`, {
       method: "POST",

@@ -49,6 +49,20 @@ const outlineBtn = {
   _hover: { bg: "whiteAlpha.100" },
 };
 
+type OpRow = { label: string; sub?: string; tone: string };
+type OpResult = { title: string; rows: OpRow[] };
+function toneColor(t: string): string {
+  return t === "green"
+    ? "green.400"
+    : t === "blue"
+      ? "nexzy.lightBlue"
+      : t === "orange"
+        ? "orange.300"
+        : t === "red"
+          ? "red.300"
+          : "whiteAlpha.400";
+}
+
 function timeAgo(iso: string): string {
   const mins = Math.max(
     0,
@@ -283,13 +297,27 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
+  const [result, setResult] = useState<OpResult | null>(null);
 
   async function doImportAll() {
     setWorking("import");
     setNotice(null);
+    setResult(null);
     try {
       const r = await importAllUnresolved(25);
-      setNotice(`Imported ${r.imported}/${r.attempted} (failed ${r.failed}).`);
+      setResult({
+        title: `Imported ${r.imported} of ${r.attempted} (failed ${r.failed})`,
+        rows: (r.details ?? []).map((d) => ({
+          label: d.rawName,
+          sub: d.gameName ? `${d.result} → ${d.gameName}` : d.result,
+          tone:
+            d.result === "imported"
+              ? "green"
+              : d.result === "already in DB"
+                ? "gray"
+                : "red",
+        })),
+      });
       await load();
     } catch (e) {
       setNotice((e as Error).message);
@@ -301,9 +329,29 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   async function doBackfill() {
     setWorking("backfill");
     setNotice(null);
+    setResult(null);
     try {
       const r = await backfillGameLinks();
-      setNotice(`Backfill: linked ${r.linked} of ${r.scanned} posts.`);
+      setResult({
+        title: `Backfill: linked ${r.linked} of ${r.scanned} published posts`,
+        rows: (r.details ?? []).map((d) => ({
+          label: d.title,
+          sub:
+            d.result === "no-match"
+              ? "no DB match — leave it, or link by hand"
+              : d.gameName
+                ? `${d.result.replace("linked-", "")} → ${d.gameName}${d.matchedOn ? ` (matched "${d.matchedOn}")` : ""}`
+                : d.result,
+          tone:
+            d.result === "linked-confirmed"
+              ? "green"
+              : d.result === "linked-suggested"
+                ? "blue"
+                : d.result === "already-linked"
+                  ? "gray"
+                  : "orange",
+        })),
+      });
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -379,6 +427,53 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
         <Text color="nexzy.lightBlue" mb={3} fontSize="sm">
           {notice}
         </Text>
+      )}
+      {result && (
+        <Box
+          mb={4}
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          p={3}
+          bg="whiteAlpha.50"
+        >
+          <Flex justify="space-between" align="center" mb={2}>
+            <Text fontWeight="600" color="nexzy.white" fontSize="sm">
+              {result.title}
+            </Text>
+            <Button size="xs" {...outlineBtn} onClick={() => setResult(null)}>
+              Dismiss
+            </Button>
+          </Flex>
+          {result.rows.length === 0 ? (
+            <Text fontSize="sm" color="whiteAlpha.600">
+              No posts scanned.
+            </Text>
+          ) : (
+            <VStack align="stretch" gap={1} maxH="320px" overflowY="auto">
+              {result.rows.map((row, i) => (
+                <Flex key={i} align="center" gap={2}>
+                  <Box
+                    boxSize="8px"
+                    borderRadius="full"
+                    bg={toneColor(row.tone)}
+                    flexShrink={0}
+                  />
+                  <Box minW="0">
+                    <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                      {row.label}
+                    </Text>
+                    {row.sub && (
+                      <Text fontSize="xs" color="whiteAlpha.600" lineClamp={1}>
+                        {row.sub}
+                      </Text>
+                    )}
+                  </Box>
+                </Flex>
+              ))}
+            </VStack>
+          )}
+        </Box>
       )}
       {loading ? (
         <Flex justify="center" py={10}>
