@@ -21,6 +21,8 @@ import {
   mapUnresolvedGame,
   importUnresolvedGame,
   skipUnresolvedGame,
+  backfillGameLinks,
+  importAllUnresolved,
   type UnresolvedGameRef,
   type GameLite,
 } from "@/lib/admin/client";
@@ -279,6 +281,35 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [rows, setRows] = useState<UnresolvedGameRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [working, setWorking] = useState<string | null>(null);
+
+  async function doImportAll() {
+    setWorking("import");
+    setNotice(null);
+    try {
+      const r = await importAllUnresolved(25);
+      setNotice(`Imported ${r.imported}/${r.attempted} (failed ${r.failed}).`);
+      await load();
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setWorking(null);
+    }
+  }
+
+  async function doBackfill() {
+    setWorking("backfill");
+    setNotice(null);
+    try {
+      const r = await backfillGameLinks();
+      setNotice(`Backfill: linked ${r.linked} of ${r.scanned} posts.`);
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setWorking(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -310,14 +341,43 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
             import from RAWG.
           </Text>
         </Box>
-        <Button size="sm" {...outlineBtn} onClick={load} loading={loading}>
-          Refresh
-        </Button>
+        <HStack gap={2}>
+          {isOwner && (
+            <Button
+              size="sm"
+              {...outlineBtn}
+              onClick={doImportAll}
+              loading={working === "import"}
+              loadingText="Importing"
+            >
+              Import all
+            </Button>
+          )}
+          {isOwner && (
+            <Button
+              size="sm"
+              {...outlineBtn}
+              onClick={doBackfill}
+              loading={working === "backfill"}
+              loadingText="Backfilling"
+            >
+              Backfill links
+            </Button>
+          )}
+          <Button size="sm" {...outlineBtn} onClick={load} loading={loading}>
+            Refresh
+          </Button>
+        </HStack>
       </Flex>
 
       {error && (
         <Text color="red.300" mb={3}>
           {error}
+        </Text>
+      )}
+      {notice && (
+        <Text color="nexzy.lightBlue" mb={3} fontSize="sm">
+          {notice}
         </Text>
       )}
       {loading ? (

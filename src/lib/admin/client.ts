@@ -892,3 +892,80 @@ export async function skipUnresolvedGame(
     }),
   );
 }
+
+// --- Post <-> game links + backfills (Phase 4) ---
+
+export interface PostGameLink {
+  gameId: string;
+  status: string;
+  source: string;
+  isPrimary: boolean;
+  game: {
+    id: string;
+    name: string;
+    slug: string;
+    backgroundImage: string | null;
+    released: string | null;
+  } | null;
+}
+
+export async function getPostGames(postId: string): Promise<PostGameLink[]> {
+  return handle(await fetch(`/api/newsroom/admin/posts/${postId}/games`));
+}
+
+export async function addPostGame(
+  postId: string,
+  gameId: string,
+  isPrimary = false,
+): Promise<PostGameLink | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${postId}/games`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId, isPrimary }),
+    }),
+  );
+}
+
+export async function confirmPostGame(
+  postId: string,
+  gameId: string,
+): Promise<PostGameLink | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${postId}/games/${gameId}/confirm`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function removePostGame(
+  postId: string,
+  gameId: string,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${postId}/games/${gameId}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+export async function backfillGameLinks(): Promise<{
+  scanned: number;
+  linked: number;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/backfill/game-links`, { method: "POST" }),
+  );
+}
+
+export async function importAllUnresolved(
+  limit = 25,
+): Promise<{ attempted: number; imported: number; failed: number }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/import-all`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit }),
+    }),
+  );
+}

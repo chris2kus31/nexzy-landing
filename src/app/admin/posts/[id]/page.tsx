@@ -20,6 +20,7 @@ import {
 } from "@chakra-ui/react";
 import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
+import PostGamesEditor from "@/components/admin/PostGamesEditor";
 import {
   getPost,
   updatePost,
@@ -759,6 +760,10 @@ function EditorContent({ id }: { id: string }) {
                 “Set byline” relabels only. “Rewrite in this voice” regenerates
                 the draft in that author’s tone (drafts only).
               </Text>
+            </Box>
+
+            <Box>
+              <PostGamesEditor postId={id} />
             </Box>
 
             <Box>
