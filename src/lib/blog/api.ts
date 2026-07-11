@@ -29,6 +29,16 @@ export interface PublicPost {
   featured: boolean;
   // Guides only: is this game in the Nexzy library? Drives the app CTA.
   appGame?: { inDb: boolean; name: string } | null;
+  // The primary DB game linked to this post (powers the game card).
+  game?: {
+    id: string;
+    name: string;
+    slug: string;
+    backgroundImage: string | null;
+    released: string | null;
+    platforms: string[];
+    genres: string[];
+  } | null;
 }
 
 export interface PostList {

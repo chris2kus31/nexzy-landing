@@ -22,6 +22,7 @@ import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import Markdown from "@/components/blog/Markdown";
 import AppCta from "@/components/blog/AppCta";
+import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
@@ -261,6 +262,8 @@ export default async function GuidePage({
             {imageCredit}
           </Text>
         )}
+
+        {post.game && <GameCard game={post.game} />}
 
         {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
 
