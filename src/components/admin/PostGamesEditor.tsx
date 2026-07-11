@@ -47,11 +47,14 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
   const [results, setResults] = useState<GameLite[]>([]);
   const [searching, setSearching] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     try {
       setLinks(await getPostGames(postId));
+    } catch (e) {
+      setMsg((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -64,37 +67,49 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
 
   async function search() {
     setSearching(true);
+    setMsg(null);
     try {
       setResults(await searchGamesForLink(q));
+    } catch (e) {
+      setMsg((e as Error).message);
     } finally {
       setSearching(false);
     }
   }
   async function add(gameId: string, isPrimary = false) {
     setBusy(gameId);
+    setMsg(null);
     try {
       await addPostGame(postId, gameId, isPrimary);
       setResults([]);
       setQ("");
       await load();
+    } catch (e) {
+      setMsg((e as Error).message);
     } finally {
       setBusy(null);
     }
   }
   async function confirm(gameId: string) {
     setBusy(gameId);
+    setMsg(null);
     try {
       await confirmPostGame(postId, gameId);
       await load();
+    } catch (e) {
+      setMsg((e as Error).message);
     } finally {
       setBusy(null);
     }
   }
   async function remove(gameId: string) {
     setBusy(gameId);
+    setMsg(null);
     try {
       await removePostGame(postId, gameId);
       await load();
+    } catch (e) {
+      setMsg((e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -102,6 +117,11 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
 
   return (
     <Box>
+      {msg && (
+        <Text fontSize="xs" color="red.400" mb={2}>
+          {msg}
+        </Text>
+      )}
       <Text
         fontSize="xs"
         fontWeight="600"

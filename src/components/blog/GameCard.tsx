@@ -59,15 +59,15 @@ export default function GameCard({
                 {year}
               </Badge>
             )}
-            {game.genres.slice(0, 2).map((g) => (
+            {(game.genres ?? []).slice(0, 2).map((g) => (
               <Badge key={g} colorPalette="purple" variant="subtle">
                 {g}
               </Badge>
             ))}
           </HStack>
-          {game.platforms.length > 0 && (
+          {(game.platforms ?? []).length > 0 && (
             <Text fontSize="sm" color="gray.400">
-              {game.platforms.slice(0, 5).join(" · ")}
+              {(game.platforms ?? []).slice(0, 5).join(" · ")}
             </Text>
           )}
         </Box>
