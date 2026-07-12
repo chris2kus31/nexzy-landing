@@ -81,13 +81,19 @@ function WalkthroughGroup({
 }) {
   const [open, setOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [pubErr, setPubErr] = useState<string | null>(null);
 
   const publishAll = async () => {
     setPublishing(true);
+    setPubErr(null);
     try {
       await approvePost(parent.id);
       for (const c of chapters) await approvePost(c.id);
       onChanged?.();
+    } catch (e) {
+      setPubErr(
+        e instanceof Error ? e.message : "Failed to publish walkthrough.",
+      );
     } finally {
       setPublishing(false);
     }
@@ -168,6 +174,12 @@ function WalkthroughGroup({
           <StatusBadge status={parent.status} />
         </HStack>
       </Flex>
+
+      {pubErr && (
+        <Text color="red.300" fontSize="xs" px={4} pb={2}>
+          {pubErr}
+        </Text>
+      )}
 
       {open && (
         <VStack align="stretch" gap={2} px={4} pb={4}>
