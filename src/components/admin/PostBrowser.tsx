@@ -243,22 +243,69 @@ export default function PostBrowser({
 
   return (
     <Box>
-      <Flex gap={3} mb={3} direction={{ base: "column", md: "row" }}>
-        <Input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
+      <Input
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setVisible(PAGE_SIZE);
+        }}
+        placeholder="Search by title…"
+        color="nexzy.white"
+        bg="whiteAlpha.50"
+        borderColor="whiteAlpha.300"
+        _placeholder={{ color: "nexzy.gray.100" }}
+        size="sm"
+        maxW={{ md: "360px" }}
+        mb={3}
+      />
+
+      <HStack gap={2} wrap="wrap" mb={3}>
+        <Text color="nexzy.gray.100" fontSize="xs" mr={1} minW="36px">
+          Type
+        </Text>
+        <Button
+          size="xs"
+          onClick={() => {
+            setPtype(null);
+            setBeat(null);
             setVisible(PAGE_SIZE);
           }}
-          placeholder="Search by title…"
-          color="nexzy.white"
-          bg="whiteAlpha.50"
-          borderColor="whiteAlpha.300"
-          _placeholder={{ color: "nexzy.gray.100" }}
-          size="sm"
-          maxW={{ md: "320px" }}
-        />
-        <HStack gap={2} wrap="wrap">
+          bg={ptype === null ? "nexzy.blue" : "transparent"}
+          color={ptype === null ? "white" : "nexzy.gray.100"}
+          borderWidth="1px"
+          borderColor={ptype === null ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: ptype === null ? "nexzy.blue" : "whiteAlpha.100" }}
+        >
+          All
+        </Button>
+        {TYPE_FILTERS.map((t) => {
+          const active = ptype === t.key;
+          return (
+            <Button
+              key={t.key}
+              size="xs"
+              onClick={() => {
+                setPtype(active ? null : t.key);
+                setBeat(null);
+                setVisible(PAGE_SIZE);
+              }}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              {t.label}
+            </Button>
+          );
+        })}
+      </HStack>
+
+      {(ptype === null || ptype === "article") && (
+        <HStack gap={2} wrap="wrap" mb={3}>
+          <Text color="nexzy.gray.100" fontSize="xs" mr={1} minW="36px">
+            Beat
+          </Text>
           <Button
             size="xs"
             onClick={() => {
@@ -294,47 +341,7 @@ export default function PostBrowser({
             );
           })}
         </HStack>
-      </Flex>
-
-      <HStack gap={2} wrap="wrap" mb={3}>
-        <Text color="nexzy.gray.100" fontSize="xs" mr={1}>
-          Type:
-        </Text>
-        <Button
-          size="xs"
-          onClick={() => {
-            setPtype(null);
-            setVisible(PAGE_SIZE);
-          }}
-          bg={ptype === null ? "nexzy.blue" : "transparent"}
-          color={ptype === null ? "white" : "nexzy.gray.100"}
-          borderWidth="1px"
-          borderColor={ptype === null ? "nexzy.blue" : "whiteAlpha.300"}
-          _hover={{ bg: ptype === null ? "nexzy.blue" : "whiteAlpha.100" }}
-        >
-          All
-        </Button>
-        {TYPE_FILTERS.map((t) => {
-          const active = ptype === t.key;
-          return (
-            <Button
-              key={t.key}
-              size="xs"
-              onClick={() => {
-                setPtype(active ? null : t.key);
-                setVisible(PAGE_SIZE);
-              }}
-              bg={active ? "nexzy.blue" : "transparent"}
-              color={active ? "white" : "nexzy.gray.100"}
-              borderWidth="1px"
-              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-            >
-              {t.label}
-            </Button>
-          );
-        })}
-      </HStack>
+      )}
 
       <Text color="nexzy.gray.100" fontSize="xs" mb={3}>
         Showing {shown.length} of {topLevel.length}

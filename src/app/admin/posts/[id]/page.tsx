@@ -501,7 +501,7 @@ function EditorContent({ id }: { id: string }) {
             size="sm"
             variant="ghost"
             color="nexzy.gray.100"
-            onClick={() => router.push("/admin")}
+            onClick={() => router.back()}
             _hover={{ bg: "whiteAlpha.100" }}
           >
             ← Queue
