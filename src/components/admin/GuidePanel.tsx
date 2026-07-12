@@ -23,6 +23,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
   const [game, setGame] = useState("");
   const [focus, setFocus] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -36,6 +37,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         game: game.trim(),
         focus: focus.trim() || undefined,
         instructions: instructions.trim() || undefined,
+        notes: notes.trim() || undefined,
       });
       setMsg({
         ok: true,
@@ -44,6 +46,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
       setGame("");
       setFocus("");
       setInstructions("");
+      setNotes("");
       onRan?.();
     } catch (e) {
       setMsg({
@@ -126,6 +129,25 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
             borderColor="whiteAlpha.300"
             _placeholder={{ color: "nexzy.gray.100" }}
           />
+        </Box>
+
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+            Your notes (optional — authoritative)
+          </Text>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Paste your own firsthand strategy here. The writer builds the guide around your notes and treats them as the source of truth — web research only fills gaps."
+            rows={6}
+            color="nexzy.white"
+            bg="whiteAlpha.50"
+            borderColor="whiteAlpha.300"
+            _placeholder={{ color: "nexzy.gray.100" }}
+          />
+          <Text color="nexzy.gray.100" fontSize="10px" mt={1}>
+            When provided, your notes lead — the AI won&rsquo;t contradict them.
+          </Text>
         </Box>
 
         <Flex justify="flex-end">

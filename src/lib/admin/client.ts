@@ -547,6 +547,8 @@ export interface GuideInput {
   game: string;
   focus?: string;
   instructions?: string;
+  /** Author's firsthand strategy notes — authoritative source for the guide. */
+  notes?: string;
 }
 
 /** Generate an evergreen "how to beat X" guide (lands in the review queue). */
@@ -974,7 +976,7 @@ export async function backfillGameLinks(): Promise<{
 
 export interface ImportDetail {
   rawName: string;
-  result: string;
+  result: "imported" | "already in DB" | "no_rawg_match" | "error";
   gameName?: string;
 }
 
