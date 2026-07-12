@@ -646,6 +646,26 @@ export async function uploadArticleImage(
 
 /** Regenerate a draft's excerpt, body, or the whole article from its brief.
  *  Optional author rewrites the draft in that persona's voice (Chuy/Eli). */
+export async function regenerateSection(
+  postId: string,
+  input: {
+    heading: string;
+    action: "rewrite" | "expand" | "draft";
+    instructions?: string;
+  },
+): Promise<
+  | { ok: true; heading: string; before: string; after: string }
+  | { ok: false; message: string }
+> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${postId}/section`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function regeneratePost(
   id: string,
   scope: "excerpt" | "body" | "all",

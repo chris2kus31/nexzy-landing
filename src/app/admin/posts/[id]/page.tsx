@@ -21,6 +21,7 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
 import PostGamesEditor from "@/components/admin/PostGamesEditor";
+import SectionEditor from "@/components/admin/SectionEditor";
 import {
   getPost,
   updatePost,
@@ -684,6 +685,13 @@ function EditorContent({ id }: { id: string }) {
                 {...inputProps}
               />
             </Box>
+            {post.type === "guide" && !isPublished && (
+              <SectionEditor
+                postId={id}
+                body={form.bodyMarkdown}
+                onDone={load}
+              />
+            )}
             <Box>
               <Text {...labelProps}>Tags (comma separated)</Text>
               <Input
