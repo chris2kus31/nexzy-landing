@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
+import NextImage from "next/image";
 import {
   Box,
   Container,
@@ -239,6 +240,25 @@ export default async function WalkthroughChapterPage({
             >
               {c.title}
             </Heading>
+
+            {c.heroImageUrl && (
+              <Box
+                position="relative"
+                w="100%"
+                h={{ base: "200px", md: "320px" }}
+                borderRadius="lg"
+                overflow="hidden"
+                mb={6}
+              >
+                <NextImage
+                  src={c.heroImageUrl}
+                  alt={c.imageAlt || c.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  style={{ objectFit: "cover" }}
+                />
+              </Box>
+            )}
 
             {c.game && (
               <Box mb={6}>

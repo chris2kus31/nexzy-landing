@@ -18,6 +18,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      {
+        // RAWG cover art + screenshots used to illustrate game-linked content
+        // (walkthroughs, guide game cards).
+        protocol: "https",
+        hostname: "media.rawg.io",
+      },
     ],
   },
   // Force the old landing.nexzyapp.com subdomain to 301-redirect to the
