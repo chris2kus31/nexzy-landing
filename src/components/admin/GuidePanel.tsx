@@ -24,6 +24,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
   const [focus, setFocus] = useState("");
   const [instructions, setInstructions] = useState("");
   const [notes, setNotes] = useState("");
+  const [format, setFormat] = useState<"guide" | "walkthrough">("guide");
   const [outline, setOutline] = useState<string[]>([]);
   const [proposing, setProposing] = useState(false);
   const [sending, setSending] = useState(false);
@@ -40,6 +41,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         focus: focus.trim() || undefined,
         instructions: instructions.trim() || undefined,
         notes: notes.trim() || undefined,
+        format,
       });
       setOutline(r.outline || []);
       if (!r.outline?.length)
@@ -75,6 +77,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         instructions: instructions.trim() || undefined,
         notes: notes.trim() || undefined,
         outline: cleanOutline.length ? cleanOutline : undefined,
+        format,
       });
       setMsg({
         ok: true,
@@ -120,6 +123,32 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
       </Text>
 
       <Stack gap={4}>
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+            Format
+          </Text>
+          <Flex gap={2}>
+            {(["guide", "walkthrough"] as const).map((f) => (
+              <Button
+                key={f}
+                size="sm"
+                flex="1"
+                variant={format === f ? "solid" : "outline"}
+                colorPalette={format === f ? "blue" : undefined}
+                color={format === f ? undefined : "nexzy.white"}
+                borderColor="whiteAlpha.300"
+                onClick={() => setFormat(f)}
+              >
+                {f === "guide" ? "Guide" : "Walkthrough"}
+              </Button>
+            ))}
+          </Flex>
+          <Text color="nexzy.gray.100" fontSize="10px" mt={1}>
+            {format === "walkthrough"
+              ? "A longer, chaptered full-playthrough — pairs well with Propose outline."
+              : "A focused how-to for one boss, level, or challenge."}
+          </Text>
+        </Box>
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
             Game

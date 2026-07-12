@@ -551,6 +551,8 @@ export interface GuideInput {
   notes?: string;
   /** Approved section outline (outline-first) — writer fills these in order. */
   outline?: string[];
+  /** 'walkthrough' = longer chaptered full-playthrough; default 'guide'. */
+  format?: "guide" | "walkthrough";
 }
 
 export async function proposeGuideOutline(
