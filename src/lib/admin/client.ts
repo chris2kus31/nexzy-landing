@@ -18,6 +18,8 @@ export interface BlogPost {
   youtubeUrl: string | null;
   beat: string;
   type?: string;
+  parentId?: string | null;
+  chapterOrder?: number | null;
   tags: string[] | null;
   sources: { name: string; url: string }[] | null;
   status: string;

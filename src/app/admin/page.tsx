@@ -303,6 +303,7 @@ function AdminContent() {
             posts={queue}
             empty="Nothing in the queue right now."
             dateField="createdAt"
+            onChanged={load}
           />
         </Box>
       )}
