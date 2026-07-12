@@ -549,6 +549,20 @@ export interface GuideInput {
   instructions?: string;
   /** Author's firsthand strategy notes — authoritative source for the guide. */
   notes?: string;
+  /** Approved section outline (outline-first) — writer fills these in order. */
+  outline?: string[];
+}
+
+export async function proposeGuideOutline(
+  input: GuideInput,
+): Promise<{ outline: string[] }> {
+  return handle(
+    await fetch("/api/newsroom/admin/guides/outline", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
 }
 
 /** Generate an evergreen "how to beat X" guide (lands in the review queue). */
