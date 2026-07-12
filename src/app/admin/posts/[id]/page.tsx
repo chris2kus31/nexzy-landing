@@ -23,6 +23,7 @@ import StatusBadge from "@/components/admin/StatusBadge";
 import PostGamesEditor from "@/components/admin/PostGamesEditor";
 import SectionEditor from "@/components/admin/SectionEditor";
 import Markdown from "@/components/blog/Markdown";
+import YoutubeSearch from "@/components/admin/YoutubeSearch";
 import {
   getPost,
   updatePost,
@@ -893,6 +894,12 @@ function EditorContent({ id }: { id: string }) {
                 placeholder="Paste a YouTube link — watch, share, or Shorts"
                 {...inputProps}
               />
+              {!isPublished && (
+                <YoutubeSearch
+                  defaultQuery={post?.title ?? undefined}
+                  onAttach={(url) => set("youtubeUrl", url)}
+                />
+              )}
               {(() => {
                 const vid = youtubeId(form.youtubeUrl);
                 if (!vid) return null;

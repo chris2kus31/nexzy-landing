@@ -1032,3 +1032,20 @@ export async function importAllUnresolved(limit = 25): Promise<{
     }),
   );
 }
+
+// ---- YouTube editorial search (post editor) ----
+export interface YoutubeResult {
+  videoId: string;
+  url: string;
+  title: string;
+  channel: string;
+  thumbnail: string | null;
+}
+export async function searchYoutube(q: string): Promise<YoutubeResult[]> {
+  const r = (await handle(
+    await fetch(
+      `/api/newsroom/admin/youtube/search?q=${encodeURIComponent(q)}`,
+    ),
+  )) as { results?: YoutubeResult[] };
+  return r?.results || [];
+}

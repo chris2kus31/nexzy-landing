@@ -46,6 +46,7 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<GameLite[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -74,6 +75,7 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
       setMsg((e as Error).message);
     } finally {
       setSearching(false);
+      setSearched(true);
     }
   }
   async function add(gameId: string, isPrimary = false) {
@@ -227,6 +229,13 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
           <FiSearch />
         </Button>
       </HStack>
+
+      {searched && !searching && results.length === 0 && q.trim() !== "" && (
+        <Text fontSize="xs" color="nexzy.gray.100" mt={2}>
+          No games found for &ldquo;{q.trim()}&rdquo;. If it should exist,
+          import it from the Missing games tab.
+        </Text>
+      )}
 
       {results.length > 0 && (
         <VStack align="stretch" gap={1} mt={2}>
