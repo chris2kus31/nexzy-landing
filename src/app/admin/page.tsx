@@ -140,7 +140,21 @@ function AdminContent() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<Tab>("leads");
+  const [tab, _setTab] = useState<Tab>("leads");
+  const setTab = useCallback((t: Tab) => {
+    _setTab(t);
+    if (typeof window !== "undefined")
+      window.history.replaceState(null, "", `/admin?tab=${t}`);
+  }, []);
+  useEffect(() => {
+    const readTab = () => {
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (t) _setTab(t as Tab);
+    };
+    readTab();
+    window.addEventListener("popstate", readTab);
+    return () => window.removeEventListener("popstate", readTab);
+  }, []);
   const [forumView, setForumView] = useState<"seeds" | "moderation">("seeds");
   // Owner = the account allowed to trigger token-spending actions (scans,
   // pipeline runs, content generation). A second admin (editor) sees a

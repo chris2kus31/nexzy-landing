@@ -22,6 +22,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import StatusBadge from "@/components/admin/StatusBadge";
 import PostGamesEditor from "@/components/admin/PostGamesEditor";
 import SectionEditor from "@/components/admin/SectionEditor";
+import Markdown from "@/components/blog/Markdown";
 import {
   getPost,
   updatePost,
@@ -404,6 +405,7 @@ function EditorContent({ id }: { id: string }) {
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
   const [authorSel, setAuthorSel] = useState("");
+  const [preview, setPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
@@ -660,30 +662,59 @@ function EditorContent({ id }: { id: string }) {
                 <Text {...labelProps} mb={0}>
                   Body (markdown)
                 </Text>
-                {!isPublished && (
+                <HStack gap={2}>
                   <Button
                     size="xs"
                     variant="ghost"
                     color="nexzy.lightBlue"
-                    loading={busy === "Body regenerated"}
                     _hover={{ bg: "whiteAlpha.100" }}
-                    onClick={() =>
-                      run("Body regenerated", () => regeneratePost(id, "body"))
-                    }
+                    onClick={() => setPreview((p) => !p)}
                   >
-                    ↻ Regenerate
+                    {preview ? "Edit" : "Preview"}
                   </Button>
-                )}
+                  {!isPublished && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      color="nexzy.lightBlue"
+                      loading={busy === "Body regenerated"}
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() =>
+                        run("Body regenerated", () =>
+                          regeneratePost(id, "body"),
+                        )
+                      }
+                    >
+                      ↻ Regenerate
+                    </Button>
+                  )}
+                </HStack>
               </Flex>
-              <Textarea
-                value={form.bodyMarkdown}
-                onChange={(e) => set("bodyMarkdown", e.target.value)}
-                flex="1"
-                minH="420px"
-                fontFamily="mono"
-                fontSize="sm"
-                {...inputProps}
-              />
+              {preview ? (
+                <Box
+                  flex="1"
+                  minH="420px"
+                  overflowY="auto"
+                  bg="whiteAlpha.50"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.300"
+                  borderRadius="md"
+                  p={4}
+                  color="gray.200"
+                >
+                  <Markdown>{form.bodyMarkdown || "_(empty)_"}</Markdown>
+                </Box>
+              ) : (
+                <Textarea
+                  value={form.bodyMarkdown}
+                  onChange={(e) => set("bodyMarkdown", e.target.value)}
+                  flex="1"
+                  minH="420px"
+                  fontFamily="mono"
+                  fontSize="sm"
+                  {...inputProps}
+                />
+              )}
             </Box>
             {post.type === "guide" && !isPublished && (
               <SectionEditor

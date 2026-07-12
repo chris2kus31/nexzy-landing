@@ -18,6 +18,13 @@ import { approvePost, type BlogPost } from "@/lib/admin/client";
 
 const PAGE_SIZE = 15;
 
+const TYPE_FILTERS: { key: string; label: string }[] = [
+  { key: "article", label: "News" },
+  { key: "guide", label: "Guides" },
+  { key: "walkthrough", label: "Walkthroughs" },
+  { key: "list", label: "Lists" },
+];
+
 function PostRow({
   post,
   dateField,
@@ -191,17 +198,19 @@ export default function PostBrowser({
 }) {
   const [q, setQ] = useState("");
   const [beat, setBeat] = useState<string | null>(null);
+  const [ptype, setPtype] = useState<string | null>(null);
   const [visible, setVisible] = useState(PAGE_SIZE);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return posts.filter((p) => {
       if (beat && p.beat !== beat) return false;
+      if (ptype && (p.type || "article") !== ptype) return false;
       if (needle && !(p.title || "").toLowerCase().includes(needle))
         return false;
       return true;
     });
-  }, [posts, q, beat]);
+  }, [posts, q, beat, ptype]);
 
   // Group walkthroughs: a parent (type='walkthrough', no parentId) owns its
   // chapters. Chapters render nested under the parent, not as loose rows.
@@ -286,6 +295,46 @@ export default function PostBrowser({
           })}
         </HStack>
       </Flex>
+
+      <HStack gap={2} wrap="wrap" mb={3}>
+        <Text color="nexzy.gray.100" fontSize="xs" mr={1}>
+          Type:
+        </Text>
+        <Button
+          size="xs"
+          onClick={() => {
+            setPtype(null);
+            setVisible(PAGE_SIZE);
+          }}
+          bg={ptype === null ? "nexzy.blue" : "transparent"}
+          color={ptype === null ? "white" : "nexzy.gray.100"}
+          borderWidth="1px"
+          borderColor={ptype === null ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: ptype === null ? "nexzy.blue" : "whiteAlpha.100" }}
+        >
+          All
+        </Button>
+        {TYPE_FILTERS.map((t) => {
+          const active = ptype === t.key;
+          return (
+            <Button
+              key={t.key}
+              size="xs"
+              onClick={() => {
+                setPtype(active ? null : t.key);
+                setVisible(PAGE_SIZE);
+              }}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              {t.label}
+            </Button>
+          );
+        })}
+      </HStack>
 
       <Text color="nexzy.gray.100" fontSize="xs" mb={3}>
         Showing {shown.length} of {topLevel.length}
