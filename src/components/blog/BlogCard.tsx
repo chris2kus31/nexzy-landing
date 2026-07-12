@@ -27,12 +27,20 @@ export default function BlogCard({ post }: { post: PublicPost }) {
       : isWalkthrough
         ? `/walkthroughs/${post.slug}`
         : `/blog/${post.slug}`;
-  const badgeLabel = isGuide ? "Guide" : isList ? "List" : beatLabel(post.beat);
+  const badgeLabel = isGuide
+    ? "Guide"
+    : isList
+      ? "List"
+      : isWalkthrough
+        ? "Walkthrough"
+        : beatLabel(post.beat);
   const badgePalette = isGuide
     ? "cyan"
     : isList
       ? "purple"
-      : beatPalette(post.beat);
+      : isWalkthrough
+        ? "orange"
+        : beatPalette(post.beat);
   return (
     <NextLink href={href} style={{ display: "block", height: "100%" }}>
       <Box

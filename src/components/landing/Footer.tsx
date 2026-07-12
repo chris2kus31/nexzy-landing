@@ -49,7 +49,7 @@ export default function Footer() {
   };
 
   return (
-    <Box as="footer" bg="gray.50" pt={{ base: 12, md: 16 }} pb={8}>
+    <Box as="footer" bg="nexzy.navy" pt={{ base: 12, md: 16 }} pb={8}>
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <SimpleGrid columns={{ base: 1, sm: 2, lg: 5 }} gap={8} mb={12}>
           {/* Logo & Brand Column */}
@@ -57,7 +57,7 @@ export default function Footer() {
             <HStack gap={3}>
               <Image src="/NexzyLogo.png" alt="Nexzy" h={12} w={12} />
               <Stack gap={0}>
-                <Text fontWeight="bold" fontSize="2xl" color="nexzy.navy">
+                <Text fontWeight="bold" fontSize="2xl" color="white">
                   Nexzy
                 </Text>
                 <Text fontSize="xs" color="nexzy.yellow">
@@ -65,12 +65,12 @@ export default function Footer() {
                 </Text>
               </Stack>
             </HStack>
-            <Text fontSize="sm" color="gray.600">
+            <Text fontSize="sm" color="gray.400">
               Your ultimate gaming companion with AI assistance, rewards, and
               game management all in one app.
             </Text>
             <Stack gap={2} pt={2}>
-              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+              <Text fontSize="xs" color="gray.400" fontWeight="medium">
                 DOWNLOAD THE APP
               </Text>
               <HStack gap={3}>
@@ -82,7 +82,7 @@ export default function Footer() {
                   display="flex"
                   alignItems="center"
                   gap={2}
-                  color="gray.600"
+                  color="gray.400"
                   _hover={{ color: "nexzy.blue" }}
                   fontSize="sm"
                 >
@@ -97,7 +97,7 @@ export default function Footer() {
                   display="flex"
                   alignItems="center"
                   gap={2}
-                  color="gray.600"
+                  color="gray.400"
                   _hover={{ color: "nexzy.blue" }}
                   fontSize="sm"
                 >
@@ -114,7 +114,7 @@ export default function Footer() {
               <Text
                 fontWeight="bold"
                 fontSize="sm"
-                color="gray.700"
+                color="gray.300"
                 textTransform="uppercase"
                 letterSpacing="wider"
               >
@@ -125,7 +125,7 @@ export default function Footer() {
                   key={link.label}
                   href={link.href}
                   fontSize="sm"
-                  color="gray.600"
+                  color="gray.400"
                   _hover={{ color: "nexzy.blue" }}
                   transition="color 0.2s"
                 >
@@ -136,7 +136,7 @@ export default function Footer() {
           ))}
         </SimpleGrid>
 
-        <Separator borderColor="gray.200" />
+        <Separator borderColor="whiteAlpha.200" />
 
         {/* Bottom Section */}
         <Stack
@@ -151,14 +151,14 @@ export default function Footer() {
             gap={{ base: 2, sm: 4 }}
             align="center"
           >
-            <Text fontSize="sm" color="gray.600">
+            <Text fontSize="sm" color="gray.400">
               © {currentYear} Nexzy. All rights reserved.
             </Text>
             <HStack gap={4} display={{ base: "none", sm: "flex" }}>
               <Link
                 href="/privacy"
                 fontSize="sm"
-                color="gray.600"
+                color="gray.400"
                 _hover={{ color: "nexzy.blue" }}
               >
                 Privacy
@@ -166,7 +166,7 @@ export default function Footer() {
               <Link
                 href="/terms"
                 fontSize="sm"
-                color="gray.600"
+                color="gray.400"
                 _hover={{ color: "nexzy.blue" }}
               >
                 Terms
@@ -174,7 +174,7 @@ export default function Footer() {
               <Link
                 href="/guidelines"
                 fontSize="sm"
-                color="gray.600"
+                color="gray.400"
                 _hover={{ color: "nexzy.blue" }}
               >
                 Guidelines
@@ -190,7 +190,7 @@ export default function Footer() {
               alignItems="center"
               gap={2}
               fontSize="sm"
-              color="gray.600"
+              color="gray.400"
               _hover={{ color: "nexzy.blue" }}
             >
               <HiMail />
@@ -200,7 +200,7 @@ export default function Footer() {
         </Stack>
 
         {/* Cookie / analytics disclosure (Microsoft Clarity + Google Analytics) */}
-        <Text fontSize="xs" color="gray.500" textAlign="center" mt={8} px={4}>
+        <Text fontSize="xs" color="gray.400" textAlign="center" mt={8} px={4}>
           We use cookies, Google Analytics, and Microsoft Clarity to see how you
           use our site so we can improve it. By using our site, you agree that
           we and these providers can collect and use this data.{" "}
@@ -215,13 +215,13 @@ export default function Footer() {
         </Text>
 
         {/* App Features Reminder - Optional bottom banner */}
-        <Box mt={8} pt={8} borderTop="1px solid" borderColor="gray.200">
+        <Box mt={8} pt={8} borderTop="1px solid" borderColor="whiteAlpha.200">
           <HStack justify="center" gap={8} wrap="wrap" opacity={0.6}>
             <HStack gap={2}>
               <Icon color="nexzy.blue" boxSize={4}>
                 <FaRobot />
               </Icon>
-              <Text fontSize="xs" color="gray.600">
+              <Text fontSize="xs" color="gray.400">
                 AI Gaming Assistant
               </Text>
             </HStack>
@@ -229,12 +229,12 @@ export default function Footer() {
               <Icon color="nexzy.blue" boxSize={4}>
                 <IoGameController />
               </Icon>
-              <Text fontSize="xs" color="gray.600">
+              <Text fontSize="xs" color="gray.400">
                 1000+ Games Supported
               </Text>
             </HStack>
             <HStack gap={2}>
-              <Text fontSize="xs" color="gray.600">
+              <Text fontSize="xs" color="gray.400">
                 Free to Download
               </Text>
             </HStack>

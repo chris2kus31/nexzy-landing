@@ -101,6 +101,57 @@ export async function fetchLists(params?: {
   return fetchPosts({ ...params, type: "list" });
 }
 
+/**
+ * Newest published guides + walkthroughs + lists, merged newest-first, for the
+ * home "From the library" rail. Combined so the rail looks full while each type
+ * is still small; graduates into its own section as the library grows.
+ */
+export async function fetchLibraryLatest(limit = 3): Promise<PublicPost[]> {
+  const [guides, lists, walkthroughs] = await Promise.all([
+    fetchGuides({ pageSize: limit }),
+    fetchLists({ pageSize: limit }),
+    fetchWalkthroughs({ pageSize: limit }),
+  ]);
+  const all = [...guides.items, ...lists.items, ...walkthroughs.items];
+  all.sort((a, b) => {
+    const ta = a.publishedAt ? Date.parse(a.publishedAt) : 0;
+    const tb = b.publishedAt ? Date.parse(b.publishedAt) : 0;
+    return tb - ta;
+  });
+  return all.slice(0, limit);
+}
+
+// ---- Daily "Gaming Nostalgia" spotlight (from the personalization system) ----
+export interface NostalgiaSpotlight {
+  gameName: string;
+  content: string;
+  image: string | null;
+}
+
+/**
+ * Today's nostalgia fact for the home newsroom lead. Public endpoint on the
+ * games API; returns null when there's no fact for today (the block then falls
+ * back to the featured article). Kept out of the newsroom path on purpose.
+ */
+export async function fetchNostalgia(): Promise<NostalgiaSpotlight | null> {
+  try {
+    const res = await fetch(`${API}/games/nostalgia/today`, {
+      next: { revalidate: REVALIDATE },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const fact = json?.data;
+    if (!fact || !fact.content) return null;
+    return {
+      gameName: fact.game?.name ?? "",
+      content: fact.content,
+      image: fact.game?.backgroundImage ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTrending(
   limit = 5,
   sort: "hot" | "reads" = "hot",

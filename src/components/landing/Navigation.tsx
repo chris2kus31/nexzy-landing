@@ -1,6 +1,8 @@
 // ============================================
 // FILE: components/landing/Navigation.tsx
-// Fixed mobile menu layout
+// Top nav — content-forward and grouped. Desktop: News, a Guides dropdown
+// (Guides / Walkthroughs / Lists), The App, and the Download CTA. Mobile: the
+// same, with the library shown as an expanded group in the drawer.
 // ============================================
 "use client";
 
@@ -25,22 +27,19 @@ import {
   DrawerHeader,
 } from "@/components/ui/drawer";
 import { useState } from "react";
-import { HiMenu, HiX } from "react-icons/hi";
+import { HiMenu, HiX, HiChevronDown } from "react-icons/hi";
 import NextLink from "next/link";
+
+// Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
+const LIBRARY = [
+  { label: "Guides", href: "/guides" },
+  { label: "Walkthroughs", href: "/walkthroughs" },
+  { label: "Lists", href: "/lists" },
+];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
-  const navItems = [
-    { label: "Features", href: "/#features" },
-    { label: "How it Works", href: "/#how-it-works" },
-    { label: "Game News", href: "/blog" },
-    { label: "Guides", href: "/guides" },
-    { label: "Walkthroughs", href: "/walkthroughs" },
-    { label: "Lists", href: "/lists" },
-    { label: "Download", href: "/#download" },
-  ];
+  const close = () => setIsOpen(false);
 
   return (
     <Box
@@ -70,19 +69,92 @@ export default function Navigation() {
 
           {/* Desktop Navigation */}
           <HStack gap={8} display={{ base: "none", md: "flex" }}>
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                asChild
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
+              <NextLink href="/blog">News</NextLink>
+            </Link>
+
+            {/* Guides dropdown (reveals on hover) */}
+            <Box position="relative" className="group">
+              <HStack
+                gap={1}
                 fontSize="sm"
                 fontWeight="medium"
                 color="nexzy.white"
-                _hover={{ color: "nexzy.lightBlue" }}
+                cursor="pointer"
+                _groupHover={{ color: "nexzy.lightBlue" }}
                 transition="color 0.2s"
               >
-                <NextLink href={item.href}>{item.label}</NextLink>
-              </Link>
-            ))}
+                <Link asChild color="inherit" _hover={{ color: "inherit" }}>
+                  <NextLink href="/guides">Guides</NextLink>
+                </Link>
+                <Box as="span" fontSize="xs" mt="1px">
+                  <HiChevronDown />
+                </Box>
+              </HStack>
+              <Box
+                position="absolute"
+                top="100%"
+                left={0}
+                pt={3}
+                minW="210px"
+                opacity={0}
+                visibility="hidden"
+                transform="translateY(6px)"
+                transition="all 0.15s"
+                _groupHover={{
+                  opacity: 1,
+                  visibility: "visible",
+                  transform: "translateY(0)",
+                }}
+              >
+                <Stack
+                  gap={0}
+                  bg="nexzy.navy"
+                  border="1px solid"
+                  borderColor="nexzy.blue/20"
+                  borderRadius="lg"
+                  p={2}
+                  boxShadow="xl"
+                >
+                  {LIBRARY.map((item) => (
+                    <Link
+                      key={item.href}
+                      asChild
+                      px={3}
+                      py={2}
+                      borderRadius="md"
+                      fontSize="sm"
+                      fontWeight="medium"
+                      color="nexzy.white"
+                      _hover={{
+                        bg: "whiteAlpha.100",
+                        color: "nexzy.lightBlue",
+                      }}
+                    >
+                      <NextLink href={item.href}>{item.label}</NextLink>
+                    </Link>
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
+
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
+              <NextLink href="/#features">The App</NextLink>
+            </Link>
           </HStack>
 
           {/* Desktop CTA */}
@@ -115,7 +187,7 @@ export default function Navigation() {
         </Flex>
       </Container>
 
-      {/* Mobile Drawer - Overlay style */}
+      {/* Mobile Drawer */}
       <DrawerRoot
         open={isOpen}
         onOpenChange={(e) => setIsOpen(e.open)}
@@ -151,22 +223,54 @@ export default function Navigation() {
             </Flex>
           </DrawerHeader>
           <DrawerBody>
-            <Stack gap={4}>
-              {navItems.map((item) => (
-                <Link key={item.href} asChild fontSize="lg" color="nexzy.white">
-                  <NextLink href={item.href} onClick={() => setIsOpen(false)}>
+            <Stack gap={1}>
+              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+                <NextLink href="/blog" onClick={close}>
+                  News
+                </NextLink>
+              </Link>
+
+              <Text
+                fontSize="xs"
+                fontWeight="800"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                color="nexzy.gray.100"
+                mt={3}
+                mb={1}
+              >
+                Library
+              </Text>
+              {LIBRARY.map((item) => (
+                <Link
+                  key={item.href}
+                  asChild
+                  fontSize="lg"
+                  py={2}
+                  pl={3}
+                  color="nexzy.white"
+                >
+                  <NextLink href={item.href} onClick={close}>
                     {item.label}
                   </NextLink>
                 </Link>
               ))}
+
+              <Link asChild fontSize="lg" py={2} mt={3} color="nexzy.white">
+                <NextLink href="/#features" onClick={close}>
+                  The App
+                </NextLink>
+              </Link>
+
               <Button
                 asChild
                 size="lg"
-                mt={4}
+                mt={5}
                 bg="nexzy.yellow"
                 color="nexzy.navy"
+                borderRadius="full"
               >
-                <NextLink href="/#download" onClick={() => setIsOpen(false)}>
+                <NextLink href="/#download" onClick={close}>
                   Download
                 </NextLink>
               </Button>

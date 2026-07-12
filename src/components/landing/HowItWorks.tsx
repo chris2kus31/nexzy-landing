@@ -64,7 +64,12 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <Box as="section" py={{ base: 16, md: 24 }} bg="white" id="how-it-works">
+    <Box
+      as="section"
+      py={{ base: 16, md: 24 }}
+      bg="nexzy.navy"
+      id="how-it-works"
+    >
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Stack gap={16}>
           {/* Header */}
@@ -84,14 +89,10 @@ export default function HowItWorks() {
               <HiLightningBolt />
               QUICK START
             </Badge>
-            <Heading
-              as="h2"
-              size={{ base: "xl", md: "2xl" }}
-              color="nexzy.navy"
-            >
+            <Heading as="h2" size={{ base: "xl", md: "2xl" }} color="white">
               Start Gaming Smarter in 3 Simple Steps
             </Heading>
-            <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
+            <Text fontSize={{ base: "md", md: "lg" }} color="gray.300">
               From download to earning rewards in under 2 minutes
             </Text>
           </Stack>
@@ -130,7 +131,7 @@ export default function HowItWorks() {
                   <Box position="relative">
                     <Circle
                       size="120px"
-                      bg="white"
+                      bg="whiteAlpha.50"
                       border="4px solid"
                       borderColor={step.color}
                       boxShadow="xl"
@@ -166,10 +167,10 @@ export default function HowItWorks() {
 
                   {/* Content */}
                   <Stack gap={3} textAlign="center" maxW="280px">
-                    <Heading as="h3" size="md" color="nexzy.navy">
+                    <Heading as="h3" size="md" color="white">
                       {step.title}
                     </Heading>
-                    <Text color="gray.600" fontSize="sm">
+                    <Text color="gray.300" fontSize="sm">
                       {step.description}
                     </Text>
                     <VStack gap={1} pt={2}>
@@ -181,7 +182,7 @@ export default function HowItWorks() {
                             bg={step.color}
                             borderRadius="full"
                           />
-                          <Text fontSize="xs" color="gray.500">
+                          <Text fontSize="xs" color="gray.400">
                             {detail}
                           </Text>
                         </HStack>
@@ -200,7 +201,7 @@ export default function HowItWorks() {
                 <HStack gap={4}>
                   <Circle
                     size="80px"
-                    bg="white"
+                    bg="whiteAlpha.50"
                     border="3px solid"
                     borderColor={step.color}
                     boxShadow="lg"
@@ -215,10 +216,10 @@ export default function HowItWorks() {
                     </VStack>
                   </Circle>
                   <Stack flex={1} gap={1}>
-                    <Heading as="h3" size="md" color="nexzy.navy">
+                    <Heading as="h3" size="md" color="white">
                       {step.title}
                     </Heading>
-                    <Text color="gray.600" fontSize="sm">
+                    <Text color="gray.300" fontSize="sm">
                       {step.description}
                     </Text>
                   </Stack>
@@ -232,7 +233,7 @@ export default function HowItWorks() {
                         bg={step.color}
                         borderRadius="full"
                       />
-                      <Text fontSize="xs" color="gray.500">
+                      <Text fontSize="xs" color="gray.400">
                         {detail}
                       </Text>
                     </HStack>
@@ -255,11 +256,11 @@ export default function HowItWorks() {
                 <Icon boxSize={6} color="nexzy.gold">
                   <IoGameController />
                 </Icon>
-                <Heading size="md" color="nexzy.navy">
+                <Heading size="md" color="white">
                   Ready to Transform Your Gaming Experience?
                 </Heading>
               </HStack>
-              <Text color="gray.700">
+              <Text color="gray.200">
                 Join thousands of gamers who never get stuck and earn rewards
                 while playing
               </Text>
@@ -268,7 +269,7 @@ export default function HowItWorks() {
                   <Icon color="nexzy.yellow" boxSize={5}>
                     <FaRobot />
                   </Icon>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                  <Text fontSize="sm" fontWeight="medium" color="gray.200">
                     Instant AI Help
                   </Text>
                 </HStack>
@@ -276,7 +277,7 @@ export default function HowItWorks() {
                   <Icon color="nexzy.yellow" boxSize={5}>
                     <FaCoins />
                   </Icon>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                  <Text fontSize="sm" fontWeight="medium" color="gray.200">
                     Daily Rewards
                   </Text>
                 </HStack>
@@ -284,7 +285,7 @@ export default function HowItWorks() {
                   <Icon color="nexzy.yellow" boxSize={5}>
                     <IoSparkles />
                   </Icon>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                  <Text fontSize="sm" fontWeight="medium" color="gray.200">
                     Free Forever
                   </Text>
                 </HStack>

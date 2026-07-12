@@ -79,7 +79,7 @@ const features = [
 
 export default function Features() {
   return (
-    <Box as="section" py={{ base: 16, md: 24 }} id="features" bg="gray.50">
+    <Box as="section" py={{ base: 16, md: 24 }} id="features" bg="nexzy.navy">
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Stack gap={12}>
           {/* Header */}
@@ -95,10 +95,10 @@ export default function Features() {
             >
               POWERFUL FEATURES
             </Badge>
-            <Heading as="h2" size={{ base: "xl", md: "2xl" }}>
+            <Heading as="h2" size={{ base: "xl", md: "2xl" }} color="white">
               Everything You Need to Level Up Your Gaming
             </Heading>
-            <Text fontSize={{ base: "md", md: "lg" }} color="gray.600">
+            <Text fontSize={{ base: "md", md: "lg" }} color="gray.300">
               From AI assistance to reward coins, we've built the ultimate
               gaming companion app
             </Text>
@@ -109,9 +109,11 @@ export default function Features() {
             {features.map((feature) => (
               <Card.Root
                 key={feature.title}
-                bg="white"
+                bg="whiteAlpha.50"
                 borderWidth={feature.highlight ? "2px" : "1px"}
-                borderColor={feature.highlight ? "nexzy.yellow" : "gray.200"}
+                borderColor={
+                  feature.highlight ? "nexzy.yellow" : "whiteAlpha.200"
+                }
                 _hover={{
                   transform: "translateY(-4px)",
                   boxShadow: "xl",
@@ -176,10 +178,10 @@ export default function Features() {
                       )}
                     </Box>
                     <Stack gap={2}>
-                      <Heading as="h3" size="md" color="nexzy.navy">
+                      <Heading as="h3" size="md" color="white">
                         {feature.title}
                       </Heading>
-                      <Text color="gray.600" fontSize="sm" lineHeight="tall">
+                      <Text color="gray.300" fontSize="sm" lineHeight="tall">
                         {feature.description}
                       </Text>
                     </Stack>
@@ -191,14 +193,14 @@ export default function Features() {
 
           {/* Bottom CTA */}
           <Stack gap={4} textAlign="center" pt={8}>
-            <Text fontSize="lg" color="gray.700" fontWeight="medium">
+            <Text fontSize="lg" color="gray.200" fontWeight="medium">
               All features included in the{" "}
               <Text as="span" color="nexzy.yellow" fontWeight="bold">
                 FREE
               </Text>{" "}
               download
             </Text>
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color="gray.400">
               Optional coin purchases available for power users
             </Text>
           </Stack>

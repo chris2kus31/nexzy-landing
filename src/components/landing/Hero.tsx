@@ -1,6 +1,10 @@
 // ============================================
 // FILE: components/landing/Hero.tsx
-// Enhanced Hero with AI & rewards focus
+// Hero — app-primary anchor for the home page, themed to match the dark site.
+// Left: badge, gradient headline, subhead, app-store CTAs + a prominent door to
+// the newsroom, and a compact trust bar. Right: the app showcase with floating
+// content cards (app + newsroom dual value). The latest-news strip lives at the
+// bottom so news + app share the top of the page.
 // ============================================
 "use client";
 
@@ -14,7 +18,6 @@ import {
   Stack,
   Flex,
   Badge,
-  Icon,
   Link,
   SimpleGrid,
 } from "@chakra-ui/react";
@@ -33,13 +36,56 @@ export interface HeroNewsItem {
 
 // Dynamically import to avoid SSR issues
 const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
-import EmailCapture from "./EmailCapture";
-import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
-import { HiSparkles, HiCurrencyDollar, HiLibrary } from "react-icons/hi";
-import { IoGameController } from "react-icons/io5";
+import { FaApple, FaGooglePlay } from "react-icons/fa";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 import { trackDownload, track } from "@/lib/analytics";
+
+const TRUST: { value: string; label: string }[] = [
+  { value: "Free", label: "to download" },
+  { value: "1000+", label: "games" },
+  { value: "24/7", label: "AI help" },
+  { value: "Daily", label: "fresh news" },
+];
+
+function FloatCard({
+  emoji,
+  title,
+  sub,
+  ...pos
+}: {
+  emoji: string;
+  title: string;
+  sub: string;
+  [key: string]: unknown;
+}) {
+  return (
+    <HStack
+      position="absolute"
+      gap={3}
+      maxW="230px"
+      bg="rgba(28,34,64,0.94)"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="xl"
+      px={4}
+      py={3}
+      boxShadow="0 14px 34px rgba(0,0,0,0.45)"
+      backdropFilter="blur(6px)"
+      {...pos}
+    >
+      <Text fontSize="xl">{emoji}</Text>
+      <Box minW={0}>
+        <Text color="white" fontWeight="800" fontSize="sm" lineHeight="1.25">
+          {title}
+        </Text>
+        <Text color="gray.300" fontSize="xs">
+          {sub}
+        </Text>
+      </Box>
+    </HStack>
+  );
+}
 
 export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
   return (
@@ -56,7 +102,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
         position="absolute"
         top="-20%"
         right="-10%"
-        width="50%"
+        width="45%"
         height="120%"
         borderRadius="full"
         bg="nexzy.blue"
@@ -71,7 +117,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
         height="100%"
         borderRadius="full"
         bg="nexzy.yellow"
-        opacity={0.1}
+        opacity={0.08}
         filter="blur(100px)"
       />
 
@@ -83,7 +129,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
         <Flex
           direction={{ base: "column", lg: "row" }}
           align="center"
-          gap={{ base: 8, lg: 12 }}
+          gap={{ base: 10, lg: 12 }}
         >
           {/* Content */}
           <Stack
@@ -92,9 +138,8 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
             textAlign={{ base: "center", lg: "left" }}
             gap={6}
           >
-            {/* New animated badge */}
             <Badge
-              bg="nexzy.yellow/20"
+              bg="nexzy.yellow/15"
               color="nexzy.gold"
               px={4}
               py={2}
@@ -106,21 +151,29 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
               gap={2}
             >
               <BsFillLightningChargeFill />
-              <Text>AI-Powered Gaming Assistant</Text>
+              <Text>AI companion + free gaming newsroom</Text>
             </Badge>
 
             <Heading
               as="h1"
               size={{ base: "3xl", md: "4xl", lg: "5xl" }}
               fontWeight="bold"
-              lineHeight="shorter"
+              lineHeight="1.05"
               color="nexzy.white"
             >
-              Never Get{" "}
-              <Text as="span" color="nexzy.lightBlue">
-                Stuck
-              </Text>{" "}
-              in a Game Again
+              Beat what&apos;s got you stuck.
+              <br />
+              <Box
+                as="span"
+                style={{
+                  background: "linear-gradient(90deg, #6AB7FF, #FFC947)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                Stay on top of gaming.
+              </Box>
             </Heading>
 
             <Text
@@ -128,55 +181,30 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
               color="nexzy.gray.100"
               maxW="xl"
             >
-              Your personal AI gaming assistant helps you beat any level, find
-              hidden secrets, and optimize your gameplay. Plus earn coins daily,
-              track your game library, and never miss a deal on your wishlist!
+              Your personal AI gaming assistant helps you beat any level, track
+              your library, and never miss a deal &mdash; backed by a free
+              newsroom of gaming news, guides &amp; walkthroughs for the games
+              you play.
             </Text>
 
-            {/* Value props */}
-            <Stack gap={3}>
-              <HStack gap={3}>
-                <Icon color="nexzy.yellow" boxSize={5}>
-                  <FaRobot />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Instant AI help for any game, any level
-                </Text>
-              </HStack>
-              <HStack gap={3}>
-                <Icon color="nexzy.yellow" boxSize={5}>
-                  <HiCurrencyDollar />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Earn coins daily just for gaming
-                </Text>
-              </HStack>
-              <HStack gap={3}>
-                <Icon color="nexzy.yellow" boxSize={5}>
-                  <HiLibrary />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Track your library & wishlist prices
-                </Text>
-              </HStack>
-            </Stack>
-
-            {/* CTA Buttons */}
+            {/* CTAs: two stores + a prominent door to the newsroom */}
             <Stack
               direction={{ base: "column", sm: "row" }}
               gap={4}
               w={{ base: "full", sm: "auto" }}
+              pt={1}
             >
               <Button
                 asChild
                 size="lg"
-                bg="white"
+                bg="nexzy.gold"
                 color="nexzy.navy"
                 borderRadius="full"
-                px={8}
-                _hover={{ bg: "nexzy.gray.100", transform: "translateY(-2px)" }}
+                px={7}
+                fontWeight="700"
+                _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
                 transition="all 0.2s"
-                boxShadow="0 4px 14px rgba(255,255,255,0.2)"
+                boxShadow="0 8px 22px rgba(255,201,71,0.28)"
               >
                 <a
                   href={APP_STORE_URL}
@@ -193,14 +221,14 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
               <Button
                 asChild
                 size="lg"
-                bg="nexzy.yellow"
+                bg="nexzy.gold"
                 color="nexzy.navy"
                 borderRadius="full"
-                px={8}
-                fontWeight="600"
-                _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
+                px={7}
+                fontWeight="700"
+                _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
                 transition="all 0.2s"
-                boxShadow="0 4px 14px rgba(255,183,77,0.4)"
+                boxShadow="0 8px 22px rgba(255,201,71,0.28)"
               >
                 <a
                   href={GOOGLE_PLAY_URL}
@@ -214,76 +242,91 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                   </HStack>
                 </a>
               </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                borderColor="whiteAlpha.400"
+                color="nexzy.white"
+                borderRadius="full"
+                px={7}
+                _hover={{ borderColor: "nexzy.blue", color: "nexzy.lightBlue" }}
+                transition="all 0.2s"
+              >
+                <NextLink
+                  href="/blog"
+                  onClick={() =>
+                    track("news_click", { location: "hero_explore" })
+                  }
+                >
+                  Explore the newsroom →
+                </NextLink>
+              </Button>
             </Stack>
 
-            {/* Secondary door to the newsroom — download stays the primary CTA */}
-            <Link
-              asChild
-              color="nexzy.lightBlue"
-              fontWeight="600"
-              fontSize="sm"
-              _hover={{ textDecoration: "underline" }}
-            >
-              <NextLink
-                href="/blog"
-                onClick={() => track("news_click", { location: "hero_link" })}
-              >
-                or catch up on today&apos;s game news →
-              </NextLink>
-            </Link>
-
-            {/* Newsletter email capture (tips, deals + bonus coins) */}
-            <Box pt={2} w={{ base: "full", lg: "auto" }}>
-              <EmailCapture variant="hero" source="hero" />
-            </Box>
-
-            {/* Social proof */}
+            {/* Compact trust bar */}
             <HStack
-              gap={{ base: 6, md: 8 }}
-              pt={4}
+              gap={{ base: 4, md: 6 }}
+              pt={3}
               wrap="wrap"
               justify={{ base: "center", lg: "start" }}
             >
-              <Stack gap={0}>
-                <HStack>
-                  <Icon color="nexzy.yellow" boxSize={5}>
-                    <HiSparkles />
-                  </Icon>
-                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
-                    Free
-                  </Text>
+              {TRUST.map((t, i) => (
+                <HStack key={t.value} gap={{ base: 4, md: 6 }}>
+                  {i > 0 && (
+                    <Box
+                      w="1px"
+                      h="30px"
+                      bg="whiteAlpha.200"
+                      display={{ base: "none", sm: "block" }}
+                    />
+                  )}
+                  <Stack gap={0}>
+                    <Text
+                      fontSize="xl"
+                      fontWeight="900"
+                      color="nexzy.white"
+                      lineHeight="1.1"
+                    >
+                      {t.value}
+                    </Text>
+                    <Text fontSize="xs" color="nexzy.gray.100">
+                      {t.label}
+                    </Text>
+                  </Stack>
                 </HStack>
-                <Text fontSize="sm" color="nexzy.gray.100">
-                  Download
-                </Text>
-              </Stack>
-              <Stack gap={0}>
-                <HStack>
-                  <Icon color="nexzy.lightBlue" boxSize={5}>
-                    <IoGameController />
-                  </Icon>
-                  <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
-                    1000+
-                  </Text>
-                </HStack>
-                <Text fontSize="sm" color="nexzy.gray.100">
-                  Games Supported
-                </Text>
-              </Stack>
-              <Stack gap={0}>
-                <Text fontSize="2xl" fontWeight="bold" color="nexzy.white">
-                  24/7
-                </Text>
-                <Text fontSize="sm" color="nexzy.gray.100">
-                  AI Assistant
-                </Text>
-              </Stack>
+              ))}
             </HStack>
           </Stack>
 
-          {/* Hero Image/Mockup - Desktop */}
-          <Box flex={1} display={{ base: "none", lg: "block" }}>
+          {/* App showcase + floating content cards - Desktop */}
+          <Box
+            flex={1}
+            display={{ base: "none", lg: "block" }}
+            position="relative"
+          >
             <AppShowcase />
+            <FloatCard
+              emoji="🔥"
+              title="Trending now"
+              sub="GTA 6 trailer breaks records"
+              top="4%"
+              left="0"
+            />
+            <FloatCard
+              emoji="🔔"
+              title="Deal alert"
+              sub="PS5 Pro · −30% today"
+              top="44%"
+              left="-2%"
+            />
+            <FloatCard
+              emoji="📖"
+              title="New guide"
+              sub="How to beat Malenia"
+              bottom="8%"
+              right="0"
+            />
           </Box>
         </Flex>
 
@@ -355,7 +398,6 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                         transform: "translateY(-2px)",
                       }}
                     >
-                      {/* Thumbnail: beside the title on phones, on top on wider */}
                       <Box
                         position="relative"
                         flexShrink={0}
