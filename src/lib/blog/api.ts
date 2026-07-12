@@ -150,3 +150,71 @@ export async function fetchPost(slug: string): Promise<PublicPost | null> {
   if (!res.ok) return null;
   return res.json();
 }
+
+// ---- Walkthroughs (Phase 7b) ----
+export interface WalkthroughChapterRef {
+  slug: string;
+  chapterSlug: string;
+  title: string;
+  order: number;
+}
+export interface WalkthroughOverview {
+  walkthrough: PublicPost;
+  chapters: WalkthroughChapterRef[];
+}
+export interface WalkthroughChapterResponse {
+  walkthrough: { slug: string; title: string };
+  chapter: PublicPost;
+  chapters: WalkthroughChapterRef[];
+  prev: WalkthroughChapterRef | null;
+  next: WalkthroughChapterRef | null;
+}
+
+/** Walkthrough hub — published overviews, newest first. */
+export async function fetchWalkthroughs(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PostList> {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  const qs = q.toString();
+  const res = await fetch(
+    `${API}/newsroom/public/walkthroughs${qs ? `?${qs}` : ""}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok)
+    return {
+      items: [],
+      total: 0,
+      page: params?.page || 1,
+      pageSize: params?.pageSize || 18,
+    };
+  return res.json();
+}
+
+/** A walkthrough overview + its ordered chapter list. */
+export async function fetchWalkthrough(
+  slug: string,
+): Promise<WalkthroughOverview | null> {
+  const res = await fetch(
+    `${API}/newsroom/public/walkthroughs/${encodeURIComponent(slug)}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/** A single walkthrough chapter + prev/next + the sibling list. */
+export async function fetchChapter(
+  slug: string,
+  chapterSlug: string,
+): Promise<WalkthroughChapterResponse | null> {
+  const res = await fetch(
+    `${API}/newsroom/public/walkthroughs/${encodeURIComponent(slug)}/${encodeURIComponent(chapterSlug)}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return null;
+  return res.json();
+}

@@ -3,7 +3,13 @@
 // Generates /sitemap.xml for search engines.
 // ============================================
 import type { MetadataRoute } from "next";
-import { fetchPosts, fetchGuides, fetchLists, fetchTags } from "@/lib/blog/api";
+import {
+  fetchPosts,
+  fetchGuides,
+  fetchLists,
+  fetchWalkthroughs,
+  fetchTags,
+} from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 
@@ -27,10 +33,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/how-we-use-ai",
     "/blog",
     "/guides",
+    "/walkthroughs",
     "/lists",
   ];
 
-  const hubRoutes = new Set(["/blog", "/guides", "/lists"]);
+  const hubRoutes = new Set(["/blog", "/guides", "/walkthroughs", "/lists"]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
@@ -71,6 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     fetch: typeof fetchGuides;
   }[] = [
     { prefix: "/guides", fetch: fetchGuides },
+    { prefix: "/walkthroughs", fetch: fetchWalkthroughs },
     { prefix: "/lists", fetch: fetchLists },
   ];
   for (const { prefix, fetch } of evergreen) {

@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "nexzy-newsroom-media.s3.us-east-1.amazonaws.com",
       },
+      {
+        // Placeholder hero images the API serves for news items without a real
+        // image yet (e.g. seed/fallback data).
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
     ],
   },
   // Force the old landing.nexzyapp.com subdomain to 301-redirect to the

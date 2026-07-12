@@ -19,11 +19,14 @@ export default function BlogCard({ post }: { post: PublicPost }) {
   // badge; articles keep their beat.
   const isGuide = post.type === "guide";
   const isList = post.type === "list";
+  const isWalkthrough = post.type === "walkthrough";
   const href = isGuide
     ? `/guides/${post.slug}`
     : isList
       ? `/lists/${post.slug}`
-      : `/blog/${post.slug}`;
+      : isWalkthrough
+        ? `/walkthroughs/${post.slug}`
+        : `/blog/${post.slug}`;
   const badgeLabel = isGuide ? "Guide" : isList ? "List" : beatLabel(post.beat);
   const badgePalette = isGuide
     ? "cyan"
