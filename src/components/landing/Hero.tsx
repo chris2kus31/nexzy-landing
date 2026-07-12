@@ -188,63 +188,63 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
             </Text>
 
             {/* CTAs: two stores + a prominent door to the newsroom */}
-            <Stack
-              direction={{ base: "column", sm: "row" }}
-              gap={4}
-              w={{ base: "full", sm: "auto" }}
-              pt={1}
-            >
-              <Button
-                asChild
-                size="lg"
-                bg="nexzy.gold"
-                color="nexzy.navy"
-                borderRadius="full"
-                px={7}
-                fontWeight="700"
-                _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
-                transition="all 0.2s"
-                boxShadow="0 8px 22px rgba(255,201,71,0.28)"
-              >
-                <a
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackDownload("ios", "hero")}
+            <Stack gap={3} w={{ base: "full", md: "auto" }} pt={1}>
+              <Stack direction={{ base: "column", sm: "row" }} gap={3} w="full">
+                <Button
+                  asChild
+                  size="lg"
+                  flex={1}
+                  bg="nexzy.gold"
+                  color="nexzy.navy"
+                  borderRadius="full"
+                  px={7}
+                  fontWeight="700"
+                  _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
+                  transition="all 0.2s"
+                  boxShadow="0 8px 22px rgba(255,201,71,0.28)"
                 >
-                  <HStack gap={2}>
-                    <FaApple />
-                    <Text>App Store</Text>
-                  </HStack>
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                bg="nexzy.gold"
-                color="nexzy.navy"
-                borderRadius="full"
-                px={7}
-                fontWeight="700"
-                _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
-                transition="all 0.2s"
-                boxShadow="0 8px 22px rgba(255,201,71,0.28)"
-              >
-                <a
-                  href={GOOGLE_PLAY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackDownload("android", "hero")}
+                  <a
+                    href={APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackDownload("ios", "hero")}
+                  >
+                    <HStack gap={2}>
+                      <FaApple />
+                      <Text>App Store</Text>
+                    </HStack>
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  flex={1}
+                  bg="nexzy.gold"
+                  color="nexzy.navy"
+                  borderRadius="full"
+                  px={7}
+                  fontWeight="700"
+                  _hover={{ bg: "nexzy.yellow", transform: "translateY(-2px)" }}
+                  transition="all 0.2s"
+                  boxShadow="0 8px 22px rgba(255,201,71,0.28)"
                 >
-                  <HStack gap={2}>
-                    <FaGooglePlay />
-                    <Text>Google Play</Text>
-                  </HStack>
-                </a>
-              </Button>
+                  <a
+                    href={GOOGLE_PLAY_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackDownload("android", "hero")}
+                  >
+                    <HStack gap={2}>
+                      <FaGooglePlay />
+                      <Text>Google Play</Text>
+                    </HStack>
+                  </a>
+                </Button>
+              </Stack>
               <Button
                 asChild
                 size="lg"
+                w="full"
                 variant="outline"
                 borderColor="whiteAlpha.400"
                 color="nexzy.white"
