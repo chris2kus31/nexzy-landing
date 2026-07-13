@@ -22,6 +22,7 @@ import {
   importUnresolvedGame,
   skipUnresolvedGame,
   backfillGameLinks,
+  type BackfillDetail,
   importAllUnresolved,
   type UnresolvedGameRef,
   type GameLite,
@@ -331,31 +332,45 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     setNotice(null);
     setResult(null);
     try {
-      const r = await backfillGameLinks();
-      setResult({
-        title: `Backfill: linked ${r.linked} of ${r.scanned} unlinked posts${r.errors ? ` \u00b7 ${r.errors} error${r.errors === 1 ? "" : "s"}` : ""}${r.remaining ? ` \u00b7 ${r.remaining} still to scan \u2014 run again` : ""}`,
-        rows: (r.details ?? []).map((d) => ({
-          label: d.title,
-          sub:
-            d.result === "error"
-              ? `error — ${d.reason ?? "failed"}`
-              : d.result === "no-match"
-                ? "no DB match — leave it, or link by hand"
-                : d.gameName
-                  ? `${d.result.replace("linked-", "")} → ${d.gameName}${d.matchedOn ? ` (matched "${d.matchedOn}")` : ""}`
-                  : d.result,
-          tone:
-            d.result === "error"
-              ? "red"
-              : d.result === "linked-confirmed"
-                ? "green"
-                : d.result === "linked-suggested"
-                  ? "blue"
-                  : d.result === "already-linked"
-                    ? "gray"
-                    : "orange",
-        })),
+      const mapRow = (d: BackfillDetail): OpRow => ({
+        label: d.title,
+        sub:
+          d.result === "error"
+            ? `error — ${d.reason ?? "failed"}`
+            : d.result === "no-match"
+              ? "no DB match — leave it, or link by hand"
+              : d.gameName
+                ? `${d.result.replace("linked-", "")} → ${d.gameName}${d.matchedOn ? ` (matched "${d.matchedOn}")` : ""}`
+                : d.result,
+        tone:
+          d.result === "error"
+            ? "red"
+            : d.result === "linked-confirmed"
+              ? "green"
+              : d.result === "linked-suggested"
+                ? "blue"
+                : "orange",
       });
+      // Small server batches (each returns fast); loop client-side until the
+      // queue is empty so a large backfill never trips a request timeout.
+      let linked = 0;
+      let scanned = 0;
+      let errCount = 0;
+      let remaining = 0;
+      const rows: OpRow[] = [];
+      for (let i = 0; i < 100; i++) {
+        const r = await backfillGameLinks();
+        linked += r.linked;
+        scanned += r.scanned;
+        errCount += r.errors;
+        remaining = r.remaining;
+        rows.push(...(r.details ?? []).map(mapRow));
+        setResult({
+          title: `Backfill: linked ${linked} of ${scanned} scanned${remaining ? ` \u00b7 ${remaining} to go\u2026` : ""}${errCount ? ` \u00b7 ${errCount} error${errCount === 1 ? "" : "s"}` : ""}`,
+          rows,
+        });
+        if (r.scanned === 0 || remaining === 0) break;
+      }
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
