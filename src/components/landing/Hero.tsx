@@ -38,7 +38,7 @@ export interface HeroNewsItem {
 const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
 import { FaApple, FaGooglePlay } from "react-icons/fa";
 import { BsFillLightningChargeFill } from "react-icons/bs";
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload, track } from "@/lib/analytics";
 
 const TRUST: { value: string; label: string }[] = [
@@ -229,7 +229,7 @@ export default function Hero({ latest = [] }: { latest?: HeroNewsItem[] }) {
                   boxShadow="0 8px 22px rgba(255,201,71,0.28)"
                 >
                   <a
-                    href={GOOGLE_PLAY_URL}
+                    href={googlePlayUrl("hero")}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackDownload("android", "hero")}

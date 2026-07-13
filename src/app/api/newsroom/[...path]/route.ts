@@ -47,6 +47,9 @@ async function proxy(req: NextRequest, ctx: Ctx) {
   });
 }
 
+// Admin ops like backfill can run several seconds; give the proxy headroom.
+export const maxDuration = 60;
+
 export const GET = proxy;
 export const POST = proxy;
 export const PATCH = proxy;

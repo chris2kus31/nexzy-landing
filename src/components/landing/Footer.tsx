@@ -19,7 +19,7 @@ import {
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { IoGameController } from "react-icons/io5";
 import { HiMail } from "react-icons/hi";
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload } from "@/lib/analytics";
 
 export default function Footer() {
@@ -90,7 +90,7 @@ export default function Footer() {
                   iOS
                 </Link>
                 <Link
-                  href={GOOGLE_PLAY_URL}
+                  href={googlePlayUrl("footer")}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackDownload("android", "footer")}

@@ -1008,6 +1008,7 @@ export async function backfillGameLinks(): Promise<{
   scanned: number;
   linked: number;
   errors: number;
+  remaining: number;
   details: BackfillDetail[];
 }> {
   return handle(

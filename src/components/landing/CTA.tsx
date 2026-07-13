@@ -22,7 +22,7 @@ import { HiSparkles, HiLightningBolt } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
 import EmailCapture from "./EmailCapture";
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload } from "@/lib/analytics";
 
 export default function CTA() {
@@ -197,7 +197,7 @@ export default function CTA() {
               position="relative"
             >
               <a
-                href={GOOGLE_PLAY_URL}
+                href={googlePlayUrl("cta")}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackDownload("android", "cta")}

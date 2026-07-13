@@ -9,7 +9,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay } from "react-icons/fa";
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload } from "@/lib/analytics";
 
 /**
@@ -93,7 +93,7 @@ export default function AppCta({
             _hover={{ bg: "nexzy.gold" }}
           >
             <a
-              href={GOOGLE_PLAY_URL}
+              href={googlePlayUrl("news")}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackDownload("android", "news")}
