@@ -997,14 +997,17 @@ export interface BackfillDetail {
     | "linked-confirmed"
     | "linked-suggested"
     | "already-linked"
-    | "no-match";
+    | "no-match"
+    | "error";
   gameName?: string;
   matchedOn?: string;
+  reason?: string;
 }
 
 export async function backfillGameLinks(): Promise<{
   scanned: number;
   linked: number;
+  errors: number;
   details: BackfillDetail[];
 }> {
   return handle(

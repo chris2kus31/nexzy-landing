@@ -333,23 +333,27 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     try {
       const r = await backfillGameLinks();
       setResult({
-        title: `Backfill: linked ${r.linked} of ${r.scanned} published posts`,
+        title: `Backfill: linked ${r.linked} of ${r.scanned} published posts${r.errors ? ` \u00b7 ${r.errors} error${r.errors === 1 ? "" : "s"}` : ""}`,
         rows: (r.details ?? []).map((d) => ({
           label: d.title,
           sub:
-            d.result === "no-match"
-              ? "no DB match — leave it, or link by hand"
-              : d.gameName
-                ? `${d.result.replace("linked-", "")} → ${d.gameName}${d.matchedOn ? ` (matched "${d.matchedOn}")` : ""}`
-                : d.result,
+            d.result === "error"
+              ? `error — ${d.reason ?? "failed"}`
+              : d.result === "no-match"
+                ? "no DB match — leave it, or link by hand"
+                : d.gameName
+                  ? `${d.result.replace("linked-", "")} → ${d.gameName}${d.matchedOn ? ` (matched "${d.matchedOn}")` : ""}`
+                  : d.result,
           tone:
-            d.result === "linked-confirmed"
-              ? "green"
-              : d.result === "linked-suggested"
-                ? "blue"
-                : d.result === "already-linked"
-                  ? "gray"
-                  : "orange",
+            d.result === "error"
+              ? "red"
+              : d.result === "linked-confirmed"
+                ? "green"
+                : d.result === "linked-suggested"
+                  ? "blue"
+                  : d.result === "already-linked"
+                    ? "gray"
+                    : "orange",
         })),
       });
     } catch (e) {
