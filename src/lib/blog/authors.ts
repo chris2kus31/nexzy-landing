@@ -32,6 +32,15 @@ export const AUTHORS: Record<string, Author> = {
     x: null,
     instagram: null,
   },
+  leslie: {
+    slug: "leslie",
+    name: "Leslie",
+    role: "Deals & Guides Writer",
+    bio: "Leslie covers deals and guides for Nexzy with a soft spot for anything dark, dramatic, or a little supernatural — the kind of fan who'll happily lose a weekend to a vampire RPG or a haunted small town.",
+    avatar: "/leslie.png",
+    x: null,
+    instagram: null,
+  },
 };
 
 /** Resolve a stored byline (display name) to a persona; null if not a named author. */

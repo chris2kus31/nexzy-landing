@@ -36,12 +36,13 @@ import {
   uploadArticleImage,
   setFeatured,
   setPostAuthor,
+  getWriterNames,
   type BlogPost,
 } from "@/lib/admin/client";
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 
 /** Byline options for the author override. */
-const BYLINES = ["Chuy", "Eli", "Nexzy Editorial"];
+const BYLINES = ["Chuy", "Eli", "Leslie", "Nexzy Editorial"];
 
 interface FormState {
   title: string;
@@ -406,6 +407,12 @@ function EditorContent({ id }: { id: string }) {
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
   const [authorSel, setAuthorSel] = useState("");
+  const [bylines, setBylines] = useState<string[]>(BYLINES);
+  useEffect(() => {
+    getWriterNames()
+      .then((names) => setBylines([...names, "Nexzy Editorial"]))
+      .catch(() => {});
+  }, []);
   const [preview, setPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -746,7 +753,7 @@ function EditorContent({ id }: { id: string }) {
             >
               <Text {...labelProps}>Author / byline</Text>
               <HStack gap={1} wrap="wrap" mb={2}>
-                {BYLINES.map((a) => {
+                {bylines.map((a) => {
                   const active = authorSel === a;
                   return (
                     <Button

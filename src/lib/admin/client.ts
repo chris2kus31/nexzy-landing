@@ -1053,3 +1053,86 @@ export async function searchYoutube(q: string): Promise<YoutubeResult[]> {
   )) as { results?: YoutubeResult[] };
   return r?.results || [];
 }
+
+// ---- Writer personas (Writers tab) ----
+
+export interface WriterPersona {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  bio: string | null;
+  title: string | null;
+  avatarUrl: string | null;
+  socials: Record<string, string> | null;
+  toneBible: string;
+  exemplars: string | null;
+  styleNotes: string | null;
+  guideBible: string | null;
+  modelWriter: string | null;
+  promptVersion: string | null;
+  beats: string[] | null;
+  channels: string[] | null;
+  priorityBoost: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PersonaInput = Partial<
+  Pick<
+    WriterPersona,
+    | "name"
+    | "slug"
+    | "active"
+    | "bio"
+    | "title"
+    | "avatarUrl"
+    | "toneBible"
+    | "exemplars"
+    | "styleNotes"
+    | "guideBible"
+    | "modelWriter"
+    | "beats"
+    | "channels"
+  >
+>;
+
+export async function listPersonas(): Promise<WriterPersona[]> {
+  return handle(await fetch("/api/newsroom/admin/personas"));
+}
+
+export async function createPersona(
+  input: PersonaInput,
+): Promise<WriterPersona> {
+  return handle(
+    await fetch("/api/newsroom/admin/personas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function updatePersona(
+  id: string,
+  input: PersonaInput,
+): Promise<WriterPersona> {
+  return handle(
+    await fetch(`/api/newsroom/admin/personas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+/** Active writer names for admin author pickers (falls back to Chuy/Eli). */
+export async function getWriterNames(): Promise<string[]> {
+  try {
+    const ps = await listPersonas();
+    const names = ps.filter((p) => p.active).map((p) => p.name);
+    return names.length ? names : ["Chuy", "Eli"];
+  } catch {
+    return ["Chuy", "Eli"];
+  }
+}

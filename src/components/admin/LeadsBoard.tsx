@@ -18,6 +18,7 @@ import {
   sendLeadDigest,
   writeLead,
   skipLead,
+  getWriterNames,
   type Lead,
 } from "@/lib/admin/client";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
@@ -40,18 +41,20 @@ function trendColor(score: number): string {
   return "whiteAlpha.400";
 }
 
-const LEAD_AUTHORS = ["Chuy", "Eli"];
+const LEAD_AUTHORS = ["Chuy", "Eli", "Leslie"];
 
 function LeadCard({
   lead,
   onWrite,
   onSkip,
   busy,
+  authors,
 }: {
   lead: Lead;
   onWrite: (id: string, author: string) => void;
   onSkip: (id: string) => void;
   busy: boolean;
+  authors: string[];
 }) {
   const [showSources, setShowSources] = useState(false);
   const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
@@ -216,7 +219,7 @@ function LeadCard({
               ) : null}
             </Text>
             <HStack gap={1}>
-              {LEAD_AUTHORS.map((a) => {
+              {authors.map((a) => {
                 const active = author === a;
                 return (
                   <Box
@@ -280,6 +283,12 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   const [beat, setBeat] = useState<string | null>(null);
   const [writer, setWriter] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [authors, setAuthors] = useState<string[]>(LEAD_AUTHORS);
+  useEffect(() => {
+    getWriterNames()
+      .then(setAuthors)
+      .catch(() => {});
+  }, []);
 
   const load = () => {
     setRefreshing(true);
@@ -458,7 +467,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
         >
           All writers
         </Button>
-        {LEAD_AUTHORS.map((a) => {
+        {authors.map((a) => {
           const active = writer === a;
           return (
             <Button
@@ -505,6 +514,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
               onWrite={doWrite}
               onSkip={doSkip}
               busy={busyId === lead.id}
+              authors={authors}
             />
           ))}
         </VStack>

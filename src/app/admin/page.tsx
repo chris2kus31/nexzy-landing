@@ -28,6 +28,7 @@ import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
+import WritersPanel from "@/components/admin/WritersPanel";
 import {
   getQueue,
   getPublished,
@@ -48,6 +49,7 @@ type Tab =
   | "analytics"
   | "growth"
   | "games"
+  | "writers"
   | "tools";
 
 function StatCard({
@@ -284,6 +286,13 @@ function AdminContent() {
           />
           {isOwner && (
             <TabButton
+              label="Writers"
+              active={tab === "writers"}
+              onClick={() => setTab("writers")}
+            />
+          )}
+          {isOwner && (
+            <TabButton
               label="Tools"
               active={tab === "tools"}
               onClick={() => setTab("tools")}
@@ -383,6 +392,8 @@ function AdminContent() {
       {tab === "analytics" && <AnalyticsPanel />}
       {tab === "growth" && <GrowthPanel isOwner={isOwner} />}
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
+
+      {tab === "writers" && isOwner && <WritersPanel />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>

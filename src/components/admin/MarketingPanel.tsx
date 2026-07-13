@@ -22,6 +22,7 @@ import {
   postMarketingRecommendation,
   marketingDraft,
   marketingPost,
+  getWriterNames,
   type SocialChannel,
   type MarketingRecommendation,
   type SocialPostResult,
@@ -36,7 +37,7 @@ const LABEL: Record<SocialChannel, string> = {
 };
 
 /** Tone/voice options — same personas as the article writers. */
-const AUTHORS = ["Chuy", "Eli"];
+const AUTHORS = ["Chuy", "Eli", "Leslie"];
 
 const inputProps = {
   bg: "whiteAlpha.50",
@@ -278,6 +279,12 @@ function Composer({ enabled }: { enabled: SocialChannel[] }) {
   const [topic, setTopic] = useState("");
   const [url, setUrl] = useState("");
   const [author, setAuthor] = useState(AUTHORS[0]);
+  const [authors, setAuthors] = useState<string[]>(AUTHORS);
+  useEffect(() => {
+    getWriterNames()
+      .then(setAuthors)
+      .catch(() => {});
+  }, []);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageName, setImageName] = useState("");
   const [channels, setChannels] = useState<SocialChannel[]>(
@@ -397,7 +404,7 @@ function Composer({ enabled }: { enabled: SocialChannel[] }) {
               Tone
             </Text>
             <HStack gap={1}>
-              {AUTHORS.map((a) => {
+              {authors.map((a) => {
                 const active = author === a;
                 return (
                   <Button
