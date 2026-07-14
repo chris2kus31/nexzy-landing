@@ -548,7 +548,7 @@ export default function ContentPanel({
   const [err, setErr] = useState("");
   const [budget, setBudget] = useState<TtsBudget | null>(null);
   const [writers, setWriters] = useState<string[]>(["Chuy", "Eli", "Leslie"]);
-  const [batchVoice, setBatchVoice] = useState("Chuy");
+  const [batchVoice, setBatchVoice] = useState("All");
   const loadBudget = () => {
     getTtsBudget()
       .then(setBudget)
@@ -569,7 +569,9 @@ export default function ContentPanel({
     setLoading(true);
     setErr("");
     try {
-      setItems(await suggestContentNow(batchVoice));
+      setItems(
+        await suggestContentNow(batchVoice === "All" ? undefined : batchVoice),
+      );
     } catch (e) {
       setErr((e as Error)?.message || "Could not generate suggestions.");
     } finally {
@@ -642,30 +644,28 @@ export default function ContentPanel({
         </Text>
         {isOwner && (
           <HStack gap={2} wrap="wrap">
-            {writers.length > 1 && (
-              <HStack gap={1}>
-                <Text color="nexzy.gray.100" fontSize="xs">
-                  Voice:
-                </Text>
-                {writers.map((w) => {
-                  const active = batchVoice === w;
-                  return (
-                    <Button
-                      key={w}
-                      size="xs"
-                      onClick={() => setBatchVoice(w)}
-                      bg={active ? "nexzy.blue" : "transparent"}
-                      color={active ? "white" : "nexzy.gray.100"}
-                      borderWidth="1px"
-                      borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-                    >
-                      {w}
-                    </Button>
-                  );
-                })}
-              </HStack>
-            )}
+            <HStack gap={1}>
+              <Text color="nexzy.gray.100" fontSize="xs">
+                Voice:
+              </Text>
+              {["All", ...writers].map((w) => {
+                const active = batchVoice === w;
+                return (
+                  <Button
+                    key={w}
+                    size="xs"
+                    onClick={() => setBatchVoice(w)}
+                    bg={active ? "nexzy.blue" : "transparent"}
+                    color={active ? "white" : "nexzy.gray.100"}
+                    borderWidth="1px"
+                    borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                    _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                  >
+                    {w}
+                  </Button>
+                );
+              })}
+            </HStack>
             <Button
               size="sm"
               colorPalette="blue"
