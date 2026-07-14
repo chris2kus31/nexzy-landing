@@ -530,6 +530,7 @@ export interface CommissionInput {
   instructions: string;
   sourceUrl?: string;
   workingTitle?: string;
+  author?: string;
 }
 
 /** Commission a specific story for the AI staff to research + write. */

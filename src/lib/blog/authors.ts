@@ -41,6 +41,15 @@ export const AUTHORS: Record<string, Author> = {
     x: null,
     instagram: null,
   },
+  bana: {
+    slug: "bana",
+    name: "Bana",
+    role: "All-Ages Writer",
+    bio: "Bana is Nexzy's youngest voice — all about Roblox, anime games, and anything you can play with friends. She covers the fun, all-ages side of gaming with a whole lot of heart.",
+    avatar: "/bana.png",
+    x: null,
+    instagram: null,
+  },
 };
 
 /** Resolve a stored byline (display name) to a persona; null if not a named author. */

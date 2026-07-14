@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Flex,
@@ -12,7 +12,7 @@ import {
   Textarea,
   Button,
 } from "@chakra-ui/react";
-import { commissionStory } from "@/lib/admin/client";
+import { commissionStory, getWriterNames } from "@/lib/admin/client";
 import { BEATS } from "@/lib/blog/beats";
 
 /**
@@ -28,6 +28,13 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [instructions, setInstructions] = useState("");
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [author, setAuthor] = useState("");
+  const [authors, setAuthors] = useState<string[]>([]);
+  useEffect(() => {
+    getWriterNames()
+      .then(setAuthors)
+      .catch(() => {});
+  }, []);
 
   const canSend = instructions.trim().length >= 10 && !sending;
 
@@ -40,6 +47,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         instructions: instructions.trim(),
         sourceUrl: sourceUrl.trim() || undefined,
         workingTitle: title.trim() || undefined,
+        author: author || undefined,
       });
       setMsg({
         ok: true,
@@ -97,6 +105,42 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
                   _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
                 >
                   {b.label}
+                </Button>
+              );
+            })}
+          </HStack>
+        </Box>
+
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+            Writer (optional — the desk picks by default)
+          </Text>
+          <HStack gap={2} wrap="wrap">
+            <Button
+              size="sm"
+              onClick={() => setAuthor("")}
+              bg={author === "" ? "nexzy.blue" : "transparent"}
+              color={author === "" ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={author === "" ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: author === "" ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              Auto
+            </Button>
+            {authors.map((a) => {
+              const active = author === a;
+              return (
+                <Button
+                  key={a}
+                  size="sm"
+                  onClick={() => setAuthor(a)}
+                  bg={active ? "nexzy.blue" : "transparent"}
+                  color={active ? "white" : "nexzy.gray.100"}
+                  borderWidth="1px"
+                  borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                  _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                >
+                  {a}
                 </Button>
               );
             })}
