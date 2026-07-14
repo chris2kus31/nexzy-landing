@@ -1193,10 +1193,13 @@ export async function updatePersona(
   );
 }
 
-/** Active writer names for admin author pickers (falls back to Chuy/Eli). */
+/** Active writer names for admin author pickers (falls back to Chuy/Eli).
+ *  Filtered server-side (?active=true); the client filter is a safety net. */
 export async function getWriterNames(): Promise<string[]> {
   try {
-    const ps = await listPersonas();
+    const ps: WriterPersona[] = await handle(
+      await fetch("/api/newsroom/admin/personas?active=true"),
+    );
     const names = ps.filter((p) => p.active).map((p) => p.name);
     return names.length ? names : ["Chuy", "Eli"];
   } catch {
