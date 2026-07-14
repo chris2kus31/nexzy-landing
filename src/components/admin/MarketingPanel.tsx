@@ -212,11 +212,14 @@ function RecCard({
   rec,
   enabled,
   onDone,
+  writers,
 }: {
   rec: MarketingRecommendation;
   enabled: SocialChannel[];
   onDone: (id: string) => void;
+  writers: string[];
 }) {
+  const [persona, setPersona] = useState(rec.author);
   const [channels, setChannels] = useState<SocialChannel[]>(
     (rec.recommendedChannels || []).filter((c) => enabled.includes(c)),
   );
@@ -292,6 +295,30 @@ function RecCard({
           {rec.reason}
         </Text>
       )}
+      {writers.length > 1 && (
+        <HStack gap={1} mb={3} wrap="wrap">
+          <Text color="nexzy.gray.100" fontSize="xs">
+            Voice:
+          </Text>
+          {writers.map((w) => {
+            const active = persona === w;
+            return (
+              <Button
+                key={w}
+                size="xs"
+                onClick={() => setPersona(w)}
+                bg={active ? "nexzy.blue" : "transparent"}
+                color={active ? "white" : "nexzy.gray.100"}
+                borderWidth="1px"
+                borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+              >
+                {w}
+              </Button>
+            );
+          })}
+        </HStack>
+      )}
       <PostEditor
         enabled={enabled}
         channels={channels}
@@ -301,7 +328,7 @@ function RecCard({
         onPost={post}
         posting={posting}
         posted={posted}
-        persona={rec.author}
+        persona={persona}
       />
     </Box>
   );
@@ -602,6 +629,7 @@ export default function MarketingPanel() {
   const [recs, setRecs] = useState<MarketingRecommendation[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [writers, setWriters] = useState<string[]>(AUTHORS);
 
   useEffect(() => {
     getMarketingChannels()
@@ -616,6 +644,9 @@ export default function MarketingPanel() {
     getMarketingRecommendations()
       .then(setRecs)
       .catch(() => setRecs([]));
+    getWriterNames()
+      .then(setWriters)
+      .catch(() => {});
   }, []);
 
   const generate = async () => {
@@ -721,6 +752,7 @@ export default function MarketingPanel() {
                 rec={rec}
                 enabled={enabled}
                 onDone={removeRec}
+                writers={writers}
               />
             ))}
           </VStack>

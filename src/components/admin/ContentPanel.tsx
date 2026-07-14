@@ -12,6 +12,7 @@ import {
   Badge,
   Link,
   Input,
+  Textarea,
   Spinner,
 } from "@chakra-ui/react";
 import {
@@ -21,6 +22,8 @@ import {
   useContentSuggestion,
   approveContentGuide,
   generateContentScript,
+  updateContentScript,
+  getWriterNames,
   getTtsBudget,
   type ContentSuggestion,
   type PlatformKit,
@@ -238,16 +241,26 @@ function SuggestionCard({
   onDone,
   isOwner,
   onBudget,
+  writers,
 }: {
   s: ContentSuggestion;
   onDone: (id: string) => void;
   isOwner: boolean;
   onBudget: () => void;
+  writers: string[];
 }) {
   const [busy, setBusy] = useState<"skip" | "use" | "script" | null>(null);
   const [gen, setGen] = useState<ContentSuggestion | null>(null);
   const platforms = s.payload?.platforms;
   const view = gen ?? s;
+  const [persona, setPersona] = useState(s.author);
+  const [draft, setDraft] = useState(view.ttsScript ?? "");
+  const [saving, setSaving] = useState(false);
+  // Keep the editable draft in sync when the script is (re)generated.
+  useEffect(() => {
+    setDraft(view.ttsScript ?? "");
+  }, [view.ttsScript]);
+  const dirty = draft.trim() !== (view.ttsScript ?? "").trim();
 
   const act = async (kind: "skip" | "use") => {
     setBusy(kind);
@@ -264,11 +277,22 @@ function SuggestionCard({
   const genScript = async () => {
     setBusy("script");
     try {
-      setGen(await generateContentScript(s.id));
+      setGen(await generateContentScript(s.id, persona));
     } catch {
       /* leave as-is on failure */
     } finally {
       setBusy(null);
+    }
+  };
+
+  const saveScript = async () => {
+    setSaving(true);
+    try {
+      setGen(await updateContentScript(s.id, draft));
+    } catch {
+      /* keep the edit in the box on failure */
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -367,18 +391,44 @@ function SuggestionCard({
       {/* ElevenLabs shorts script + production notes */}
       <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
         {isOwner && (
-          <Button
-            size="xs"
-            colorPalette="purple"
-            variant={view.ttsScript ? "outline" : "solid"}
-            onClick={genScript}
-            loading={busy === "script"}
-            loadingText="Writing script…"
-          >
-            {view.ttsScript
-              ? "↻ Regenerate ElevenLabs script"
-              : "🎙 Generate ElevenLabs script"}
-          </Button>
+          <Flex gap={2} align="center" wrap="wrap">
+            {writers.length > 1 && (
+              <HStack gap={1}>
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  Voice:
+                </Text>
+                {writers.map((w) => {
+                  const active = persona === w;
+                  return (
+                    <Button
+                      key={w}
+                      size="xs"
+                      onClick={() => setPersona(w)}
+                      bg={active ? "nexzy.blue" : "transparent"}
+                      color={active ? "white" : "nexzy.gray.100"}
+                      borderWidth="1px"
+                      borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                    >
+                      {w}
+                    </Button>
+                  );
+                })}
+              </HStack>
+            )}
+            <Button
+              size="xs"
+              colorPalette="purple"
+              variant={view.ttsScript ? "outline" : "solid"}
+              onClick={genScript}
+              loading={busy === "script"}
+              loadingText="Writing script…"
+            >
+              {view.ttsScript
+                ? "↻ Regenerate in " + persona + "\u2019s voice"
+                : "🎙 Generate ElevenLabs script"}
+            </Button>
+          </Flex>
         )}
         {view.ttsScript && (
           <VStack align="stretch" gap={2} mt={2}>
@@ -391,15 +441,43 @@ function SuggestionCard({
             >
               <Flex justify="space-between" align="center" mb={1} gap={2}>
                 <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                  ElevenLabs script ·{" "}
-                  {(view.charCount ?? view.ttsScript.length).toLocaleString()}{" "}
-                  chars
+                  ElevenLabs script · {draft.length.toLocaleString()} chars
                 </Text>
-                <CopyBtn text={view.ttsScript} label="Copy script" />
+                <HStack gap={1}>
+                  {isOwner && dirty && (
+                    <Button
+                      size="xs"
+                      colorPalette="green"
+                      variant="outline"
+                      onClick={saveScript}
+                      loading={saving}
+                      loadingText="Saving…"
+                    >
+                      Save
+                    </Button>
+                  )}
+                  <CopyBtn text={draft} label="Copy script" />
+                </HStack>
               </Flex>
-              <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
-                {view.ttsScript}
-              </Text>
+              {isOwner ? (
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={8}
+                  bg="whiteAlpha.50"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  fontSize="sm"
+                />
+              ) : (
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="sm"
+                  whiteSpace="pre-wrap"
+                >
+                  {view.ttsScript}
+                </Text>
+              )}
             </Box>
             {view.payload?.voicePersona && (
               <Text color="nexzy.gray.100" fontSize="xs">
@@ -438,6 +516,7 @@ export default function ContentPanel({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [budget, setBudget] = useState<TtsBudget | null>(null);
+  const [writers, setWriters] = useState<string[]>(["Chuy", "Eli", "Leslie"]);
   const loadBudget = () => {
     getTtsBudget()
       .then(setBudget)
@@ -449,6 +528,9 @@ export default function ContentPanel({
       .then(setItems)
       .catch(() => setItems([]));
     loadBudget();
+    getWriterNames()
+      .then(setWriters)
+      .catch(() => {});
   }, []);
 
   const suggest = async () => {
@@ -576,6 +658,7 @@ export default function ContentPanel({
                 onDone={remove}
                 isOwner={isOwner}
                 onBudget={loadBudget}
+                writers={writers}
               />
             ),
           )}

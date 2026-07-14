@@ -384,12 +384,32 @@ export async function getTtsBudget(): Promise<TtsBudget> {
   return handle(await fetch("/api/newsroom/admin/content/tts-budget"));
 }
 
-/** Generate an ElevenLabs-ready TTS script + production notes for a suggestion. */
+/** Generate an ElevenLabs-ready TTS script + production notes for a suggestion.
+ *  Optional persona overrides (and persists) the writer voice for that card. */
 export async function generateContentScript(
   id: string,
+  persona?: string,
 ): Promise<ContentSuggestion> {
   return handle(
-    await fetch(`/api/newsroom/admin/content/${id}/script`, { method: "POST" }),
+    await fetch(`/api/newsroom/admin/content/${id}/script`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona }),
+    }),
+  );
+}
+
+/** Save a hand-edited TTS script (no LLM); recomputes the character count. */
+export async function updateContentScript(
+  id: string,
+  ttsScript: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/script-edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ttsScript }),
+    }),
   );
 }
 
