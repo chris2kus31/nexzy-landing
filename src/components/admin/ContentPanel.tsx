@@ -21,7 +21,7 @@ import {
   skipContentSuggestion,
   useContentSuggestion,
   approveContentGuide,
-  generateContentScript,
+  regenerateContentCard,
   updateContentScript,
   getWriterNames,
   getTtsBudget,
@@ -251,11 +251,14 @@ function SuggestionCard({
 }) {
   const [busy, setBusy] = useState<"skip" | "use" | "script" | null>(null);
   const [gen, setGen] = useState<ContentSuggestion | null>(null);
-  const platforms = s.payload?.platforms;
   const view = gen ?? s;
+  const platforms = view.payload?.platforms;
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const credits = view.charCount ?? view.ttsScript?.length ?? 0;
+  const secs = Math.max(1, Math.round(credits / 15)); // ~15 chars/sec speech
   // Keep the editable draft in sync when the script is (re)generated.
   useEffect(() => {
     setDraft(view.ttsScript ?? "");
@@ -274,10 +277,11 @@ function SuggestionCard({
     }
   };
 
-  const genScript = async () => {
+  const regen = async () => {
     setBusy("script");
     try {
-      setGen(await generateContentScript(s.id, persona));
+      // Rebuild the WHOLE card (hook/script/kits/hashtags/TTS) in the voice.
+      setGen(await regenerateContentCard(s.id, persona));
     } catch {
       /* leave as-is on failure */
     } finally {
@@ -313,7 +317,7 @@ function SuggestionCard({
             {(s.lane ?? "clip").toUpperCase()}
           </Badge>
           <Badge colorPalette="blue" variant="subtle">
-            {s.author}’s voice
+            {view.author}’s voice
           </Badge>
           <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
             {s.title}
@@ -346,29 +350,29 @@ function SuggestionCard({
 
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>
-        {s.hook && (
+        {view.hook && (
           <Text color="nexzy.white" fontSize="sm">
-            <b>Hook:</b> {s.hook}
+            <b>Hook:</b> {view.hook}
           </Text>
         )}
-        {s.script && (
+        {view.script && (
           <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
-            {s.script}
+            {view.script}
           </Text>
         )}
-        {s.payload?.broll && (
+        {view.payload?.broll && (
           <Text color="nexzy.gray.100" fontSize="xs">
-            🎬 B-roll: {s.payload.broll}
+            🎬 B-roll: {view.payload.broll}
           </Text>
         )}
-        {s.payload?.cta && (
+        {view.payload?.cta && (
           <Text color="nexzy.gray.100" fontSize="xs">
-            📣 CTA: {s.payload.cta}
+            📣 CTA: {view.payload.cta}
           </Text>
         )}
-        {s.url && (
+        {view.url && (
           <Link
-            href={s.url}
+            href={view.url}
             target="_blank"
             rel="noopener noreferrer"
             color="nexzy.lightBlue"
@@ -379,130 +383,157 @@ function SuggestionCard({
         )}
       </VStack>
 
-      {/* Per-platform posting kits */}
-      {platforms && (
-        <VStack align="stretch" gap={2}>
-          <KitBlock name="YouTube Shorts" kit={platforms.youtube} />
-          <KitBlock name="TikTok" kit={platforms.tiktok} />
-          <KitBlock name="Instagram Reels" kit={platforms.reels} />
-        </VStack>
-      )}
+      {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
+      <Button
+        size="xs"
+        variant="ghost"
+        color="nexzy.gray.100"
+        _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
+        onClick={() => setShowDetails((v) => !v)}
+        mb={2}
+      >
+        {showDetails ? "▾ Hide" : "▸ Show"} kits &amp; ElevenLabs script
+        {view.ttsScript
+          ? ` · ~${secs}s · ${credits.toLocaleString()} credits`
+          : ""}
+      </Button>
 
-      {/* ElevenLabs shorts script + production notes */}
-      <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
-        {isOwner && (
-          <Flex gap={2} align="center" wrap="wrap">
-            {writers.length > 1 && (
-              <HStack gap={1}>
-                <Text color="nexzy.gray.100" fontSize="xs">
-                  Voice:
-                </Text>
-                {writers.map((w) => {
-                  const active = persona === w;
-                  return (
-                    <Button
-                      key={w}
-                      size="xs"
-                      onClick={() => setPersona(w)}
-                      bg={active ? "nexzy.blue" : "transparent"}
-                      color={active ? "white" : "nexzy.gray.100"}
-                      borderWidth="1px"
-                      borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-                    >
-                      {w}
-                    </Button>
-                  );
-                })}
-              </HStack>
-            )}
-            <Button
-              size="xs"
-              colorPalette="purple"
-              variant={view.ttsScript ? "outline" : "solid"}
-              onClick={genScript}
-              loading={busy === "script"}
-              loadingText="Writing script…"
-            >
-              {view.ttsScript
-                ? "↻ Regenerate in " + persona + "\u2019s voice"
-                : "🎙 Generate ElevenLabs script"}
-            </Button>
-          </Flex>
-        )}
-        {view.ttsScript && (
-          <VStack align="stretch" gap={2} mt={2}>
-            <Box
-              bg="whiteAlpha.50"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              borderRadius="lg"
-              p={3}
-            >
-              <Flex justify="space-between" align="center" mb={1} gap={2}>
-                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                  ElevenLabs script · {draft.length.toLocaleString()} chars
-                </Text>
-                <HStack gap={1}>
-                  {isOwner && dirty && (
-                    <Button
-                      size="xs"
-                      colorPalette="green"
-                      variant="outline"
-                      onClick={saveScript}
-                      loading={saving}
-                      loadingText="Saving…"
-                    >
-                      Save
-                    </Button>
-                  )}
-                  <CopyBtn text={draft} label="Copy script" />
-                </HStack>
-              </Flex>
-              {isOwner ? (
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  rows={8}
-                  bg="whiteAlpha.50"
-                  color="nexzy.white"
-                  borderColor="whiteAlpha.300"
-                  fontSize="sm"
-                />
-              ) : (
-                <Text
-                  color="nexzy.gray.100"
-                  fontSize="sm"
-                  whiteSpace="pre-wrap"
+      {showDetails && (
+        <>
+          {/* Per-platform posting kits */}
+          {platforms && (
+            <VStack align="stretch" gap={2}>
+              <KitBlock name="YouTube Shorts" kit={platforms.youtube} />
+              <KitBlock name="TikTok" kit={platforms.tiktok} />
+              <KitBlock name="Instagram Reels" kit={platforms.reels} />
+            </VStack>
+          )}
+
+          {/* ElevenLabs shorts script + production notes */}
+          <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+            {isOwner && (
+              <Flex gap={2} align="center" wrap="wrap">
+                {writers.length > 1 && (
+                  <HStack gap={1}>
+                    <Text color="nexzy.gray.100" fontSize="xs">
+                      Voice:
+                    </Text>
+                    {writers.map((w) => {
+                      const active = persona === w;
+                      return (
+                        <Button
+                          key={w}
+                          size="xs"
+                          onClick={() => setPersona(w)}
+                          bg={active ? "nexzy.blue" : "transparent"}
+                          color={active ? "white" : "nexzy.gray.100"}
+                          borderWidth="1px"
+                          borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                          _hover={{
+                            bg: active ? "nexzy.blue" : "whiteAlpha.100",
+                          }}
+                        >
+                          {w}
+                        </Button>
+                      );
+                    })}
+                  </HStack>
+                )}
+                <Button
+                  size="xs"
+                  colorPalette="purple"
+                  variant={view.ttsScript ? "outline" : "solid"}
+                  onClick={regen}
+                  loading={busy === "script"}
+                  loadingText="Regenerating…"
                 >
-                  {view.ttsScript}
-                </Text>
-              )}
-            </Box>
-            {view.payload?.voicePersona && (
-              <Text color="nexzy.gray.100" fontSize="xs">
-                🗣 Voice: {view.payload.voicePersona}
-              </Text>
+                  {view.ttsScript
+                    ? "↻ Regenerate in " + persona + "\u2019s voice"
+                    : "🎙 Generate in " + persona + "\u2019s voice"}
+                </Button>
+              </Flex>
             )}
-            {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
-              <Text color="nexzy.gray.100" fontSize="xs">
-                🎞 Background:{" "}
-                {(view.payload?.backgroundVideo ?? []).join(" · ")}
-              </Text>
+            {view.ttsScript && (
+              <VStack align="stretch" gap={2} mt={2}>
+                <Box
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="lg"
+                  p={3}
+                >
+                  <Flex justify="space-between" align="center" mb={1} gap={2}>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="xs"
+                      fontWeight="700"
+                    >
+                      ElevenLabs script · {draft.length.toLocaleString()}{" "}
+                      credits · ~{Math.max(1, Math.round(draft.length / 15))}s
+                    </Text>
+                    <HStack gap={1}>
+                      {isOwner && dirty && (
+                        <Button
+                          size="xs"
+                          colorPalette="green"
+                          variant="outline"
+                          onClick={saveScript}
+                          loading={saving}
+                          loadingText="Saving…"
+                        >
+                          Save
+                        </Button>
+                      )}
+                      <CopyBtn text={draft} label="Copy script" />
+                    </HStack>
+                  </Flex>
+                  {isOwner ? (
+                    <Textarea
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      rows={8}
+                      bg="whiteAlpha.50"
+                      color="nexzy.white"
+                      borderColor="whiteAlpha.300"
+                      fontSize="sm"
+                    />
+                  ) : (
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="sm"
+                      whiteSpace="pre-wrap"
+                    >
+                      {view.ttsScript}
+                    </Text>
+                  )}
+                </Box>
+                {view.payload?.voicePersona && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    🗣 Voice: {view.payload.voicePersona}
+                  </Text>
+                )}
+                {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    🎞 Background (search):{" "}
+                    {(view.payload?.backgroundVideo ?? []).join(" · ")}
+                  </Text>
+                )}
+                {(view.payload?.brollSfx?.length ?? 0) > 0 && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    🎬 B-roll/SFX: {(view.payload?.brollSfx ?? []).join(" · ")}
+                  </Text>
+                )}
+                {(view.payload?.onScreenText?.length ?? 0) > 0 && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    💬 On-screen:{" "}
+                    {(view.payload?.onScreenText ?? []).join(" · ")}
+                  </Text>
+                )}
+              </VStack>
             )}
-            {(view.payload?.brollSfx?.length ?? 0) > 0 && (
-              <Text color="nexzy.gray.100" fontSize="xs">
-                🎬 B-roll/SFX: {(view.payload?.brollSfx ?? []).join(" · ")}
-              </Text>
-            )}
-            {(view.payload?.onScreenText?.length ?? 0) > 0 && (
-              <Text color="nexzy.gray.100" fontSize="xs">
-                💬 On-screen: {(view.payload?.onScreenText ?? []).join(" · ")}
-              </Text>
-            )}
-          </VStack>
-        )}
-      </Box>
+          </Box>
+        </>
+      )}
     </Box>
   );
 }
@@ -517,6 +548,7 @@ export default function ContentPanel({
   const [err, setErr] = useState("");
   const [budget, setBudget] = useState<TtsBudget | null>(null);
   const [writers, setWriters] = useState<string[]>(["Chuy", "Eli", "Leslie"]);
+  const [batchVoice, setBatchVoice] = useState("Chuy");
   const loadBudget = () => {
     getTtsBudget()
       .then(setBudget)
@@ -537,7 +569,7 @@ export default function ContentPanel({
     setLoading(true);
     setErr("");
     try {
-      setItems(await suggestContentNow());
+      setItems(await suggestContentNow(batchVoice));
     } catch (e) {
       setErr((e as Error)?.message || "Could not generate suggestions.");
     } finally {
@@ -609,15 +641,41 @@ export default function ContentPanel({
             : `${items.length} open suggestion${items.length === 1 ? "" : "s"}`}
         </Text>
         {isOwner && (
-          <Button
-            size="sm"
-            colorPalette="blue"
-            onClick={suggest}
-            loading={loading}
-            loadingText="Thinking…"
-          >
-            {items && items.length ? "↻ Suggest more" : "Suggest now"}
-          </Button>
+          <HStack gap={2} wrap="wrap">
+            {writers.length > 1 && (
+              <HStack gap={1}>
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  Voice:
+                </Text>
+                {writers.map((w) => {
+                  const active = batchVoice === w;
+                  return (
+                    <Button
+                      key={w}
+                      size="xs"
+                      onClick={() => setBatchVoice(w)}
+                      bg={active ? "nexzy.blue" : "transparent"}
+                      color={active ? "white" : "nexzy.gray.100"}
+                      borderWidth="1px"
+                      borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                      _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                    >
+                      {w}
+                    </Button>
+                  );
+                })}
+              </HStack>
+            )}
+            <Button
+              size="sm"
+              colorPalette="blue"
+              onClick={suggest}
+              loading={loading}
+              loadingText="Thinking…"
+            >
+              {items && items.length ? "↻ Suggest more" : "Suggest now"}
+            </Button>
+          </HStack>
         )}
       </Flex>
 

@@ -355,9 +355,15 @@ export async function getContentSuggestions(): Promise<ContentSuggestion[]> {
 }
 
 /** Generate fresh suggestions now, then return the open board. */
-export async function suggestContentNow(): Promise<ContentSuggestion[]> {
+export async function suggestContentNow(
+  persona?: string,
+): Promise<ContentSuggestion[]> {
   return handle(
-    await fetch("/api/newsroom/admin/content/suggest-now", { method: "POST" }),
+    await fetch("/api/newsroom/admin/content/suggest-now", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona }),
+    }),
   );
 }
 
@@ -392,6 +398,20 @@ export async function generateContentScript(
 ): Promise<ContentSuggestion> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/script`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona }),
+    }),
+  );
+}
+
+/** Rebuild the WHOLE card (script + kits + hashtags + notes) in a chosen voice. */
+export async function regenerateContentCard(
+  id: string,
+  persona?: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/regenerate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ persona }),
