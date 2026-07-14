@@ -51,13 +51,14 @@ function LeadCard({
   authors,
 }: {
   lead: Lead;
-  onWrite: (id: string, author: string) => void;
+  onWrite: (id: string, author: string, noImage: boolean) => void;
   onSkip: (id: string) => void;
   busy: boolean;
   authors: string[];
 }) {
   const [showSources, setShowSources] = useState(false);
   const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
+  const [noImage, setNoImage] = useState(false);
   const hot = lead.trendScore >= 60;
   return (
     <Box
@@ -244,10 +245,26 @@ function LeadCard({
               })}
             </HStack>
           </Box>
+          <Box
+            as="button"
+            onClick={() => setNoImage((v) => !v)}
+            px={2}
+            py="3px"
+            borderRadius="md"
+            fontSize="11px"
+            fontWeight="600"
+            borderWidth="1px"
+            bg={noImage ? "nexzy.blue" : "transparent"}
+            color={noImage ? "white" : "nexzy.gray.100"}
+            borderColor={noImage ? "nexzy.blue" : "whiteAlpha.300"}
+            title="Skip AI hero-image generation (saves image tokens)"
+          >
+            {noImage ? "☑" : "☐"} Skip AI image
+          </Box>
           <Button
             size="sm"
             colorPalette="blue"
-            onClick={() => onWrite(lead.id, author)}
+            onClick={() => onWrite(lead.id, author, noImage)}
             loading={busy}
           >
             Write this
@@ -335,10 +352,10 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     }
   };
 
-  const doWrite = async (id: string, author: string) => {
+  const doWrite = async (id: string, author: string, noImage: boolean) => {
     setBusyId(id);
     try {
-      await writeLead(id, author);
+      await writeLead(id, author, noImage);
       setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
     } catch (e) {
       setMsg((e as Error)?.message || "Could not assign the lead.");

@@ -512,6 +512,11 @@ function SuggestionCard({
                     🗣 Voice: {view.payload.voicePersona}
                   </Text>
                 )}
+                {view.payload?.music && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    🎵 Music: {view.payload.music}
+                  </Text>
+                )}
                 {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
                   <Text color="nexzy.gray.100" fontSize="xs">
                     🎞 Background (search):{" "}

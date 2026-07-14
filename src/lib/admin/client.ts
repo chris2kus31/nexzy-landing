@@ -343,6 +343,7 @@ export interface ContentSuggestion {
     backgroundVideo?: string[];
     brollSfx?: string[];
     onScreenText?: string[];
+    music?: string | null;
     voicePersona?: string | null;
   } | null;
   status: string;
@@ -564,12 +565,19 @@ export async function sendLeadDigest(): Promise<{
 }
 
 /** "Write this": assign a lead to the writer, optionally choosing the author. */
-export async function writeLead(id: string, author?: string): Promise<Lead> {
+export async function writeLead(
+  id: string,
+  author?: string,
+  noImage?: boolean,
+): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(author ? { author } : {}),
+      body: JSON.stringify({
+        ...(author ? { author } : {}),
+        ...(noImage ? { noImage: true } : {}),
+      }),
     }),
   );
 }
