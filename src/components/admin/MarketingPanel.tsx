@@ -23,6 +23,7 @@ import {
   marketingDraft,
   marketingPost,
   getWriterNames,
+  rewriteMarketingVoice,
   type SocialChannel,
   type MarketingRecommendation,
   type SocialPostResult,
@@ -105,6 +106,7 @@ function PostEditor({
   onPost,
   posting,
   posted,
+  persona,
 }: {
   enabled: SocialChannel[];
   channels: SocialChannel[];
@@ -114,7 +116,9 @@ function PostEditor({
   onPost: () => void;
   posting: boolean;
   posted: SocialPostResult[] | null;
+  persona?: string;
 }) {
+  const [rewriting, setRewriting] = useState<SocialChannel | null>(null);
   const toggle = (c: SocialChannel) =>
     setChannels(
       channels.includes(c) ? channels.filter((x) => x !== c) : [...channels, c],
@@ -154,6 +158,34 @@ function PostEditor({
               rows={2}
               {...inputProps}
             />
+            {persona && (captions[c] || "").trim().length > 0 && (
+              <Button
+                size="xs"
+                variant="ghost"
+                mt={1}
+                color="nexzy.gray.100"
+                _hover={{ color: "nexzy.white", bg: "whiteAlpha.100" }}
+                loading={rewriting === c}
+                loadingText="Rewriting…"
+                onClick={async () => {
+                  setRewriting(c);
+                  try {
+                    const r = await rewriteMarketingVoice(
+                      captions[c] || "",
+                      persona,
+                      c,
+                    );
+                    if (r.text) setCaption(c, r.text);
+                  } catch {
+                    /* leave caption unchanged on failure */
+                  } finally {
+                    setRewriting(null);
+                  }
+                }}
+              >
+                ↻ Rewrite in {persona}’s voice
+              </Button>
+            )}
           </Box>
         ))}
       </VStack>
@@ -269,6 +301,7 @@ function RecCard({
         onPost={post}
         posting={posting}
         posted={posted}
+        persona={rec.author}
       />
     </Box>
   );

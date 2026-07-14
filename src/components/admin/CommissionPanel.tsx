@@ -30,6 +30,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [author, setAuthor] = useState("");
   const [authors, setAuthors] = useState<string[]>([]);
+  const [noImage, setNoImage] = useState(false);
   useEffect(() => {
     getWriterNames()
       .then(setAuthors)
@@ -48,6 +49,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         sourceUrl: sourceUrl.trim() || undefined,
         workingTitle: title.trim() || undefined,
         author: author || undefined,
+        noImage: noImage || undefined,
       });
       setMsg({
         ok: true,
@@ -56,6 +58,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       setTitle("");
       setSourceUrl("");
       setInstructions("");
+      setNoImage(false);
       onRan?.();
     } catch (e) {
       setMsg({
@@ -192,6 +195,23 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
             _placeholder={{ color: "nexzy.gray.100" }}
           />
         </Box>
+
+        <Button
+          size="sm"
+          alignSelf="flex-start"
+          onClick={() => setNoImage((v) => !v)}
+          bg={noImage ? "nexzy.blue" : "transparent"}
+          color={noImage ? "white" : "nexzy.gray.100"}
+          borderWidth="1px"
+          borderColor={noImage ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: noImage ? "nexzy.blue" : "whiteAlpha.100" }}
+        >
+          {noImage ? "✓ Skip AI image" : "Skip AI image"}
+        </Button>
+        <Text color="nexzy.gray.100" fontSize="xs" mt={-2}>
+          Bypass the art director — the post lands with no AI hero image so you
+          can drop your own (saves image tokens).
+        </Text>
 
         <Flex justify="flex-end">
           <Button

@@ -248,6 +248,21 @@ export async function postMarketingRecommendation(
   );
 }
 
+/** Rewrite a marketing caption in a persona's voice; returns the rewrite to accept. */
+export async function rewriteMarketingVoice(
+  text: string,
+  persona?: string,
+  channel?: SocialChannel,
+): Promise<{ text: string; author: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/rewrite-voice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, persona, channel }),
+    }),
+  );
+}
+
 /** Draft a caption per channel from a free topic, in an author's voice.
  *  Optional reference image (data URL) informs the caption. */
 export async function marketingDraft(
@@ -303,6 +318,8 @@ export interface ContentSuggestion {
   title: string;
   hook: string | null;
   script: string | null;
+  ttsScript?: string | null;
+  charCount?: number;
   rationale: string | null;
   sourceType: string | null;
   url: string | null;
@@ -322,6 +339,11 @@ export interface ContentSuggestion {
     genres?: string[];
     angles?: string[];
     focus?: string;
+    // Shorts-script extras (kind === "video", after Generate script)
+    backgroundVideo?: string[];
+    brollSfx?: string[];
+    onScreenText?: string[];
+    voicePersona?: string | null;
   } | null;
   status: string;
   createdAt: string;
@@ -349,6 +371,28 @@ export async function skipContentSuggestion(
 }
 
 /** Mark a suggestion used (you shot/posted it). */
+export interface TtsBudget {
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsOn: string;
+  source: "local" | "elevenlabs";
+}
+
+/** ElevenLabs monthly TTS budget (local estimate or real usage if key set). */
+export async function getTtsBudget(): Promise<TtsBudget> {
+  return handle(await fetch("/api/newsroom/admin/content/tts-budget"));
+}
+
+/** Generate an ElevenLabs-ready TTS script + production notes for a suggestion. */
+export async function generateContentScript(
+  id: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/script`, { method: "POST" }),
+  );
+}
+
 export async function useContentSuggestion(
   id: string,
 ): Promise<ContentSuggestion> {
@@ -531,6 +575,8 @@ export interface CommissionInput {
   sourceUrl?: string;
   workingTitle?: string;
   author?: string;
+  /** Skip AI hero-image generation — you'll drop your own. */
+  noImage?: boolean;
 }
 
 /** Commission a specific story for the AI staff to research + write. */

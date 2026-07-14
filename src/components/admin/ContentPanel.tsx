@@ -20,8 +20,11 @@ import {
   skipContentSuggestion,
   useContentSuggestion,
   approveContentGuide,
+  generateContentScript,
+  getTtsBudget,
   type ContentSuggestion,
   type PlatformKit,
+  type TtsBudget,
 } from "@/lib/admin/client";
 
 const LANE_COLOR: Record<string, string> = {
@@ -233,12 +236,18 @@ function GuideLeadCard({
 function SuggestionCard({
   s,
   onDone,
+  isOwner,
+  onBudget,
 }: {
   s: ContentSuggestion;
   onDone: (id: string) => void;
+  isOwner: boolean;
+  onBudget: () => void;
 }) {
-  const [busy, setBusy] = useState<"skip" | "use" | null>(null);
+  const [busy, setBusy] = useState<"skip" | "use" | "script" | null>(null);
+  const [gen, setGen] = useState<ContentSuggestion | null>(null);
   const platforms = s.payload?.platforms;
+  const view = gen ?? s;
 
   const act = async (kind: "skip" | "use") => {
     setBusy(kind);
@@ -246,7 +255,19 @@ function SuggestionCard({
       if (kind === "skip") await skipContentSuggestion(s.id);
       else await useContentSuggestion(s.id);
       onDone(s.id);
+      if (kind === "use") onBudget();
     } catch {
+      setBusy(null);
+    }
+  };
+
+  const genScript = async () => {
+    setBusy("script");
+    try {
+      setGen(await generateContentScript(s.id));
+    } catch {
+      /* leave as-is on failure */
+    } finally {
       setBusy(null);
     }
   };
@@ -342,6 +363,68 @@ function SuggestionCard({
           <KitBlock name="Instagram Reels" kit={platforms.reels} />
         </VStack>
       )}
+
+      {/* ElevenLabs shorts script + production notes */}
+      <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+        {isOwner && (
+          <Button
+            size="xs"
+            colorPalette="purple"
+            variant={view.ttsScript ? "outline" : "solid"}
+            onClick={genScript}
+            loading={busy === "script"}
+            loadingText="Writing script…"
+          >
+            {view.ttsScript
+              ? "↻ Regenerate ElevenLabs script"
+              : "🎙 Generate ElevenLabs script"}
+          </Button>
+        )}
+        {view.ttsScript && (
+          <VStack align="stretch" gap={2} mt={2}>
+            <Box
+              bg="whiteAlpha.50"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+            >
+              <Flex justify="space-between" align="center" mb={1} gap={2}>
+                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                  ElevenLabs script ·{" "}
+                  {(view.charCount ?? view.ttsScript.length).toLocaleString()}{" "}
+                  chars
+                </Text>
+                <CopyBtn text={view.ttsScript} label="Copy script" />
+              </Flex>
+              <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
+                {view.ttsScript}
+              </Text>
+            </Box>
+            {view.payload?.voicePersona && (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                🗣 Voice: {view.payload.voicePersona}
+              </Text>
+            )}
+            {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                🎞 Background:{" "}
+                {(view.payload?.backgroundVideo ?? []).join(" · ")}
+              </Text>
+            )}
+            {(view.payload?.brollSfx?.length ?? 0) > 0 && (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                🎬 B-roll/SFX: {(view.payload?.brollSfx ?? []).join(" · ")}
+              </Text>
+            )}
+            {(view.payload?.onScreenText?.length ?? 0) > 0 && (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                💬 On-screen: {(view.payload?.onScreenText ?? []).join(" · ")}
+              </Text>
+            )}
+          </VStack>
+        )}
+      </Box>
     </Box>
   );
 }
@@ -354,11 +437,18 @@ export default function ContentPanel({
   const [items, setItems] = useState<ContentSuggestion[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [budget, setBudget] = useState<TtsBudget | null>(null);
+  const loadBudget = () => {
+    getTtsBudget()
+      .then(setBudget)
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getContentSuggestions()
       .then(setItems)
       .catch(() => setItems([]));
+    loadBudget();
   }, []);
 
   const suggest = async () => {
@@ -389,6 +479,46 @@ export default function ContentPanel({
           guide&rdquo; to turn a lead into a full guide in your review queue.
         </Text>
       </Box>
+
+      {budget && (
+        <Box
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          px={4}
+          py={3}
+        >
+          <Flex justify="space-between" align="center" gap={2} wrap="wrap">
+            <Text color="nexzy.white" fontSize="sm" fontWeight="600">
+              🎙 ElevenLabs — {budget.remaining.toLocaleString()} of{" "}
+              {budget.limit.toLocaleString()} credits left this month{" "}
+              <Text as="span" color="nexzy.gray.100" fontWeight="400">
+                (~{Math.round(budget.remaining / 900)} min)
+              </Text>
+            </Text>
+            <Text color="nexzy.gray.100" fontSize="xs">
+              {budget.source === "elevenlabs"
+                ? "live from ElevenLabs"
+                : "local estimate"}{" "}
+              · resets {new Date(budget.resetsOn).toLocaleDateString()}
+            </Text>
+          </Flex>
+          <Box
+            mt={2}
+            h="6px"
+            bg="whiteAlpha.200"
+            borderRadius="full"
+            overflow="hidden"
+          >
+            <Box
+              h="full"
+              bg="nexzy.blue"
+              w={`${Math.max(0, Math.min(100, (budget.used / budget.limit) * 100))}%`}
+            />
+          </Box>
+        </Box>
+      )}
 
       <Flex align="center" justify="space-between" gap={2} wrap="wrap">
         <Text color="nexzy.gray.100" fontSize="sm">
@@ -440,7 +570,13 @@ export default function ContentPanel({
                 isOwner={isOwner}
               />
             ) : (
-              <SuggestionCard key={s.id} s={s} onDone={remove} />
+              <SuggestionCard
+                key={s.id}
+                s={s}
+                onDone={remove}
+                isOwner={isOwner}
+                onBudget={loadBudget}
+              />
             ),
           )}
         </VStack>
