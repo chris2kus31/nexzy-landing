@@ -390,21 +390,6 @@ export async function getTtsBudget(): Promise<TtsBudget> {
   return handle(await fetch("/api/newsroom/admin/content/tts-budget"));
 }
 
-/** Generate an ElevenLabs-ready TTS script + production notes for a suggestion.
- *  Optional persona overrides (and persists) the writer voice for that card. */
-export async function generateContentScript(
-  id: string,
-  persona?: string,
-): Promise<ContentSuggestion> {
-  return handle(
-    await fetch(`/api/newsroom/admin/content/${id}/script`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ persona }),
-    }),
-  );
-}
-
 /** Rebuild the WHOLE card (script + kits + hashtags + notes) in a chosen voice. */
 export async function regenerateContentCard(
   id: string,
