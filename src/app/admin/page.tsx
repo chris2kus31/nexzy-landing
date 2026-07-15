@@ -23,6 +23,7 @@ import GrowthPanel from "@/components/admin/GrowthPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
+import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
@@ -45,6 +46,7 @@ type Tab =
   | "subscribers"
   | "marketing"
   | "content"
+  | "guides"
   | "forum"
   | "analytics"
   | "growth"
@@ -265,6 +267,11 @@ function AdminContent() {
             onClick={() => setTab("content")}
           />
           <TabButton
+            label="Guide targets"
+            active={tab === "guides"}
+            onClick={() => setTab("guides")}
+          />
+          <TabButton
             label="Forum"
             active={tab === "forum"}
             onClick={() => setTab("forum")}
@@ -349,6 +356,8 @@ function AdminContent() {
       {tab === "marketing" && <MarketingPanel />}
 
       {tab === "content" && <ContentPanel isOwner={isOwner} />}
+
+      {tab === "guides" && <GuideTargetsPanel isOwner={isOwner} />}
 
       {tab === "forum" && (
         <VStack align="stretch" gap={6}>

@@ -433,13 +433,34 @@ export async function useContentSuggestion(
  */
 export async function approveContentGuide(
   id: string,
-  overrides?: { focus?: string; instructions?: string },
+  overrides?: {
+    focus?: string;
+    instructions?: string;
+    format?: "guide" | "walkthrough";
+  },
 ): Promise<ContentSuggestion> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/approve-guide`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(overrides ?? {}),
+    }),
+  );
+}
+
+/**
+ * This week's GUIDE/WALKTHROUGH targets — recently released games that don't
+ * have a guide yet, freshest first. Read-only, zero-token.
+ */
+export async function getGuideTargets(): Promise<ContentSuggestion[]> {
+  return handle(await fetch("/api/newsroom/admin/content/guide-targets"));
+}
+
+/** Refresh the guide-targets board now (zero-token DB surfacing, no LLM). */
+export async function refreshGuideTargets(): Promise<ContentSuggestion[]> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/guide-targets/refresh", {
+      method: "POST",
     }),
   );
 }
