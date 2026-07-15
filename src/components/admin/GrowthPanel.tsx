@@ -5,6 +5,7 @@ import {
   Box,
   Flex,
   HStack,
+  VStack,
   SimpleGrid,
   Heading,
   Text,
@@ -17,8 +18,14 @@ import {
   getGrowthBrief,
   getGrowthBriefs,
   runGrowth,
+  getGrowthRecommendations,
+  markRecommendationDone,
+  dismissRecommendation,
+  reopenRecommendation,
   type GrowthBriefResponse,
   type GrowthBriefMeta,
+  type GrowthRecommendation,
+  type RecommendationStatus,
 } from "@/lib/admin/client";
 
 function Kpi({ label, value }: { label: string; value: string | number }) {
@@ -42,6 +49,234 @@ function Kpi({ label, value }: { label: string; value: string | number }) {
       <Text color="nexzy.gray.100" fontSize="xs">
         {label}
       </Text>
+    </Box>
+  );
+}
+
+const EFFORT_COLOR: Record<string, string> = {
+  low: "green",
+  med: "yellow",
+  medium: "yellow",
+  high: "red",
+};
+const IMPACT_COLOR: Record<string, string> = {
+  high: "green",
+  med: "yellow",
+  medium: "yellow",
+  low: "gray",
+};
+const STATUS_COLOR: Record<string, string> = {
+  open: "blue",
+  done: "green",
+  dismissed: "gray",
+};
+
+function expertLabel(k: string): string {
+  if (k === "aso") return "ASO";
+  if (k === "seo") return "SEO";
+  return k.toUpperCase();
+}
+
+function RecCard({
+  r,
+  onChanged,
+}: {
+  r: GrowthRecommendation;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState<"done" | "dismiss" | "reopen" | null>(null);
+  const run = async (
+    key: "done" | "dismiss" | "reopen",
+    fn: () => Promise<unknown>,
+  ) => {
+    setBusy(key);
+    try {
+      await fn();
+      onChanged();
+    } catch {
+      setBusy(null);
+    }
+  };
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="lg"
+      p={3.5}
+    >
+      <Flex justify="space-between" align="flex-start" gap={3} mb={1}>
+        <HStack gap={2} flex={1} minW={0} wrap="wrap">
+          <Badge colorPalette="purple" variant="subtle">
+            {expertLabel(r.expert)}
+          </Badge>
+          <Text color="nexzy.white" fontWeight="600">
+            {r.title}
+          </Text>
+        </HStack>
+        <Badge
+          colorPalette={STATUS_COLOR[r.status] ?? "gray"}
+          variant="subtle"
+          flexShrink={0}
+        >
+          {r.status}
+        </Badge>
+      </Flex>
+      {r.why && (
+        <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
+          {r.why}
+        </Text>
+      )}
+      <HStack gap={2} wrap="wrap" mb={r.outcomeNote ? 2 : 3}>
+        {r.effort && (
+          <Badge
+            colorPalette={EFFORT_COLOR[r.effort.toLowerCase()] ?? "gray"}
+            variant="outline"
+            fontSize="10px"
+          >
+            effort: {r.effort}
+          </Badge>
+        )}
+        {r.impact && (
+          <Badge
+            colorPalette={IMPACT_COLOR[r.impact.toLowerCase()] ?? "gray"}
+            variant="outline"
+            fontSize="10px"
+          >
+            impact: {r.impact}
+          </Badge>
+        )}
+        {r.category && (
+          <Badge colorPalette="gray" variant="subtle" fontSize="10px">
+            {r.category}
+          </Badge>
+        )}
+        <Text color="nexzy.gray.100" fontSize="10px">
+          {r.day}
+        </Text>
+      </HStack>
+      {r.outcomeNote && (
+        <Text color="nexzy.gray.100" fontSize="xs" fontStyle="italic" mb={3}>
+          Outcome: {r.outcomeNote}
+        </Text>
+      )}
+      <HStack gap={2} justify="flex-end">
+        {r.status === "open" ? (
+          <>
+            <Button
+              size="xs"
+              colorPalette="green"
+              onClick={() => run("done", () => markRecommendationDone(r.id))}
+              loading={busy === "done"}
+              disabled={!!busy}
+            >
+              Mark done
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+              onClick={() => run("dismiss", () => dismissRecommendation(r.id))}
+              loading={busy === "dismiss"}
+              disabled={!!busy}
+            >
+              Dismiss
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="xs"
+            variant="ghost"
+            color="nexzy.gray.100"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={() => run("reopen", () => reopenRecommendation(r.id))}
+            loading={busy === "reopen"}
+            disabled={!!busy}
+          >
+            Re-open
+          </Button>
+        )}
+      </HStack>
+    </Box>
+  );
+}
+
+const REC_FILTERS: RecommendationStatus[] = ["open", "done", "dismissed"];
+
+/**
+ * Recommendation memory ledger — the marketing-employee's close-the-loop board.
+ * Shows what each expert recommended and lets Chris mark it done or dismiss it;
+ * the next brief reads this back so it follows up instead of repeating itself.
+ */
+function RecommendationsLedger() {
+  const [filter, setFilter] = useState<RecommendationStatus>("open");
+  const [recs, setRecs] = useState<GrowthRecommendation[] | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setRecs(await getGrowthRecommendations(filter));
+    } catch {
+      setRecs([]);
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <Box mt={8}>
+      <Flex align="center" justify="space-between" mb={3} wrap="wrap" gap={2}>
+        <Box>
+          <Heading size="sm" color="nexzy.white">
+            Recommendation memory
+          </Heading>
+          <Text color="nexzy.gray.100" fontSize="xs">
+            What the experts recommended — mark done or dismiss; the next brief
+            follows up.
+          </Text>
+        </Box>
+        <HStack gap={1}>
+          {REC_FILTERS.map((fVal) => (
+            <Button
+              key={fVal}
+              size="xs"
+              variant={filter === fVal ? "solid" : "ghost"}
+              colorPalette={filter === fVal ? "blue" : "gray"}
+              color={filter === fVal ? "white" : "nexzy.gray.100"}
+              onClick={() => setFilter(fVal)}
+            >
+              {fVal}
+            </Button>
+          ))}
+        </HStack>
+      </Flex>
+      {recs === null ? (
+        <HStack color="nexzy.gray.100" gap={2}>
+          <Spinner size="sm" />
+          <Text fontSize="sm">Loading…</Text>
+        </HStack>
+      ) : recs.length === 0 ? (
+        <Box
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          p={5}
+          textAlign="center"
+        >
+          <Text color="nexzy.gray.100" fontSize="sm">
+            No {filter} recommendations.
+          </Text>
+        </Box>
+      ) : (
+        <VStack align="stretch" gap={2.5}>
+          {recs.map((r) => (
+            <RecCard key={r.id} r={r} onChanged={load} />
+          ))}
+        </VStack>
+      )}
     </Box>
   );
 }
@@ -228,6 +463,8 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
               </Text>
             </Box>
           )}
+
+          <RecommendationsLedger />
         </>
       )}
     </Box>

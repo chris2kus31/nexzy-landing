@@ -965,6 +965,67 @@ export async function runGrowth(): Promise<{
   );
 }
 
+export type RecommendationStatus = "open" | "done" | "dismissed";
+
+export interface GrowthRecommendation {
+  id: string;
+  day: string;
+  expert: string;
+  title: string;
+  category: string | null;
+  why: string | null;
+  effort: string | null;
+  impact: string | null;
+  targetMetricKey: string | null;
+  status: RecommendationStatus;
+  actedAt: string | null;
+  outcomeNote: string | null;
+  createdAt: string;
+}
+
+export async function getGrowthRecommendations(
+  status?: RecommendationStatus,
+): Promise<GrowthRecommendation[]> {
+  const qs = status ? `?status=${status}` : "";
+  return handle(await fetch(`/api/newsroom/admin/growth/recommendations${qs}`));
+}
+
+export async function markRecommendationDone(
+  id: string,
+  note?: string,
+): Promise<GrowthRecommendation> {
+  return handle(
+    await fetch(`/api/newsroom/admin/growth/recommendations/${id}/done`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    }),
+  );
+}
+
+export async function dismissRecommendation(
+  id: string,
+  note?: string,
+): Promise<GrowthRecommendation> {
+  return handle(
+    await fetch(`/api/newsroom/admin/growth/recommendations/${id}/dismiss`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    }),
+  );
+}
+
+export async function reopenRecommendation(
+  id: string,
+): Promise<GrowthRecommendation> {
+  return handle(
+    await fetch(`/api/newsroom/admin/growth/recommendations/${id}/reopen`, {
+      method: "POST",
+    }),
+  );
+}
+
 // --- Game-Linked Content Graph: missing-games queue (Phase 2) ---
 
 export interface UnresolvedGameRef {
