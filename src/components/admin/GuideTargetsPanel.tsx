@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Flex,
@@ -28,6 +28,24 @@ import {
  * daily-viewable board where you pick what to write. One click generates a
  * GUIDE or a WALKTHROUGH (owner-only) → it lands in the Review queue.
  */
+
+// Angles arrive as full sentences that repeat the game name
+// ("Beginner's guide to The Alters: Last Variable"). Strip the game name and
+// leading connectors so the chip reads as a tight label ("Beginner's guide").
+function tightenAngle(angle: string, game: string): string {
+  let a = angle.trim();
+  if (game) {
+    const g = game.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    a = a.replace(new RegExp(`\\s*(?:to|for|in|of|:)?\\s*${g}\\b`, "ig"), " ");
+  }
+  a = a
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\s:–—-]+$/g, "")
+    .trim();
+  if (!a) return angle.trim();
+  return a.charAt(0).toUpperCase() + a.slice(1);
+}
+
 function TargetCard({
   s,
   onDone,
@@ -40,11 +58,28 @@ function TargetCard({
   const [busy, setBusy] = useState<"guide" | "walkthrough" | "skip" | null>(
     null,
   );
+  const [showFocus, setShowFocus] = useState(false);
   const [focus, setFocus] = useState("");
   const game = s.payload?.game ?? s.title.replace(/^Guide:\s*/i, "");
   const released = s.payload?.released ?? null;
-  const angles = s.payload?.angles ?? [];
   const genres = s.payload?.genres ?? [];
+
+  // De-dupe + tighten angle labels, cap the visible set so the card stays short.
+  const angles = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of s.payload?.angles ?? []) {
+      const t = tightenAngle(raw, game);
+      const key = t.toLowerCase();
+      if (t && !seen.has(key)) {
+        seen.add(key);
+        out.push(t);
+      }
+    }
+    return out;
+  }, [s.payload?.angles, game]);
+  const shownAngles = angles.slice(0, 3);
+  const extraAngles = angles.length - shownAngles.length;
 
   const generate = async (format: "guide" | "walkthrough") => {
     setBusy(format);
@@ -68,105 +103,143 @@ function TargetCard({
     }
   };
 
+  // Compact meta line: release date first, then genres, dot-separated.
+  const meta: string[] = [];
+  if (released) meta.push(`Released ${released}`);
+  for (const g of genres.slice(0, 3)) meta.push(g);
+
   return (
-    <Box
+    <Flex
+      direction="column"
       bg="whiteAlpha.50"
       border="1px solid"
       borderColor="whiteAlpha.200"
-      borderRadius="xl"
-      p={4}
+      borderRadius="lg"
+      p={3.5}
+      gap={2.5}
+      transition="border-color 0.15s"
+      _hover={{ borderColor: "whiteAlpha.300" }}
     >
-      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
-        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
-          <Badge colorPalette="cyan" variant="solid">
-            GUIDE TARGET
-          </Badge>
-          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-            {game}
-          </Text>
-        </HStack>
-        {released && (
-          <Badge colorPalette="purple" variant="subtle" flexShrink={0}>
-            Released {released}
-          </Badge>
-        )}
-      </Flex>
-
-      {s.rationale && (
-        <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
-          {s.rationale}
+      {/* Title + meta */}
+      <Box>
+        <Text
+          color="nexzy.white"
+          fontWeight="700"
+          fontSize="md"
+          lineHeight="1.25"
+          lineClamp={2}
+          title={game}
+        >
+          {game}
         </Text>
-      )}
+        {meta.length > 0 && (
+          <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+            {meta.join("  ·  ")}
+          </Text>
+        )}
+      </Box>
 
-      {(angles.length > 0 || genres.length > 0) && (
-        <HStack gap={2} wrap="wrap" mb={3}>
-          {angles.map((a) => (
-            <Badge key={`a-${a}`} colorPalette="gray" variant="subtle">
+      {/* Angle labels */}
+      {shownAngles.length > 0 && (
+        <HStack gap={1.5} wrap="wrap">
+          {shownAngles.map((a) => (
+            <Badge
+              key={a}
+              colorPalette="gray"
+              variant="subtle"
+              fontSize="10px"
+              textTransform="none"
+            >
               {a}
             </Badge>
           ))}
-          {genres.map((g) => (
-            <Badge key={`g-${g}`} colorPalette="blue" variant="subtle">
-              {g}
-            </Badge>
-          ))}
+          {extraAngles > 0 && (
+            <Text color="nexzy.gray.100" fontSize="10px">
+              +{extraAngles} more
+            </Text>
+          )}
         </HStack>
       )}
 
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        Optional focus (boss / level / system) — blank for a general guide
-      </Text>
-      <Input
-        value={focus}
-        onChange={(e) => setFocus(e.target.value)}
-        placeholder={`e.g. a specific boss in ${game}`}
-        color="nexzy.white"
-        bg="whiteAlpha.50"
-        borderColor="whiteAlpha.300"
-        _placeholder={{ color: "nexzy.gray.100" }}
-        mb={3}
-      />
+      {/* Optional focus — collapsed by default to keep the card short */}
+      {showFocus && (
+        <Input
+          size="sm"
+          value={focus}
+          onChange={(e) => setFocus(e.target.value)}
+          placeholder={`Focus, e.g. a specific boss in ${game}`}
+          color="nexzy.white"
+          bg="whiteAlpha.50"
+          borderColor="whiteAlpha.300"
+          _placeholder={{ color: "nexzy.gray.100" }}
+          autoFocus
+        />
+      )}
 
-      <HStack gap={2} justify="flex-end" wrap="wrap">
-        {isOwner && (
-          <>
-            <Button
-              size="xs"
-              colorPalette="cyan"
-              onClick={() => generate("guide")}
-              loading={busy === "guide"}
-              loadingText="Generating…"
-              disabled={!!busy}
-            >
-              Generate guide
-            </Button>
-            <Button
-              size="xs"
-              colorPalette="purple"
-              variant="outline"
-              onClick={() => generate("walkthrough")}
-              loading={busy === "walkthrough"}
-              loadingText="Generating…"
-              disabled={!!busy}
-            >
-              Generate walkthrough
-            </Button>
-          </>
+      {/* Actions */}
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={2}
+        mt="auto"
+        wrap="wrap"
+      >
+        {isOwner ? (
+          <Button
+            size="xs"
+            variant="ghost"
+            color="nexzy.gray.100"
+            px={1}
+            _hover={{ bg: "transparent", color: "nexzy.white" }}
+            onClick={() => setShowFocus((v) => !v)}
+            disabled={!!busy}
+          >
+            {showFocus ? "− Focus" : "+ Focus"}
+          </Button>
+        ) : (
+          <Box />
         )}
-        <Button
-          size="xs"
-          variant="ghost"
-          color="nexzy.gray.100"
-          _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
-          onClick={skip}
-          loading={busy === "skip"}
-          loadingText="…"
-          disabled={!!busy}
-        >
-          Skip
-        </Button>
-      </HStack>
-    </Box>
+        <HStack gap={2}>
+          {isOwner && (
+            <>
+              <Button
+                size="xs"
+                colorPalette="cyan"
+                onClick={() => generate("guide")}
+                loading={busy === "guide"}
+                loadingText="Generating…"
+                disabled={!!busy}
+              >
+                Guide
+              </Button>
+              <Button
+                size="xs"
+                colorPalette="purple"
+                variant="outline"
+                onClick={() => generate("walkthrough")}
+                loading={busy === "walkthrough"}
+                loadingText="Generating…"
+                disabled={!!busy}
+              >
+                Walkthrough
+              </Button>
+            </>
+          )}
+          <Button
+            size="xs"
+            variant="ghost"
+            color="nexzy.gray.100"
+            _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+            onClick={skip}
+            loading={busy === "skip"}
+            loadingText="…"
+            disabled={!!busy}
+          >
+            Skip
+          </Button>
+        </HStack>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -261,7 +334,7 @@ export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
             {targets.length} target{targets.length === 1 ? "" : "s"} · aim for
             2–4 guides/week
           </Text>
-          <SimpleGrid columns={{ base: 1, lg: 2 }} gap={3}>
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={3}>
             {targets.map((s) => (
               <TargetCard
                 key={s.id}
