@@ -72,7 +72,7 @@ export default async function WalkthroughsIndexPage() {
               Walkthroughs are on the way. In the meantime, the Nexzy app can
               walk you through any game right now.
             </Text>
-            <AppCta variant="inline" />
+            <AppCta variant="inline" location="walkthroughs" />
           </Box>
         ) : (
           <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={6}>

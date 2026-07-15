@@ -145,7 +145,7 @@ export default async function BlogIndexPage({
       )}
 
       <Box mt={{ base: 12, md: 16 }}>
-        <AppCta variant="band" />
+        <AppCta variant="band" location="blog" />
       </Box>
 
       <Box mt={{ base: 12, md: 16 }}>

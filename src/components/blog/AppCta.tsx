@@ -21,12 +21,21 @@ export default function AppCta({
   variant = "band",
   heading,
   subtext,
+  location = "news",
 }: {
   variant?: "band" | "inline";
   /** Optional override headline (e.g. game-specific guide CTA). */
   heading?: string;
   /** Optional override subtext. */
   subtext?: string;
+  /**
+   * Attribution tag for this CTA's placement/content type. Feeds the GA4
+   * `app_download_click` event's `location` param AND the Android install
+   * referrer's `utm_medium`, so installs can be attributed to the content
+   * type that drove them (blog / guides / lists / walkthroughs). Defaults to
+   * "news" for backward compatibility with existing call sites.
+   */
+  location?: string;
 }) {
   const compact = variant === "inline";
   return (
@@ -75,7 +84,7 @@ export default function AppCta({
               href={APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackDownload("ios", "news")}
+              onClick={() => trackDownload("ios", location)}
             >
               <HStack gap={2}>
                 <FaApple />
@@ -93,10 +102,10 @@ export default function AppCta({
             _hover={{ bg: "nexzy.gold" }}
           >
             <a
-              href={googlePlayUrl("news")}
+              href={googlePlayUrl(location)}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackDownload("android", "news")}
+              onClick={() => trackDownload("android", location)}
             >
               <HStack gap={2}>
                 <FaGooglePlay />

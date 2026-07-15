@@ -22,7 +22,7 @@ import { slugifyTag } from "@/lib/blog/tags";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
-import Markdown from "@/components/blog/Markdown";
+import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
@@ -271,7 +271,9 @@ export default async function BlogArticlePage({
           </Text>
         )}
 
-        {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
+        {post.bodyMarkdown && (
+          <ArticleBody body={post.bodyMarkdown} location="blog" />
+        )}
 
         {videoEmbed && (
           <Box mt={10}>
@@ -363,7 +365,7 @@ export default async function BlogArticlePage({
 
         {/* Turn readers into installs — the newsroom's app funnel. */}
         <Box mt={10}>
-          <AppCta variant="inline" />
+          <AppCta variant="inline" location="blog" />
         </Box>
 
         <HStack

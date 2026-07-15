@@ -20,7 +20,7 @@ import { fetchPost, fetchRelated } from "@/lib/blog/api";
 import { slugifyTag } from "@/lib/blog/tags";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
-import Markdown from "@/components/blog/Markdown";
+import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
@@ -245,7 +245,9 @@ export default async function ListPage({
           </Text>
         )}
 
-        {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
+        {post.bodyMarkdown && (
+          <ArticleBody body={post.bodyMarkdown} location="lists" />
+        )}
 
         {videoEmbed && (
           <Box mt={10}>
@@ -335,7 +337,12 @@ export default async function ListPage({
 
         {/* Turn readers into installs — the app tracks every game on this list. */}
         <Box mt={10}>
-          <AppCta variant="inline" />
+          <AppCta
+            variant="inline"
+            location="lists"
+            heading="Never miss a release — get Nexzy."
+            subtext="Track every game on this list, get price-drop alerts, and AI help when you're stuck — free on iOS & Android."
+          />
         </Box>
 
         <HStack

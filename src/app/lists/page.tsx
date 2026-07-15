@@ -88,7 +88,7 @@ export default async function ListsIndexPage({
               Lists are on the way. In the meantime, Nexzy tracks every upcoming
               release and tells you the moment it lands.
             </Text>
-            <AppCta variant="inline" />
+            <AppCta variant="inline" location="lists" />
           </Box>
         ) : (
           <>
@@ -157,7 +157,7 @@ export default async function ListsIndexPage({
             )}
 
             <Box mt={14}>
-              <AppCta variant="inline" />
+              <AppCta variant="inline" location="lists" />
             </Box>
           </>
         )}

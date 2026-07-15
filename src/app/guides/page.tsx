@@ -88,7 +88,7 @@ export default async function GuidesIndexPage({
               Guides are on the way. In the meantime, the Nexzy app can walk you
               through any game or boss right now.
             </Text>
-            <AppCta variant="inline" />
+            <AppCta variant="inline" location="guides" />
           </Box>
         ) : (
           <>
@@ -157,7 +157,7 @@ export default async function GuidesIndexPage({
             )}
 
             <Box mt={14}>
-              <AppCta variant="inline" />
+              <AppCta variant="inline" location="guides" />
             </Box>
           </>
         )}

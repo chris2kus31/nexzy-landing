@@ -20,7 +20,7 @@ import { fetchPost, fetchRelated } from "@/lib/blog/api";
 import { slugifyTag } from "@/lib/blog/tags";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
-import Markdown from "@/components/blog/Markdown";
+import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
@@ -265,7 +265,9 @@ export default async function GuidePage({
 
         {post.game && <GameCard game={post.game} />}
 
-        {post.bodyMarkdown && <Markdown>{post.bodyMarkdown}</Markdown>}
+        {post.bodyMarkdown && (
+          <ArticleBody body={post.bodyMarkdown} location="guides" />
+        )}
 
         {videoEmbed && (
           <Box mt={10}>
@@ -359,11 +361,12 @@ export default async function GuidePage({
           {post.appGame?.inDb ? (
             <AppCta
               variant="inline"
+              location="guides"
               heading={`Playing ${post.appGame.name || post.title}? Get Nexzy.`}
               subtext={`Track ${post.appGame.name || "this game"}, get step-by-step AI help for any stuck moment, and earn coins — free on iOS & Android.`}
             />
           ) : (
-            <AppCta variant="inline" />
+            <AppCta variant="inline" location="guides" />
           )}
         </Box>
 

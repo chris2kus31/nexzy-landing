@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { HiArrowRight } from "react-icons/hi";
 import { fetchWalkthrough } from "@/lib/blog/api";
-import Markdown from "@/components/blog/Markdown";
+import ArticleBody from "@/components/blog/ArticleBody";
 import GameCard from "@/components/blog/GameCard";
 import AppCta from "@/components/blog/AppCta";
 
@@ -151,7 +151,7 @@ export default async function WalkthroughOverviewPage({
 
         {w.bodyMarkdown && (
           <Box color="gray.200" fontSize="lg" mb={8}>
-            <Markdown>{w.bodyMarkdown}</Markdown>
+            <ArticleBody body={w.bodyMarkdown} location="walkthroughs" />
           </Box>
         )}
 
@@ -210,7 +210,16 @@ export default async function WalkthroughOverviewPage({
           ))}
         </VStack>
 
-        <AppCta variant="inline" />
+        {w.game ? (
+          <AppCta
+            variant="inline"
+            location="walkthroughs"
+            heading={`Playing ${w.game.name}? Get Nexzy.`}
+            subtext={`Get step-by-step AI help for ${w.game.name}, track it, and earn coins — free on iOS & Android.`}
+          />
+        ) : (
+          <AppCta variant="inline" location="walkthroughs" />
+        )}
       </Container>
     </Box>
   );
