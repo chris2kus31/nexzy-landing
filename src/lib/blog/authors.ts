@@ -75,3 +75,26 @@ export function authorInitials(name: string): string {
     .slice(0, 2)
     .toUpperCase();
 }
+
+/**
+ * Schema.org author node for a byline: a Person (with bio page + any sameAs)
+ * when the byline maps to a known persona, else the site Organization. Shared
+ * by every content type's JSON-LD so E-E-A-T author attribution is consistent.
+ */
+export function authorJsonLd(
+  author: string | null | undefined,
+  siteUrl: string,
+) {
+  const persona = getAuthorByName(author);
+  return persona
+    ? {
+        "@type": "Person",
+        name: persona.name,
+        jobTitle: persona.role,
+        url: `${siteUrl}/author/${persona.slug}`,
+        ...(persona.x || persona.instagram
+          ? { sameAs: [persona.x, persona.instagram].filter(Boolean) }
+          : {}),
+      }
+    : { "@type": "Organization", name: author || "Nexzy Editorial" };
+}

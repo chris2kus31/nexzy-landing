@@ -236,7 +236,11 @@ export default async function BlogArticlePage({
         )}
 
         <Box mb={8}>
-          <Byline author={post.author} date={post.publishedAt} />
+          <Byline
+            author={post.author}
+            date={post.publishedAt}
+            updated={post.updatedAt}
+          />
         </Box>
 
         {post.heroImageUrl && (

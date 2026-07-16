@@ -13,14 +13,21 @@ import AuthorAvatar from "./AuthorAvatar";
 export default function Byline({
   author,
   date,
+  updated,
 }: {
   author: string | null;
   date?: string | null;
+  updated?: string | null;
 }) {
   const name = author || "Nexzy Editorial";
   const persona = getAuthorByName(author);
-  const dateStr = date
-    ? new Date(date).toLocaleDateString(undefined, {
+  // Show "Updated" only when the last edit is clearly after publish (>24h);
+  // otherwise a freshly-published post would falsely read "Updated".
+  const showUpdated =
+    !!date && !!updated && Date.parse(updated) - Date.parse(date) > 86400000;
+  const shown = showUpdated ? updated! : date;
+  const dateStr = shown
+    ? new Date(shown).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -50,7 +57,8 @@ export default function Byline({
           {persona ? `, ${persona.role}` : ""}
         </Text>
         <Text color="gray.500" fontSize="xs">
-          {dateStr ? `${dateStr} · ` : ""}Reviewed by the Nexzy newsroom
+          {dateStr ? `${showUpdated ? "Updated " : ""}${dateStr} · ` : ""}
+          Reviewed by the Nexzy newsroom
         </Text>
       </VStack>
     </HStack>

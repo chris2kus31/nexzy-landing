@@ -20,6 +20,7 @@ import { fetchChapter } from "@/lib/blog/api";
 import Markdown from "@/components/blog/Markdown";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
+import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
@@ -108,38 +109,54 @@ export default async function WalkthroughChapterPage({
       { "@type": "ListItem", position: 4, name: c.title, item: url },
     ],
   };
-  const howToLd = {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    name: c.title,
-    description: c.seoDescription || c.excerpt || undefined,
-    mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    isPartOf: {
-      "@type": "Article",
-      name: w.title,
-      url: `${SITE_URL}/walkthroughs/${slug}`,
+  const chapterPublisher = {
+    "@type": "Organization",
+    name: "Nexzy",
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/android-chrome-512x512.png`,
+      width: 512,
+      height: 512,
     },
-    ...(steps.length
+  };
+  const chapterIsPartOf = {
+    "@type": "Article",
+    name: w.title,
+    url: `${SITE_URL}/walkthroughs/${slug}`,
+  };
+  // >=2 real steps → HowTo; otherwise a plain Article (no thin/empty HowTo).
+  const chapterLd =
+    steps.length >= 2
       ? {
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: c.title,
+          description: c.seoDescription || c.excerpt || undefined,
+          datePublished: c.publishedAt || undefined,
+          dateModified: c.updatedAt || c.publishedAt || undefined,
+          author: authorJsonLd(c.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          isPartOf: chapterIsPartOf,
           step: steps.map((s, i) => ({
             "@type": "HowToStep",
             position: i + 1,
             name: s.name,
             text: s.text,
           })),
+          publisher: chapterPublisher,
         }
-      : {}),
-    publisher: {
-      "@type": "Organization",
-      name: "Nexzy",
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
-    },
-  };
+      : {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: c.title,
+          description: c.seoDescription || c.excerpt || undefined,
+          datePublished: c.publishedAt || undefined,
+          dateModified: c.updatedAt || c.publishedAt || undefined,
+          author: authorJsonLd(c.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          isPartOf: chapterIsPartOf,
+          publisher: chapterPublisher,
+        };
 
   return (
     <Box>
@@ -149,7 +166,7 @@ export default async function WalkthroughChapterPage({
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(chapterLd) }}
       />
       <Container maxW="6xl" py={{ base: 8, md: 12 }}>
         <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
@@ -245,7 +262,11 @@ export default async function WalkthroughChapterPage({
             </Heading>
 
             <Box mb={6}>
-              <Byline author={c.author} date={c.publishedAt} />
+              <Byline
+                author={c.author}
+                date={c.publishedAt}
+                updated={c.updatedAt}
+              />
             </Box>
 
             {c.heroImageUrl && (

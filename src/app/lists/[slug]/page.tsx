@@ -23,6 +23,7 @@ import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
+import { authorJsonLd } from "@/lib/blog/authors";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
@@ -127,19 +128,52 @@ export default async function ListPage({
   const listUrl = `${SITE_URL}/lists/${post.slug}`;
   const entries = toListItems(post.bodyMarkdown);
 
-  const itemListLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: post.title,
-    description: post.seoDescription || post.excerpt || undefined,
-    url: listUrl,
-    numberOfItems: entries.length,
-    itemListElement: entries.map((e, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: e.name,
-    })),
+  const listPublisher = {
+    "@type": "Organization",
+    name: "Nexzy",
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/android-chrome-512x512.png`,
+      width: 512,
+      height: 512,
+    },
   };
+  // A real list (>=2 entries) is a CollectionPage wrapping an ItemList — that's
+  // the CreativeWork that can validly carry author + dates. A degenerate list
+  // (<2) falls back to a plain Article rather than a thin ItemList.
+  const listLd =
+    entries.length >= 2
+      ? {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: post.title,
+          description: post.seoDescription || post.excerpt || undefined,
+          url: listUrl,
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          publisher: listPublisher,
+          mainEntity: {
+            "@type": "ItemList",
+            numberOfItems: entries.length,
+            itemListElement: entries.map((e, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: e.name,
+            })),
+          },
+        }
+      : {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          description: post.seoDescription || post.excerpt || undefined,
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": listUrl },
+          publisher: listPublisher,
+        };
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -210,7 +244,11 @@ export default async function ListPage({
         )}
 
         <Box mb={8}>
-          <Byline author={post.author} date={post.publishedAt} />
+          <Byline
+            author={post.author}
+            date={post.publishedAt}
+            updated={post.updatedAt}
+          />
         </Box>
 
         {post.heroImageUrl && (
@@ -380,7 +418,7 @@ export default async function ListPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
       />
       <script
         type="application/ld+json"

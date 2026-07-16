@@ -24,6 +24,7 @@ import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
+import { authorJsonLd } from "@/lib/blog/authors";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import ViewPing from "@/components/blog/ViewPing";
@@ -128,36 +129,51 @@ export default async function GuidePage({
 
   const guideUrl = `${SITE_URL}/guides/${post.slug}`;
   const steps = toHowToSteps(post.bodyMarkdown);
-
-  const howToLd = {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    name: post.title,
-    description: post.seoDescription || post.excerpt || undefined,
-    image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
-    totalTime: `PT${minutes}M`,
-    mainEntityOfPage: { "@type": "WebPage", "@id": guideUrl },
-    ...(steps.length
+  const guidePublisher = {
+    "@type": "Organization",
+    name: "Nexzy",
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/android-chrome-512x512.png`,
+      width: 512,
+      height: 512,
+    },
+  };
+  // Only claim HowTo when there are >=2 real step headings; otherwise emit a
+  // plain Article so we never ship a thin/empty HowTo (a structured-data trap).
+  const guideLd =
+    steps.length >= 2
       ? {
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: post.title,
+          description: post.seoDescription || post.excerpt || undefined,
+          image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
+          totalTime: `PT${minutes}M`,
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": guideUrl },
           step: steps.map((s, i) => ({
             "@type": "HowToStep",
             position: i + 1,
             name: s.name,
             text: s.text,
           })),
+          publisher: guidePublisher,
         }
-      : {}),
-    publisher: {
-      "@type": "Organization",
-      name: "Nexzy",
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
-    },
-  };
+      : {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          description: post.seoDescription || post.excerpt || undefined,
+          image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": guideUrl },
+          publisher: guidePublisher,
+        };
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -228,7 +244,11 @@ export default async function GuidePage({
         )}
 
         <Box mb={8}>
-          <Byline author={post.author} date={post.publishedAt} />
+          <Byline
+            author={post.author}
+            date={post.publishedAt}
+            updated={post.updatedAt}
+          />
         </Box>
 
         {post.heroImageUrl && (
@@ -405,7 +425,7 @@ export default async function GuidePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(guideLd) }}
       />
       <script
         type="application/ld+json"

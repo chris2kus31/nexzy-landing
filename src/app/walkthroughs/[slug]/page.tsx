@@ -19,6 +19,7 @@ import ArticleBody from "@/components/blog/ArticleBody";
 import GameCard from "@/components/blog/GameCard";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
+import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
@@ -88,6 +89,9 @@ export default async function WalkthroughOverviewPage({
     description: w.seoDescription || w.excerpt || undefined,
     image: w.heroImageUrl ? [w.heroImageUrl] : undefined,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    datePublished: w.publishedAt || undefined,
+    dateModified: w.updatedAt || w.publishedAt || undefined,
+    author: authorJsonLd(w.author, SITE_URL),
     hasPart: chapters.map((c, i) => ({
       "@type": "WebPage",
       position: i + 1,
@@ -147,7 +151,11 @@ export default async function WalkthroughOverviewPage({
         </Heading>
 
         <Box mb={6}>
-          <Byline author={w.author} date={w.publishedAt} />
+          <Byline
+            author={w.author}
+            date={w.publishedAt}
+            updated={w.updatedAt}
+          />
         </Box>
 
         {w.game && (
