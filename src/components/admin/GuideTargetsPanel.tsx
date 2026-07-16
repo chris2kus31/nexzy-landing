@@ -17,6 +17,7 @@ import {
 import {
   getGuideTargets,
   getGuideCadence,
+  mineGuideFocus,
   refreshGuideTargets,
   approveContentGuide,
   skipContentSuggestion,
@@ -138,6 +139,17 @@ function TargetCard({
         >
           {game}
         </Text>
+        {s.payload?.focus && (
+          <Badge
+            colorPalette="cyan"
+            variant="subtle"
+            fontSize="10px"
+            textTransform="none"
+            mt={1}
+          >
+            {s.payload.focus}
+          </Badge>
+        )}
         {s.covered && (
           <Badge
             colorPalette="green"
@@ -311,6 +323,27 @@ export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
     }
   };
 
+  const [mining, setMining] = useState(false);
+  const [mineMsg, setMineMsg] = useState("");
+  const mine = async () => {
+    setMining(true);
+    setErr("");
+    setMineMsg("");
+    try {
+      const r = await mineGuideFocus();
+      setMineMsg(
+        r.created > 0
+          ? `Found ${r.created} new topic${r.created === 1 ? "" : "s"} from ${r.scanned} game${r.scanned === 1 ? "" : "s"}.`
+          : `No new topics (scanned ${r.scanned} game${r.scanned === 1 ? "" : "s"}).`,
+      );
+      await load();
+    } catch (e) {
+      setErr((e as Error)?.message || "Couldn't mine topics.");
+    } finally {
+      setMining(false);
+    }
+  };
+
   const removeOne = (id: string) =>
     setTargets((t) => (t ? t.filter((x) => x.id !== id) : t));
 
@@ -326,19 +359,41 @@ export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
             guide or walkthrough → it lands in the Review queue.
           </Text>
         </Box>
-        <Button
-          size="sm"
-          variant="outline"
-          color="nexzy.white"
-          borderColor="whiteAlpha.300"
-          _hover={{ bg: "whiteAlpha.100" }}
-          onClick={refresh}
-          loading={refreshing}
-          loadingText="Refreshing…"
-        >
-          Refresh targets
-        </Button>
+        <HStack gap={2}>
+          {isOwner && (
+            <Button
+              size="sm"
+              bg="nexzy.blue"
+              color="white"
+              borderRadius="md"
+              _hover={{ bg: "nexzy.lightBlue" }}
+              onClick={mine}
+              loading={mining}
+              loadingText="Mining…"
+              title="Mine Ask-Nexzy questions into specific guide topics (uses AI)"
+            >
+              ✨ Find guide topics
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={refresh}
+            loading={refreshing}
+            loadingText="Refreshing…"
+          >
+            Refresh targets
+          </Button>
+        </HStack>
       </Flex>
+      {mineMsg && (
+        <Text color="nexzy.lightBlue" fontSize="sm" mb={3}>
+          {mineMsg}
+        </Text>
+      )}
 
       {err && (
         <Text color="red.300" fontSize="sm" mb={3}>

@@ -468,6 +468,18 @@ export async function getGuideCadence(): Promise<GuideCadence> {
   return handle(await fetch("/api/newsroom/admin/content/guide-cadence"));
 }
 
+/** Owner-only: mine Ask-Nexzy questions into specific guide targets (spends tokens). */
+export async function mineGuideFocus(): Promise<{
+  scanned: number;
+  created: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/guide-focus/mine", {
+      method: "POST",
+    }),
+  );
+}
+
 /** Refresh the guide-targets board now (zero-token DB surfacing, no LLM). */
 export async function refreshGuideTargets(): Promise<ContentSuggestion[]> {
   return handle(
