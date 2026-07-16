@@ -16,10 +16,12 @@ import {
 } from "@chakra-ui/react";
 import {
   getGuideTargets,
+  getGuideCadence,
   refreshGuideTargets,
   approveContentGuide,
   skipContentSuggestion,
   type ContentSuggestion,
+  type GuideCadence,
 } from "@/lib/admin/client";
 
 /**
@@ -60,6 +62,8 @@ function TargetCard({
   );
   const [showFocus, setShowFocus] = useState(false);
   const [focus, setFocus] = useState("");
+  // Guides default to an uploaded screenshot, so skip the AI hero by default.
+  const [noImage, setNoImage] = useState(true);
   const game = s.payload?.game ?? s.title.replace(/^Guide:\s*/i, "");
   const released = s.payload?.released ?? null;
   const genres = s.payload?.genres ?? [];
@@ -87,6 +91,7 @@ function TargetCard({
       await approveContentGuide(s.id, {
         focus: focus.trim() || undefined,
         format,
+        noImage,
       });
       onDone(s.id);
     } catch {
@@ -117,6 +122,7 @@ function TargetCard({
       borderRadius="lg"
       p={3.5}
       gap={2.5}
+      opacity={s.covered ? 0.6 : 1}
       transition="border-color 0.15s"
       _hover={{ borderColor: "whiteAlpha.300" }}
     >
@@ -132,6 +138,17 @@ function TargetCard({
         >
           {game}
         </Text>
+        {s.covered && (
+          <Badge
+            colorPalette="green"
+            variant="subtle"
+            fontSize="10px"
+            textTransform="none"
+            mt={1}
+          >
+            ✓ Already has a guide
+          </Badge>
+        )}
         {meta.length > 0 && (
           <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
             {meta.join("  ·  ")}
@@ -185,17 +202,31 @@ function TargetCard({
         wrap="wrap"
       >
         {isOwner ? (
-          <Button
-            size="xs"
-            variant="ghost"
-            color="nexzy.gray.100"
-            px={1}
-            _hover={{ bg: "transparent", color: "nexzy.white" }}
-            onClick={() => setShowFocus((v) => !v)}
-            disabled={!!busy}
-          >
-            {showFocus ? "− Focus" : "+ Focus"}
-          </Button>
+          <HStack gap={1}>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              px={1}
+              _hover={{ bg: "transparent", color: "nexzy.white" }}
+              onClick={() => setShowFocus((v) => !v)}
+              disabled={!!busy}
+            >
+              {showFocus ? "− Focus" : "+ Focus"}
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              px={1}
+              color={noImage ? "nexzy.gray.100" : "nexzy.lightBlue"}
+              _hover={{ bg: "transparent", color: "nexzy.white" }}
+              onClick={() => setNoImage((v) => !v)}
+              disabled={!!busy}
+              title="Toggle AI hero image"
+            >
+              {noImage ? "No AI image" : "AI image on"}
+            </Button>
+          </HStack>
         ) : (
           <Box />
         )}
@@ -245,6 +276,7 @@ function TargetCard({
 
 export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
   const [targets, setTargets] = useState<ContentSuggestion[] | null>(null);
+  const [cadence, setCadence] = useState<GuideCadence | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState("");
 
@@ -255,6 +287,11 @@ export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
     } catch (e) {
       setErr((e as Error)?.message || "Couldn't load guide targets.");
       setTargets([]);
+    }
+    try {
+      setCadence(await getGuideCadence());
+    } catch {
+      setCadence(null);
     }
   }, []);
 
@@ -331,8 +368,10 @@ export default function GuideTargetsPanel({ isOwner }: { isOwner: boolean }) {
       ) : (
         <VStack align="stretch" gap={3}>
           <Text color="nexzy.gray.100" fontSize="sm">
-            {targets.length} target{targets.length === 1 ? "" : "s"} · aim for
-            2–4 guides/week
+            {targets.length} target{targets.length === 1 ? "" : "s"}
+            {cadence
+              ? ` · ${cadence.generatedThisWeek} of ${cadence.target} guides this week`
+              : ""}
           </Text>
           <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={3}>
             {targets.map((s) => (

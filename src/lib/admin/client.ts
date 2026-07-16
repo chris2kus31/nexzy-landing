@@ -315,6 +315,8 @@ export interface PlatformKit {
 export interface ContentSuggestion {
   id: string;
   kind: string;
+  /** Guide leads: true when the game already has a published guide. */
+  covered?: boolean;
   lane: string | null;
   title: string;
   hook: string | null;
@@ -438,6 +440,7 @@ export async function approveContentGuide(
     focus?: string;
     instructions?: string;
     format?: "guide" | "walkthrough";
+    noImage?: boolean;
   },
 ): Promise<ContentSuggestion> {
   return handle(
@@ -455,6 +458,14 @@ export async function approveContentGuide(
  */
 export async function getGuideTargets(): Promise<ContentSuggestion[]> {
   return handle(await fetch("/api/newsroom/admin/content/guide-targets"));
+}
+
+export interface GuideCadence {
+  generatedThisWeek: number;
+  target: number;
+}
+export async function getGuideCadence(): Promise<GuideCadence> {
+  return handle(await fetch("/api/newsroom/admin/content/guide-cadence"));
 }
 
 /** Refresh the guide-targets board now (zero-token DB surfacing, no LLM). */
