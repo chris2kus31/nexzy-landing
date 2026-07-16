@@ -16,7 +16,7 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { HiClock, HiEye } from "react-icons/hi";
-import { fetchPost, fetchRelated } from "@/lib/blog/api";
+import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
 import { slugifyTag } from "@/lib/blog/tags";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
@@ -27,6 +27,7 @@ import Byline from "@/components/blog/Byline";
 import { authorJsonLd } from "@/lib/blog/authors";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
+import MoreOnGame from "@/components/blog/MoreOnGame";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
@@ -113,6 +114,9 @@ export default async function GuidePage({
   if (post.type !== "guide") notFound();
 
   const related = await fetchRelated(post.slug, 3);
+  const byGame = await fetchRelatedByGame(post.slug, 4);
+  const byGameSlugs = new Set(byGame.items.map((p) => p.slug));
+  const relatedDeduped = related.filter((p) => !byGameSlugs.has(p.slug));
   const topics = (post.tags || [])
     .map((t) => ({ label: t, slug: slugifyTag(t) }))
     .filter((t) => t.slug);
@@ -437,14 +441,16 @@ export default async function GuidePage({
       </Container>
 
       {/* Related guides */}
-      {related.length > 0 && (
+      <MoreOnGame game={byGame.game} items={byGame.items} />
+
+      {relatedDeduped.length > 0 && (
         <Box borderTop="1px solid" borderColor="whiteAlpha.100" py={12}>
           <Container maxW="container.xl">
             <Heading as="h2" size="lg" color="white" mb={6}>
               More guides
             </Heading>
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
-              {related.map((p) => (
+              {relatedDeduped.map((p) => (
                 <BlogCard key={p.slug} post={p} />
               ))}
             </SimpleGrid>

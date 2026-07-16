@@ -181,6 +181,25 @@ export async function fetchRelated(
   return res.json();
 }
 
+export interface RelatedByGame {
+  game: { name: string; slug: string } | null;
+  items: PublicPost[];
+}
+
+export async function fetchRelatedByGame(
+  slug: string,
+  limit = 4,
+): Promise<RelatedByGame> {
+  // Cross-type "More on <game>" module: other Nexzy content for this post's
+  // game(s) + the game for the heading/hub link. Pillar->cluster internal links.
+  const res = await fetch(
+    `${API}/newsroom/public/posts/${encodeURIComponent(slug)}/related-by-game?limit=${limit}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return { game: null, items: [] };
+  return res.json();
+}
+
 export async function fetchTags(limit = 200): Promise<TagInfo[]> {
   // Distinct published tags + counts, for the topic-hub index and sitemap.
   const res = await fetch(`${API}/newsroom/public/tags?limit=${limit}`, {

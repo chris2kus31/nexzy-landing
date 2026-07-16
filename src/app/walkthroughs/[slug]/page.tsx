@@ -14,9 +14,10 @@ import {
   Icon,
 } from "@chakra-ui/react";
 import { HiArrowRight } from "react-icons/hi";
-import { fetchWalkthrough } from "@/lib/blog/api";
+import { fetchWalkthrough, fetchRelatedByGame } from "@/lib/blog/api";
 import ArticleBody from "@/components/blog/ArticleBody";
 import GameCard from "@/components/blog/GameCard";
+import MoreOnGame from "@/components/blog/MoreOnGame";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import { authorJsonLd } from "@/lib/blog/authors";
@@ -67,6 +68,7 @@ export default async function WalkthroughOverviewPage({
   const { walkthrough: w, chapters } = data;
   const url = `${SITE_URL}/walkthroughs/${w.slug}`;
   const firstChapter = chapters[0];
+  const byGame = await fetchRelatedByGame(w.slug, 4);
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -236,6 +238,9 @@ export default async function WalkthroughOverviewPage({
           <AppCta variant="inline" location="walkthroughs" />
         )}
       </Container>
+
+      <MoreOnGame game={byGame.game} items={byGame.items} />
+
       <ViewPing slug={w.slug} />
       <ArticleAnalytics slug={w.slug} />
     </Box>
