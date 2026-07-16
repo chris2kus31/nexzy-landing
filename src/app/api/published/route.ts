@@ -23,7 +23,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     const body = await req.json();
     slug = typeof body?.slug === "string" ? body.slug : "";
-    if (body?.type === "guide" || body?.type === "list") type = body.type;
+    if (
+      body?.type === "guide" ||
+      body?.type === "list" ||
+      body?.type === "walkthrough"
+    )
+      type = body.type;
   } catch {
     // no body / bad JSON — still refresh the index + feeds below
   }
@@ -31,7 +36,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Content type → its own URL home, so we revalidate + ping the RIGHT path
   // (a guide lives at /guides/<slug>, a list at /lists/<slug>, not /blog).
   const base =
-    type === "guide" ? "/guides" : type === "list" ? "/lists" : "/blog";
+    type === "guide"
+      ? "/guides"
+      : type === "list"
+        ? "/lists"
+        : type === "walkthrough"
+          ? "/walkthroughs"
+          : "/blog";
 
   // Refresh the affected page + its index + feeds.
   if (slug) revalidatePath(`${base}/${slug}`);

@@ -18,6 +18,9 @@ import { fetchWalkthrough } from "@/lib/blog/api";
 import ArticleBody from "@/components/blog/ArticleBody";
 import GameCard from "@/components/blog/GameCard";
 import AppCta from "@/components/blog/AppCta";
+import Byline from "@/components/blog/Byline";
+import ViewPing from "@/components/blog/ViewPing";
+import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
 export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -143,6 +146,10 @@ export default async function WalkthroughOverviewPage({
           {w.title}
         </Heading>
 
+        <Box mb={6}>
+          <Byline author={w.author} date={w.publishedAt} />
+        </Box>
+
         {w.game && (
           <Box mb={6}>
             <GameCard game={w.game} />
@@ -221,6 +228,8 @@ export default async function WalkthroughOverviewPage({
           <AppCta variant="inline" location="walkthroughs" />
         )}
       </Container>
+      <ViewPing slug={w.slug} />
+      <ArticleAnalytics slug={w.slug} />
     </Box>
   );
 }

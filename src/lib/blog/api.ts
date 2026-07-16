@@ -269,3 +269,19 @@ export async function fetchChapter(
   if (!res.ok) return null;
   return res.json();
 }
+
+export interface WalkthroughChapterSitemapRef {
+  path: string;
+  updatedAt: string | null;
+}
+
+/** Flat list of every walkthrough chapter URL, for the sitemap (one round-trip). */
+export async function fetchWalkthroughChapters(): Promise<
+  WalkthroughChapterSitemapRef[]
+> {
+  const res = await fetch(`${API}/newsroom/public/walkthrough-chapters`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}

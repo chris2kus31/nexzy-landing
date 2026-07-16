@@ -19,6 +19,9 @@ import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import { fetchChapter } from "@/lib/blog/api";
 import Markdown from "@/components/blog/Markdown";
 import GameCard from "@/components/blog/GameCard";
+import Byline from "@/components/blog/Byline";
+import ViewPing from "@/components/blog/ViewPing";
+import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
 export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -241,6 +244,10 @@ export default async function WalkthroughChapterPage({
               {c.title}
             </Heading>
 
+            <Box mb={6}>
+              <Byline author={c.author} date={c.publishedAt} />
+            </Box>
+
             {c.heroImageUrl && (
               <Box
                 position="relative"
@@ -313,6 +320,8 @@ export default async function WalkthroughChapterPage({
           </Box>
         </Flex>
       </Container>
+      <ViewPing slug={c.slug} />
+      <ArticleAnalytics slug={c.slug} />
     </Box>
   );
 }

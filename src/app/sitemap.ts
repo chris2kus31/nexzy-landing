@@ -8,6 +8,7 @@ import {
   fetchGuides,
   fetchLists,
   fetchWalkthroughs,
+  fetchWalkthroughChapters,
   fetchTags,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
@@ -104,6 +105,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // Walkthrough chapter pages (/walkthroughs/<slug>/<chapter>) — enumerated via
+  // a single flat API call so the sitemap stays one round-trip as chapters
+  // scale. Best-effort so an API hiccup never breaks the sitemap.
+  const chapterEntries: MetadataRoute.Sitemap = [];
+  try {
+    const chapters = await fetchWalkthroughChapters();
+    for (const c of chapters) {
+      chapterEntries.push({
+        url: `${SITE_URL}${c.path}`,
+        lastModified: c.updatedAt ? new Date(c.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.6,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Author pages (E-E-A-T) — stable, low-churn.
   const authorEntries: MetadataRoute.Sitemap = Object.values(AUTHORS).map(
     (a) => ({
@@ -138,6 +157,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...articleEntries,
     ...evergreenEntries,
+    ...chapterEntries,
     ...authorEntries,
     ...topicEntries,
   ];
