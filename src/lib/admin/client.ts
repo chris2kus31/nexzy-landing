@@ -1349,3 +1349,61 @@ export async function getWriterNames(): Promise<string[]> {
     return ["Chuy", "Eli"];
   }
 }
+
+// ---- AI Visibility (GEO scoreboard) ----
+
+export interface AiEngineCell {
+  ok: boolean;
+  cited: boolean;
+  mentioned: boolean;
+  citedUrl: string | null;
+  position: number | null;
+  sourceCount: number | null;
+}
+export interface AiScoreboardRow {
+  query: string;
+  engines: Record<string, AiEngineCell>;
+}
+export interface AiEngineSummary {
+  key: string;
+  label: string;
+  configured: boolean;
+  citedRate: number;
+  mentionRate: number;
+  answered: number;
+}
+export interface AiScoreboard {
+  runId: string | null;
+  ranAt: string | null;
+  engines: { key: string; label: string }[];
+  rows: AiScoreboardRow[];
+  summary: AiEngineSummary[];
+}
+
+export async function fetchAiVisibilityScoreboard(): Promise<AiScoreboard> {
+  return handle(await fetch("/api/newsroom/admin/ai-visibility/scoreboard"));
+}
+
+export interface AiTrendPoint {
+  runId: string;
+  ranAt: string;
+  rates: Record<string, number>;
+}
+export async function fetchAiVisibilityTrend(
+  limit = 6,
+): Promise<AiTrendPoint[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/ai-visibility/trend?limit=${limit}`),
+  );
+}
+
+export async function runAiVisibility(): Promise<{
+  runId: string;
+  queries: number;
+  engines: string[];
+  rows: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/ai-visibility/run", { method: "POST" }),
+  );
+}
