@@ -657,6 +657,8 @@ export interface GuideInput {
   outline?: string[];
   /** 'walkthrough' = longer chaptered full-playthrough; default 'guide'. */
   format?: "guide" | "walkthrough";
+  /** Persona/byline to write as. Omit to use the default (Chuy). */
+  author?: string;
 }
 
 export async function proposeGuideOutline(

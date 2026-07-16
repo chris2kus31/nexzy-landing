@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -11,7 +11,12 @@ import {
   Textarea,
   Button,
 } from "@chakra-ui/react";
-import { generateGuide, proposeGuideOutline } from "@/lib/admin/client";
+import {
+  generateGuide,
+  proposeGuideOutline,
+  listPersonas,
+  type WriterPersona,
+} from "@/lib/admin/client";
 
 /**
  * "Generate a guide" desk. The Editor-in-Chief gives a game + the specific
@@ -26,6 +31,14 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
   const [notes, setNotes] = useState("");
   const [format, setFormat] = useState<"guide" | "walkthrough">("guide");
   const [outline, setOutline] = useState<string[]>([]);
+  const [author, setAuthor] = useState("");
+  const [personas, setPersonas] = useState<WriterPersona[]>([]);
+
+  useEffect(() => {
+    listPersonas()
+      .then((ps) => setPersonas(ps.filter((p) => p.active)))
+      .catch(() => setPersonas([]));
+  }, []);
   const [proposing, setProposing] = useState(false);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -78,6 +91,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         notes: notes.trim() || undefined,
         outline: cleanOutline.length ? cleanOutline : undefined,
         format,
+        author: author.trim() || undefined,
       });
       setMsg({
         ok: true,
@@ -88,6 +102,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
       setInstructions("");
       setNotes("");
       setOutline([]);
+      setAuthor("");
       onRan?.();
     } catch (e) {
       setMsg({
@@ -148,6 +163,37 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
               ? "A longer, chaptered full-playthrough — pairs well with Propose outline."
               : "A focused how-to for one boss, level, or challenge."}
           </Text>
+
+          {personas.length > 0 && (
+            <Box>
+              <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                Writer
+              </Text>
+              <Flex gap={2} flexWrap="wrap">
+                {personas.map((p) => {
+                  const on = author === p.name;
+                  return (
+                    <Button
+                      key={p.id}
+                      size="sm"
+                      variant={on ? "solid" : "outline"}
+                      colorPalette={on ? "blue" : undefined}
+                      color={on ? undefined : "nexzy.white"}
+                      borderColor="whiteAlpha.300"
+                      onClick={() => setAuthor(on ? "" : p.name)}
+                    >
+                      {p.name}
+                    </Button>
+                  );
+                })}
+              </Flex>
+              <Text color="nexzy.gray.100" fontSize="10px" mt={1}>
+                {author
+                  ? `This guide will be written in ${author}'s voice.`
+                  : "Leave unset to use the default writer (Chuy)."}
+              </Text>
+            </Box>
+          )}
         </Box>
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
