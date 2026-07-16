@@ -919,7 +919,7 @@ function EditorContent({ id }: { id: string }) {
                 <Input
                   value={form.imageCredit}
                   onChange={(e) => set("imageCredit", e.target.value)}
-                  placeholder="e.g. Generated with AI, or a source/photographer"
+                  placeholder="e.g. AI illustration, or a source/photographer"
                   {...inputProps}
                 />
               </Box>

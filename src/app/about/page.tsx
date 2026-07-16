@@ -16,7 +16,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 export const metadata: Metadata = {
   title: "About Nexzy News",
   description:
-    "Nexzy News is a gaming newsroom covering PC and console games, hardware, adaptations, and deals — AI-assisted, human-edited, and published by Nexzy.",
+    "Nexzy News is a gaming newsroom covering PC and console games, hardware, adaptations, and deals — written and edited by real people, and published by Nexzy.",
   alternates: { canonical: "/about" },
   openGraph: { title: "About Nexzy News", type: "website" },
 };
@@ -57,8 +57,8 @@ export default function AboutPage() {
     },
     email: "support@nexzyapp.com",
     founder: { "@type": "Person", name: "Chris M." },
-    publishingPrinciples: `${SITE_URL}/how-we-use-ai`,
-    ethicsPolicy: `${SITE_URL}/how-we-use-ai`,
+    publishingPrinciples: `${SITE_URL}/editorial-standards`,
+    ethicsPolicy: `${SITE_URL}/editorial-standards`,
     parentOrganization: {
       "@type": "Organization",
       name: "Nexzy",
@@ -108,14 +108,15 @@ export default function AboutPage() {
 
           <Section title="How we work">
             <Text>
-              Nexzy News is an AI-assisted newsroom with human editorial
-              oversight. AI agents handle the legwork — scanning reputable
-              outlets, gathering sourced facts, and drafting stories — and a
-              human editor reviews, fact-checks, and approves everything before
-              it publishes. Nothing goes live automatically. For the full
-              breakdown, see{" "}
+              Nexzy&apos;s news and guides are written and edited by real people
+              who play these games. Our writers research each story from cited
+              sources, and an editor fact-checks and approves everything before
+              it publishes — nothing goes live automatically. For the full
+              breakdown, see our{" "}
               <Link asChild color="nexzy.lightBlue" display="inline">
-                <NextLink href="/how-we-use-ai">How we use AI</NextLink>
+                <NextLink href="/editorial-standards">
+                  editorial standards
+                </NextLink>
               </Link>
               .
             </Text>

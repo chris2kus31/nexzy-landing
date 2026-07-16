@@ -131,7 +131,7 @@ export default async function ListPage({
   const imageCredit = post.imageCredit
     ? post.imageCredit
         .replace(/\s*\(.*?\)\s*$/, "")
-        .replace(/^AI-generated$/i, "Generated with AI")
+        .replace(/^(AI-generated|Generated with AI)$/i, "AI illustration")
     : null;
 
   const listUrl = `${SITE_URL}/lists/${post.slug}`;

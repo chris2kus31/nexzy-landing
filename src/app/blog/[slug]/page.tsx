@@ -108,7 +108,7 @@ export default async function BlogArticlePage({
   const imageCredit = post.imageCredit
     ? post.imageCredit
         .replace(/\s*\(.*?\)\s*$/, "")
-        .replace(/^AI-generated$/i, "Generated with AI")
+        .replace(/^(AI-generated|Generated with AI)$/i, "AI illustration")
     : null;
 
   const articleUrl = `${SITE_URL}/blog/${post.slug}`;

@@ -44,7 +44,7 @@ export default function Footer() {
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },
       { label: "Community Guidelines", href: "/guidelines" },
-      { label: "How We Use AI", href: "/how-we-use-ai" },
+      { label: "Editorial Standards", href: "/editorial-standards" },
     ],
   };
 

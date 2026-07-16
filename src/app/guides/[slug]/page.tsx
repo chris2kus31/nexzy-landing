@@ -133,7 +133,7 @@ export default async function GuidePage({
   const imageCredit = post.imageCredit
     ? post.imageCredit
         .replace(/\s*\(.*?\)\s*$/, "")
-        .replace(/^AI-generated$/i, "Generated with AI")
+        .replace(/^(AI-generated|Generated with AI)$/i, "AI illustration")
     : null;
 
   const guideUrl = `${SITE_URL}/guides/${post.slug}`;
