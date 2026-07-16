@@ -286,3 +286,69 @@ export async function fetchWalkthroughChapters(): Promise<
   if (!res.ok) return [];
   return res.json();
 }
+
+// ---- Game hubs ----
+export interface GameHubItem {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  heroImageUrl: string | null;
+  type: string;
+  publishedAt: string | null;
+  path: string;
+}
+export interface GameHub {
+  game: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    backgroundImage: string | null;
+    released: string | null;
+    esrbRating: string | null;
+    platforms: string[];
+    genres: string[];
+    clipUrl: string | null;
+    screenshots: string[];
+  };
+  content: {
+    news: GameHubItem[];
+    guides: GameHubItem[];
+    walkthroughs: GameHubItem[];
+    lists: GameHubItem[];
+  };
+  counts: {
+    guides: number;
+    walkthroughs: number;
+    lists: number;
+    news: number;
+    total: number;
+  };
+}
+export interface GameWithContent {
+  slug: string;
+  name: string;
+  backgroundImage: string | null;
+  released: string | null;
+  count: number;
+  updatedAt: string | null;
+}
+
+/** A game's public hub (basics + all its published content). null if none. */
+export async function fetchGameHub(slug: string): Promise<GameHub | null> {
+  const res = await fetch(
+    `${API}/newsroom/public/games/${encodeURIComponent(slug)}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/** Every game that has a public hub (>=1 published linked content). */
+export async function fetchGamesWithContent(): Promise<GameWithContent[]> {
+  const res = await fetch(`${API}/newsroom/public/games`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}

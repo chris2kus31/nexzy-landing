@@ -1,8 +1,8 @@
 // ============================================
 // FILE: components/landing/Navigation.tsx
-// Top nav — content-forward and grouped. Desktop: News, a Guides dropdown
-// (Guides / Walkthroughs / Lists), The App, and the Download CTA. Mobile: the
-// same, with the library shown as an expanded group in the drawer.
+// Top nav — content-forward and grouped. Desktop: Games, News, a Guides
+// dropdown (Guides / Walkthroughs / Lists), The App, and the Download CTA.
+// Mobile: the same, with the library shown as an expanded group in the drawer.
 // ============================================
 "use client";
 
@@ -69,6 +69,17 @@ export default function Navigation() {
 
           {/* Desktop Navigation */}
           <HStack gap={8} display={{ base: "none", md: "flex" }}>
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
+              <NextLink href="/games">Games</NextLink>
+            </Link>
+
             <Link
               asChild
               fontSize="sm"
@@ -224,6 +235,12 @@ export default function Navigation() {
           </DrawerHeader>
           <DrawerBody>
             <Stack gap={1}>
+              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+                <NextLink href="/games" onClick={close}>
+                  Games
+                </NextLink>
+              </Link>
+
               <Link asChild fontSize="lg" py={2} color="nexzy.white">
                 <NextLink href="/blog" onClick={close}>
                   News

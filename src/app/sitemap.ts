@@ -9,6 +9,7 @@ import {
   fetchLists,
   fetchWalkthroughs,
   fetchWalkthroughChapters,
+  fetchGamesWithContent,
   fetchTags,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
@@ -36,9 +37,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guides",
     "/walkthroughs",
     "/lists",
+    "/games",
   ];
 
-  const hubRoutes = new Set(["/blog", "/guides", "/walkthroughs", "/lists"]);
+  const hubRoutes = new Set([
+    "/blog",
+    "/guides",
+    "/walkthroughs",
+    "/lists",
+    "/games",
+  ]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
@@ -123,6 +131,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
+  // Game hubs (/games/<slug>) — one per game that has linked content, best-
+  // effort so an API hiccup never breaks the sitemap.
+  const gameHubEntries: MetadataRoute.Sitemap = [];
+  try {
+    const gameHubs = await fetchGamesWithContent();
+    for (const g of gameHubs) {
+      gameHubEntries.push({
+        url: `${SITE_URL}/games/${g.slug}`,
+        lastModified: g.updatedAt ? new Date(g.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Author pages (E-E-A-T) — stable, low-churn.
   const authorEntries: MetadataRoute.Sitemap = Object.values(AUTHORS).map(
     (a) => ({
@@ -158,6 +183,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...articleEntries,
     ...evergreenEntries,
     ...chapterEntries,
+    ...gameHubEntries,
     ...authorEntries,
     ...topicEntries,
   ];
