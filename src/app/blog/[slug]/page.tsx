@@ -17,6 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { HiCalendar, HiClock, HiEye } from "react-icons/hi";
 import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
+import { imageObjectLd } from "@/lib/blog/imageLd";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
 import { getAuthorByName } from "@/lib/blog/authors";
@@ -62,13 +63,17 @@ export async function generateMetadata({
       description,
       type: "article",
       publishedTime: post.publishedAt || undefined,
-      images: post.heroImageUrl ? [{ url: post.heroImageUrl }] : undefined,
+      images: post.heroImageUrl
+        ? [{ url: post.heroImageUrl, alt: post.imageAlt || post.title }]
+        : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: post.heroImageUrl ? [post.heroImageUrl] : undefined,
+      images: post.heroImageUrl
+        ? [{ url: post.heroImageUrl, alt: post.imageAlt || post.title }]
+        : undefined,
     },
   };
 }
@@ -115,7 +120,7 @@ export default async function BlogArticlePage({
     "@type": "NewsArticle",
     headline: post.title,
     description: post.seoDescription || post.excerpt || undefined,
-    image: post.heroImageUrl ? [post.heroImageUrl] : undefined,
+    image: imageObjectLd(post),
     datePublished: post.publishedAt || undefined,
     dateModified: post.updatedAt || post.publishedAt || undefined,
     articleSection: sectionLabel,

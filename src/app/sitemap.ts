@@ -70,6 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               : now,
           changeFrequency: "weekly",
           priority: 0.7,
+          images: p.heroImageUrl ? [p.heroImageUrl] : undefined,
         });
       }
       if (items.length < PAGE_SIZE || articleEntries.length >= total) break;
@@ -104,6 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 : now,
             changeFrequency: "weekly",
             priority: 0.7,
+            images: p.heroImageUrl ? [p.heroImageUrl] : undefined,
           });
         }
         if (items.length < PAGE_SIZE || page * PAGE_SIZE >= total) break;

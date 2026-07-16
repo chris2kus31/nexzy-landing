@@ -708,6 +708,14 @@ export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
 
+export async function suggestAlt(id: string): Promise<{ alt: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/suggest-alt`, {
+      method: "POST",
+    }),
+  );
+}
+
 export async function updatePost(
   id: string,
   patch: Partial<BlogPost>,

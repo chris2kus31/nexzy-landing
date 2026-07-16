@@ -17,6 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { HiClock, HiEye } from "react-icons/hi";
 import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
+import { imageObjectLd } from "@/lib/blog/imageLd";
 import { slugifyTag } from "@/lib/blog/tags";
 import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
@@ -89,13 +90,17 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
-      images: post.heroImageUrl ? [{ url: post.heroImageUrl }] : undefined,
+      images: post.heroImageUrl
+        ? [{ url: post.heroImageUrl, alt: post.imageAlt || post.title }]
+        : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: post.heroImageUrl ? [post.heroImageUrl] : undefined,
+      images: post.heroImageUrl
+        ? [{ url: post.heroImageUrl, alt: post.imageAlt || post.title }]
+        : undefined,
     },
   };
 }
@@ -153,6 +158,7 @@ export default async function ListPage({
           name: post.title,
           description: post.seoDescription || post.excerpt || undefined,
           url: listUrl,
+          image: imageObjectLd(post),
           datePublished: post.publishedAt || undefined,
           dateModified: post.updatedAt || post.publishedAt || undefined,
           author: authorJsonLd(post.author, SITE_URL),
@@ -172,6 +178,7 @@ export default async function ListPage({
           "@type": "Article",
           headline: post.title,
           description: post.seoDescription || post.excerpt || undefined,
+          image: imageObjectLd(post),
           datePublished: post.publishedAt || undefined,
           dateModified: post.updatedAt || post.publishedAt || undefined,
           author: authorJsonLd(post.author, SITE_URL),

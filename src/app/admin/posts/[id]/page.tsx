@@ -32,6 +32,7 @@ import {
   sendBackPost,
   unpublishPost,
   regenerateImage,
+  suggestAlt,
   regeneratePost,
   uploadArticleImage,
   setFeatured,
@@ -51,6 +52,7 @@ interface FormState {
   seoDescription: string;
   bodyMarkdown: string;
   imageAlt: string;
+  imageCredit: string;
   youtubeUrl: string;
   tags: string;
   faq: string;
@@ -64,6 +66,7 @@ function toForm(p: BlogPost): FormState {
     seoDescription: p.seoDescription || "",
     bodyMarkdown: p.bodyMarkdown || "",
     imageAlt: p.imageAlt || "",
+    imageCredit: p.imageCredit || "",
     youtubeUrl: p.youtubeUrl || "",
     tags: (p.tags || []).join(", "),
     faq: (p.faq || []).map((f) => `${f.q} :: ${f.a}`).join("\n"),
@@ -478,6 +481,7 @@ function EditorContent({ id }: { id: string }) {
         seoDescription: form!.seoDescription,
         bodyMarkdown: form!.bodyMarkdown,
         imageAlt: form!.imageAlt,
+        imageCredit: form!.imageCredit,
         youtubeUrl: form!.youtubeUrl.trim(),
         tags: form!.tags
           .split(",")
@@ -495,6 +499,25 @@ function EditorContent({ id }: { id: string }) {
           .filter((x): x is { q: string; a: string } => x !== null),
       }),
     );
+
+  const suggestAltText = async () => {
+    setBusy("Suggesting alt");
+    setNotice("");
+    setError("");
+    try {
+      const { alt } = await suggestAlt(id);
+      if (alt) {
+        set("imageAlt", alt);
+        setNotice("Alt suggested ✓ — review and Save");
+      } else {
+        setError("Couldn't suggest alt text.");
+      }
+    } catch (e) {
+      setError((e as Error)?.message || "Suggest failed.");
+    } finally {
+      setBusy("");
+    }
+  };
 
   if (error && !post) {
     return (
@@ -891,18 +914,42 @@ function EditorContent({ id }: { id: string }) {
                 style={{ display: "none" }}
                 onChange={onPickImage}
               />
-              <Text color="nexzy.gray.100" fontSize="xs" mt={2}>
-                {post.imageCredit}
-              </Text>
+              <Box mt={3}>
+                <Text {...labelProps}>Image credit</Text>
+                <Input
+                  value={form.imageCredit}
+                  onChange={(e) => set("imageCredit", e.target.value)}
+                  placeholder="e.g. Generated with AI, or a source/photographer"
+                  {...inputProps}
+                />
+              </Box>
             </Box>
 
             <Box>
               <Text {...labelProps}>Image alt</Text>
-              <Input
-                value={form.imageAlt}
-                onChange={(e) => set("imageAlt", e.target.value)}
-                {...inputProps}
-              />
+              <HStack gap={2} align="flex-start">
+                <Input
+                  value={form.imageAlt}
+                  onChange={(e) => set("imageAlt", e.target.value)}
+                  {...inputProps}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  loading={busy === "Suggesting alt"}
+                  onClick={suggestAltText}
+                  flexShrink={0}
+                >
+                  ✨ Suggest
+                </Button>
+              </HStack>
+              <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+                Describes the actual image (vision) for accessibility + image
+                SEO. Edit, then Save.
+              </Text>
             </Box>
 
             <Box>
