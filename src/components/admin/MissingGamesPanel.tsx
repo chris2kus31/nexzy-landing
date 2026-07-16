@@ -24,6 +24,10 @@ import {
   backfillGameLinks,
   type BackfillDetail,
   importAllUnresolved,
+  getImportDiagnostics,
+  dismissImportDiagnostic,
+  dismissAllImportDiagnostics,
+  type ImportDiagnostic,
   type UnresolvedGameRef,
   type GameLite,
 } from "@/lib/admin/client";
@@ -287,6 +291,82 @@ function MissingGameCard({
   );
 }
 
+/** One import-issue card: a failed import, or a game that imported but had
+ *  tags/genres/stores skipped because their slug isn't in our taxonomy. */
+function DiagnosticCard({
+  d,
+  onDismiss,
+}: {
+  d: ImportDiagnostic;
+  onDismiss: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const failed = d.outcome === "failed";
+  const dismiss = async () => {
+    setBusy(true);
+    try {
+      await dismissImportDiagnostic(d.id);
+      onDismiss(d.id);
+    } catch {
+      setBusy(false);
+    }
+  };
+  const kindColor = (k: string) =>
+    k === "tag"
+      ? "purple"
+      : k === "genre"
+        ? "blue"
+        : k === "store"
+          ? "green"
+          : "gray";
+  return (
+    <Box
+      borderWidth="1px"
+      borderColor={failed ? "red.400" : "orange.400"}
+      borderRadius="lg"
+      p={3}
+      bg="whiteAlpha.50"
+    >
+      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
+        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
+          <Badge colorPalette={failed ? "red" : "orange"} variant="solid">
+            {failed ? "FAILED" : "IMPORTED · GAPS"}
+          </Badge>
+          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
+            {d.gameName}
+          </Text>
+          <Text color="whiteAlpha.500" fontSize="xs">
+            {timeAgo(d.createdAt)}
+          </Text>
+        </HStack>
+        <Button size="xs" {...outlineBtn} onClick={dismiss} loading={busy}>
+          Dismiss
+        </Button>
+      </Flex>
+      {failed ? (
+        <Text color="whiteAlpha.700" fontSize="sm">
+          Couldn&rsquo;t import &mdash; {d.reason ?? "unknown reason"}.
+        </Text>
+      ) : (
+        <>
+          <Text color="whiteAlpha.700" fontSize="sm" mb={2}>
+            Imported, but {d.dropped.length} item
+            {d.dropped.length === 1 ? "" : "s"} weren&rsquo;t in your taxonomy
+            and were skipped:
+          </Text>
+          <HStack gap={2} wrap="wrap">
+            {d.dropped.map((x, i) => (
+              <Badge key={i} colorPalette={kindColor(x.kind)} variant="subtle">
+                {x.kind}: {x.name} ({x.slug})
+              </Badge>
+            ))}
+          </HStack>
+        </>
+      )}
+    </Box>
+  );
+}
+
 /**
  * "Missing games" queue — games referenced by content (guides/articles/picks)
  * the resolver couldn't match to a DB game. Map to an existing game (learns an
@@ -299,6 +379,9 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const [result, setResult] = useState<OpResult | null>(null);
+  const [view, setView] = useState<"queue" | "issues">("queue");
+  const [diags, setDiags] = useState<ImportDiagnostic[]>([]);
+  const [diagsLoading, setDiagsLoading] = useState(false);
 
   async function doImportAll() {
     setWorking("import");
@@ -390,26 +473,63 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     }
   }
 
+  async function loadDiags() {
+    setDiagsLoading(true);
+    try {
+      setDiags(await getImportDiagnostics());
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setDiagsLoading(false);
+    }
+  }
+
+  async function doDismissAllDiags() {
+    setWorking("dismiss");
+    try {
+      await dismissAllImportDiagnostics();
+      setDiags([]);
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setWorking(null);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadDiags();
   }, []);
 
   const remove = (id: string) => setRows((r) => r.filter((x) => x.id !== id));
+  const removeDiag = (id: string) =>
+    setDiags((d) => d.filter((x) => x.id !== id));
+
+  // Aggregate the most-dropped slugs across all open diagnostics — the list of
+  // candidates worth seeding (informs the later create-or-link decision).
+  const dropCounts = new Map<string, number>();
+  for (const d of diags)
+    for (const x of d.dropped ?? [])
+      dropCounts.set(x.slug, (dropCounts.get(x.slug) ?? 0) + 1);
+  const topDropped = [...dropCounts.entries()]
+    .map(([slug, count]) => ({ slug, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb={4}>
+      <Flex justify="space-between" align="center" mb={4} gap={3} wrap="wrap">
         <Box>
           <Heading size="md" color="nexzy.white">
             Missing games
           </Heading>
           <Text fontSize="sm" color="whiteAlpha.600">
-            Referenced by content but not in the DB. Map to an existing game or
-            import from RAWG.
+            Games referenced by content but not in the DB, plus a log of import
+            gaps and failures.
           </Text>
         </Box>
         <HStack gap={2}>
-          {isOwner && (
+          {view === "queue" && isOwner && (
             <Button
               size="sm"
               {...outlineBtn}
@@ -420,7 +540,7 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
               Import all
             </Button>
           )}
-          {isOwner && (
+          {view === "queue" && isOwner && (
             <Button
               size="sm"
               {...outlineBtn}
@@ -431,11 +551,56 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
               Backfill links
             </Button>
           )}
-          <Button size="sm" {...outlineBtn} onClick={load} loading={loading}>
+          {view === "issues" && diags.length > 0 && (
+            <Button
+              size="sm"
+              {...outlineBtn}
+              onClick={doDismissAllDiags}
+              loading={working === "dismiss"}
+              loadingText="Clearing"
+            >
+              Dismiss all
+            </Button>
+          )}
+          <Button
+            size="sm"
+            {...outlineBtn}
+            onClick={() => (view === "queue" ? load() : loadDiags())}
+            loading={view === "queue" ? loading : diagsLoading}
+          >
             Refresh
           </Button>
         </HStack>
       </Flex>
+
+      {/* Sub-nav: the unresolved queue vs. the import-issues log */}
+      <HStack gap={2} mb={4}>
+        {(
+          [
+            ["queue", `Queue${rows.length ? ` (${rows.length})` : ""}`],
+            [
+              "issues",
+              `Import issues${diags.length ? ` (${diags.length})` : ""}`,
+            ],
+          ] as const
+        ).map(([key, label]) => {
+          const active = view === key;
+          return (
+            <Button
+              key={key}
+              size="sm"
+              onClick={() => setView(key)}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              {label}
+            </Button>
+          );
+        })}
+      </HStack>
 
       {error && (
         <Text color="red.300" mb={3}>
@@ -447,72 +612,124 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
           {notice}
         </Text>
       )}
-      {result && (
-        <Box
-          mb={4}
-          borderWidth="1px"
-          borderColor="whiteAlpha.200"
-          borderRadius="lg"
-          p={3}
-          bg="whiteAlpha.50"
-        >
-          <Flex justify="space-between" align="center" mb={2}>
-            <Text fontWeight="600" color="nexzy.white" fontSize="sm">
-              {result.title}
-            </Text>
-            <Button size="xs" {...outlineBtn} onClick={() => setResult(null)}>
-              Dismiss
-            </Button>
-          </Flex>
-          {result.rows.length === 0 ? (
-            <Text fontSize="sm" color="whiteAlpha.600">
-              No posts scanned.
+
+      {view === "queue" ? (
+        <>
+          {result && (
+            <Box
+              mb={4}
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+              bg="whiteAlpha.50"
+            >
+              <Flex justify="space-between" align="center" mb={2}>
+                <Text fontWeight="600" color="nexzy.white" fontSize="sm">
+                  {result.title}
+                </Text>
+                <Button
+                  size="xs"
+                  {...outlineBtn}
+                  onClick={() => setResult(null)}
+                >
+                  Dismiss
+                </Button>
+              </Flex>
+              {result.rows.length === 0 ? (
+                <Text fontSize="sm" color="whiteAlpha.600">
+                  No posts scanned.
+                </Text>
+              ) : (
+                <VStack align="stretch" gap={1} maxH="320px" overflowY="auto">
+                  {result.rows.map((row, i) => (
+                    <Flex key={i} align="center" gap={2}>
+                      <Box
+                        boxSize="8px"
+                        borderRadius="full"
+                        bg={toneColor(row.tone)}
+                        flexShrink={0}
+                      />
+                      <Box minW="0">
+                        <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                          {row.label}
+                        </Text>
+                        {row.sub && (
+                          <Text
+                            fontSize="xs"
+                            color="whiteAlpha.600"
+                            lineClamp={1}
+                          >
+                            {row.sub}
+                          </Text>
+                        )}
+                      </Box>
+                    </Flex>
+                  ))}
+                </VStack>
+              )}
+            </Box>
+          )}
+          {loading ? (
+            <Flex justify="center" py={10}>
+              <Spinner />
+            </Flex>
+          ) : rows.length === 0 ? (
+            <Text color="whiteAlpha.600" py={6}>
+              Nothing unresolved — every referenced game is linked. 🎮
             </Text>
           ) : (
-            <VStack align="stretch" gap={1} maxH="320px" overflowY="auto">
-              {result.rows.map((row, i) => (
-                <Flex key={i} align="center" gap={2}>
-                  <Box
-                    boxSize="8px"
-                    borderRadius="full"
-                    bg={toneColor(row.tone)}
-                    flexShrink={0}
-                  />
-                  <Box minW="0">
-                    <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
-                      {row.label}
-                    </Text>
-                    {row.sub && (
-                      <Text fontSize="xs" color="whiteAlpha.600" lineClamp={1}>
-                        {row.sub}
-                      </Text>
-                    )}
-                  </Box>
-                </Flex>
+            <VStack align="stretch" gap={3}>
+              {rows.map((r) => (
+                <MissingGameCard
+                  key={r.id}
+                  item={r}
+                  isOwner={isOwner}
+                  onDone={remove}
+                />
               ))}
             </VStack>
           )}
-        </Box>
-      )}
-      {loading ? (
-        <Flex justify="center" py={10}>
-          <Spinner />
-        </Flex>
-      ) : rows.length === 0 ? (
-        <Text color="whiteAlpha.600" py={6}>
-          Nothing unresolved — every referenced game is linked. 🎮
-        </Text>
+        </>
       ) : (
-        <VStack align="stretch" gap={3}>
-          {rows.map((r) => (
-            <MissingGameCard
-              key={r.id}
-              item={r}
-              isOwner={isOwner}
-              onDone={remove}
-            />
-          ))}
-        </VStack>
+        <>
+          {topDropped.length > 0 && (
+            <Box
+              mb={4}
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+              bg="whiteAlpha.50"
+            >
+              <Text fontWeight="600" color="nexzy.white" fontSize="sm" mb={2}>
+                Most-dropped slugs (candidates to seed)
+              </Text>
+              <HStack gap={2} wrap="wrap">
+                {topDropped.map((t) => (
+                  <Badge key={t.slug} colorPalette="orange" variant="subtle">
+                    {t.slug} ×{t.count}
+                  </Badge>
+                ))}
+              </HStack>
+            </Box>
+          )}
+          {diagsLoading ? (
+            <Flex justify="center" py={10}>
+              <Spinner />
+            </Flex>
+          ) : diags.length === 0 ? (
+            <Text color="whiteAlpha.600" py={6}>
+              No import issues logged — every import came in clean. ✅
+            </Text>
+          ) : (
+            <VStack align="stretch" gap={3}>
+              {diags.map((d) => (
+                <DiagnosticCard key={d.id} d={d} onDismiss={removeDiag} />
+              ))}
+            </VStack>
+          )}
+        </>
       )}
     </Box>
   );

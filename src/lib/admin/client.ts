@@ -1071,6 +1071,51 @@ export async function mapUnresolvedGame(
   );
 }
 
+export interface DroppedTaxon {
+  kind: "tag" | "genre" | "store" | "platform";
+  slug: string;
+  name: string;
+  rawgId: number | null;
+}
+
+export interface ImportDiagnostic {
+  id: string;
+  source: string;
+  gameName: string;
+  rawgId: number | null;
+  gameId: string | null;
+  outcome: "imported_with_gaps" | "failed";
+  reason: string | null;
+  dropped: DroppedTaxon[];
+  status: string;
+  createdAt: string;
+}
+
+/** Open import diagnostics (gaps + failed imports), newest first. */
+export async function getImportDiagnostics(): Promise<ImportDiagnostic[]> {
+  return handle(await fetch("/api/newsroom/admin/games/import-diagnostics"));
+}
+
+export async function dismissImportDiagnostic(
+  id: string,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/import-diagnostics/${id}/dismiss`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function dismissAllImportDiagnostics(): Promise<{
+  dismissed: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/games/import-diagnostics/dismiss-all", {
+      method: "POST",
+    }),
+  );
+}
+
 export async function importUnresolvedGame(id: string): Promise<{
   result: {
     imported: boolean;
