@@ -80,7 +80,7 @@ export async function generateMetadata({
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || post.excerpt || undefined;
   return {
-    title: `${title} — Nexzy Lists`,
+    title: `${title} | Nexzy`,
     description,
     alternates: { canonical: `/lists/${post.slug}` },
     openGraph: {

@@ -988,6 +988,14 @@ function EditorContent({ id }: { id: string }) {
                 onChange={(e) => set("seoTitle", e.target.value)}
                 {...inputProps}
               />
+              <Text
+                fontSize="xs"
+                mt={1}
+                color={form.seoTitle.length > 60 ? "red.400" : "gray.500"}
+              >
+                {form.seoTitle.length}/60 — the page title in Google (a site
+                name is appended).
+              </Text>
               <Text {...labelProps} mt={3}>
                 SEO description
               </Text>
@@ -997,6 +1005,16 @@ function EditorContent({ id }: { id: string }) {
                 rows={3}
                 {...inputProps}
               />
+              <Text
+                fontSize="xs"
+                mt={1}
+                color={
+                  form.seoDescription.length > 160 ? "red.400" : "gray.500"
+                }
+              >
+                {form.seoDescription.length}/160 — the grey snippet under the
+                title in search results.
+              </Text>
             </Box>
           </VStack>
         </GridItem>
