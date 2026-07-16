@@ -190,6 +190,20 @@ export default async function GuidePage({
     ],
   };
 
+  // FAQPage only when there are >=2 real Q&As (thin-schema guard).
+  const faqLd =
+    post.faq && post.faq.length >= 2
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: post.faq.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }
+      : null;
+
   return (
     <Box>
       <Container maxW="3xl" py={{ base: 8, md: 12 }}>
@@ -287,6 +301,24 @@ export default async function GuidePage({
 
         {post.bodyMarkdown && (
           <ArticleBody body={post.bodyMarkdown} location="guides" />
+        )}
+
+        {post.faq && post.faq.length > 0 && (
+          <Box mt={10}>
+            <Heading as="h2" size="lg" color="white" mb={4}>
+              Frequently asked questions
+            </Heading>
+            <VStack align="stretch" gap={4}>
+              {post.faq.map((f, i) => (
+                <Box key={i}>
+                  <Heading as="h3" size="sm" color="white" mb={1}>
+                    {f.q}
+                  </Heading>
+                  <Text color="gray.300">{f.a}</Text>
+                </Box>
+              ))}
+            </VStack>
+          </Box>
         )}
 
         {videoEmbed && (
@@ -431,6 +463,12 @@ export default async function GuidePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
+      {faqLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        />
+      )}
     </Box>
   );
 }

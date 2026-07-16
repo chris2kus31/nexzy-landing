@@ -53,6 +53,7 @@ interface FormState {
   imageAlt: string;
   youtubeUrl: string;
   tags: string;
+  faq: string;
 }
 
 function toForm(p: BlogPost): FormState {
@@ -65,6 +66,7 @@ function toForm(p: BlogPost): FormState {
     imageAlt: p.imageAlt || "",
     youtubeUrl: p.youtubeUrl || "",
     tags: (p.tags || []).join(", "),
+    faq: (p.faq || []).map((f) => `${f.q} :: ${f.a}`).join("\n"),
   };
 }
 
@@ -481,6 +483,16 @@ function EditorContent({ id }: { id: string }) {
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        faq: form!.faq
+          .split("\n")
+          .map((line) => {
+            const idx = line.indexOf("::");
+            if (idx < 0) return null;
+            const q = line.slice(0, idx).trim();
+            const a = line.slice(idx + 2).trim();
+            return q && a ? { q, a } : null;
+          })
+          .filter((x): x is { q: string; a: string } => x !== null),
       }),
     );
 
@@ -1014,6 +1026,23 @@ function EditorContent({ id }: { id: string }) {
               >
                 {form.seoDescription.length}/160 — the grey snippet under the
                 title in search results.
+              </Text>
+            </Box>
+
+            <Box>
+              <Text {...labelProps}>
+                FAQ (one per line — &quot;Question :: Answer&quot;)
+              </Text>
+              <Textarea
+                value={form.faq}
+                onChange={(e) => set("faq", e.target.value)}
+                rows={5}
+                placeholder="Is Malenia optional? :: No — she guards a Great Rune you need."
+                {...inputProps}
+              />
+              <Text fontSize="xs" mt={1} color="gray.500">
+                Renders an FAQ block + FAQPage schema on guides (needs 2+ to
+                emit schema). Leave empty to omit.
               </Text>
             </Box>
           </VStack>

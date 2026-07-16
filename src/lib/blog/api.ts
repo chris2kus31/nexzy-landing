@@ -39,6 +39,7 @@ export interface PublicPost {
     platforms: string[];
     genres: string[];
   } | null;
+  faq?: { q: string; a: string }[] | null;
 }
 
 export interface PostList {

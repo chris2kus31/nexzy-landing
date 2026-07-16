@@ -11,6 +11,7 @@ export interface BlogPost {
   excerpt: string | null;
   seoDescription: string | null;
   bodyMarkdown: string | null;
+  faq?: { q: string; a: string }[] | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;
   imageAlt: string | null;
