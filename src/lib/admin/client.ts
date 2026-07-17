@@ -1314,6 +1314,7 @@ export interface WriterPersona {
   promptVersion: string | null;
   beats: string[] | null;
   channels: string[] | null;
+  nowPlaying: string[] | null;
   priorityBoost: number;
   createdAt: string;
   updatedAt: string;
@@ -1335,6 +1336,7 @@ export type PersonaInput = Partial<
     | "modelWriter"
     | "beats"
     | "channels"
+    | "nowPlaying"
   >
 >;
 

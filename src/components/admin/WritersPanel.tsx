@@ -106,6 +106,7 @@ function PersonaForm({
     guideBible: persona?.guideBible ?? "",
     beats: persona?.beats ?? [],
     channels: persona?.channels ?? [],
+    nowPlaying: persona?.nowPlaying ?? [],
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -219,6 +220,22 @@ function PersonaForm({
             value={f.bio ?? ""}
             onChange={(e) => set({ bio: e.target.value })}
             rows={2}
+            {...inputProps}
+          />
+        </Field>
+
+        <Field label="Currently playing (optional — comma-separated; shows on the author page)">
+          <Input
+            value={(f.nowPlaying ?? []).join(", ")}
+            onChange={(e) =>
+              set({
+                nowPlaying: e.target.value
+                  .split(",")
+                  .map((x) => x.trim())
+                  .filter(Boolean),
+              })
+            }
+            placeholder="e.g. Elden Ring, Hades II"
             {...inputProps}
           />
         </Field>

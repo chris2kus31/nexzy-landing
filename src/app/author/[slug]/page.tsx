@@ -7,10 +7,13 @@ import {
   Heading,
   Text,
   HStack,
+  Link,
+  Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
 import { getAuthorBySlug } from "@/lib/blog/authors";
-import { fetchPosts } from "@/lib/blog/api";
+import { fetchPosts, fetchAuthorProfile } from "@/lib/blog/api";
+import { beatLabel } from "@/lib/blog/beats";
 import BlogCard from "@/components/blog/BlogCard";
 import AuthorAvatar from "@/components/blog/AuthorAvatar";
 import Pager from "@/components/blog/Pager";
@@ -23,17 +26,39 @@ const PAGE_SIZE = 12;
 type Params = Promise<{ slug: string }>;
 type Search = Promise<{ page?: string }>;
 
+/** Merge the DB persona (editable) over the static fallback (avatar, defaults). */
+async function resolveAuthor(slug: string) {
+  const staticA = getAuthorBySlug(slug);
+  const db = await fetchAuthorProfile(slug);
+  if (!staticA && !db) return null;
+  const socialUrls = [
+    ...(db?.socials ? Object.values(db.socials) : []),
+    staticA?.x ?? undefined,
+    staticA?.instagram ?? undefined,
+  ].filter((u): u is string => !!u);
+  return {
+    slug,
+    name: db?.name || staticA?.name || slug,
+    role: db?.title || staticA?.role || "Writer",
+    bio: db?.bio || staticA?.bio || "",
+    avatar: db?.avatarUrl || staticA?.avatar || null,
+    nowPlaying: (db?.nowPlaying ?? []).filter(Boolean),
+    socials: [...new Set(socialUrls)],
+    knowsAbout: (db?.beats ?? []).map((b) => beatLabel(b)).filter(Boolean),
+  };
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Params;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const author = getAuthorBySlug(slug);
-  if (!author) return { title: "Author — Nexzy News" };
+  const author = await resolveAuthor(slug);
+  if (!author) return { title: "Author — Nexzy" };
   return {
-    title: `${author.name} — ${author.role} at Nexzy News`,
-    description: author.bio,
+    title: `${author.name} — ${author.role} at Nexzy`,
+    description: author.bio || undefined,
     alternates: { canonical: `/author/${author.slug}` },
   };
 }
@@ -46,13 +71,15 @@ export default async function AuthorPage({
   searchParams: Search;
 }) {
   const { slug } = await params;
-  const author = getAuthorBySlug(slug);
+  const author = await resolveAuthor(slug);
   if (!author) notFound();
 
   const { page: pageRaw } = await searchParams;
   const page = Math.max(1, parseInt(pageRaw || "1", 10) || 1);
+  // All content types — articles, guides, walkthroughs, lists.
   const { items, total, pageSize } = await fetchPosts({
     author: author.name,
+    type: "all",
     page,
     pageSize: PAGE_SIZE,
   });
@@ -62,39 +89,90 @@ export default async function AuthorPage({
     "@type": "Person",
     name: author.name,
     jobTitle: author.role,
-    description: author.bio,
+    ...(author.bio ? { description: author.bio } : {}),
+    ...(author.avatar
+      ? {
+          image: author.avatar.startsWith("http")
+            ? author.avatar
+            : `${SITE_URL}${author.avatar}`,
+        }
+      : {}),
     url: `${SITE_URL}/author/${author.slug}`,
     worksFor: { "@type": "Organization", name: "Nexzy" },
-    ...(author.x || author.instagram
-      ? { sameAs: [author.x, author.instagram].filter(Boolean) }
-      : {}),
+    ...(author.knowsAbout.length ? { knowsAbout: author.knowsAbout } : {}),
+    ...(author.socials.length ? { sameAs: author.socials } : {}),
   };
 
   return (
     <Container maxW="container.xl" py={{ base: 10, md: 14 }}>
-      <Flex gap={5} align="center" mb={{ base: 8, md: 10 }} wrap="wrap">
+      <Flex gap={5} align="flex-start" mb={{ base: 8, md: 10 }} wrap="wrap">
         <AuthorAvatar src={author.avatar} name={author.name} size={88} />
-        <Box>
+        <Box flex="1" minW="260px">
           <Heading as="h1" size="2xl" color="white" mb={1}>
             {author.name}
           </Heading>
           <Text color="nexzy.lightBlue" fontWeight="600" mb={2}>
-            {author.role}, Nexzy News
+            {author.role}, Nexzy
           </Text>
-          <Text color="gray.300" maxW="2xl" lineHeight="1.6">
-            {author.bio}
-          </Text>
+          {author.bio && (
+            <Text color="gray.300" maxW="2xl" lineHeight="1.6" mb={3}>
+              {author.bio}
+            </Text>
+          )}
+
+          {author.nowPlaying.length > 0 && (
+            <Box mb={3}>
+              <Text
+                fontSize="xs"
+                fontWeight="800"
+                letterSpacing="0.1em"
+                textTransform="uppercase"
+                color="nexzy.gray.100"
+                mb={1.5}
+              >
+                Currently playing
+              </Text>
+              <HStack gap={2} wrap="wrap">
+                {author.nowPlaying.map((g) => (
+                  <Badge
+                    key={g}
+                    colorPalette="cyan"
+                    variant="subtle"
+                    textTransform="none"
+                  >
+                    {g}
+                  </Badge>
+                ))}
+              </HStack>
+            </Box>
+          )}
+
+          {author.socials.length > 0 && (
+            <HStack gap={4} fontSize="sm">
+              {author.socials.map((url) => (
+                <Link
+                  key={url}
+                  href={url}
+                  color="nexzy.lightBlue"
+                  target="_blank"
+                  rel="me noopener noreferrer"
+                >
+                  {new URL(url).hostname.replace(/^www\./, "")}
+                </Link>
+              ))}
+            </HStack>
+          )}
         </Box>
       </Flex>
 
       <HStack mb={5}>
         <Heading as="h2" size="lg" color="white">
-          Latest by {author.name}
+          {author.name}&apos;s work
         </Heading>
       </HStack>
 
       {items.length === 0 ? (
-        <Text color="gray.400">No published articles yet.</Text>
+        <Text color="gray.400">No published work yet.</Text>
       ) : (
         <>
           <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={6}>

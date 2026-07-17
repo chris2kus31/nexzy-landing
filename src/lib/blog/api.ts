@@ -200,6 +200,36 @@ export async function fetchRelatedByGame(
   return res.json();
 }
 
+export interface AuthorProfile {
+  name: string;
+  slug: string;
+  bio: string | null;
+  title: string | null;
+  avatarUrl: string | null;
+  socials: Record<string, string> | null;
+  nowPlaying: string[] | null;
+  beats: string[] | null;
+}
+
+/** Public author profile from the DB persona (bio/role/now-playing/socials). */
+export async function fetchAuthorProfile(
+  slug: string,
+): Promise<AuthorProfile | null> {
+  try {
+    const res = await fetch(
+      `${API}/newsroom/public/authors/${encodeURIComponent(slug)}`,
+      { next: { revalidate: REVALIDATE } },
+    );
+    if (!res.ok) return null;
+    // The endpoint returns an empty body when there's no matching persona (or
+    // before the nowPlaying migration runs) — tolerate that, don't crash.
+    const text = await res.text();
+    return text ? (JSON.parse(text) as AuthorProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchTags(limit = 200): Promise<TagInfo[]> {
   // Distinct published tags + counts, for the topic-hub index and sitemap.
   const res = await fetch(`${API}/newsroom/public/tags?limit=${limit}`, {
