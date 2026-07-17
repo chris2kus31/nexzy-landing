@@ -6,14 +6,7 @@
 // newsroom homepage). ISR-cached; mostly static so it's fully crawlable.
 // ============================================
 import type { Metadata } from "next";
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  Stack,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, Container, Heading, Text, Stack, VStack } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
 import AppHero from "@/components/landing/AppHero";
 import Features from "@/components/landing/Features";
@@ -28,7 +21,9 @@ export const revalidate = 3600;
 // The app page owns the app-feature keywords (assistant, library, deals) that we
 // deliberately took off the newsroom homepage title.
 export const metadata: Metadata = {
-  title: "Nexzy App — AI Gaming Assistant, Game Library & Deal Tracker",
+  title: {
+    absolute: "Nexzy App — AI Gaming Assistant, Game Library & Deal Tracker",
+  },
   description:
     "Nexzy is your AI gaming companion: Ask Nexzy to beat any game, keep your whole library across Steam, PlayStation & Xbox in one place, track wishlist price drops, and earn rewards — free on iOS & Android.",
   keywords:

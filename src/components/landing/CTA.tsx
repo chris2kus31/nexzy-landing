@@ -21,7 +21,6 @@ import {
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiLightningBolt } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
-import { BsStars } from "react-icons/bs";
 import EmailCapture from "./EmailCapture";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload } from "@/lib/analytics";
@@ -65,7 +64,7 @@ export default function CTA() {
         position="relative"
         px={{ base: 5, md: 6 }}
       >
-        <Stack gap={12} align="center">
+        <Stack gap={8} align="center">
           {/* Special Offer Banner */}
           <Badge
             bg="nexzy.yellow"
@@ -254,41 +253,6 @@ export default function CTA() {
 
           {/* Newsletter — the device-agnostic capture (works on any device) */}
           <EmailCapture variant="cta" source="cta" />
-
-          {/* Social Proof */}
-          <Stack gap={4} align="center">
-            <HStack gap={1}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Icon key={star} color="nexzy.yellow" boxSize={5}>
-                  <BsStars />
-                </Icon>
-              ))}
-            </HStack>
-            <Text color="nexzy.gray.100" fontSize="sm">
-              Free on iOS and Android — the newsroom in your pocket, tuned to
-              the games you play.
-            </Text>
-
-            {/* Features highlight */}
-            <HStack gap={6} opacity={0.9}>
-              <HStack gap={2}>
-                <Icon color="nexzy.yellow" boxSize={4}>
-                  <FaRobot />
-                </Icon>
-                <Text fontSize="xs" color="nexzy.gray.200">
-                  Instant AI help
-                </Text>
-              </HStack>
-              <HStack gap={2}>
-                <Icon color="nexzy.gold" boxSize={4}>
-                  <IoGift />
-                </Icon>
-                <Text fontSize="xs" color="nexzy.gray.200">
-                  Daily rewards
-                </Text>
-              </HStack>
-            </HStack>
-          </Stack>
 
           {/* Feature highlight box */}
           <Box

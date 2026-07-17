@@ -52,7 +52,7 @@ export default function EmailCapture({
       track("newsletter_signup", { source });
       setStatus("success");
       setMessage(
-        "You're in! Watch your inbox for gaming tips, deals, and bonus coins. 🎮",
+        "You're in! Gaming news, guides, and deals — straight to your inbox. 🎮",
       );
       setEmail("");
     } catch {
@@ -97,7 +97,7 @@ export default function EmailCapture({
             <HiSparkles />
           </Icon>
           <Text fontSize="sm" fontWeight="medium" color="nexzy.white">
-            Get gaming tips, deals + bonus coins in your inbox
+            Get gaming news, guides, and deals in your inbox
           </Text>
         </HStack>
         <Stack direction={{ base: "column", sm: "row" }} gap={3} w="full">
