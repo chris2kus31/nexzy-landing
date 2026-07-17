@@ -93,7 +93,8 @@ export default function HowItWorks() {
               Make Nexzy yours in 3 steps
             </Heading>
             <Text fontSize={{ base: "md", md: "lg" }} color="gray.300">
-              From reading the newsroom to your own personalized Nexzy in minutes
+              From reading the newsroom to your own personalized Nexzy in
+              minutes
             </Text>
           </Stack>
 

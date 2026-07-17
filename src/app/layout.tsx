@@ -3,16 +3,31 @@
 // Complete layout with Google Analytics
 // ============================================
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk, Chakra_Petch } from "next/font/google";
 import { Providers } from "./providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import Clarity from "@/components/Clarity";
 import React from "react";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
+// Nexzy type system: Chakra Petch = titles + wordmark (gaming edge),
+// Space Grotesk = section headings, Inter = body/UI. Loaded once here and
+// exposed as CSS variables that the Chakra theme's font tokens reference.
 const inter = Inter({
   subsets: ["latin"],
   display: "swap", // Better font loading performance
+  variable: "--font-inter",
+});
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-space-grotesk",
+});
+const chakraPetch = Chakra_Petch({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700"],
+  variable: "--font-chakra-petch",
 });
 
 // Set NEXT_PUBLIC_SITE_URL in your env to your canonical root domain
@@ -131,7 +146,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} ${chakraPetch.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <meta
           name="viewport"

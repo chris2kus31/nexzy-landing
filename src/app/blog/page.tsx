@@ -85,7 +85,12 @@ export default async function BlogIndexPage({
     <Container maxW="container.xl" py={{ base: 8, md: 14 }}>
       <Box mb={{ base: 8, md: 10 }}>
         <HStack gap={3} align="baseline" wrap="wrap" mb={3}>
-          <Heading as="h1" size={{ base: "2xl", md: "4xl" }} color="white">
+          <Heading
+            as="h1"
+            fontFamily="title"
+            size={{ base: "2xl", md: "4xl" }}
+            color="white"
+          >
             Nexzy{" "}
             <Text as="span" color="nexzy.blue">
               News

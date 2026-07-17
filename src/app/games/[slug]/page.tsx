@@ -431,6 +431,7 @@ export default async function GameHubPage({
 
         <Heading
           as="h1"
+          fontFamily="title"
           size={{ base: "2xl", md: "3xl" }}
           color="white"
           lineHeight="1.1"

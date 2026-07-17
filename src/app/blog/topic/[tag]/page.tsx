@@ -161,7 +161,7 @@ export default async function TopicHubPage({
         <Text color="nexzy.lightBlue" fontWeight="700" fontSize="sm">
           TOPIC
         </Text>
-        <Heading as="h1" size="2xl" color="white">
+        <Heading as="h1" fontFamily="title" size="2xl" color="white">
           #{displayLabel}
         </Heading>
         <Text color="gray.400">

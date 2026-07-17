@@ -10,7 +10,6 @@ import Hero from "@/components/landing/Hero";
 import HomeNewsroom from "@/components/landing/HomeNewsroom";
 import HomeLibrary from "@/components/landing/HomeLibrary";
 import TopicBar from "@/components/landing/TopicBar";
-import HomeWriters from "@/components/landing/HomeWriters";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import {
@@ -56,9 +55,6 @@ export default async function HomePage() {
 
         {/* Guides, walkthroughs & lists rail */}
         <HomeLibrary items={library} />
-
-        {/* Meet the newsroom — real writers (E-E-A-T) */}
-        <HomeWriters />
 
         {/* The app — one "make it yours" band, low on the page */}
         <CTA />

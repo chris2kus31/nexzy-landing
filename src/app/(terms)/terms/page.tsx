@@ -44,7 +44,7 @@ export default function TermsPage() {
       {/* Content */}
       <Container maxW="container.md" py={16}>
         <Stack gap={8}>
-          <Heading as="h1" size="2xl" color="nexzy.navy">
+          <Heading as="h1" fontFamily="title" size="2xl" color="nexzy.navy">
             Terms of Service
           </Heading>
 

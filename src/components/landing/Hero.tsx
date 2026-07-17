@@ -122,7 +122,11 @@ export default function Hero({
         filter="blur(120px)"
       />
 
-      <Container maxW="container.xl" position="relative" px={{ base: 5, md: 6 }}>
+      <Container
+        maxW="container.xl"
+        position="relative"
+        px={{ base: 5, md: 6 }}
+      >
         {/* Masthead */}
         <Flex
           justify="space-between"
@@ -146,6 +150,7 @@ export default function Hero({
             </HStack>
             <Heading
               as="h1"
+              fontFamily="title"
               size={{ base: "2xl", md: "3xl" }}
               color="white"
               lineHeight="1.1"

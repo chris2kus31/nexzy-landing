@@ -105,7 +105,11 @@ export default function AppHero() {
         filter="blur(100px)"
       />
 
-      <Container maxW="container.xl" position="relative" px={{ base: 5, md: 6 }}>
+      <Container
+        maxW="container.xl"
+        position="relative"
+        px={{ base: 5, md: 6 }}
+      >
         <Flex
           direction={{ base: "column", lg: "row" }}
           align="center"
@@ -135,6 +139,7 @@ export default function AppHero() {
 
             <Heading
               as="h1"
+              fontFamily="title"
               size={{ base: "3xl", md: "4xl", lg: "5xl" }}
               fontWeight="bold"
               lineHeight="1.05"

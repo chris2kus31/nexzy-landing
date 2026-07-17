@@ -143,7 +143,7 @@ export default async function AuthorPage({
       <Flex gap={5} align="flex-start" mb={{ base: 8, md: 10 }} wrap="wrap">
         <AuthorAvatar src={author.avatar} name={author.name} size={88} />
         <Box flex="1" minW="260px">
-          <Heading as="h1" size="2xl" color="white" mb={1}>
+          <Heading as="h1" fontFamily="title" size="2xl" color="white" mb={1}>
             {author.name}
           </Heading>
           <Text color="nexzy.lightBlue" fontWeight="600" mb={2}>

@@ -60,7 +60,12 @@ export default function Navigation() {
             <NextLink href="/">
               <HStack gap={2}>
                 <Image src="/NexzyLogo.png" alt="Nexzy" h={10} w={10} />
-                <Text fontWeight="bold" fontSize="xl" color="nexzy.white">
+                <Text
+                  fontFamily="title"
+                  fontWeight="bold"
+                  fontSize="xl"
+                  color="nexzy.white"
+                >
                   Nexzy
                 </Text>
               </HStack>

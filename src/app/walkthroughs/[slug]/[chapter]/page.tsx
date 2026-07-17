@@ -254,6 +254,7 @@ export default async function WalkthroughChapterPage({
             </HStack>
             <Heading
               as="h1"
+              fontFamily="title"
               size={{ base: "xl", md: "2xl" }}
               color="white"
               mb={6}

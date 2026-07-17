@@ -68,6 +68,7 @@ export default function EditorialStandardsPage() {
 
         <Heading
           as="h1"
+          fontFamily="title"
           size={{ base: "2xl", md: "4xl" }}
           color="white"
           mb={4}

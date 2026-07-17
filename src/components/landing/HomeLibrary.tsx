@@ -20,7 +20,12 @@ import BlogCard from "@/components/blog/BlogCard";
 export default function HomeLibrary({ items }: { items: PublicPost[] }) {
   if (!items.length) return null;
   return (
-    <Box as="section" pt={{ base: 6, md: 8 }} pb={{ base: 16, md: 24 }} bg="nexzy.navy">
+    <Box
+      as="section"
+      pt={{ base: 6, md: 8 }}
+      pb={{ base: 16, md: 24 }}
+      bg="nexzy.navy"
+    >
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Flex
           justify="space-between"

@@ -145,6 +145,7 @@ export default async function WalkthroughOverviewPage({
 
         <Heading
           as="h1"
+          fontFamily="title"
           size={{ base: "2xl", md: "3xl" }}
           color="white"
           mb={4}

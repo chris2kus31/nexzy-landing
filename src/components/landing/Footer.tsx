@@ -64,7 +64,12 @@ export default function Footer() {
             <HStack gap={3}>
               <Image src="/NexzyLogo.png" alt="Nexzy" h={12} w={12} />
               <Stack gap={0}>
-                <Text fontWeight="bold" fontSize="2xl" color="white">
+                <Text
+                  fontFamily="title"
+                  fontWeight="bold"
+                  fontSize="2xl"
+                  color="white"
+                >
                   Nexzy
                 </Text>
                 <Text fontSize="xs" color="nexzy.yellow">
