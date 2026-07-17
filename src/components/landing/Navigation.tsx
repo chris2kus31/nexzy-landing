@@ -77,7 +77,7 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
-              <NextLink href="/games">Games</NextLink>
+              <NextLink href="/games">Game Hubs</NextLink>
             </Link>
 
             <Link
@@ -237,7 +237,7 @@ export default function Navigation() {
             <Stack gap={1}>
               <Link asChild fontSize="lg" py={2} color="nexzy.white">
                 <NextLink href="/games" onClick={close}>
-                  Games
+                  Game Hubs
                 </NextLink>
               </Link>
 
