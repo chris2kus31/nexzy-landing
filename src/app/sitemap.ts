@@ -38,6 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/walkthroughs",
     "/lists",
     "/games",
+    "/app",
   ];
 
   const hubRoutes = new Set([
