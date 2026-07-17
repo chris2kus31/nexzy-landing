@@ -5,7 +5,6 @@ import NextLink from "next/link";
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel } from "@/lib/blog/beats";
-import { formatCount } from "@/lib/blog/format";
 
 type TabKey = "hot" | "reads";
 
@@ -106,9 +105,6 @@ export default function TrendingRail({
                   </Text>
                   <Text color="gray.500" fontSize="xs" mt={1}>
                     {beatLabel(p.beat)}
-                    {p.viewCount > 0
-                      ? ` · ${formatCount(p.viewCount)} reads`
-                      : ""}
                   </Text>
                 </Box>
               </HStack>

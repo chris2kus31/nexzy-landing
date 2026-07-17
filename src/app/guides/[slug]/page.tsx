@@ -15,11 +15,10 @@ import {
   Separator,
   Icon,
 } from "@chakra-ui/react";
-import { HiClock, HiEye } from "react-icons/hi";
+import { HiClock } from "react-icons/hi";
 import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import { slugifyTag } from "@/lib/blog/tags";
-import { formatCount } from "@/lib/blog/format";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
@@ -239,14 +238,6 @@ export default async function GuidePage({
             </Icon>
             <Text>{minutes} min read</Text>
           </HStack>
-          {post.viewCount > 0 && (
-            <HStack gap={1} color="gray.400" fontSize="sm">
-              <Icon>
-                <HiEye />
-              </Icon>
-              <Text>{formatCount(post.viewCount)} reads</Text>
-            </HStack>
-          )}
           <Box ml="auto">
             <ShareRow url={shareUrl} title={post.title} />
           </Box>
