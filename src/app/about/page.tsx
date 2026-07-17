@@ -10,6 +10,7 @@ import {
   Separator,
 } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -59,10 +60,22 @@ export default function AboutPage() {
     founder: { "@type": "Person", name: "Chris M." },
     publishingPrinciples: `${SITE_URL}/editorial-standards`,
     ethicsPolicy: `${SITE_URL}/editorial-standards`,
+    foundingDate: "2026-06",
     parentOrganization: {
       "@type": "Organization",
+      "@id": `${SITE_URL}/#org`,
       name: "Nexzy",
       url: SITE_URL,
+      description:
+        "Nexzy is a gaming companion app and newsroom covering game news, guides, and deals, kept short and to the point, with an in-app AI assistant, for players of every age.",
+      foundingDate: "2026-06",
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/android-chrome-512x512.png`,
+        width: 512,
+        height: 512,
+      },
+      sameAs: [APP_STORE_URL, GOOGLE_PLAY_URL],
     },
   };
 
@@ -97,6 +110,32 @@ export default function AboutPage() {
         </Text>
 
         <Stack gap={8}>
+          <Section title="Why Nexzy exists">
+            <Text>
+              Let me paint you a picture. You want one gaming tip. Just one. You
+              click a news site and it detonates in your face: seventeen ads, an
+              autoplaying video, a newsletter popup, a cookie banner, and buried
+              somewhere under all of it, allegedly, the actual article. So you
+              bail to YouTube, sit through twelve minutes of &ldquo;hey guys
+              don&apos;t forget to smash that like button,&rdquo; and the big
+              tip at the end turns out to be &ldquo;just get good.&rdquo; Cool.
+              Thanks. Very helpful.
+            </Text>
+            <Text>
+              That is the entire reason Nexzy exists. We got tired of it too. We
+              cover the latest gaming news short, straight, and to the point. No
+              ad-maze, no filler, no ten-minute runway before the runway. Just
+              tell me the thing, so that is what we do.
+            </Text>
+            <Text>
+              The Nexzy app takes that same no-nonsense experience and puts it
+              in your pocket, with an AI assistant that actually helps instead
+              of wasting your afternoon. Whether you are a kid stuck on your
+              first boss or a veteran who remembers blowing into cartridges, you
+              are welcome here. One clean gamer experience, minus the nonsense.
+            </Text>
+          </Section>
+
           <Section title="What we cover">
             <Text>
               Breaking game news, announcements and release dates, console and
