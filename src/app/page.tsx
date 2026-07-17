@@ -1,16 +1,14 @@
 // ============================================
 // FILE: app/page.tsx
-// Home page: app-primary hero, then a content cluster (newsroom + library)
-// that grows the traffic flywheel, then the app pitch + download. Every content
-// module is adaptive — it hides itself when there's nothing to show, so the
-// page never renders half-empty and fills out as we publish.
+// Home page — a NEWSROOM first. Opens with the lead story + latest headlines,
+// then the daily newsroom block (nostalgia + what's trending) and the guides
+// rail. The app appears once, low on the page, as the "make it yours" band.
+// Every content module is adaptive — it hides when there's nothing to show.
 // ============================================
 import Navigation from "@/components/landing/Navigation";
 import Hero from "@/components/landing/Hero";
 import HomeNewsroom from "@/components/landing/HomeNewsroom";
 import HomeLibrary from "@/components/landing/HomeLibrary";
-import Features from "@/components/landing/Features";
-import HowItWorks from "@/components/landing/HowItWorks";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import {
@@ -25,40 +23,36 @@ export const revalidate = 300;
 
 export default async function HomePage() {
   const [news, hot, reads, library, nostalgia] = await Promise.all([
-    fetchPosts({ pageSize: 6 }),
+    fetchPosts({ pageSize: 7 }),
     fetchTrending(6, "hot"),
     fetchTrending(6, "reads"),
     fetchLibraryLatest(3),
     fetchNostalgia(),
   ]);
 
-  const latest = news.items.slice(0, 3).map((p) => ({
-    slug: p.slug,
-    title: p.title,
-    beat: p.beat,
-    imageUrl: p.heroImageUrl ?? null,
-  }));
+  // The lead story anchors the masthead; the next few are the headline list.
   const lead = news.items[0] ?? null;
+  const headlines = news.items.slice(1, 6);
 
   return (
     <>
       <Navigation />
       <main>
-        {/* App anchor — the latest-news strip lives inside the hero */}
-        <Hero latest={latest} />
+        {/* Newsroom masthead — lead story + latest headlines */}
+        <Hero lead={lead} headlines={headlines} />
 
-        {/* Content cluster (dark): nostalgia-led newsroom, then the library */}
+        {/* Daily newsroom — nostalgia spotlight + what's trending */}
         <HomeNewsroom
           nostalgia={nostalgia}
           lead={lead}
           hot={hot}
           reads={reads}
         />
+
+        {/* Guides, walkthroughs & lists rail */}
         <HomeLibrary items={library} />
 
-        {/* App pitch (light) + download / newsletter */}
-        <Features />
-        <HowItWorks />
+        {/* The app — one "make it yours" band, low on the page */}
         <CTA />
       </main>
       <Footer />

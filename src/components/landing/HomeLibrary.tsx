@@ -39,7 +39,7 @@ export default function HomeLibrary({ items }: { items: PublicPost[] }) {
                 textTransform="uppercase"
                 color="nexzy.blue"
               >
-                From the Nexzy library
+                From the newsroom
               </Text>
             </HStack>
             <Heading as="h2" size={{ base: "xl", md: "2xl" }} color="white">
@@ -66,7 +66,7 @@ export default function HomeLibrary({ items }: { items: PublicPost[] }) {
           </Box>
           <NextLink href="/guides">
             <Text color="nexzy.lightBlue" fontWeight="700" fontSize="sm">
-              Browse the library →
+              Browse all guides →
             </Text>
           </NextLink>
         </Flex>

@@ -19,22 +19,24 @@ const inter = Inter({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  // Title still LEADS with the AI hook, but now names the other rankable
-  // wedges (library, deals) so we can rank for more than "AI assistant".
-  title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
+  // Title LEADS with the newsroom identity (what the web IS — a content site)
+  // and keeps the keywords the newsroom actually earns (news, guides,
+  // walkthroughs). The app-feature keywords live in the App Store listing, not
+  // here — the web is the newsroom; the app is where you make it yours.
+  title: "Nexzy — Gaming News, Guides & Walkthroughs",
   description:
-    "Never get stuck in a game again. Nexzy is your AI gaming assistant — beat any game, sync your library across Steam, PlayStation & Xbox, track wishlist price drops, get what-to-play picks, and earn rewards daily.",
+    "Nexzy is the independent gaming newsroom — news, guides, and walkthroughs for the games you play, updated all day. Get the app to make it yours: track the games you play, get updates tuned to you, and Ask Nexzy when you're stuck.",
   keywords:
-    "AI gaming assistant, game walkthrough, how to beat, game library tracker, cross-platform library, wishlist price tracker, game deal alerts, what to play next, gaming news, gaming rewards",
+    "gaming news, video game guides, game walkthroughs, how to beat, game news site, gaming news today, game lists, AI game assistant",
   authors: [{ name: "Nexzy" }],
   creator: "Nexzy",
   publisher: "Nexzy",
   metadataBase: new URL(SITE_URL),
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
+    title: "Nexzy — Gaming News, Guides & Walkthroughs",
     description:
-      "Your AI gaming companion: beat any game, sync your whole library, track wishlist deals, find what to play next, and earn rewards — all in one app.",
+      "The independent gaming newsroom — news, guides, and walkthroughs for the games you play. Get the app to make it yours.",
     url: SITE_URL,
     siteName: "Nexzy",
     // og:image is generated automatically by app/opengraph-image.tsx (1200x630)
@@ -43,9 +45,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nexzy — AI Gaming Assistant, Game Library & Deal Tracker",
+    title: "Nexzy — Gaming News, Guides & Walkthroughs",
     description:
-      "Beat any game with AI help, sync your library, and catch every wishlist deal — all in one app.",
+      "The independent gaming newsroom for the games you play. Get the app to make it yours.",
     // twitter:image is generated automatically by app/twitter-image.tsx
   },
   robots: {

@@ -13,9 +13,11 @@ import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import { trackDownload } from "@/lib/analytics";
 
 /**
- * "Get the Nexzy app" band for the news pages — turns readers into installs.
+ * "Make it yours" band for the news pages — turns newsroom readers into app
+ * users by framing the app as the personalized version of what they're reading
+ * (their games, their updates, their AI help), not a generic "download our app".
  * Compact variant sits inline at the end of an article; the default is a fuller
- * band for the blog index. Keeps the newsroom a download funnel, not a leak.
+ * band for the blog index.
  */
 export default function AppCta({
   variant = "band",
@@ -57,7 +59,7 @@ export default function AppCta({
           textTransform="uppercase"
           letterSpacing="wide"
         >
-          The Nexzy app
+          Make it yours
         </Text>
         <Heading
           as="h2"
@@ -65,11 +67,11 @@ export default function AppCta({
           color="white"
           mb={2}
         >
-          {heading ?? "Stuck in a game? Nexzy's AI has the answer."}
+          {heading ?? "Make Nexzy yours."}
         </Heading>
         <Text color="gray.300" fontSize="sm" mb={5}>
           {subtext ??
-            "Instant help for any game, earn coins daily, and track your library — free on iOS & Android."}
+            "The app turns this newsroom into your own — track the games you play, get news and guides tuned to you, and Ask Nexzy when you're stuck. Free on iOS & Android."}
         </Text>
         <HStack gap={3} justify="center" flexWrap="wrap">
           <Button

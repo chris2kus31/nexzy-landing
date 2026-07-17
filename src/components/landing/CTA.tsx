@@ -16,6 +16,7 @@ import {
   Icon,
   Badge,
   Flex,
+  Image,
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { HiSparkles, HiLightningBolt } from "react-icons/hi";
@@ -80,7 +81,7 @@ export default function CTA() {
             animation="pulse 2s infinite"
           >
             <IoGift />
-            NEW: AI Gaming Assistant Now Available!
+            MAKE IT YOURS
           </Badge>
 
           {/* Main CTA Content */}
@@ -91,10 +92,10 @@ export default function CTA() {
               color="nexzy.white"
               lineHeight="shorter"
             >
-              Beat Any Game, Any Level.
+              Make Nexzy yours.
               <br />
               <Text as="span" color="nexzy.yellow">
-                Start Playing Smarter.
+                Your games. Your news. Your AI.
               </Text>
             </Heading>
 
@@ -103,8 +104,9 @@ export default function CTA() {
               color="nexzy.gray.100"
               maxW="2xl"
             >
-              Your AI gaming assistant is waiting to help you conquer any game,
-              earn daily rewards, and never miss a deal on your wishlist
+              Add the games you actually play, get news and help tuned to you,
+              and Ask Nexzy whenever you&apos;re stuck &mdash; free on iOS &amp;
+              Android.
             </Text>
 
             {/* Value Props Grid */}
@@ -114,7 +116,7 @@ export default function CTA() {
                   <FaRobot />
                 </Icon>
                 <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  24/7 AI Assistant
+                  Ask Nexzy AI
                 </Text>
               </HStack>
               <HStack gap={2}>
@@ -122,7 +124,7 @@ export default function CTA() {
                   <IoGameController />
                 </Icon>
                 <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  1000+ Games
+                  Your game library
                 </Text>
               </HStack>
               <HStack gap={2}>
@@ -136,11 +138,14 @@ export default function CTA() {
             </Flex>
           </Stack>
 
-          {/* Download Buttons */}
+          {/* Download — device-aware. On a phone, the store buttons install
+              directly. On desktop/tablet they're hidden in favor of the QR
+              block below (you can't install a phone app on a laptop). */}
           <Stack
             direction={{ base: "column", sm: "row" }}
             gap={4}
             w={{ base: "full", sm: "auto" }}
+            display={{ base: "flex", md: "none" }}
           >
             <Button
               asChild
@@ -217,7 +222,37 @@ export default function CTA() {
             </Button>
           </Stack>
 
-          {/* Newsletter email capture (tips, deals + bonus coins) */}
+          {/* Desktop / tablet: scan to get the app on your phone */}
+          <HStack
+            gap={5}
+            display={{ base: "none", md: "flex" }}
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="2xl"
+            px={6}
+            py={5}
+            align="center"
+          >
+            <Box bg="white" p={2} borderRadius="xl" flexShrink={0}>
+              <Image
+                src="/qr-get-app.png"
+                alt="Scan to get the Nexzy app on your phone"
+                boxSize="128px"
+              />
+            </Box>
+            <Stack gap={1} textAlign="left">
+              <Text color="nexzy.white" fontWeight="800" fontSize="lg">
+                Scan to get it on your phone
+              </Text>
+              <Text color="nexzy.gray.100" fontSize="sm" maxW="xs">
+                Point your camera at the code — it opens the right store for your
+                phone. Free on iOS &amp; Android.
+              </Text>
+            </Stack>
+          </HStack>
+
+          {/* Newsletter — the device-agnostic capture (works on any device) */}
           <EmailCapture variant="cta" source="cta" />
 
           {/* Social Proof */}
@@ -230,8 +265,8 @@ export default function CTA() {
               ))}
             </HStack>
             <Text color="nexzy.gray.100" fontSize="sm">
-              Now live on iOS and Android — download free and start playing
-              smarter today.
+              Free on iOS and Android — the newsroom in your pocket, tuned to
+              the games you play.
             </Text>
 
             {/* Features highlight */}
@@ -267,7 +302,7 @@ export default function CTA() {
             <HStack gap={2}>
               <HiLightningBolt color="#4A9FFF" />
               <Text fontSize="sm" color="nexzy.lightBlue" fontWeight="medium">
-                The only gaming app with real-time AI assistance for any game
+                Read it on the web, make it yours in the app.
               </Text>
             </HStack>
           </Box>

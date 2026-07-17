@@ -90,10 +90,10 @@ export default function HowItWorks() {
               QUICK START
             </Badge>
             <Heading as="h2" size={{ base: "xl", md: "2xl" }} color="white">
-              Start Gaming Smarter in 3 Simple Steps
+              Make Nexzy yours in 3 steps
             </Heading>
             <Text fontSize={{ base: "md", md: "lg" }} color="gray.300">
-              From download to earning rewards in under 2 minutes
+              From reading the newsroom to your own personalized Nexzy in minutes
             </Text>
           </Stack>
 
@@ -257,7 +257,7 @@ export default function HowItWorks() {
                   <IoGameController />
                 </Icon>
                 <Heading size="md" color="white">
-                  Ready to Transform Your Gaming Experience?
+                  Ready to make Nexzy yours?
                 </Heading>
               </HStack>
               <Text color="gray.200">

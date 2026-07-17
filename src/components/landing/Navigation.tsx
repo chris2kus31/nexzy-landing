@@ -164,7 +164,7 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
-              <NextLink href="/#features">The App</NextLink>
+              <NextLink href="/#download">The App</NextLink>
             </Link>
           </HStack>
 
@@ -181,7 +181,7 @@ export default function Navigation() {
               _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
               transition="all 0.2s"
             >
-              <NextLink href="/#download">Download</NextLink>
+              <NextLink href="/#download">Get the app</NextLink>
             </Button>
           </HStack>
 
@@ -256,7 +256,7 @@ export default function Navigation() {
                 mt={3}
                 mb={1}
               >
-                Library
+                Guides &amp; Lists
               </Text>
               {LIBRARY.map((item) => (
                 <Link
@@ -274,7 +274,7 @@ export default function Navigation() {
               ))}
 
               <Link asChild fontSize="lg" py={2} mt={3} color="nexzy.white">
-                <NextLink href="/#features" onClick={close}>
+                <NextLink href="/#download" onClick={close}>
                   The App
                 </NextLink>
               </Link>
@@ -288,7 +288,7 @@ export default function Navigation() {
                 borderRadius="full"
               >
                 <NextLink href="/#download" onClick={close}>
-                  Download
+                  Get the app
                 </NextLink>
               </Button>
             </Stack>

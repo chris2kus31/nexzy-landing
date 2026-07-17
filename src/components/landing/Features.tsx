@@ -93,14 +93,14 @@ export default function Features() {
               w="fit-content"
               mx="auto"
             >
-              POWERFUL FEATURES
+              MAKE IT YOURS
             </Badge>
             <Heading as="h2" size={{ base: "xl", md: "2xl" }} color="white">
-              Everything You Need to Level Up Your Gaming
+              The app makes the newsroom yours
             </Heading>
             <Text fontSize={{ base: "md", md: "lg" }} color="gray.300">
-              From AI assistance to reward coins, we've built the ultimate
-              gaming companion app
+              Nexzy the app follows the games you actually play — your library,
+              your deals, and instant AI help, all tuned to you
             </Text>
           </Stack>
 
