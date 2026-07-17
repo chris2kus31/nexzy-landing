@@ -1,9 +1,9 @@
 // ============================================
 // FILE: components/landing/CTA.tsx
-// "Make it yours" band — a modern two-column app CTA. LEFT: the pitch + the
-// newsletter (device-agnostic). RIGHT: a "get the app" card — a scannable QR on
-// desktop/tablet, store buttons on mobile (you can't install a phone app on a
-// laptop). Newsroom-first: the app is framed as making the newsroom yours.
+// "Make it yours" band — a single CONTAINED card (bounded width, bordered,
+// faint fill) so the pitch and the get-app action sit close together as one
+// unit (no full-width void, one focal point). LEFT: pitch + newsletter. RIGHT:
+// a compact "get the app" tile — QR on desktop/tablet, store buttons on mobile.
 // ============================================
 "use client";
 
@@ -15,7 +15,6 @@ import {
   Button,
   Stack,
   HStack,
-  VStack,
   Icon,
   Badge,
   Flex,
@@ -32,238 +31,218 @@ export default function CTA() {
   return (
     <Box
       as="section"
-      pt={{ base: 10, md: 14 }}
+      pt={{ base: 12, md: 16 }}
       pb={{ base: 16, md: 24 }}
       bg="nexzy.navy"
       position="relative"
       id="download"
       overflow="hidden"
     >
-      {/* Animated background gradient */}
-      <Box
-        position="absolute"
-        top="0"
-        left="0"
-        right="0"
-        bottom="0"
-        bgGradient="linear(135deg, nexzy.navy 0%, nexzy.blue 50%, nexzy.navy 100%)"
-        opacity={0.3}
-      />
-      {/* Pattern overlay */}
-      <Box
-        position="absolute"
-        top="0"
-        left="0"
-        right="0"
-        bottom="0"
-        opacity={0.05}
-        bgImage="radial-gradient(circle at 1px 1px, white 1px, transparent 1px)"
-        backgroundSize="40px 40px"
-      />
-
-      <Container
-        maxW="container.xl"
-        position="relative"
-        px={{ base: 5, md: 6 }}
-      >
-        <Flex
-          direction={{ base: "column", lg: "row" }}
-          align="center"
-          gap={{ base: 10, lg: 16 }}
+      <Container maxW="container.xl" position="relative" px={{ base: 5, md: 6 }}>
+        {/* One contained card — keeps the two halves close, no cross-page void */}
+        <Box
+          maxW="5xl"
+          mx="auto"
+          position="relative"
+          overflow="hidden"
+          borderRadius="3xl"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          bg="whiteAlpha.50"
+          px={{ base: 6, md: 10, lg: 12 }}
+          py={{ base: 8, md: 10 }}
         >
-          {/* LEFT — the pitch + newsletter */}
-          <Stack
-            flex="1.3"
-            w="full"
-            gap={6}
-            align={{ base: "center", lg: "flex-start" }}
-            textAlign={{ base: "center", lg: "left" }}
+          {/* faint depth glow */}
+          <Box
+            position="absolute"
+            top="-40%"
+            right="-8%"
+            w="45%"
+            h="150%"
+            borderRadius="full"
+            bg="nexzy.blue"
+            opacity={0.08}
+            filter="blur(90px)"
+            pointerEvents="none"
+          />
+
+          <Flex
+            direction={{ base: "column", lg: "row" }}
+            gap={{ base: 8, lg: 12 }}
+            align="center"
+            position="relative"
           >
-            <Badge
-              bg="nexzy.yellow"
-              color="nexzy.navy"
-              px={4}
-              py={2}
-              borderRadius="full"
-              fontSize="sm"
-              fontWeight="bold"
-              display="flex"
-              alignItems="center"
-              gap={2}
-            >
-              <IoGift />
-              MAKE IT YOURS
-            </Badge>
-
-            <Heading
-              as="h2"
-              fontFamily="title"
-              size={{ base: "2xl", md: "3xl" }}
-              color="nexzy.white"
-              lineHeight="shorter"
-            >
-              Make Nexzy yours.
-              <br />
-              <Text as="span" color="nexzy.yellow">
-                Your games. Your news. Your AI.
-              </Text>
-            </Heading>
-
-            <Text
-              fontSize={{ base: "lg", md: "xl" }}
-              color="nexzy.gray.100"
-              maxW="xl"
-            >
-              Add the games you actually play, get news and help tuned to you,
-              and Ask Nexzy whenever you&apos;re stuck &mdash; free on iOS &amp;
-              Android.
-            </Text>
-
-            {/* Value props */}
-            <Flex
-              gap={{ base: 5, md: 6 }}
-              wrap="wrap"
-              justify={{ base: "center", lg: "flex-start" }}
-            >
-              <HStack gap={2}>
-                <Icon color="nexzy.yellow" boxSize={5}>
-                  <FaRobot />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Ask Nexzy AI
-                </Text>
-              </HStack>
-              <HStack gap={2}>
-                <Icon color="nexzy.lightBlue" boxSize={5}>
-                  <IoGameController />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Your game library
-                </Text>
-              </HStack>
-              <HStack gap={2}>
-                <Icon color="nexzy.gold" boxSize={5}>
-                  <HiSparkles />
-                </Icon>
-                <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                  Free Forever
-                </Text>
-              </HStack>
-            </Flex>
-
-            {/* Mobile: store buttons (can't scan a QR on the phone you're on) */}
+            {/* LEFT — pitch + newsletter */}
             <Stack
-              direction={{ base: "column", sm: "row" }}
-              gap={3}
-              w={{ base: "full", sm: "auto" }}
-              display={{ base: "flex", md: "none" }}
+              flex="1"
+              w="full"
+              gap={5}
+              align={{ base: "center", lg: "flex-start" }}
+              textAlign={{ base: "center", lg: "left" }}
             >
-              <Button
-                asChild
-                size="lg"
-                bg="white"
-                color="nexzy.navy"
-                borderRadius="full"
-                px={8}
-                py={7}
-                _hover={{ bg: "nexzy.gray.100" }}
-              >
-                <a
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackDownload("ios", "cta")}
-                >
-                  <HStack gap={3}>
-                    <FaApple size={22} />
-                    <VStack gap={0} align="start">
-                      <Text fontSize="xs" opacity={0.9}>
-                        Download on the
-                      </Text>
-                      <Text fontSize="md" fontWeight="bold">
-                        App Store
-                      </Text>
-                    </VStack>
-                  </HStack>
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="lg"
+              <Badge
                 bg="nexzy.yellow"
                 color="nexzy.navy"
+                px={4}
+                py={2}
                 borderRadius="full"
-                px={8}
-                py={7}
-                fontWeight="600"
-                _hover={{ bg: "nexzy.gold" }}
+                fontSize="sm"
+                fontWeight="bold"
+                display="flex"
+                alignItems="center"
+                gap={2}
               >
-                <a
-                  href={googlePlayUrl("cta")}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => trackDownload("android", "cta")}
+                <IoGift />
+                MAKE IT YOURS
+              </Badge>
+
+              <Heading
+                as="h2"
+                size={{ base: "2xl", md: "3xl" }}
+                color="nexzy.white"
+                lineHeight="shorter"
+              >
+                Make Nexzy yours.
+                <br />
+                <Text as="span" color="nexzy.yellow">
+                  Your games. Your news. Your AI.
+                </Text>
+              </Heading>
+
+              <Text
+                fontSize={{ base: "md", md: "lg" }}
+                color="nexzy.gray.100"
+                maxW="lg"
+              >
+                Add the games you actually play, get news and help tuned to you,
+                and Ask Nexzy whenever you&apos;re stuck.
+              </Text>
+
+              {/* Value props */}
+              <Flex
+                gap={{ base: 4, md: 6 }}
+                wrap="wrap"
+                justify={{ base: "center", lg: "flex-start" }}
+              >
+                <HStack gap={2}>
+                  <Icon color="nexzy.yellow" boxSize={5}>
+                    <FaRobot />
+                  </Icon>
+                  <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                    Ask Nexzy AI
+                  </Text>
+                </HStack>
+                <HStack gap={2}>
+                  <Icon color="nexzy.lightBlue" boxSize={5}>
+                    <IoGameController />
+                  </Icon>
+                  <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                    Your game library
+                  </Text>
+                </HStack>
+                <HStack gap={2}>
+                  <Icon color="nexzy.gold" boxSize={5}>
+                    <HiSparkles />
+                  </Icon>
+                  <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+                    Free Forever
+                  </Text>
+                </HStack>
+              </Flex>
+
+              {/* Mobile: store buttons (can't scan a QR on the phone in hand) */}
+              <Stack
+                direction={{ base: "column", sm: "row" }}
+                gap={3}
+                w={{ base: "full", sm: "auto" }}
+                display={{ base: "flex", md: "none" }}
+              >
+                <Button
+                  asChild
+                  size="lg"
+                  bg="white"
+                  color="nexzy.navy"
+                  borderRadius="full"
+                  px={7}
+                  py={6}
+                  _hover={{ bg: "nexzy.gray.100" }}
                 >
-                  <HStack gap={3}>
-                    <FaGooglePlay size={22} />
-                    <VStack gap={0} align="start">
-                      <Text fontSize="xs" opacity={0.9}>
-                        Get it on
-                      </Text>
-                      <Text fontSize="md" fontWeight="bold">
-                        Google Play
-                      </Text>
-                    </VStack>
-                  </HStack>
-                </a>
-              </Button>
+                  <a
+                    href={APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackDownload("ios", "cta")}
+                  >
+                    <HStack gap={2}>
+                      <FaApple size={20} />
+                      <Text fontWeight="bold">App Store</Text>
+                    </HStack>
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  bg="nexzy.yellow"
+                  color="nexzy.navy"
+                  borderRadius="full"
+                  px={7}
+                  py={6}
+                  fontWeight="600"
+                  _hover={{ bg: "nexzy.gold" }}
+                >
+                  <a
+                    href={googlePlayUrl("cta")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackDownload("android", "cta")}
+                  >
+                    <HStack gap={2}>
+                      <FaGooglePlay size={20} />
+                      <Text fontWeight="bold">Google Play</Text>
+                    </HStack>
+                  </a>
+                </Button>
+              </Stack>
+
+              {/* Newsletter — device-agnostic capture */}
+              <Box w="full" maxW={{ base: "full", sm: "sm" }} pt={1}>
+                <EmailCapture variant="cta" source="cta" />
+              </Box>
             </Stack>
 
-            {/* Newsletter — device-agnostic capture */}
-            <Box w="full" maxW={{ base: "full", sm: "md" }}>
-              <EmailCapture variant="cta" source="cta" />
-            </Box>
-          </Stack>
-
-          {/* RIGHT — the "get the app" card (tablet + desktop) */}
-          <Stack
-            display={{ base: "none", md: "flex" }}
-            flexShrink={0}
-            align="center"
-            gap={4}
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="3xl"
-            px={{ base: 8, md: 10 }}
-            py={{ base: 8, md: 10 }}
-          >
-            <Box bg="white" p={3} borderRadius="2xl">
-              <Image
-                src="/qr-get-app.png"
-                alt="Scan to get the Nexzy app on your phone"
-                boxSize="180px"
-              />
-            </Box>
-            <Text
-              color="nexzy.white"
-              fontWeight="800"
-              fontSize="lg"
-              textAlign="center"
+            {/* RIGHT — compact "get the app" tile (tablet + desktop) */}
+            <Stack
+              display={{ base: "none", md: "flex" }}
+              flexShrink={0}
+              align="center"
+              gap={3}
             >
-              Scan to get it on your phone
-            </Text>
-            <Text
-              color="nexzy.gray.100"
-              fontSize="sm"
-              textAlign="center"
-              maxW="2xs"
-            >
-              Point your camera at the code — it opens the right store. Free on
-              iOS &amp; Android.
-            </Text>
-          </Stack>
-        </Flex>
+              <Box bg="white" p={3} borderRadius="2xl" boxShadow="lg">
+                <Image
+                  src="/qr-get-app.png"
+                  alt="Scan to get the Nexzy app on your phone"
+                  boxSize="150px"
+                />
+              </Box>
+              <Text
+                color="nexzy.white"
+                fontWeight="700"
+                fontSize="sm"
+                textAlign="center"
+              >
+                Scan to get it on your phone
+              </Text>
+              <Text
+                color="nexzy.gray.100"
+                fontSize="xs"
+                textAlign="center"
+                maxW="40"
+              >
+                Opens the right store — free on iOS &amp; Android.
+              </Text>
+            </Stack>
+          </Flex>
+        </Box>
       </Container>
     </Box>
   );
