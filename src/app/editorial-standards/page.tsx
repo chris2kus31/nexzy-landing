@@ -14,7 +14,7 @@ import Navigation from "@/components/landing/Navigation";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Editorial Standards — Nexzy",
+  title: "Editorial Standards",
   description:
     "How Nexzy's news and guides are made: written by real gaming writers, researched from cited sources, fact-checked, edited, and human-reviewed before anything publishes.",
   alternates: { canonical: "/editorial-standards" },

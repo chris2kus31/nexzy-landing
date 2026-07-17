@@ -17,7 +17,7 @@ import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Press & Media Kit — Nexzy",
+  title: "Press & Media Kit",
   description:
     "Everything you need to write about Nexzy: boilerplate, fast facts, brand assets, and press contact.",
   alternates: { canonical: "/press" },

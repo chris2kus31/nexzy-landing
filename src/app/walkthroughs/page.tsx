@@ -8,7 +8,7 @@ export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Game Walkthroughs — Full Playthroughs, Chapter by Chapter | Nexzy",
+  title: "Game Walkthroughs — Full Playthroughs, Chapter by Chapter",
   description:
     "Complete game walkthroughs broken into chapters — area-by-area directions, key items, tough fights, and missable content.",
   alternates: { canonical: "/walkthroughs" },

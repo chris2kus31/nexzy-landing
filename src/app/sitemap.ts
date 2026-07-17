@@ -26,6 +26,10 @@ const PAGE_SIZE = 50;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  // Fixed lastmod for purely-static informational pages so their sitemap entry
+  // doesn't churn on every ISR regeneration (which trains crawlers to ignore
+  // lastmod). Bump when a static page's content meaningfully changes.
+  const STATIC_LAST_MOD = new Date("2026-07-01T00:00:00Z");
   const staticRoutes = [
     "",
     "/about",
@@ -51,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
-    lastModified: now,
+    lastModified: path === "" || hubRoutes.has(path) ? now : STATIC_LAST_MOD,
     changeFrequency: path === "" || hubRoutes.has(path) ? "daily" : "monthly",
     priority: path === "" ? 1 : hubRoutes.has(path) ? 0.8 : 0.5,
   }));

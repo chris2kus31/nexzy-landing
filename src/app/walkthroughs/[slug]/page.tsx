@@ -39,7 +39,7 @@ export async function generateMetadata({
   const title = w.seoTitle || w.title;
   const description = w.seoDescription || w.excerpt || undefined;
   return {
-    title: `${title} | Nexzy`,
+    title,
     description,
     alternates: { canonical: `/walkthroughs/${w.slug}` },
     openGraph: {

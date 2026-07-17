@@ -28,7 +28,7 @@ export async function generateMetadata({
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp?.page || "1", 10) || 1);
   return {
-    title: "Game Lists — Upcoming & New Releases | Nexzy",
+    title: "Game Lists — Upcoming & New Releases",
     description:
       "What to play now and what's coming next. Handpicked lists of upcoming games and fresh releases worth your time — updated from the Nexzy games database.",
     alternates: { canonical: page > 1 ? `/lists?page=${page}` : "/lists" },

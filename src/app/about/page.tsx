@@ -14,7 +14,7 @@ import Navigation from "@/components/landing/Navigation";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "About Nexzy News",
+  title: { absolute: "About Nexzy News" },
   description:
     "Nexzy News is a gaming newsroom covering PC and console games, hardware, adaptations, and deals — written and edited by real people, and published by Nexzy.",
   alternates: { canonical: "/about" },

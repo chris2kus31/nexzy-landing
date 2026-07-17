@@ -72,7 +72,7 @@ export async function generateMetadata({
   const title = `${displayLabel} — Nexzy News`;
   const description = `The latest ${displayLabel} news, updates, and coverage from the Nexzy newsroom.`;
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: {
       canonical:

@@ -86,7 +86,7 @@ export async function generateMetadata({
       : `Every Nexzy guide, walkthrough, list and news story for ${game.name} — in one place.`) ||
     undefined;
   return {
-    title: `${game.name} — Guides, Walkthroughs & News | Nexzy`,
+    title: `${game.name} — Guides, Walkthroughs & News`,
     description,
     alternates: { canonical: `/games/${game.slug}` },
     openGraph: {

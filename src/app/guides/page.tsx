@@ -28,7 +28,7 @@ export async function generateMetadata({
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp?.page || "1", 10) || 1);
   return {
-    title: "Game Guides — How to Beat Any Game | Nexzy",
+    title: "Game Guides — How to Beat Any Game",
     description:
       "Straight-to-the-point guides and boss walkthroughs. How to beat the hardest fights, levels, and challenges — grounded in real strategy.",
     alternates: { canonical: page > 1 ? `/guides?page=${page}` : "/guides" },

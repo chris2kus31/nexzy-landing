@@ -24,7 +24,10 @@ export const metadata: Metadata = {
   // and keeps the keywords the newsroom actually earns (news, guides,
   // walkthroughs). The app-feature keywords live in the App Store listing, not
   // here — the web is the newsroom; the app is where you make it yours.
-  title: "Nexzy — Gaming News, Guides & Walkthroughs",
+  title: {
+    default: "Nexzy — Gaming News, Guides & Walkthroughs",
+    template: "%s | Nexzy",
+  },
   description:
     "Nexzy is the independent gaming newsroom — news, guides, and walkthroughs for the games you play, updated all day. Get the app to make it yours: track the games you play, get updates tuned to you, and Ask Nexzy when you're stuck.",
   keywords:

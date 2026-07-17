@@ -15,7 +15,7 @@ export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Game Guides, Walkthroughs & News | Nexzy",
+  title: "Game Guides, Walkthroughs & News",
   description:
     "Nexzy's guides, walkthroughs, lists and news, organized by game — everything we've covered so far, in one place.",
   alternates: { canonical: "/games" },
@@ -114,7 +114,7 @@ export default async function GamesIndexPage() {
           <Text color="gray.500">No game coverage yet — check back soon.</Text>
         ) : (
           <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} gap={5}>
-            {games.map((g) => {
+            {games.map((g, i) => {
               const year = g.released
                 ? new Date(g.released).getFullYear()
                 : null;
@@ -143,6 +143,7 @@ export default async function GamesIndexPage() {
                         src={g.backgroundImage}
                         alt={g.name}
                         fill
+                        priority={i === 0}
                         sizes="(max-width: 768px) 50vw, 240px"
                         style={{ objectFit: "cover" }}
                       />

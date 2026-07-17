@@ -47,7 +47,7 @@ export async function generateMetadata({
   const pageSuffix = page > 1 ? ` — Page ${page}` : "";
 
   return {
-    title: `Nexzy News — ${scope}${pageSuffix}`,
+    title: { absolute: `Nexzy News — ${scope}${pageSuffix}` },
     description:
       "The latest gaming news across PC and every console, plus hardware, game adaptations, and deals — by the Nexzy newsroom.",
     alternates: { canonical },

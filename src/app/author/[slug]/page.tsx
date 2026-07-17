@@ -57,17 +57,29 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const author = await resolveAuthor(slug);
-  if (!author) return { title: "Author — Nexzy" };
+  if (!author) return { title: "Author" };
   const { page: pageRaw } = await searchParams;
   const page = Math.max(1, parseInt(pageRaw || "1", 10) || 1);
+  const ogTitle = `${author.name} — ${author.role} at Nexzy`;
   return {
-    title: `${author.name} — ${author.role} at Nexzy`,
+    title: `${author.name} — ${author.role}`,
     description: author.bio || undefined,
     alternates: {
       canonical:
         page > 1
           ? `/author/${author.slug}?page=${page}`
           : `/author/${author.slug}`,
+    },
+    openGraph: {
+      type: "profile",
+      title: ogTitle,
+      description: author.bio || undefined,
+      url: `${SITE_URL}/author/${author.slug}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: author.bio || undefined,
     },
   };
 }
