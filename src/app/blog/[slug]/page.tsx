@@ -142,6 +142,7 @@ export default async function BlogArticlePage({
       : { "@type": "Organization", name: post.author || "Nexzy Editorial" },
     publisher: {
       "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
       name: "Nexzy",
       logo: {
         "@type": "ImageObject",

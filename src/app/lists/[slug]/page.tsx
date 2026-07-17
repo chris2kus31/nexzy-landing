@@ -139,6 +139,7 @@ export default async function ListPage({
 
   const listPublisher = {
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: "Nexzy",
     logo: {
       "@type": "ImageObject",

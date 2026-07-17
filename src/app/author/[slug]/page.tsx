@@ -107,9 +107,23 @@ export default async function AuthorPage({
         }
       : {}),
     url: `${SITE_URL}/author/${author.slug}`,
-    worksFor: { "@type": "Organization", name: "Nexzy" },
+    worksFor: { "@id": `${SITE_URL}/#organization` },
     ...(author.knowsAbout.length ? { knowsAbout: author.knowsAbout } : {}),
     ...(author.socials.length ? { sameAs: author.socials } : {}),
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: author.name,
+        item: `${SITE_URL}/author/${author.slug}`,
+      },
+    ],
   };
 
   return (
@@ -201,6 +215,10 @@ export default async function AuthorPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
     </Container>
   );

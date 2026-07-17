@@ -275,6 +275,24 @@ export default async function GameHubPage({
     ...(game.platforms.length ? { gamePlatform: game.platforms } : {}),
     ...(game.released ? { datePublished: game.released } : {}),
     ...(desc ? { description: desc.slice(0, 300) } : {}),
+    // Trailer as a VideoObject so the embed is a first-class video entity for
+    // AI/GEO. uploadDate is intentionally omitted (RAWG clip data carries no
+    // true upload date and we never fabricate one), so it won't chase the video
+    // rich result until a real date exists, but the video is still understood.
+    ...(embed && (game.backgroundImage || shots[0])
+      ? {
+          video: {
+            "@type": "VideoObject",
+            name: `${game.name} trailer`,
+            description: desc
+              ? desc.slice(0, 200)
+              : `Official trailer for ${game.name}.`,
+            thumbnailUrl: [game.backgroundImage || shots[0]],
+            embedUrl: embed,
+            ...(game.clipUrl ? { contentUrl: game.clipUrl } : {}),
+          },
+        }
+      : {}),
   };
   const collectionLd = {
     "@context": "https://schema.org",

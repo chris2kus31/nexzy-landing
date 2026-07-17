@@ -102,6 +102,7 @@ export default async function WalkthroughOverviewPage({
     })),
     publisher: {
       "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
       name: "Nexzy",
       logo: {
         "@type": "ImageObject",

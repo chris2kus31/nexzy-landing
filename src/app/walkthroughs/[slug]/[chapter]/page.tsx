@@ -111,6 +111,7 @@ export default async function WalkthroughChapterPage({
   };
   const chapterPublisher = {
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: "Nexzy",
     logo: {
       "@type": "ImageObject",

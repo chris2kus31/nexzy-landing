@@ -140,6 +140,7 @@ export default async function GuidePage({
   const steps = toHowToSteps(post.bodyMarkdown);
   const guidePublisher = {
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: "Nexzy",
     logo: {
       "@type": "ImageObject",
