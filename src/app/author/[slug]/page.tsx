@@ -50,16 +50,25 @@ async function resolveAuthor(slug: string) {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: Search;
 }): Promise<Metadata> {
   const { slug } = await params;
   const author = await resolveAuthor(slug);
   if (!author) return { title: "Author — Nexzy" };
+  const { page: pageRaw } = await searchParams;
+  const page = Math.max(1, parseInt(pageRaw || "1", 10) || 1);
   return {
     title: `${author.name} — ${author.role} at Nexzy`,
     description: author.bio || undefined,
-    alternates: { canonical: `/author/${author.slug}` },
+    alternates: {
+      canonical:
+        page > 1
+          ? `/author/${author.slug}?page=${page}`
+          : `/author/${author.slug}`,
+    },
   };
 }
 

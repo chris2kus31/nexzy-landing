@@ -10,7 +10,6 @@ import {
   Separator,
 } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
-import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -61,22 +60,7 @@ export default function AboutPage() {
     publishingPrinciples: `${SITE_URL}/editorial-standards`,
     ethicsPolicy: `${SITE_URL}/editorial-standards`,
     foundingDate: "2026-06",
-    parentOrganization: {
-      "@type": "Organization",
-      "@id": `${SITE_URL}/#org`,
-      name: "Nexzy",
-      url: SITE_URL,
-      description:
-        "Nexzy is a gaming companion app and newsroom covering game news, guides, and deals, kept short and to the point, with an in-app AI assistant, for players of every age.",
-      foundingDate: "2026-06",
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
-      sameAs: [APP_STORE_URL, GOOGLE_PLAY_URL],
-    },
+    parentOrganization: { "@id": `${SITE_URL}/#organization` },
   };
 
   return (

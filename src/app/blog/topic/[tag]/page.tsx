@@ -55,10 +55,14 @@ export async function generateStaticParams(): Promise<{ tag: string }[]> {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ tag: string }>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const { tag } = await params;
+  const { page: pageRaw } = await searchParams;
+  const page = Math.max(1, parseInt(pageRaw || "1", 10) || 1);
   const slug = slugifyTag(tag);
   const [label, count] = await Promise.all([
     resolveLabel(slug),
@@ -70,7 +74,10 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/blog/topic/${slug}` },
+    alternates: {
+      canonical:
+        page > 1 ? `/blog/topic/${slug}?page=${page}` : `/blog/topic/${slug}`,
+    },
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary_large_image", title, description },
     // Thin hubs (too few articles) are rendered for humans but kept out of the

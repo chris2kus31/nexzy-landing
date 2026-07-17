@@ -8,6 +8,7 @@ import { Providers } from "./providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import Clarity from "@/components/Clarity";
 import React from "react";
+import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -92,12 +93,16 @@ const orgJsonLd = {
       "@id": `${SITE_URL}/#organization`,
       name: "Nexzy",
       url: SITE_URL,
+      description:
+        "Nexzy is a gaming companion app and newsroom covering game news, guides, and deals, kept short and to the point, with an in-app AI assistant, for players of every age.",
+      foundingDate: "2026-06",
       logo: {
         "@type": "ImageObject",
         url: `${SITE_URL}/android-chrome-512x512.png`,
         width: 512,
         height: 512,
       },
+      sameAs: [APP_STORE_URL, GOOGLE_PLAY_URL],
     },
     {
       "@type": "WebSite",

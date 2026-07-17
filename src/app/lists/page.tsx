@@ -20,12 +20,20 @@ export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PAGE_SIZE = 18;
 
-export const metadata: Metadata = {
-  title: "Game Lists — Upcoming & New Releases | Nexzy",
-  description:
-    "What to play now and what's coming next. Handpicked lists of upcoming games and fresh releases worth your time — updated from the Nexzy games database.",
-  alternates: { canonical: "/lists" },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp?.page || "1", 10) || 1);
+  return {
+    title: "Game Lists — Upcoming & New Releases | Nexzy",
+    description:
+      "What to play now and what's coming next. Handpicked lists of upcoming games and fresh releases worth your time — updated from the Nexzy games database.",
+    alternates: { canonical: page > 1 ? `/lists?page=${page}` : "/lists" },
+  };
+}
 
 export default async function ListsIndexPage({
   searchParams,

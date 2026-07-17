@@ -20,12 +20,20 @@ export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PAGE_SIZE = 18;
 
-export const metadata: Metadata = {
-  title: "Game Guides — How to Beat Any Game | Nexzy",
-  description:
-    "Straight-to-the-point guides and boss walkthroughs. How to beat the hardest fights, levels, and challenges — grounded in real strategy.",
-  alternates: { canonical: "/guides" },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const page = Math.max(1, parseInt(sp?.page || "1", 10) || 1);
+  return {
+    title: "Game Guides — How to Beat Any Game | Nexzy",
+    description:
+      "Straight-to-the-point guides and boss walkthroughs. How to beat the hardest fights, levels, and challenges — grounded in real strategy.",
+    alternates: { canonical: page > 1 ? `/guides?page=${page}` : "/guides" },
+  };
+}
 
 export default async function GuidesIndexPage({
   searchParams,

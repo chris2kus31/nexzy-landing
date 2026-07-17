@@ -55,11 +55,7 @@ export default function PressPage() {
     "@type": "AboutPage",
     name: "Press & Media Kit — Nexzy",
     url: `${SITE_URL}/press`,
-    publisher: {
-      "@type": "Organization",
-      name: "Nexzy",
-      "@id": `${SITE_URL}/#org`,
-    },
+    publisher: { "@id": `${SITE_URL}/#organization` },
   };
 
   return (
