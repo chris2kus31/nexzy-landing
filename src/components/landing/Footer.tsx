@@ -26,18 +26,22 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
-    Product: [
-      { label: "Features", href: "#features" },
-      { label: "How It Works", href: "#how-it-works" },
-      { label: "Download", href: "#download" },
-      { label: "Pricing", href: "#" },
+    // The app is one column now (the web is the newsroom); all point to the
+    // dedicated /app page — the old #features / #how-it-works anchors were dead
+    // after those sections moved off the home page, and "Pricing" went nowhere.
+    "The App": [
+      { label: "About the app", href: "/app" },
+      { label: "How it works", href: "/app" },
+      { label: "Download", href: "/app" },
     ],
-    // Site-wide internal links to the three content hubs — every page now
-    // passes crawl + link authority to /blog, /guides, /lists (SEO).
+    // Site-wide internal links to the newsroom surfaces — every page passes
+    // crawl + link authority to the content hubs (SEO).
     Explore: [
       { label: "Gaming News", href: "/blog" },
       { label: "Game Guides", href: "/guides" },
+      { label: "Walkthroughs", href: "/walkthroughs" },
       { label: "Game Lists", href: "/lists" },
+      { label: "By Game", href: "/games" },
     ],
     Company: [
       { label: "About Us", href: "/about" },
@@ -64,13 +68,13 @@ export default function Footer() {
                   Nexzy
                 </Text>
                 <Text fontSize="xs" color="nexzy.yellow">
-                  AI Gaming Assistant
+                  The gaming newsroom
                 </Text>
               </Stack>
             </HStack>
             <Text fontSize="sm" color="gray.400">
-              Your ultimate gaming companion with AI assistance, rewards, and
-              game management all in one app.
+              The independent gaming newsroom — news, guides, and walkthroughs
+              for the games you play. The app makes it yours.
             </Text>
             <Stack gap={2} pt={2}>
               <Text fontSize="xs" color="gray.400" fontWeight="medium">
@@ -222,23 +226,23 @@ export default function Footer() {
           <HStack justify="center" gap={8} wrap="wrap" opacity={0.6}>
             <HStack gap={2}>
               <Icon color="nexzy.blue" boxSize={4}>
-                <FaRobot />
+                <IoGameController />
               </Icon>
               <Text fontSize="xs" color="gray.400">
-                AI Gaming Assistant
+                Real writers, human-reviewed
+              </Text>
+            </HStack>
+            <HStack gap={2}>
+              <Text fontSize="xs" color="gray.400">
+                Free to read
               </Text>
             </HStack>
             <HStack gap={2}>
               <Icon color="nexzy.blue" boxSize={4}>
-                <IoGameController />
+                <FaRobot />
               </Icon>
               <Text fontSize="xs" color="gray.400">
-                1000+ Games Supported
-              </Text>
-            </HStack>
-            <HStack gap={2}>
-              <Text fontSize="xs" color="gray.400">
-                Free to Download
+                Ask Nexzy in the app
               </Text>
             </HStack>
           </HStack>
