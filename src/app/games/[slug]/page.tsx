@@ -93,15 +93,13 @@ export async function generateMetadata({
       title: `${game.name} on Nexzy`,
       description,
       type: "website",
-      images: game.backgroundImage
-        ? [{ url: game.backgroundImage }]
-        : undefined,
+      // og:image comes from the co-located branded opengraph-image.tsx.
     },
     twitter: {
       card: "summary_large_image",
       title: `${game.name} on Nexzy`,
       description,
-      images: game.backgroundImage ? [game.backgroundImage] : undefined,
+      // twitter:image comes from the co-located twitter-image.tsx.
     },
   };
 }
