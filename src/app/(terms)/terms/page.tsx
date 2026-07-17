@@ -23,7 +23,7 @@ export default function TermsPage() {
       <Box bg="nexzy.navy" py={4}>
         <Container maxW="container.xl">
           <HStack justify="space-between">
-            <NextLink href="/public">
+            <NextLink href="/">
               <Button
                 variant="ghost"
                 size="sm"
