@@ -39,7 +39,10 @@ export default function Footer() {
       { label: "Game Guides", href: "/guides" },
       { label: "Game Lists", href: "/lists" },
     ],
-    Company: [{ label: "About Us", href: "/about" }],
+    Company: [
+      { label: "About Us", href: "/about" },
+      { label: "Press Kit", href: "/press" },
+    ],
     Legal: [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },
