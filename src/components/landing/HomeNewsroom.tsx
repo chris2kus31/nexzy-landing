@@ -112,7 +112,7 @@ export default function HomeNewsroom({
 }) {
   if (!nostalgia && !lead) return null;
   return (
-    <Box as="section" py={{ base: 16, md: 24 }} bg="nexzy.navy">
+    <Box as="section" pt={{ base: 6, md: 8 }} pb={{ base: 16, md: 24 }} bg="nexzy.navy">
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
         <Flex
           justify="space-between"

@@ -6,7 +6,7 @@ import { beatLabel, beatPalette } from "@/lib/blog/beats";
 
 export default function FeaturedCard({ post }: { post: PublicPost }) {
   return (
-    <NextLink href={`/blog/${post.slug}`} style={{ display: "block" }}>
+    <NextLink href={`/blog/${post.slug}`} style={{ display: "block", height: "100%" }}>
       <Box
         className="group"
         position="relative"
@@ -15,6 +15,7 @@ export default function FeaturedCard({ post }: { post: PublicPost }) {
         border="1px solid"
         borderColor="nexzy.blue/20"
         minH={{ base: "320px", md: "440px" }}
+        h="full"
         transition="all 0.2s"
         _hover={{ borderColor: "nexzy.blue/60", transform: "translateY(-3px)" }}
       >

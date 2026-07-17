@@ -104,7 +104,7 @@ export default function Hero({
     <Box
       as="section"
       pt={{ base: 24, md: 28 }}
-      pb={{ base: 12, md: 16 }}
+      pb={{ base: 8, md: 10 }}
       bg="nexzy.navy"
       position="relative"
       overflow="hidden"
