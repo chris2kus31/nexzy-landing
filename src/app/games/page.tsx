@@ -15,9 +15,9 @@ export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {
-  title: "Game Hubs — Guides, Walkthroughs & News by Game | Nexzy",
+  title: "Game Guides, Walkthroughs & News | Nexzy",
   description:
-    "Browse every game Nexzy covers — each with its guides, walkthroughs, lists and news gathered in one place.",
+    "Nexzy's guides, walkthroughs, lists and news, organized by game — everything we've covered so far, in one place.",
   alternates: { canonical: "/games" },
 };
 
@@ -98,7 +98,7 @@ export default async function GamesIndexPage() {
           mb={3}
           lineHeight="1.1"
         >
-          Game Hubs
+          Everything we&apos;ve covered, by game
         </Heading>
         <Text
           color="gray.400"
@@ -106,12 +106,12 @@ export default async function GamesIndexPage() {
           mb={{ base: 8, md: 12 }}
           maxW="2xl"
         >
-          Every game we cover — with its guides, walkthroughs, lists and news
-          gathered in one place.
+          Our guides, walkthroughs, lists and news for each game — gathered in
+          one place, and growing every week.
         </Text>
 
         {games.length === 0 ? (
-          <Text color="gray.500">No game hubs yet — check back soon.</Text>
+          <Text color="gray.500">No game coverage yet — check back soon.</Text>
         ) : (
           <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} gap={5}>
             {games.map((g) => {
