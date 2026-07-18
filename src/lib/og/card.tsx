@@ -14,8 +14,8 @@ export const OG_SIZE = { width: 1200, height: 630 } as const;
 export const OG_CONTENT_TYPE = "image/png";
 
 const NAVY = "#1a1f3a";
-const AMBER = "#FFB74D";
-const BLUE = "#6AB7FF";
+const AMBER = "#FFD700";
+const BLUE = "#4DA3FF";
 const LIGHT = "#C9D4E5";
 const SUBTLE = "#9FB0C7";
 

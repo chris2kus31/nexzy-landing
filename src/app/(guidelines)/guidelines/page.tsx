@@ -58,7 +58,7 @@ export default function GuidelinesPage() {
           >
             <Stack gap={2}>
               <HStack>
-                <HiHeart color="#4A9FFF" />
+                <HiHeart color="#007BFF" />
                 <Text fontWeight="bold" color="nexzy.navy">
                   Our Mission
                 </Text>

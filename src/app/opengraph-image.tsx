@@ -29,7 +29,7 @@ export default function OpenGraphImage() {
           display: "flex",
           alignItems: "center",
           gap: "16px",
-          color: "#FFB74D",
+          color: "#FFD700",
           fontSize: "30px",
           fontWeight: 700,
           letterSpacing: "2px",
@@ -50,7 +50,7 @@ export default function OpenGraphImage() {
         }}
       >
         Never get stuck in a&nbsp;
-        <span style={{ color: "#6AB7FF" }}>game</span>
+        <span style={{ color: "#4DA3FF" }}>game</span>
         &nbsp;again
       </div>
       <div
@@ -74,7 +74,7 @@ export default function OpenGraphImage() {
       >
         <div
           style={{
-            background: "#FFB74D",
+            background: "#FFD700",
             color: "#1a1f3a",
             fontSize: "26px",
             fontWeight: 700,

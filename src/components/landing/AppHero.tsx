@@ -150,7 +150,7 @@ export default function AppHero() {
               <Box
                 as="span"
                 style={{
-                  background: "linear-gradient(90deg, #6AB7FF, #FFC947)",
+                  background: "linear-gradient(90deg, #4DA3FF, #FFC400)",
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   WebkitTextFillColor: "transparent",
