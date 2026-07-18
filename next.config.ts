@@ -39,6 +39,21 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Serve the app-link verification files at the exact well-known paths Apple
+  // and Google require (internal rewrites, NOT redirects). See app/aasa and
+  // app/android-assetlinks.
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        destination: "/aasa",
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        destination: "/android-assetlinks",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
