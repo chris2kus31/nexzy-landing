@@ -407,7 +407,7 @@ export default async function BlogArticlePage({
       )}
 
       <ViewPing slug={post.slug} />
-      <ArticleAnalytics slug={post.slug} />
+      <ArticleAnalytics slug={post.slug} type="article" />
 
       <script
         type="application/ld+json"

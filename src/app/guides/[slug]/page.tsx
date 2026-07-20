@@ -457,7 +457,7 @@ export default async function GuidePage({
       )}
 
       <ViewPing slug={post.slug} />
-      <ArticleAnalytics slug={post.slug} />
+      <ArticleAnalytics slug={post.slug} type="guide" />
 
       <script
         type="application/ld+json"

@@ -344,7 +344,7 @@ export default async function WalkthroughChapterPage({
         </Flex>
       </Container>
       <ViewPing slug={c.slug} />
-      <ArticleAnalytics slug={c.slug} />
+      <ArticleAnalytics slug={c.slug} type="walkthrough_chapter" />
     </Box>
   );
 }

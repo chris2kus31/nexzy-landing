@@ -244,7 +244,7 @@ export default async function WalkthroughOverviewPage({
       <MoreOnGame game={byGame.game} items={byGame.items} />
 
       <ViewPing slug={w.slug} />
-      <ArticleAnalytics slug={w.slug} />
+      <ArticleAnalytics slug={w.slug} type="walkthrough" />
     </Box>
   );
 }

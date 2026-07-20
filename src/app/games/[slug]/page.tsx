@@ -25,6 +25,7 @@ import {
 import type { IconType } from "react-icons";
 import { fetchGameHub, type GameHubItem } from "@/lib/blog/api";
 import AppCta from "@/components/blog/AppCta";
+import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import HubTabs, { type HubTab } from "@/components/games/HubTabs";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
@@ -366,6 +367,7 @@ export default async function GameHubPage({
 
   return (
     <Box>
+      <ArticleAnalytics slug={game.slug} type="game" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(videoGameLd) }}

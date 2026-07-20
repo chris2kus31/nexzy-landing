@@ -1,4 +1,4 @@
-import NextLink from "next/link";
+import TrackedLink from "@/components/TrackedLink";
 import NextImage from "next/image";
 import { Box, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
@@ -41,7 +41,16 @@ export default function BlogCard({ post }: { post: PublicPost }) {
         ? "orange"
         : beatPalette(post.beat);
   return (
-    <NextLink href={href} style={{ display: "block", height: "100%" }}>
+    <TrackedLink
+      href={href}
+      event="content_click"
+      params={{
+        content_type: post.type ?? "article",
+        slug: post.slug,
+        from: "listing",
+      }}
+      style={{ display: "block", height: "100%" }}
+    >
       <Box
         className="group"
         bg="whiteAlpha.50"
@@ -111,6 +120,6 @@ export default function BlogCard({ post }: { post: PublicPost }) {
           </HStack>
         </Box>
       </Box>
-    </NextLink>
+    </TrackedLink>
   );
 }

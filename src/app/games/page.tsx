@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import NextLink from "next/link";
+import TrackedLink from "@/components/TrackedLink";
 import NextImage from "next/image";
 import {
   Box,
@@ -120,9 +120,16 @@ export default async function GamesIndexPage() {
                 ? new Date(g.released).getFullYear()
                 : null;
               return (
-                <NextLink
+                <TrackedLink
                   key={g.slug}
                   href={`/games/${g.slug}`}
+                  event="content_click"
+                  params={{
+                    content_type: "game",
+                    slug: g.slug,
+                    from: "games_listing",
+                    position: i,
+                  }}
                   style={{ display: "block", height: "100%" }}
                 >
                   <Box
@@ -182,7 +189,7 @@ export default async function GamesIndexPage() {
                       </Badge>
                     </Box>
                   </Box>
-                </NextLink>
+                </TrackedLink>
               );
             })}
           </SimpleGrid>
