@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import {
   Box,
   Heading,
@@ -35,6 +36,7 @@ export default function NewsletterSignup() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Something went wrong");
+      track("newsletter_signup", { source: "blog" });
       setState("done");
     } catch (err) {
       setState("error");

@@ -29,6 +29,7 @@ import {
 import { useState } from "react";
 import { HiMenu, HiX, HiChevronDown } from "react-icons/hi";
 import NextLink from "next/link";
+import { track } from "@/lib/analytics";
 
 // Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
 const LIBRARY = [
@@ -40,6 +41,7 @@ const LIBRARY = [
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const close = () => setIsOpen(false);
+  const nav = (item: string) => track("nav_click", { item });
 
   return (
     <Box
@@ -82,7 +84,9 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
-              <NextLink href="/games">By Game</NextLink>
+              <NextLink href="/games" onClick={() => nav("games")}>
+                By Game
+              </NextLink>
             </Link>
 
             <Link
@@ -93,7 +97,9 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
-              <NextLink href="/blog">News</NextLink>
+              <NextLink href="/blog" onClick={() => nav("news")}>
+                News
+              </NextLink>
             </Link>
 
             {/* Guides dropdown (reveals on hover) */}
@@ -108,7 +114,9 @@ export default function Navigation() {
                 transition="color 0.2s"
               >
                 <Link asChild color="inherit" _hover={{ color: "inherit" }}>
-                  <NextLink href="/guides">Guides</NextLink>
+                  <NextLink href="/guides" onClick={() => nav("guides")}>
+                    Guides
+                  </NextLink>
                 </Link>
                 <Box as="span" fontSize="xs" mt="1px">
                   <HiChevronDown />
@@ -154,7 +162,12 @@ export default function Navigation() {
                         color: "nexzy.lightBlue",
                       }}
                     >
-                      <NextLink href={item.href}>{item.label}</NextLink>
+                      <NextLink
+                        href={item.href}
+                        onClick={() => nav(item.label)}
+                      >
+                        {item.label}
+                      </NextLink>
                     </Link>
                   ))}
                 </Stack>
@@ -169,7 +182,9 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
-              <NextLink href="/app">The App</NextLink>
+              <NextLink href="/app" onClick={() => nav("app")}>
+                The App
+              </NextLink>
             </Link>
           </HStack>
 
@@ -186,7 +201,9 @@ export default function Navigation() {
               _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
               transition="all 0.2s"
             >
-              <NextLink href="/app">Get the app</NextLink>
+              <NextLink href="/app" onClick={() => nav("get_app")}>
+                Get the app
+              </NextLink>
             </Button>
           </HStack>
 
@@ -241,13 +258,25 @@ export default function Navigation() {
           <DrawerBody>
             <Stack gap={1}>
               <Link asChild fontSize="lg" py={2} color="nexzy.white">
-                <NextLink href="/games" onClick={close}>
+                <NextLink
+                  href="/games"
+                  onClick={() => {
+                    nav("games");
+                    close();
+                  }}
+                >
                   By Game
                 </NextLink>
               </Link>
 
               <Link asChild fontSize="lg" py={2} color="nexzy.white">
-                <NextLink href="/blog" onClick={close}>
+                <NextLink
+                  href="/blog"
+                  onClick={() => {
+                    nav("news");
+                    close();
+                  }}
+                >
                   News
                 </NextLink>
               </Link>
@@ -272,14 +301,26 @@ export default function Navigation() {
                   pl={3}
                   color="nexzy.white"
                 >
-                  <NextLink href={item.href} onClick={close}>
+                  <NextLink
+                    href={item.href}
+                    onClick={() => {
+                      nav(item.label);
+                      close();
+                    }}
+                  >
                     {item.label}
                   </NextLink>
                 </Link>
               ))}
 
               <Link asChild fontSize="lg" py={2} mt={3} color="nexzy.white">
-                <NextLink href="/app" onClick={close}>
+                <NextLink
+                  href="/app"
+                  onClick={() => {
+                    nav("app");
+                    close();
+                  }}
+                >
                   The App
                 </NextLink>
               </Link>
@@ -292,7 +333,13 @@ export default function Navigation() {
                 color="nexzy.navy"
                 borderRadius="full"
               >
-                <NextLink href="/app" onClick={close}>
+                <NextLink
+                  href="/app"
+                  onClick={() => {
+                    nav("get_app");
+                    close();
+                  }}
+                >
                   Get the app
                 </NextLink>
               </Button>

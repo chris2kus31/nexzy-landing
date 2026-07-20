@@ -12,6 +12,7 @@ import {
 import { HiLink, HiCheck, HiMail } from "react-icons/hi";
 import { IoShareSocial } from "react-icons/io5";
 import { MdSms } from "react-icons/md";
+import { track } from "@/lib/analytics";
 
 export default function ShareRow({
   url,
@@ -31,15 +32,35 @@ export default function ShareRow({
   }, []);
 
   const enc = encodeURIComponent;
-  const open = (href: string) =>
+  const open = (href: string) => {
+    const method = /reddit/.test(href)
+      ? "reddit"
+      : /twitter|x\.com/.test(href)
+        ? "x"
+        : /wa\.me|whatsapp/.test(href)
+          ? "whatsapp"
+          : /t\.me/.test(href)
+            ? "telegram"
+            : /facebook/.test(href)
+              ? "facebook"
+              : "other";
+    track("content_share", { method, title });
     window.open(href, "_blank", "noopener,noreferrer");
+  };
   // Email/SMS open a native app — navigate rather than open a blank tab.
   const openApp = (href: string) => {
+    const method = href.startsWith("mailto:")
+      ? "email"
+      : href.startsWith("sms:")
+        ? "sms"
+        : "other";
+    track("content_share", { method, title });
     window.location.href = href;
   };
 
   const nativeShare = async () => {
     try {
+      track("content_share", { method: "native", title });
       await navigator.share({ title, text: title, url });
     } catch {
       /* user cancelled — ignore */
@@ -49,6 +70,7 @@ export default function ShareRow({
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
+      track("content_share", { method: "copy_link", title });
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {

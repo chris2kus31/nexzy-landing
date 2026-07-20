@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Box, Flex, HStack, Button, Input, Icon } from "@chakra-ui/react";
 import { HiSearch, HiX } from "react-icons/hi";
 import { BEATS, beatPalette } from "@/lib/blog/beats";
+import { track } from "@/lib/analytics";
 
 /**
  * Category pills + search box. State lives in the URL (?beat=&q=) so every
@@ -30,7 +31,10 @@ export default function NewsControls({ beat, q }: { beat: string; q: string }) {
       firstRun.current = false;
       return;
     }
-    const t = setTimeout(() => go(beat, term), 350);
+    const t = setTimeout(() => {
+      if (term.trim()) track("site_search", { search_term: term.trim() });
+      go(beat, term);
+    }, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term]);
@@ -60,7 +64,10 @@ export default function NewsControls({ beat, q }: { beat: string; q: string }) {
               variant={isActive ? "solid" : "outline"}
               color="white"
               borderColor={isActive ? "transparent" : "colorPalette.400/40"}
-              onClick={() => go(b.key, term)}
+              onClick={() => {
+                track("news_filter", { beat: b.key });
+                go(b.key, term);
+              }}
               _hover={{
                 bg: isActive ? undefined : "colorPalette.400/15",
                 borderColor: "colorPalette.400/70",
