@@ -12,14 +12,20 @@ import { track } from "@/lib/analytics";
 export default function ArticleAnalytics({
   slug,
   type,
+  author,
 }: {
   slug: string;
   type?: string;
+  author?: string | null;
 }) {
   const fired = useRef<Set<number>>(new Set());
 
   useEffect(() => {
-    track("article_view", { slug, content_type: type });
+    track("article_view", {
+      slug,
+      content_type: type,
+      author: author ?? undefined,
+    });
 
     const milestones = [25, 50, 75, 100];
     const onScroll = () => {
@@ -30,7 +36,12 @@ export default function ArticleAnalytics({
       for (const m of milestones) {
         if (pct >= m && !fired.current.has(m)) {
           fired.current.add(m);
-          track("article_read", { slug, depth: m, content_type: type });
+          track("article_read", {
+            slug,
+            depth: m,
+            content_type: type,
+            author: author ?? undefined,
+          });
         }
       }
     };
@@ -38,7 +49,7 @@ export default function ArticleAnalytics({
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll(); // catch short articles already fully visible
     return () => window.removeEventListener("scroll", onScroll);
-  }, [slug, type]);
+  }, [slug, type, author]);
 
   return null;
 }

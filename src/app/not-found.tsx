@@ -1,9 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
 import { Box, Heading, Text, Button } from "@chakra-ui/react";
 import Link from "next/link";
 
 export default function NotFound() {
+  useEffect(() => {
+    import("@/lib/analytics").then(({ track }) =>
+      track("page_not_found", {
+        path:
+          typeof window !== "undefined" ? window.location.pathname : "unknown",
+      }),
+    );
+  }, []);
+
   return (
     <Box
       minH="100vh"

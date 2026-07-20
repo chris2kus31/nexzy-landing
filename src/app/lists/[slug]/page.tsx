@@ -420,7 +420,7 @@ export default async function ListPage({
       )}
 
       <ViewPing slug={post.slug} />
-      <ArticleAnalytics slug={post.slug} type="list" />
+      <ArticleAnalytics slug={post.slug} type="list" author={post.author} />
 
       <script
         type="application/ld+json"

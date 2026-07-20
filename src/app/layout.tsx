@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Chakra_Petch } from "next/font/google";
 import { Providers } from "./providers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import WebVitals from "@/components/WebVitals";
 import Clarity from "@/components/Clarity";
 import React from "react";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
@@ -164,6 +165,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <GoogleAnalytics />
+        <WebVitals />
         <Clarity />
         <Providers>{children}</Providers>
       </body>
