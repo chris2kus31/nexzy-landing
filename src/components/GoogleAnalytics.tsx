@@ -29,7 +29,19 @@ export default function GoogleAnalytics() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}');
+          // fbclid fallback: Facebook's in-app browser strips the referrer, so
+          // FB clicks without a UTM would land as "Direct". If we see fbclid and
+          // no utm_source, attribute the session to Facebook / organic social.
+          var _q = new URLSearchParams(window.location.search);
+          if (_q.get('fbclid') && !_q.get('utm_source')) {
+            gtag('config', '${GA_MEASUREMENT_ID}', {
+              campaign_source: 'facebook',
+              campaign_medium: 'social',
+              campaign_name: 'fb_organic'
+            });
+          } else {
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          }
         `}
       </Script>
     </>
