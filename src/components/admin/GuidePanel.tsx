@@ -48,6 +48,8 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
   // Custom text wins when present; "General" sends nothing (natural guide).
   const [audience, setAudience] = useState<string>("General");
   const [audienceCustom, setAudienceCustom] = useState("");
+  // Guides use a real screenshot as the hero, so skip the AI image by default.
+  const [noImage, setNoImage] = useState(true);
   const [personas, setPersonas] = useState<WriterPersona[]>([]);
 
   const audienceValue = () =>
@@ -113,6 +115,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         format,
         author: author.trim() || undefined,
         audience: audienceValue(),
+        noImage,
       });
       setMsg({
         ok: true,
@@ -126,6 +129,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
       setAuthor("");
       setAudience("General");
       setAudienceCustom("");
+      setNoImage(true);
       onRan?.();
     } catch (e) {
       setMsg({
@@ -186,6 +190,41 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
               ? "A longer, chaptered full-playthrough — pairs well with Propose outline."
               : "A focused how-to for one boss, level, or challenge."}
           </Text>
+
+          <Box mt={3}>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Hero image
+            </Text>
+            <Flex gap={2}>
+              {(
+                [
+                  [true, "No AI image"],
+                  [false, "Generate AI image"],
+                ] as const
+              ).map(([val, label]) => {
+                const on = noImage === val;
+                return (
+                  <Button
+                    key={label}
+                    size="sm"
+                    flex="1"
+                    variant={on ? "solid" : "outline"}
+                    colorPalette={on ? "blue" : undefined}
+                    color={on ? undefined : "nexzy.white"}
+                    borderColor="whiteAlpha.300"
+                    onClick={() => setNoImage(val)}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </Flex>
+            <Text color="nexzy.gray.100" fontSize="10px" mt={1}>
+              {noImage
+                ? "Skips the AI hero — upload a real screenshot in the review screen (recommended for guides)."
+                : "Generates an AI hero image, like a news article."}
+            </Text>
+          </Box>
 
           {personas.length > 0 && (
             <Box>

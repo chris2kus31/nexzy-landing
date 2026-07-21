@@ -93,6 +93,7 @@ function MissingGameCard({
   const [searching, setSearching] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
 
   async function doSearch() {
     setSearching(true);
@@ -103,6 +104,7 @@ function MissingGameCard({
       setMsg((e as Error).message);
     } finally {
       setSearching(false);
+      setSearched(true);
     }
   }
 
@@ -239,6 +241,10 @@ function MissingGameCard({
         </HStack>
         {results.length > 0 && (
           <VStack align="stretch" mt={2} gap={1}>
+            <Text fontSize="xs" color="whiteAlpha.600">
+              These are games already in Nexzy. Tap Link to mark this missing
+              game as the same game.
+            </Text>
             {results.map((g) => (
               <Flex
                 key={g.id}
@@ -279,6 +285,12 @@ function MissingGameCard({
               </Flex>
             ))}
           </VStack>
+        )}
+        {searched && !searching && results.length === 0 && (
+          <Text mt={2} fontSize="xs" color="whiteAlpha.600">
+            No matches in your library. Import it from RAWG above, or try a
+            different search term.
+          </Text>
         )}
       </Box>
 

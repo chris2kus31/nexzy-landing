@@ -690,6 +690,8 @@ export interface GuideInput {
    * non-level-specific guide.
    */
   audience?: string;
+  /** Skip the AI hero image (guides default to a real uploaded screenshot). */
+  noImage?: boolean;
 }
 
 export async function proposeGuideOutline(

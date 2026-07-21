@@ -9,9 +9,12 @@ import { Heading, Text, Link, List, Box, Image } from "@chakra-ui/react";
  * render time we drop the whole line so a forgotten marker never ships to a
  * reader (the admin screen is where they get filled).
  */
-const SHOT_MARKER_LINE = /^>[ \t]*(?:📷[ \t]*)?SHOT:.*$/gim;
+// Deliberately requires the 📷 — this component is shared by every beat (news,
+// lists, guides, walkthroughs), so we only ever strip the guide writer's exact
+// marker, never an ordinary "> SHOT:" blockquote a news article might contain.
+const SHOT_MARKER_LINE = /^>[ \t]*📷[ \t]*SHOT:.*$/gim;
 function stripUnfilledShotMarkers(md: string): string {
-  if (!md.includes("SHOT:")) return md;
+  if (!md.includes("📷")) return md;
   return md.replace(SHOT_MARKER_LINE, "").replace(/\n{3,}/g, "\n\n");
 }
 
