@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { HiArrowRight } from "react-icons/hi";
 import { fetchWalkthrough, fetchRelatedByGame } from "@/lib/blog/api";
-import ArticleBody from "@/components/blog/ArticleBody";
+import GuideMarkdown from "@/components/guides/GuideMarkdown";
 import GameCard from "@/components/blog/GameCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
 import AppCta from "@/components/blog/AppCta";
@@ -135,7 +135,19 @@ export default async function WalkthroughOverviewPage({
         </HStack>
 
         <HStack gap={4} mb={4} flexWrap="wrap">
-          <Badge colorPalette="purple" variant="solid">
+          <Badge
+            variant="outline"
+            color="nexzy.lightBlue"
+            bg="rgba(0,123,255,0.12)"
+            borderColor="rgba(0,123,255,0.28)"
+            borderRadius="full"
+            px={3}
+            py="5px"
+            fontSize="11px"
+            fontWeight="800"
+            letterSpacing="0.14em"
+            textTransform="uppercase"
+          >
             Walkthrough
           </Badge>
           <Text color="gray.400" fontSize="sm">
@@ -169,13 +181,13 @@ export default async function WalkthroughOverviewPage({
         )}
 
         {w.bodyMarkdown && (
-          <Box color="gray.200" fontSize="lg" mb={8}>
-            <ArticleBody body={w.bodyMarkdown} location="walkthroughs" />
+          <Box mb={8}>
+            <GuideMarkdown>{w.bodyMarkdown}</GuideMarkdown>
           </Box>
         )}
 
         {firstChapter && (
-          <Button asChild size="lg" colorPalette="purple" mb={10}>
+          <Button asChild size="lg" colorPalette="blue" mb={10}>
             <NextLink
               href={`/walkthroughs/${w.slug}/${firstChapter.chapterSlug}`}
             >
@@ -210,14 +222,23 @@ export default async function WalkthroughOverviewPage({
                   }}
                 >
                   <HStack gap={3}>
-                    <Text
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      w="28px"
+                      h="28px"
+                      flexShrink={0}
+                      borderRadius="9px"
+                      bg="rgba(0,123,255,0.14)"
+                      borderWidth="1px"
+                      borderColor="rgba(0,123,255,0.34)"
                       color="nexzy.lightBlue"
-                      fontWeight="700"
-                      fontSize="sm"
-                      minW="24px"
+                      fontWeight="800"
+                      fontSize="13px"
                     >
                       {i + 1}
-                    </Text>
+                    </Box>
                     <Text color="white">{c.title}</Text>
                   </HStack>
                   <Icon color="gray.500">

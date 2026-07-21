@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import { fetchChapter } from "@/lib/blog/api";
-import Markdown from "@/components/blog/Markdown";
+import GuideMarkdown from "@/components/guides/GuideMarkdown";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
 import { authorJsonLd } from "@/lib/blog/authors";
@@ -245,7 +245,19 @@ export default async function WalkthroughChapterPage({
 
           <Box flex="1" minW={0}>
             <HStack gap={4} mb={3} flexWrap="wrap">
-              <Badge colorPalette="purple" variant="solid">
+              <Badge
+                variant="outline"
+                color="nexzy.lightBlue"
+                bg="rgba(0,123,255,0.12)"
+                borderColor="rgba(0,123,255,0.28)"
+                borderRadius="full"
+                px={3}
+                py="5px"
+                fontSize="11px"
+                fontWeight="800"
+                letterSpacing="0.14em"
+                textTransform="uppercase"
+              >
                 Walkthrough
               </Badge>
               <Text color="gray.400" fontSize="sm">
@@ -297,7 +309,7 @@ export default async function WalkthroughChapterPage({
             )}
 
             <Box color="gray.200">
-              <Markdown>{c.bodyMarkdown || ""}</Markdown>
+              <GuideMarkdown>{c.bodyMarkdown || ""}</GuideMarkdown>
             </Box>
 
             <Separator my={8} borderColor="whiteAlpha.200" />

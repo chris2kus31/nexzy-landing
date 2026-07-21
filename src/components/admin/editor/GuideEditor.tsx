@@ -38,7 +38,10 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
   const isPublished = ed.isPublished;
   if (!post || !form) return null;
 
-  const isGuide = post.type === "guide";
+  // Screenshot slots + section co-authoring apply to guides AND walkthrough
+  // chapters (both carry `## ` sections and 📷 SHOT markers). The parent
+  // walkthrough overview has neither, so the panels simply render nothing there.
+  const isGuide = post.type === "guide" || post.type === "walkthrough";
 
   return (
     <>
