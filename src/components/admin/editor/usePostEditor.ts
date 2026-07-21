@@ -85,33 +85,39 @@ export function usePostEditor(id: string) {
     reader.readAsDataURL(file);
   };
 
+  const buildUpdate = (bodyMarkdown: string) => ({
+    title: form!.title,
+    seoTitle: form!.seoTitle,
+    excerpt: form!.excerpt,
+    seoDescription: form!.seoDescription,
+    bodyMarkdown,
+    imageAlt: form!.imageAlt,
+    imageCredit: form!.imageCredit,
+    youtubeUrl: form!.youtubeUrl.trim(),
+    tags: form!.tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+    faq: form!.faq
+      .split("\n")
+      .map((line) => {
+        const idx = line.indexOf("::");
+        if (idx < 0) return null;
+        const q = line.slice(0, idx).trim();
+        const a = line.slice(idx + 2).trim();
+        return q && a ? { q, a } : null;
+      })
+      .filter((x): x is { q: string; a: string } => x !== null),
+  });
+
   const save = () =>
-    run("Saved", () =>
-      updatePost(id, {
-        title: form!.title,
-        seoTitle: form!.seoTitle,
-        excerpt: form!.excerpt,
-        seoDescription: form!.seoDescription,
-        bodyMarkdown: form!.bodyMarkdown,
-        imageAlt: form!.imageAlt,
-        imageCredit: form!.imageCredit,
-        youtubeUrl: form!.youtubeUrl.trim(),
-        tags: form!.tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        faq: form!.faq
-          .split("\n")
-          .map((line) => {
-            const idx = line.indexOf("::");
-            if (idx < 0) return null;
-            const q = line.slice(0, idx).trim();
-            const a = line.slice(idx + 2).trim();
-            return q && a ? { q, a } : null;
-          })
-          .filter((x): x is { q: string; a: string } => x !== null),
-      }),
-    );
+    run("Saved", () => updatePost(id, buildUpdate(form!.bodyMarkdown)));
+
+  // Persist a new body immediately — used by the screenshot uploader so a filled
+  // shot behaves like the hero upload (saved on the spot), not a draft edit that
+  // silently needs a manual Save.
+  const saveBody = (nextBody: string) =>
+    run("Screenshot added", () => updatePost(id, buildUpdate(nextBody)));
 
   const suggestAltText = async () => {
     setBusy("Suggesting alt");
@@ -151,6 +157,7 @@ export function usePostEditor(id: string) {
     set,
     run,
     save,
+    saveBody,
     onPickImage,
     suggestAltText,
     isPublished,

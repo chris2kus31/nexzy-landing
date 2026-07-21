@@ -19,17 +19,18 @@ function parseShotMarkers(
 /**
  * Guide-only. Lists the recommended-screenshot slots the writer left in the
  * body (`> 📷 SHOT: what to show`) and lets you drop a real screenshot into
- * each: it uploads the image and replaces that marker line with an inline
- * image. The body change is local until you Save (like every other edit).
+ * each: it uploads the image, replaces that marker line with an inline image,
+ * and SAVES immediately (via onInsert) so it behaves like the hero upload —
+ * no separate "Save edits" step needed for the shot to stick.
  */
 export default function ScreenshotSlots({
   postId,
   body,
-  onChange,
+  onInsert,
 }: {
   postId: string;
   body: string;
-  onChange: (next: string) => void;
+  onInsert: (next: string) => Promise<void>;
 }) {
   const markers = parseShotMarkers(body);
   const [uploading, setUploading] = useState<number | null>(null);
@@ -45,7 +46,7 @@ export default function ScreenshotSlots({
     fileRef.current?.click();
   };
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!file) return;
@@ -68,7 +69,7 @@ export default function ScreenshotSlots({
         if (li >= 0) {
           const alt = desc.replace(/[[\]]/g, "").trim();
           lines[li] = `![${alt}](${url})`;
-          onChange(lines.join("\n"));
+          await onInsert(lines.join("\n"));
         } else {
           setErr("That slot changed — reopen the list and try again.");
         }
@@ -99,8 +100,8 @@ export default function ScreenshotSlots({
         Recommended screenshots ({markers.length} to fill)
       </Text>
       <Text fontSize="11px" color="nexzy.gray.100" mb={3}>
-        The writer marked where a screenshot helps. Upload one and it replaces
-        the marker with an inline image in the body — Save to keep it.
+        The writer marked where a screenshot helps. Upload one and it drops into
+        the body where the marker is — saved automatically.
       </Text>
       <VStack align="stretch" gap={2}>
         {markers.map((m, i) => (

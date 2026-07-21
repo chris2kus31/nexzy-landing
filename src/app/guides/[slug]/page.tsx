@@ -20,7 +20,7 @@ import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import { slugifyTag } from "@/lib/blog/tags";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
-import ArticleBody from "@/components/blog/ArticleBody";
+import GuideBody from "@/components/guides/GuideBody";
 import AppCta from "@/components/blog/AppCta";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
@@ -229,7 +229,19 @@ export default async function GuidePage({
 
         {/* Meta row */}
         <HStack gap={4} mb={4} flexWrap="wrap">
-          <Badge colorPalette="cyan" variant="solid">
+          <Badge
+            variant="outline"
+            color="nexzy.lightBlue"
+            bg="rgba(0,123,255,0.12)"
+            borderColor="rgba(0,123,255,0.28)"
+            borderRadius="full"
+            px={3}
+            py="5px"
+            fontSize="11px"
+            fontWeight="800"
+            letterSpacing="0.14em"
+            textTransform="uppercase"
+          >
             Guide
           </Badge>
           <HStack gap={1} color="gray.400" fontSize="sm">
@@ -302,7 +314,7 @@ export default async function GuidePage({
         {post.game && <GameCard game={post.game} />}
 
         {post.bodyMarkdown && (
-          <ArticleBody body={post.bodyMarkdown} location="guides" />
+          <GuideBody body={post.bodyMarkdown} location="guides" />
         )}
 
         {post.faq && post.faq.length > 0 && (
@@ -310,10 +322,18 @@ export default async function GuidePage({
             <Heading as="h2" size="lg" color="white" mb={4}>
               Frequently asked questions
             </Heading>
-            <VStack align="stretch" gap={4}>
+            <VStack align="stretch" gap={3}>
               {post.faq.map((f, i) => (
-                <Box key={i}>
-                  <Heading as="h3" size="sm" color="white" mb={1}>
+                <Box
+                  key={i}
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.200"
+                  bg="whiteAlpha.50"
+                  borderRadius="xl"
+                  px={4}
+                  py={3.5}
+                >
+                  <Heading as="h3" size="sm" color="white" mb={1.5}>
                     {f.q}
                   </Heading>
                   <Text color="gray.300">{f.a}</Text>

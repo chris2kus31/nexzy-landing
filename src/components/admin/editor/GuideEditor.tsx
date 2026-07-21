@@ -164,7 +164,7 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
               <ScreenshotSlots
                 postId={id}
                 body={form.bodyMarkdown}
-                onChange={(next) => set("bodyMarkdown", next)}
+                onInsert={ed.saveBody}
               />
             )}
             {isGuide && !isPublished && (
