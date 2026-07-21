@@ -32,6 +32,15 @@ import {
  * GUIDE or a WALKTHROUGH (owner-only) → it lands in the Review queue.
  */
 
+// Audience / skill presets. "General" = a natural, non-level-specific guide;
+// the others pitch the whole guide at that level.
+const AUDIENCE_PRESETS = [
+  "General",
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+] as const;
+
 // Angles arrive as full sentences that repeat the game name
 // ("Beginner's guide to The Alters: Last Variable"). Strip the game name and
 // leading connectors so the chip reads as a tight label ("Beginner's guide").
@@ -63,6 +72,13 @@ function TargetCard({
   );
   const [showFocus, setShowFocus] = useState(false);
   const [focus, setFocus] = useState("");
+  // Audience: a preset or a free-text custom band. Custom wins; "General" sends
+  // nothing (a natural, non-level-specific guide).
+  const [showAudience, setShowAudience] = useState(false);
+  const [audience, setAudience] = useState<string>("General");
+  const [audienceCustom, setAudienceCustom] = useState("");
+  const audienceValue =
+    audienceCustom.trim() || (audience === "General" ? undefined : audience);
   // Guides default to an uploaded screenshot, so skip the AI hero by default.
   const [noImage, setNoImage] = useState(true);
   const game = s.payload?.game ?? s.title.replace(/^Guide:\s*/i, "");
@@ -93,6 +109,7 @@ function TargetCard({
         focus: focus.trim() || undefined,
         format,
         noImage,
+        audience: audienceValue,
       });
       onDone(s.id);
     } catch {
@@ -205,6 +222,44 @@ function TargetCard({
         />
       )}
 
+      {/* Optional audience/level — collapsed by default */}
+      {showAudience && (
+        <Box>
+          <HStack gap={1.5} wrap="wrap">
+            {AUDIENCE_PRESETS.map((a) => {
+              const on = !audienceCustom.trim() && audience === a;
+              return (
+                <Button
+                  key={a}
+                  size="xs"
+                  variant={on ? "solid" : "outline"}
+                  colorPalette={on ? "blue" : undefined}
+                  color={on ? undefined : "nexzy.white"}
+                  borderColor="whiteAlpha.300"
+                  onClick={() => {
+                    setAudience(a);
+                    setAudienceCustom("");
+                  }}
+                >
+                  {a}
+                </Button>
+              );
+            })}
+          </HStack>
+          <Input
+            mt={1.5}
+            size="sm"
+            value={audienceCustom}
+            onChange={(e) => setAudienceCustom(e.target.value)}
+            placeholder="…or a custom band, e.g. 'level 1–20'"
+            color="nexzy.white"
+            bg="whiteAlpha.50"
+            borderColor="whiteAlpha.300"
+            _placeholder={{ color: "nexzy.gray.100" }}
+          />
+        </Box>
+      )}
+
       {/* Actions */}
       <Flex
         align="center"
@@ -225,6 +280,22 @@ function TargetCard({
               disabled={!!busy}
             >
               {showFocus ? "− Focus" : "+ Focus"}
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              px={1}
+              color={audienceValue ? "nexzy.lightBlue" : "nexzy.gray.100"}
+              _hover={{ bg: "transparent", color: "nexzy.white" }}
+              onClick={() => setShowAudience((v) => !v)}
+              disabled={!!busy}
+              title="Set the audience / skill level for this guide"
+            >
+              {audienceValue
+                ? `Level: ${audienceValue}`
+                : showAudience
+                  ? "− Level"
+                  : "+ Level"}
             </Button>
             <Button
               size="xs"

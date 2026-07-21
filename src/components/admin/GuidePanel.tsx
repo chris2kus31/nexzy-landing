@@ -19,6 +19,18 @@ import {
 } from "@/lib/admin/client";
 
 /**
+ * Audience / skill presets. "General" = a natural, non-level-specific guide
+ * (the writer assumes little and defines terms). The others tell the writer to
+ * pitch the whole guide at that level and name it in the title.
+ */
+const AUDIENCE_PRESETS = [
+  "General",
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+] as const;
+
+/**
  * "Generate a guide" desk. The Editor-in-Chief gives a game + the specific
  * boss/level/challenge, and the GuideWriter builds an evergreen, SEO-structured
  * "how to beat X" guide (grounded in real strategy) → Media → the review queue.
@@ -32,7 +44,14 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
   const [format, setFormat] = useState<"guide" | "walkthrough">("guide");
   const [outline, setOutline] = useState<string[]>([]);
   const [author, setAuthor] = useState("");
+  // Audience: a preset ("General"/"Beginner"/…) or a free-text custom band.
+  // Custom text wins when present; "General" sends nothing (natural guide).
+  const [audience, setAudience] = useState<string>("General");
+  const [audienceCustom, setAudienceCustom] = useState("");
   const [personas, setPersonas] = useState<WriterPersona[]>([]);
+
+  const audienceValue = () =>
+    audienceCustom.trim() || (audience === "General" ? undefined : audience);
 
   useEffect(() => {
     listPersonas()
@@ -55,6 +74,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         instructions: instructions.trim() || undefined,
         notes: notes.trim() || undefined,
         format,
+        audience: audienceValue(),
       });
       setOutline(r.outline || []);
       if (!r.outline?.length)
@@ -92,6 +112,7 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
         outline: cleanOutline.length ? cleanOutline : undefined,
         format,
         author: author.trim() || undefined,
+        audience: audienceValue(),
       });
       setMsg({
         ok: true,
@@ -103,6 +124,8 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
       setNotes("");
       setOutline([]);
       setAuthor("");
+      setAudience("General");
+      setAudienceCustom("");
       onRan?.();
     } catch (e) {
       setMsg({
@@ -208,6 +231,51 @@ export default function GuidePanel({ onRan }: { onRan?: () => void }) {
             borderColor="whiteAlpha.300"
             _placeholder={{ color: "nexzy.gray.100" }}
           />
+        </Box>
+
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+            Audience
+          </Text>
+          <Flex gap={2} flexWrap="wrap">
+            {AUDIENCE_PRESETS.map((a) => {
+              const on = !audienceCustom.trim() && audience === a;
+              return (
+                <Button
+                  key={a}
+                  size="sm"
+                  variant={on ? "solid" : "outline"}
+                  colorPalette={on ? "blue" : undefined}
+                  color={on ? undefined : "nexzy.white"}
+                  borderColor="whiteAlpha.300"
+                  onClick={() => {
+                    setAudience(a);
+                    setAudienceCustom("");
+                  }}
+                >
+                  {a}
+                </Button>
+              );
+            })}
+          </Flex>
+          <Input
+            mt={2}
+            size="sm"
+            value={audienceCustom}
+            onChange={(e) => setAudienceCustom(e.target.value)}
+            placeholder="…or a custom level band, e.g. 'level 1–20' or 'first playthrough'"
+            color="nexzy.white"
+            bg="whiteAlpha.50"
+            borderColor="whiteAlpha.300"
+            _placeholder={{ color: "nexzy.gray.100" }}
+          />
+          <Text color="nexzy.gray.100" fontSize="10px" mt={1}>
+            {audienceCustom.trim()
+              ? `Written for “${audienceCustom.trim()}” — named in the title and the short version.`
+              : audience === "General"
+                ? "General — a natural guide that assumes little and defines terms as it goes (not level-specific)."
+                : `${audience} — pitched at this level throughout and named in the title.`}
+          </Text>
         </Box>
 
         <Box>

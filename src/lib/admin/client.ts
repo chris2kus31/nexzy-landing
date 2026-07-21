@@ -441,6 +441,8 @@ export async function approveContentGuide(
     instructions?: string;
     format?: "guide" | "walkthrough";
     noImage?: boolean;
+    /** Target audience / skill level (preset or custom band). */
+    audience?: string;
   },
 ): Promise<ContentSuggestion> {
   return handle(
@@ -682,6 +684,12 @@ export interface GuideInput {
   format?: "guide" | "walkthrough";
   /** Persona/byline to write as. Omit to use the default (Chuy). */
   author?: string;
+  /**
+   * Target audience / skill level. A preset ("Beginner", "Intermediate",
+   * "Advanced") or a custom band ("level 1-20"). Omit / "General" = a natural,
+   * non-level-specific guide.
+   */
+  audience?: string;
 }
 
 export async function proposeGuideOutline(
