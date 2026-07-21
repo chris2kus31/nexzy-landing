@@ -1,7 +1,19 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import NextLink from "next/link";
-import { Heading, Text, Link, List, Box } from "@chakra-ui/react";
+import { Heading, Text, Link, List, Box, Image } from "@chakra-ui/react";
+
+/**
+ * Unfilled guide screenshot markers (`> 📷 SHOT: ...`) — placeholders the guide
+ * writer leaves for a human to fill in the admin. If one is still unfilled at
+ * render time we drop the whole line so a forgotten marker never ships to a
+ * reader (the admin screen is where they get filled).
+ */
+const SHOT_MARKER_LINE = /^>[ \t]*(?:📷[ \t]*)?SHOT:.*$/gim;
+function stripUnfilledShotMarkers(md: string): string {
+  if (!md.includes("SHOT:")) return md;
+  return md.replace(SHOT_MARKER_LINE, "").replace(/\n{3,}/g, "\n\n");
+}
 
 /**
  * Renders article markdown into themed Chakra elements (server-rendered for
@@ -86,9 +98,37 @@ export default function Markdown({ children }: { children: string }) {
               {children}
             </Box>
           ),
+          img: ({ src, alt }) =>
+            typeof src === "string" ? (
+              <Box as="figure" my={6}>
+                <Image
+                  src={src}
+                  alt={alt || ""}
+                  w="full"
+                  maxH="560px"
+                  objectFit="contain"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.200"
+                  bg="blackAlpha.400"
+                  loading="lazy"
+                />
+                {alt ? (
+                  <Text
+                    as="figcaption"
+                    fontSize="sm"
+                    color="gray.400"
+                    textAlign="center"
+                    mt={2}
+                  >
+                    {alt}
+                  </Text>
+                ) : null}
+              </Box>
+            ) : null,
         }}
       >
-        {children}
+        {stripUnfilledShotMarkers(children)}
       </ReactMarkdown>
     </Box>
   );

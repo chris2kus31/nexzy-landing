@@ -35,6 +35,7 @@ import {
   suggestAlt,
   regeneratePost,
   uploadArticleImage,
+  uploadBodyImage,
   setFeatured,
   setPostAuthor,
   getWriterNames,
@@ -404,6 +405,148 @@ function EditorReport({
   );
 }
 
+/** Parse the writer's `> 📷 SHOT: ...` markers out of a guide body. */
+function parseShotMarkers(
+  body: string,
+): { line: number; raw: string; desc: string }[] {
+  const out: { line: number; raw: string; desc: string }[] = [];
+  body.split(/\r?\n/).forEach((line, i) => {
+    const m = /^>\s*(?:📷\s*)?SHOT:\s*(.*)$/i.exec(line.trim());
+    if (m) out.push({ line: i, raw: line, desc: m[1].trim() });
+  });
+  return out;
+}
+
+/**
+ * Guide-only. Lists the recommended-screenshot slots the writer left in the
+ * body (`> 📷 SHOT: what to show`) and lets you drop a real screenshot into
+ * each: it uploads the image and replaces that marker line with an inline
+ * image. The body change is local until you Save (like every other edit).
+ */
+function ScreenshotSlots({
+  postId,
+  body,
+  onChange,
+}: {
+  postId: string;
+  body: string;
+  onChange: (next: string) => void;
+}) {
+  const markers = parseShotMarkers(body);
+  const [uploading, setUploading] = useState<number | null>(null);
+  const [err, setErr] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const activeRaw = useRef<string>("");
+  const activeDesc = useRef<string>("");
+
+  const pick = (raw: string, desc: string) => {
+    activeRaw.current = raw;
+    activeDesc.current = desc;
+    setErr("");
+    fileRef.current?.click();
+  };
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setErr("Image is too large (max 10 MB).");
+      return;
+    }
+    const raw = activeRaw.current;
+    const desc = activeDesc.current;
+    setUploading(markers.findIndex((m) => m.raw === raw));
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const { url } = await uploadBodyImage(
+          postId,
+          String(reader.result || ""),
+        );
+        const lines = body.split(/\r?\n/);
+        const li = lines.findIndex((l) => l.trim() === raw.trim());
+        if (li >= 0) {
+          const alt = desc.replace(/[[\]]/g, "").trim();
+          lines[li] = `![${alt}](${url})`;
+          onChange(lines.join("\n"));
+        } else {
+          setErr("That slot changed — reopen the list and try again.");
+        }
+      } catch (e2) {
+        setErr((e2 as Error)?.message || "Upload failed.");
+      } finally {
+        setUploading(null);
+      }
+    };
+    reader.onerror = () => {
+      setErr("Could not read that file.");
+      setUploading(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (markers.length === 0) return null;
+
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="lg"
+      p={3}
+    >
+      <Text {...labelProps}>
+        Recommended screenshots ({markers.length} to fill)
+      </Text>
+      <Text fontSize="11px" color="nexzy.gray.100" mb={3}>
+        The writer marked where a screenshot helps. Upload one and it replaces
+        the marker with an inline image in the body — Save to keep it.
+      </Text>
+      <VStack align="stretch" gap={2}>
+        {markers.map((m, i) => (
+          <Flex
+            key={`${m.line}-${i}`}
+            align="center"
+            justify="space-between"
+            gap={3}
+            bg="whiteAlpha.50"
+            borderRadius="md"
+            px={3}
+            py={2}
+          >
+            <Text fontSize="sm" color="nexzy.white" lineClamp={2}>
+              📷 {m.desc || "(no description)"}
+            </Text>
+            <Button
+              size="xs"
+              colorPalette="blue"
+              flexShrink={0}
+              loading={uploading === i}
+              loadingText="Uploading…"
+              onClick={() => pick(m.raw, m.desc)}
+            >
+              ↑ Upload
+            </Button>
+          </Flex>
+        ))}
+      </VStack>
+      {err && (
+        <Text mt={2} fontSize="xs" color="red.300">
+          {err}
+        </Text>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={onFile}
+      />
+    </Box>
+  );
+}
+
 function EditorContent({ id }: { id: string }) {
   const router = useRouter();
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -759,6 +902,13 @@ function EditorContent({ id }: { id: string }) {
                 />
               )}
             </Box>
+            {post.type === "guide" && !isPublished && (
+              <ScreenshotSlots
+                postId={id}
+                body={form.bodyMarkdown}
+                onChange={(next) => set("bodyMarkdown", next)}
+              />
+            )}
             {post.type === "guide" && !isPublished && (
               <SectionEditor
                 postId={id}

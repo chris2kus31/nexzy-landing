@@ -805,6 +805,24 @@ export async function uploadArticleImage(
   );
 }
 
+/**
+ * Upload an inline body image (a guide screenshot) → returns its public URL.
+ * Does NOT change the hero; the caller embeds the URL into the markdown body
+ * (used to fill the writer's `> 📷 SHOT:` slots). Persist the body via updatePost.
+ */
+export async function uploadBodyImage(
+  id: string,
+  dataUrl: string,
+): Promise<{ url: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/body-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    }),
+  );
+}
+
 /** Regenerate a draft's excerpt, body, or the whole article from its brief.
  *  Optional author rewrites the draft in that persona's voice (Chuy/Eli). */
 export async function regenerateSection(
