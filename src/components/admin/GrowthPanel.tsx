@@ -18,6 +18,7 @@ import {
   getGrowthBrief,
   getGrowthBriefs,
   runGrowth,
+  getGrowthStatus,
   getGrowthRecommendations,
   markRecommendationDone,
   dismissRecommendation,
@@ -323,8 +324,25 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
     setRunning(true);
     setErr(null);
     try {
+      // Kicks off a BACKGROUND run and returns immediately (no long-held
+      // request → no 502). Then poll the status until it finishes, and load
+      // the fresh brief.
       await runGrowth();
       setSelectedDay(null);
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const startedAt = Date.now();
+      const TIMEOUT_MS = 4 * 60 * 1000; // runs are typically 30s-2min
+      await sleep(1500);
+      while (Date.now() - startedAt < TIMEOUT_MS) {
+        let running = false;
+        try {
+          running = (await getGrowthStatus()).running;
+        } catch {
+          break; // status blip — stop polling and just load what we have
+        }
+        if (!running) break;
+        await sleep(4000);
+      }
       await load();
       await refreshList();
     } catch (e) {

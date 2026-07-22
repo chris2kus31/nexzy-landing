@@ -22,6 +22,7 @@ import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import GrowthPanel from "@/components/admin/GrowthPanel";
 import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
+import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
@@ -54,7 +55,8 @@ type Tab =
   | "ai-visibility"
   | "games"
   | "writers"
-  | "tools";
+  | "tools"
+  | "notify";
 
 function StatCard({
   label,
@@ -312,6 +314,13 @@ function AdminContent() {
               onClick={() => setTab("tools")}
             />
           )}
+          {isOwner && (
+            <TabButton
+              label="Notify"
+              active={tab === "notify"}
+              onClick={() => setTab("notify")}
+            />
+          )}
         </HStack>
         {(tab === "queue" || tab === "published") && (
           <Button
@@ -411,6 +420,8 @@ function AdminContent() {
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
 
       {tab === "writers" && isOwner && <WritersPanel />}
+
+      {tab === "notify" && isOwner && <BroadcastPanel />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>

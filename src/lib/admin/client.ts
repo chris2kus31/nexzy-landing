@@ -1020,11 +1020,17 @@ export async function getGrowthMetrics(
 
 export async function runGrowth(): Promise<{
   ok: boolean;
-  day: string | null;
+  started?: boolean;
+  alreadyRunning?: boolean;
 }> {
   return handle(
     await fetch("/api/newsroom/admin/growth/run", { method: "POST" }),
   );
+}
+
+/** Whether a background growth run is currently in flight. */
+export async function getGrowthStatus(): Promise<{ running: boolean }> {
+  return handle(await fetch("/api/newsroom/admin/growth/status"));
 }
 
 export type RecommendationStatus = "open" | "done" | "dismissed";
@@ -1198,6 +1204,71 @@ export async function skipUnresolvedGame(
   return handle(
     await fetch(`/api/newsroom/admin/games/unresolved/${id}/skip`, {
       method: "POST",
+    }),
+  );
+}
+
+// --- Engagement push broadcasts (owner-only) ---
+
+export type AdminNotifType = "system-announcement" | "engagement";
+
+export type AdminNotifDestKind =
+  | "article"
+  | "game"
+  | "coinStore"
+  | "library"
+  | "wishlist"
+  | "forum"
+  | "games"
+  | "news"
+  | "url";
+
+export type AdminNotifDest = {
+  kind: AdminNotifDestKind;
+  postId?: string;
+  gameId?: string;
+  gameName?: string;
+  url?: string;
+};
+
+export async function getNotificationAudience(
+  type: AdminNotifType = "engagement",
+): Promise<{ count: number }> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/notifications/audience?type=${encodeURIComponent(
+        type,
+      )}`,
+    ),
+  );
+}
+
+export async function sendNotificationTest(payload: {
+  email: string;
+  title: string;
+  body: string;
+  dest?: AdminNotifDest;
+}): Promise<{ ok: boolean; reason?: string; devices?: number }> {
+  return handle(
+    await fetch("/api/newsroom/admin/notifications/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function sendNotificationBroadcast(payload: {
+  type: AdminNotifType;
+  title: string;
+  body: string;
+  dest?: AdminNotifDest;
+}): Promise<{ queued: boolean; recipients: number }> {
+  return handle(
+    await fetch("/api/newsroom/admin/notifications/broadcast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     }),
   );
 }
