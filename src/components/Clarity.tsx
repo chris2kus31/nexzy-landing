@@ -7,12 +7,15 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { useIsProdHost } from "@/lib/useProdHost";
 
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
 export default function Clarity() {
   const pathname = usePathname();
+  const isProdHost = useIsProdHost();
   if (!CLARITY_ID) return null; // not configured yet — no-op
+  if (!isProdHost) return null; // never load on Netlify previews / localhost
   // Only load analytics in production — keeps local dev (next dev) out of the prod GA/Clarity property.
   if (process.env.NODE_ENV !== "production") return null;
   if (pathname?.startsWith("/admin")) return null; // never record admin

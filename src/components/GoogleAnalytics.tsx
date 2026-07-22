@@ -1,22 +1,50 @@
 // ============================================
 // FILE: components/GoogleAnalytics.tsx
 // Google Analytics 4 with your Measurement ID.
-// Skipped entirely on /admin routes so editor/admin activity is never counted.
+// Admin is excluded via GA's official kill-switch (window['ga-disable-<ID>']),
+// which survives SPA navigation — returning null alone does NOT, because gtag
+// stays resident and Enhanced Measurement keeps firing page_views on client
+// navigation. The flag suppresses the auto page_view AND every custom event.
 // ============================================
 "use client";
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useIsProdHost } from "@/lib/useProdHost";
 
 const GA_MEASUREMENT_ID = "G-4CMMLEF6XB"; // Your actual GA4 ID
+const DISABLE_KEY = `ga-disable-${GA_MEASUREMENT_ID}`;
 
 export default function GoogleAnalytics() {
   const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin") ?? false;
+  const isProdHost = useIsProdHost();
 
-  // Don't load or fire GA anywhere under /admin (login, queue, editor, etc.).
-  // Only load analytics in production — keeps local dev (next dev) out of the prod GA/Clarity property.
+  // Toggle GA's kill-switch on EVERY render — including the render triggered by
+  // navigating into /admin — so gtag (which stays loaded across SPA routes)
+  // suppresses all hits there: the automatic history page_view and any custom
+  // event. Set in the render body (earliest hook we have, before gtag's history
+  // listener fires) and re-affirmed in an effect. Belt-and-suspenders with the
+  // GA4 internal-traffic IP filter.
+  if (typeof window !== "undefined") {
+    (window as unknown as Record<string, boolean>)[DISABLE_KEY] = isAdmin;
+  }
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    (window as unknown as Record<string, boolean>)[DISABLE_KEY] = isAdmin;
+    // Microsoft Clarity stays resident too — stop recording on admin.
+    const clarity = (
+      window as unknown as { clarity?: (...args: unknown[]) => void }
+    ).clarity;
+    if (isAdmin && typeof clarity === "function") clarity("stop");
+  }, [isAdmin]);
+
+  // Only load in production, on the real domain (not Netlify previews), and
+  // never load the tag on a direct /admin entry.
   if (process.env.NODE_ENV !== "production") return null;
-  if (pathname?.startsWith("/admin")) return null;
+  if (!isProdHost) return null;
+  if (isAdmin) return null;
 
   return (
     <>
@@ -28,6 +56,9 @@ export default function GoogleAnalytics() {
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
+          // Respect the kill-switch from the very first hit (e.g. a hard load
+          // that resolves under /admin before React hydrates).
+          window['${DISABLE_KEY}'] = location.pathname.indexOf('/admin') === 0;
           gtag('js', new Date());
           // fbclid fallback: Facebook's in-app browser strips the referrer, so
           // FB clicks without a UTM would land as "Direct". If we see fbclid and
