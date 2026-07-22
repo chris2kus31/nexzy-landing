@@ -1202,6 +1202,40 @@ export async function skipUnresolvedGame(
   );
 }
 
+// --- Manual game creation (Steam Tier 3 / any not-in-RAWG game) ---
+
+export interface ManualGamePayload {
+  refId?: string; // Missing-Games ref this fulfils (closed + aliased on success)
+  name: string;
+  slug?: string;
+  description?: string;
+  released?: string; // YYYY-MM-DD
+  website?: string;
+  esrbRating?: string;
+  isMature?: boolean;
+  coverImage?: string; // https URL or base64 data URL
+  screenshots?: string[]; // https URLs or base64 data URLs
+  genreSlugs?: string[];
+  platformSlugs?: string[];
+  storeSlugs?: string[];
+  tagSlugs?: string[];
+}
+
+/** Create a not-in-RAWG catalog game by hand (owner-only). */
+export async function createManualGame(payload: ManualGamePayload): Promise<{
+  ok: boolean;
+  game?: GameLite | null;
+  error?: string;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/manual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
 // --- Post <-> game links + backfills (Phase 4) ---
 
 export interface PostGameLink {
