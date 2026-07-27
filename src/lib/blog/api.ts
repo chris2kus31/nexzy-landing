@@ -346,6 +346,17 @@ export interface GameHubItem {
   publishedAt: string | null;
   path: string;
 }
+export interface GameHubVideo {
+  id: string | null;
+  source: "nexzy" | "external" | "article" | "rawg";
+  title: string | null;
+  youtubeId: string | null;
+  youtubeUrl: string | null;
+  thumbnailUrl: string | null;
+  platformLinks: Record<string, string> | null;
+  isShort: boolean;
+  postSlug?: string | null;
+}
 export interface GameHub {
   game: {
     id: string;
@@ -366,6 +377,7 @@ export interface GameHub {
     walkthroughs: GameHubItem[];
     lists: GameHubItem[];
   };
+  videos: GameHubVideo[];
   counts: {
     guides: number;
     walkthroughs: number;

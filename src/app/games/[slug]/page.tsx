@@ -8,6 +8,7 @@ import {
   Heading,
   Text,
   HStack,
+  VStack,
   Badge,
   Link,
   SimpleGrid,
@@ -23,7 +24,11 @@ import {
   FaGamepad,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
-import { fetchGameHub, type GameHubItem } from "@/lib/blog/api";
+import {
+  fetchGameHub,
+  type GameHubItem,
+  type GameHubVideo,
+} from "@/lib/blog/api";
 import AppCta from "@/components/blog/AppCta";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import GameViewPing from "@/components/games/GameViewPing";
@@ -170,44 +175,81 @@ function CardGrid({ items }: { items: GameHubItem[] }) {
 }
 
 function MediaPanel({
-  embed,
+  videos,
   shots,
   name,
 }: {
-  embed: string | null;
+  videos: GameHubVideo[];
   shots: string[];
   name: string;
 }) {
   return (
     <Box>
-      {embed && (
-        <Box
-          position="relative"
-          w="full"
-          maxW="3xl"
-          aspectRatio={16 / 9}
-          borderRadius="xl"
-          overflow="hidden"
-          bg="black"
-          mb={shots.length ? 6 : 0}
-          border="1px solid"
-          borderColor="whiteAlpha.100"
-        >
-          <iframe
-            src={embed}
-            title={`${name} — trailer`}
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              border: 0,
-            }}
-          />
-        </Box>
+      {videos.length > 0 && (
+        <VStack align="stretch" gap={6} mb={shots.length ? 8 : 0}>
+          {videos.map((v, i) => {
+            const embed = youtubeEmbedUrl(v.youtubeUrl);
+            const also: { label: string; href: string }[] = [];
+            if (v.platformLinks?.tiktok)
+              also.push({ label: "TikTok", href: v.platformLinks.tiktok });
+            if (v.platformLinks?.reels)
+              also.push({ label: "Reels", href: v.platformLinks.reels });
+            return (
+              <Box key={v.id ?? v.youtubeId ?? i}>
+                {embed && (
+                  <Box
+                    position="relative"
+                    w="full"
+                    maxW={v.isShort ? "sm" : "3xl"}
+                    mx={v.isShort ? "auto" : undefined}
+                    aspectRatio={v.isShort ? 9 / 16 : 16 / 9}
+                    borderRadius="xl"
+                    overflow="hidden"
+                    bg="black"
+                    border="1px solid"
+                    borderColor="whiteAlpha.100"
+                  >
+                    <iframe
+                      src={embed}
+                      title={v.title ?? `${name} video`}
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        border: 0,
+                      }}
+                    />
+                  </Box>
+                )}
+                {(v.title || also.length > 0) && (
+                  <HStack gap={3} mt={2} flexWrap="wrap">
+                    {v.title && (
+                      <Text color="gray.300" fontSize="sm" lineClamp={1}>
+                        {v.title}
+                      </Text>
+                    )}
+                    {also.map((a) => (
+                      <Link
+                        key={a.label}
+                        href={a.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="nexzy.lightBlue"
+                        fontSize="sm"
+                      >
+                        Also on {a.label}
+                      </Link>
+                    ))}
+                  </HStack>
+                )}
+              </Box>
+            );
+          })}
+        </VStack>
       )}
       {shots.length > 0 && (
         <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap={4}>
@@ -258,7 +300,8 @@ export default async function GameHubPage({
   const desc = game.description ? stripHtml(game.description) : "";
   const embed = youtubeEmbedUrl(game.clipUrl);
   const shots = game.screenshots ?? [];
-  const hasMedia = !!embed || shots.length > 0;
+  const videos = hub.videos ?? [];
+  const hasMedia = videos.length > 0 || shots.length > 0;
 
   const all: GameHubItem[] = [
     ...content.walkthroughs,
@@ -358,7 +401,7 @@ export default async function GameHubPage({
       : {}),
     ...(hasMedia
       ? {
-          media: <MediaPanel embed={embed} shots={shots} name={game.name} />,
+          media: <MediaPanel videos={videos} shots={shots} name={game.name} />,
         }
       : {}),
     ...Object.fromEntries(
