@@ -20,6 +20,7 @@ import {
   suggestContentNow,
   skipContentSuggestion,
   useContentSuggestion,
+  produceContentVideo,
   approveContentGuide,
   regenerateContentCard,
   updateContentScript,
@@ -249,9 +250,28 @@ function SuggestionCard({
   onBudget: () => void;
   writers: string[];
 }) {
-  const [busy, setBusy] = useState<"skip" | "use" | "script" | null>(null);
+  const [busy, setBusy] = useState<
+    "skip" | "use" | "script" | "produce" | null
+  >(null);
   const [gen, setGen] = useState<ContentSuggestion | null>(null);
   const view = gen ?? s;
+  const fld = {
+    size: "sm" as const,
+    bg: "whiteAlpha.50",
+    color: "nexzy.white",
+    borderColor: "whiteAlpha.300",
+    _placeholder: { color: "whiteAlpha.500" },
+  };
+  const [showProduce, setShowProduce] = useState(false);
+  const [produced, setProduced] = useState<{
+    videoSlug: string;
+    gameLinked: boolean;
+  } | null>(null);
+  const [pTitle, setPTitle] = useState("");
+  const [pYoutube, setPYoutube] = useState("");
+  const [pTiktok, setPTiktok] = useState("");
+  const [pReels, setPReels] = useState("");
+  const [pThumb, setPThumb] = useState("");
   const platforms = view.payload?.platforms;
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
@@ -300,6 +320,30 @@ function SuggestionCard({
     }
   };
 
+  const openProduce = () => {
+    setPTitle(view.payload?.platforms?.youtube?.title ?? s.title);
+    setShowProduce((v) => !v);
+  };
+  const produce = async () => {
+    setBusy("produce");
+    try {
+      const r = await produceContentVideo(s.id, {
+        title: pTitle.trim() || undefined,
+        youtubeUrl: pYoutube.trim() || undefined,
+        tiktokUrl: pTiktok.trim() || undefined,
+        reelsUrl: pReels.trim() || undefined,
+        thumbnailUrl: pThumb.trim() || undefined,
+      });
+      setProduced({ videoSlug: r.videoSlug, gameLinked: r.gameLinked });
+      setShowProduce(false);
+      onBudget();
+    } catch {
+      /* leave the form open on failure */
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <Box
       bg="whiteAlpha.50"
@@ -324,6 +368,16 @@ function SuggestionCard({
           </Text>
         </HStack>
         <HStack gap={1}>
+          {s.kind === "video" && !produced && (
+            <Button
+              size="xs"
+              colorPalette="green"
+              variant="solid"
+              onClick={openProduce}
+            >
+              🎬 Produce
+            </Button>
+          )}
           <Button
             size="xs"
             colorPalette="green"
@@ -347,6 +401,105 @@ function SuggestionCard({
           </Button>
         </HStack>
       </Flex>
+
+      {produced && (
+        <Box
+          mb={3}
+          p={3}
+          borderRadius="lg"
+          bg="green.500/10"
+          border="1px solid"
+          borderColor="green.400/40"
+        >
+          <Text fontSize="sm" color="green.200" mb={1}>
+            ✓ Published to /videos
+            {produced.gameLinked
+              ? " and linked to the game."
+              : " — no game resolved; attach one in the Videos tab."}
+          </Text>
+          <Link
+            href={`/videos/${produced.videoSlug}`}
+            target="_blank"
+            color="nexzy.lightBlue"
+            fontSize="sm"
+          >
+            View video →
+          </Link>
+        </Box>
+      )}
+
+      {s.kind === "video" && showProduce && !produced && (
+        <Box
+          mb={3}
+          p={3}
+          borderWidth="1px"
+          borderColor="green.400/40"
+          borderRadius="lg"
+          bg="green.500/5"
+        >
+          <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
+            🎬 Publish this short to /videos
+          </Text>
+          <VStack align="stretch" gap={2}>
+            <Input
+              {...fld}
+              value={pTitle}
+              onChange={(e) => setPTitle(e.target.value)}
+              placeholder="Title (prefilled from the YouTube kit)"
+            />
+            <Input
+              {...fld}
+              value={pYoutube}
+              onChange={(e) => setPYoutube(e.target.value)}
+              placeholder="YouTube URL (plays inline)"
+            />
+            <HStack gap={2}>
+              <Input
+                {...fld}
+                value={pTiktok}
+                onChange={(e) => setPTiktok(e.target.value)}
+                placeholder="TikTok URL (optional)"
+              />
+              <Input
+                {...fld}
+                value={pReels}
+                onChange={(e) => setPReels(e.target.value)}
+                placeholder="Reels URL (optional)"
+              />
+            </HStack>
+            <Input
+              {...fld}
+              value={pThumb}
+              onChange={(e) => setPThumb(e.target.value)}
+              placeholder="Thumbnail URL (optional — YouTube auto-derives)"
+            />
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                colorPalette="green"
+                onClick={produce}
+                loading={busy === "produce"}
+                loadingText="Publishing…"
+                disabled={!pYoutube.trim() && !pTiktok.trim() && !pReels.trim()}
+              >
+                Publish to /videos
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                color="nexzy.gray.100"
+                onClick={() => setShowProduce(false)}
+              >
+                Cancel
+              </Button>
+            </HStack>
+            <Text fontSize="xs" color="whiteAlpha.500">
+              Creates a Nexzy video linked to this article&rsquo;s game (Nexzy
+              videos rank first). At least one platform URL is required.
+            </Text>
+          </VStack>
+        </Box>
+      )}
 
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>

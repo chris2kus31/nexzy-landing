@@ -431,6 +431,29 @@ export async function useContentSuggestion(
 }
 
 /**
+ * Mark a video card "produced": create a real Nexzy video from it and attach it
+ * to the article's game. Flows into the /videos hub + that game's Media tab.
+ */
+export async function produceContentVideo(
+  id: string,
+  payload: {
+    youtubeUrl?: string;
+    tiktokUrl?: string;
+    reelsUrl?: string;
+    thumbnailUrl?: string;
+    title?: string;
+  },
+): Promise<{ videoId: string; videoSlug: string; gameLinked: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/produce`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+/**
  * Approve a guide LEAD → generate the real guide (lands in the review queue).
  * Optional focus/instructions steer the angle before generating.
  */
