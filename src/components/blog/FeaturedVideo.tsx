@@ -1,4 +1,5 @@
 import NextLink from "next/link";
+import TrackedLink from "@/components/TrackedLink";
 import NextImage from "next/image";
 import {
   Box,
@@ -12,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { FaPlay, FaTiktok, FaInstagram, FaYoutube } from "react-icons/fa6";
 import { HiArrowRight } from "react-icons/hi";
-import { youtubeEmbedUrl } from "@/lib/blog/youtube";
+import VideoPlayer from "@/components/blog/VideoPlayer";
 import type { PublicVideo } from "@/lib/blog/api";
 
 /**
@@ -24,42 +25,33 @@ import type { PublicVideo } from "@/lib/blog/api";
 export default function FeaturedVideo({
   video,
   play = false,
+  from = "featured",
 }: {
   video: PublicVideo;
   play?: boolean;
+  from?: string;
 }) {
   const short = video.isShort;
-  const embed = youtubeEmbedUrl(video.youtubeUrl);
   const links = video.platformLinks ?? {};
   const href = `/videos/${video.slug}`;
 
   const media =
-    play && embed ? (
-      <Box
-        position="relative"
-        w="full"
-        aspectRatio={short ? 9 / 16 : 16 / 9}
-        borderRadius="2xl"
-        overflow="hidden"
-        bg="black"
-      >
-        <iframe
-          src={embed}
-          title={video.title}
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            border: 0,
-          }}
-        />
-      </Box>
+    play && video.youtubeId ? (
+      <VideoPlayer
+        videoId={video.youtubeId}
+        slug={video.slug}
+        source={video.source}
+        isShort={short}
+        gameSlug={video.game?.slug ?? null}
+        from="featured"
+      />
     ) : (
-      <NextLink href={href} style={{ display: "block" }}>
+      <TrackedLink
+        href={href}
+        event="content_click"
+        params={{ content_type: "video", slug: video.slug, from }}
+        style={{ display: "block" }}
+      >
         <Box
           className="group"
           position="relative"
@@ -113,7 +105,7 @@ export default function FeaturedVideo({
             </Box>
           </Box>
         </Box>
-      </NextLink>
+      </TrackedLink>
     );
 
   return (

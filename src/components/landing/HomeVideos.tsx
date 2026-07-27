@@ -61,7 +61,7 @@ export default function HomeVideos({ items }: { items: PublicVideo[] }) {
 
         {/* Featured spotlight */}
         <Box mb={{ base: 8, md: 10 }}>
-          <FeaturedVideo video={hero} />
+          <FeaturedVideo video={hero} from="home_featured" />
         </Box>
 
         {/* Horizontal Shorts shelf */}

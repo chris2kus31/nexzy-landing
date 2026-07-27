@@ -46,8 +46,7 @@ export default function PlatformLinks({
               target="_blank"
               rel="noopener noreferrer"
               onClick={() =>
-                track("content_click", {
-                  content_type: "video",
+                track("video_platform_click", {
                   platform,
                   slug,
                   from: "video_detail",

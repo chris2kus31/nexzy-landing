@@ -17,6 +17,7 @@ import { slugifyTag } from "@/lib/blog/tags";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import AppCta from "@/components/blog/AppCta";
 import ShareRow from "@/components/blog/ShareRow";
+import VideoPlayer from "@/components/blog/VideoPlayer";
 import VideoTile from "@/components/blog/VideoTile";
 import PlatformLinks from "@/components/blog/PlatformLinks";
 import VideoViewPing from "@/components/blog/VideoViewPing";
@@ -185,32 +186,22 @@ export default async function VideoPage({
           </Text>
         )}
 
-        {/* Inline player — 9:16 for a Short, 16:9 for a regular video. Only
-            YouTube plays inline; other platforms are "also on" links below. */}
-        {videoEmbed && (
+        {/* Inline player — 9:16 for a Short, 16:9 otherwise. YouTube plays
+            inline (with engagement analytics); other platforms are "also on"
+            links below. */}
+        {video.youtubeId && (
           <Box
-            position="relative"
             mx={video.isShort ? "auto" : undefined}
             w={video.isShort ? { base: "full", sm: "340px" } : "full"}
-            aspectRatio={video.isShort ? 9 / 16 : 16 / 9}
-            borderRadius="2xl"
-            overflow="hidden"
-            bg="black"
             mb={6}
           >
-            <iframe
-              src={videoEmbed}
-              title={video.title}
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                border: 0,
-              }}
+            <VideoPlayer
+              videoId={video.youtubeId}
+              slug={video.slug}
+              source={video.source}
+              isShort={video.isShort}
+              gameSlug={video.game?.slug ?? null}
+              from="video_detail"
             />
           </Box>
         )}
