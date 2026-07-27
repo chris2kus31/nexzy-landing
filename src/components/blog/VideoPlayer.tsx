@@ -92,10 +92,10 @@ export default function VideoPlayer({
         const cur = p.getCurrentTime() || 0;
         if (dur <= 0) return;
         const pct = (cur / dur) * 100;
-        for (const m of [25, 50, 75, 90]) {
+        for (const m of [25, 50, 75]) {
           if (pct >= m && !milestones.current.has(m)) {
             milestones.current.add(m);
-            track("video_progress", { ...base, percent: m });
+            track("video_progress", { ...base, depth: m });
           }
         }
       }, 1000);
