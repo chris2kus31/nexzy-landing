@@ -8,7 +8,6 @@ import {
   Heading,
   Text,
   HStack,
-  VStack,
   Badge,
   Link,
   SimpleGrid,
@@ -24,15 +23,12 @@ import {
   FaGamepad,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
-import {
-  fetchGameHub,
-  type GameHubItem,
-  type GameHubVideo,
-} from "@/lib/blog/api";
+import { fetchGameHub, type GameHubItem } from "@/lib/blog/api";
 import AppCta from "@/components/blog/AppCta";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import GameViewPing from "@/components/games/GameViewPing";
 import HubTabs, { type HubTab } from "@/components/games/HubTabs";
+import GameMedia from "@/components/games/GameMedia";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
 
@@ -174,111 +170,6 @@ function CardGrid({ items }: { items: GameHubItem[] }) {
   );
 }
 
-function MediaPanel({
-  videos,
-  shots,
-  name,
-}: {
-  videos: GameHubVideo[];
-  shots: string[];
-  name: string;
-}) {
-  return (
-    <Box>
-      {videos.length > 0 && (
-        <VStack align="stretch" gap={6} mb={shots.length ? 8 : 0}>
-          {videos.map((v, i) => {
-            const embed = youtubeEmbedUrl(v.youtubeUrl);
-            const also: { label: string; href: string }[] = [];
-            if (v.platformLinks?.tiktok)
-              also.push({ label: "TikTok", href: v.platformLinks.tiktok });
-            if (v.platformLinks?.reels)
-              also.push({ label: "Reels", href: v.platformLinks.reels });
-            return (
-              <Box key={v.id ?? v.youtubeId ?? i}>
-                {embed && (
-                  <Box
-                    position="relative"
-                    w="full"
-                    maxW={v.isShort ? "sm" : "3xl"}
-                    mx={v.isShort ? "auto" : undefined}
-                    aspectRatio={v.isShort ? 9 / 16 : 16 / 9}
-                    borderRadius="xl"
-                    overflow="hidden"
-                    bg="black"
-                    border="1px solid"
-                    borderColor="whiteAlpha.100"
-                  >
-                    <iframe
-                      src={embed}
-                      title={v.title ?? `${name} video`}
-                      loading="lazy"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        border: 0,
-                      }}
-                    />
-                  </Box>
-                )}
-                {(v.title || also.length > 0) && (
-                  <HStack gap={3} mt={2} flexWrap="wrap">
-                    {v.title && (
-                      <Text color="gray.300" fontSize="sm" lineClamp={1}>
-                        {v.title}
-                      </Text>
-                    )}
-                    {also.map((a) => (
-                      <Link
-                        key={a.label}
-                        href={a.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="nexzy.lightBlue"
-                        fontSize="sm"
-                      >
-                        Also on {a.label}
-                      </Link>
-                    ))}
-                  </HStack>
-                )}
-              </Box>
-            );
-          })}
-        </VStack>
-      )}
-      {shots.length > 0 && (
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap={4}>
-          {shots.map((src, i) => (
-            <Box
-              key={i}
-              position="relative"
-              aspectRatio={16 / 9}
-              borderRadius="lg"
-              overflow="hidden"
-              border="1px solid"
-              borderColor="whiteAlpha.100"
-              bg="whiteAlpha.50"
-            >
-              <NextImage
-                src={src}
-                alt={`${name} screenshot ${i + 1}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 340px"
-                style={{ objectFit: "cover" }}
-              />
-            </Box>
-          ))}
-        </SimpleGrid>
-      )}
-    </Box>
-  );
-}
-
 export default async function GameHubPage({
   params,
 }: {
@@ -401,7 +292,7 @@ export default async function GameHubPage({
       : {}),
     ...(hasMedia
       ? {
-          media: <MediaPanel videos={videos} shots={shots} name={game.name} />,
+          media: <GameMedia videos={videos} shots={shots} name={game.name} />,
         }
       : {}),
     ...Object.fromEntries(
