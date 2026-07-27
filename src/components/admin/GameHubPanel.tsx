@@ -81,6 +81,7 @@ export default function GameHubPanel() {
   const [reels, setReels] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
+  const [featured, setFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function search() {
@@ -123,6 +124,7 @@ export default function GameHubPanel() {
     setReels("");
     setThumbnailUrl("");
     setSource("nexzy");
+    setFeatured(false);
   }
 
   function cancelEdit() {
@@ -139,6 +141,7 @@ export default function GameHubPanel() {
     setReels(v.platformLinks?.reels ?? "");
     setThumbnailUrl(v.thumbnailUrl ?? "");
     setSource(v.source === "external" ? "external" : "nexzy");
+    setFeatured(!!v.featured);
     setMsg(null);
     if (typeof window !== "undefined")
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -158,6 +161,7 @@ export default function GameHubPanel() {
         platformLinks,
         thumbnailUrl: thumbnailUrl.trim(),
         source,
+        featured,
       };
       if (editingId) {
         await updateVideo(editingId, payload);
@@ -375,6 +379,11 @@ export default function GameHubPanel() {
                         >
                           {v.source}
                         </Badge>
+                        {v.featured && (
+                          <Badge colorPalette="yellow" variant="solid">
+                            ★ Featured
+                          </Badge>
+                        )}
                         {v.isShort && (
                           <Badge colorPalette="pink" variant="subtle">
                             Short
@@ -496,6 +505,21 @@ export default function GameHubPanel() {
                 Nexzy-made = a video you produced (ranks first in the app).
                 External = a hand-picked third-party YouTube video.
               </Text>
+              <HStack gap={2}>
+                <Text fontSize="xs" color="nexzy.gray.100">
+                  Featured:
+                </Text>
+                <Button
+                  size="xs"
+                  onClick={() => setFeatured((f) => !f)}
+                  {...(featured ? primaryBtn : outlineBtn)}
+                >
+                  {featured ? "★ Featured" : "Not featured"}
+                </Button>
+                <Text fontSize="xs" color="whiteAlpha.500">
+                  Featured videos headline the /videos hub &amp; home rail.
+                </Text>
+              </HStack>
               <HStack gap={2}>
                 <Button
                   size="sm"

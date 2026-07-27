@@ -9,6 +9,7 @@ import Navigation from "@/components/landing/Navigation";
 import Hero from "@/components/landing/Hero";
 import HomeNewsroom from "@/components/landing/HomeNewsroom";
 import HomeLibrary from "@/components/landing/HomeLibrary";
+import HomeVideos from "@/components/landing/HomeVideos";
 import TopicBar from "@/components/landing/TopicBar";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
@@ -16,6 +17,7 @@ import {
   fetchPosts,
   fetchTrending,
   fetchLibraryLatest,
+  fetchVideosLatest,
   fetchNostalgia,
 } from "@/lib/blog/api";
 
@@ -23,11 +25,12 @@ import {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [news, hot, reads, library, nostalgia] = await Promise.all([
+  const [news, hot, reads, library, videos, nostalgia] = await Promise.all([
     fetchPosts({ pageSize: 7 }),
     fetchTrending(6, "hot"),
     fetchTrending(6, "reads"),
     fetchLibraryLatest(3),
+    fetchVideosLatest(9),
     fetchNostalgia(),
   ]);
 
@@ -55,6 +58,9 @@ export default async function HomePage() {
 
         {/* Guides, walkthroughs & lists rail */}
         <HomeLibrary items={library} />
+
+        {/* Latest & featured videos rail */}
+        <HomeVideos items={videos} />
 
         {/* The app — one "make it yours" band, low on the page */}
         <CTA />

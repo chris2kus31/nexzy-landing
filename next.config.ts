@@ -24,6 +24,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "media.rawg.io",
       },
+      {
+        // YouTube video thumbnails (video posters when a video has no explicit
+        // thumbnail — we derive img.youtube.com/vi/<id>/hqdefault.jpg).
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
+      {
+        // YouTube thumbnail CDN mirror (i.ytimg.com serves the same posters).
+        protocol: "https",
+        hostname: "i.ytimg.com",
+      },
     ],
   },
   // Force the old landing.nexzyapp.com subdomain to 301-redirect to the

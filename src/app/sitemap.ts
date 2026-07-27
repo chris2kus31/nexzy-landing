@@ -10,6 +10,7 @@ import {
   fetchWalkthroughs,
   fetchWalkthroughChapters,
   fetchGamesWithContent,
+  fetchVideosForSitemap,
   fetchTags,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
@@ -42,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guides",
     "/walkthroughs",
     "/lists",
+    "/videos",
     "/games",
     "/app",
   ];
@@ -51,6 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guides",
     "/walkthroughs",
     "/lists",
+    "/videos",
     "/games",
   ]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
@@ -139,6 +142,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
+  // Video pages (/videos/<slug>) — every published video, one flat API call.
+  // Best-effort so an API hiccup never breaks the sitemap.
+  const videoEntries: MetadataRoute.Sitemap = [];
+  try {
+    const videos = await fetchVideosForSitemap();
+    for (const v of videos) {
+      videoEntries.push({
+        url: `${SITE_URL}/videos/${v.slug}`,
+        lastModified: v.updatedAt ? new Date(v.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Game hubs (/games/<slug>) — one per game that has linked content, best-
   // effort so an API hiccup never breaks the sitemap.
   const gameHubEntries: MetadataRoute.Sitemap = [];
@@ -191,6 +211,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...articleEntries,
     ...evergreenEntries,
     ...chapterEntries,
+    ...videoEntries,
     ...gameHubEntries,
     ...authorEntries,
     ...topicEntries,

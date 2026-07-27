@@ -413,3 +413,87 @@ export async function fetchGamesWithContent(): Promise<GameWithContent[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+// ---- Newsroom videos (Phase 5): standalone /videos hub + detail ----
+export interface PublicVideo {
+  slug: string;
+  title: string;
+  caption: string | null;
+  thumbnailUrl: string | null;
+  youtubeUrl: string | null;
+  youtubeId: string | null;
+  isShort: boolean;
+  platformLinks: Record<string, string> | null;
+  source: "nexzy" | "external";
+  featured: boolean;
+  tags: string[];
+  viewCount: number;
+  publishedAt: string | null;
+  updatedAt: string | null;
+  // Primary linked game (for the "For <game>" chip + hub link). null if none.
+  game: { name: string; slug: string; backgroundImage: string | null } | null;
+}
+
+export interface VideoList {
+  items: PublicVideo[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Published videos for the /videos hub. Nexzy-first, then newest. Paginated. */
+export async function fetchVideos(params?: {
+  page?: number;
+  pageSize?: number;
+}): Promise<VideoList> {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  const qs = q.toString();
+  const res = await fetch(
+    `${API}/newsroom/public/videos${qs ? `?${qs}` : ""}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok)
+    return {
+      items: [],
+      total: 0,
+      page: params?.page || 1,
+      pageSize: params?.pageSize || 24,
+    };
+  return res.json();
+}
+
+/** A single published video by slug. null when not found/unpublished. */
+export async function fetchVideo(slug: string): Promise<PublicVideo | null> {
+  const res = await fetch(
+    `${API}/newsroom/public/videos/${encodeURIComponent(slug)}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/**
+ * Newest videos for the home "latest & featured" rail. The API already ranks
+ * Nexzy content first, so this is Nexzy-first then newest.
+ */
+export async function fetchVideosLatest(limit = 3): Promise<PublicVideo[]> {
+  const { items } = await fetchVideos({ page: 1, pageSize: limit });
+  return items;
+}
+
+export interface VideoSitemapRef {
+  slug: string;
+  updatedAt: string | null;
+}
+
+/** Every published video slug + updatedAt, for the sitemap (one round-trip). */
+export async function fetchVideosForSitemap(): Promise<VideoSitemapRef[]> {
+  const res = await fetch(`${API}/newsroom/public/videos-sitemap`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}

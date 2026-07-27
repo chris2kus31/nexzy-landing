@@ -1603,6 +1603,7 @@ export interface AdminVideo {
   youtubeUrl: string | null;
   platformLinks: Record<string, string> | null;
   source: "nexzy" | "external";
+  featured: boolean;
   status: "draft" | "published" | "hidden";
   tags: string[] | null;
   viewCount: number;
@@ -1610,6 +1611,7 @@ export interface AdminVideo {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  games?: { id: string; name: string; slug: string; isPrimary: boolean }[];
 }
 
 /** One video as served for a game (admin by-game view + app Media tab). */
@@ -1622,6 +1624,7 @@ export interface GameVideoItem {
   thumbnailUrl: string | null;
   platformLinks: Record<string, string> | null;
   isShort: boolean;
+  featured?: boolean;
   postSlug?: string | null;
 }
 
@@ -1633,6 +1636,7 @@ export interface CreateVideoPayload {
   caption?: string;
   tags?: string[];
   source?: "nexzy" | "external";
+  featured?: boolean;
   gameIds?: string[];
   primaryGameId?: string;
 }
