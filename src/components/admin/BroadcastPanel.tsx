@@ -16,7 +16,9 @@ import {
   sendNotificationTest,
   sendNotificationBroadcast,
   getPublished,
+  searchForumPosts,
   type BlogPost,
+  type ForumPostLite,
   type AdminNotifType,
   type AdminNotifDest,
   type AdminNotifDestKind,
@@ -58,6 +60,7 @@ type DestKind = "none" | AdminNotifDestKind;
 const DEST_OPTIONS: { value: DestKind; label: string }[] = [
   { value: "none", label: "Just open the app" },
   { value: "newsArticle", label: "News article" },
+  { value: "forumPost", label: "Forum thread" },
   { value: "game", label: "Game" },
   { value: "coinStore", label: "Coin Store" },
   { value: "library", label: "Game Library" },
@@ -93,6 +96,14 @@ export default function BroadcastPanel() {
   const [articleQuery, setArticleQuery] = useState("");
   const [manualSlug, setManualSlug] = useState(false);
 
+  // Forum-thread picker: server-side search (forums scale large), debounced.
+  const [forumQuery, setForumQuery] = useState("");
+  const [forumResults, setForumResults] = useState<ForumPostLite[]>([]);
+  const [forumLoading, setForumLoading] = useState(false);
+  const [forumPostId, setForumPostId] = useState("");
+  const [forumPostTitle, setForumPostTitle] = useState("");
+  const [manualForumId, setManualForumId] = useState(false);
+
   const [audience, setAudience] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -118,6 +129,30 @@ export default function BroadcastPanel() {
       .catch(() => setArticles([]))
       .finally(() => setArticlesLoading(false));
   }, [destKind, articles, articlesLoading]);
+
+  // Debounced server-side forum-thread search.
+  useEffect(() => {
+    if (destKind !== "forumPost" || manualForumId) return;
+    const fq = forumQuery.trim();
+    // Require 2+ chars so we don't fire a search (and hit the DB) on one letter.
+    if (fq.length < 2) {
+      setForumResults([]);
+      setForumLoading(false);
+      return;
+    }
+    let alive = true;
+    setForumLoading(true);
+    const t = setTimeout(() => {
+      searchForumPosts(fq)
+        .then((r) => alive && setForumResults(r))
+        .catch(() => alive && setForumResults([]))
+        .finally(() => alive && setForumLoading(false));
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [forumQuery, destKind, manualForumId]);
 
   // Title-filtered results (published list is newest-first, capped server-side).
   const q = articleQuery.trim().toLowerCase();
@@ -149,6 +184,10 @@ export default function BroadcastPanel() {
         if (!slug.trim())
           return { error: "Pick a news article (or enter its slug)." };
         return { dest: { kind: "newsArticle", slug: slug.trim() } };
+      case "forumPost":
+        if (!forumPostId.trim())
+          return { error: "Pick a forum thread (or enter its ID)." };
+        return { dest: { kind: "forumPost", postId: forumPostId.trim() } };
       case "game":
         if (!gameId.trim()) return { error: "Enter the game ID." };
         return {
@@ -457,6 +496,138 @@ export default function BroadcastPanel() {
                     onClick={() => setManualSlug(true)}
                   >
                     or paste the article slug manually
+                  </Text>
+                </>
+              )}
+            </Box>
+          )}
+
+          {destKind === "forumPost" && (
+            <Box mt={2}>
+              {manualForumId ? (
+                <>
+                  <Input
+                    {...inputProps}
+                    value={forumPostId}
+                    onChange={(e) => setForumPostId(e.target.value)}
+                    placeholder="Forum thread ID"
+                  />
+                  <Text
+                    fontSize="xs"
+                    color="nexzy.lightBlue"
+                    mt={1}
+                    cursor="pointer"
+                    onClick={() => setManualForumId(false)}
+                  >
+                    Search forum threads instead
+                  </Text>
+                </>
+              ) : forumPostId ? (
+                <HStack
+                  justify="space-between"
+                  bg="whiteAlpha.50"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.300"
+                  borderRadius="6px"
+                  px={3}
+                  py={2}
+                >
+                  <VStack align="start" gap={0} flex={1} minW={0}>
+                    <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                      {forumPostTitle || `Selected thread (${forumPostId})`}
+                    </Text>
+                    <Text fontSize="xs" color="whiteAlpha.500">
+                      Opens this forum thread on tap
+                    </Text>
+                  </VStack>
+                  <Button
+                    size="xs"
+                    {...outlineBtn}
+                    onClick={() => {
+                      setForumPostId("");
+                      setForumPostTitle("");
+                      setForumQuery("");
+                      setForumResults([]);
+                    }}
+                  >
+                    Change
+                  </Button>
+                </HStack>
+              ) : (
+                <>
+                  <Input
+                    {...inputProps}
+                    value={forumQuery}
+                    onChange={(e) => setForumQuery(e.target.value)}
+                    placeholder="Search forum threads by title…"
+                  />
+                  {forumQuery.trim().length >= 2 && (
+                    <Box
+                      mt={1}
+                      maxH="220px"
+                      overflowY="auto"
+                      borderWidth="1px"
+                      borderColor="whiteAlpha.200"
+                      borderRadius="6px"
+                    >
+                      {forumLoading ? (
+                        <Text
+                          fontSize="xs"
+                          color="whiteAlpha.500"
+                          px={3}
+                          py={2}
+                        >
+                          Searching…
+                        </Text>
+                      ) : forumResults.length === 0 ? (
+                        <Text
+                          fontSize="xs"
+                          color="whiteAlpha.500"
+                          px={3}
+                          py={2}
+                        >
+                          No thread matches “{forumQuery.trim()}”.
+                        </Text>
+                      ) : (
+                        forumResults.map((p) => (
+                          <Box
+                            key={p.id}
+                            px={3}
+                            py={2}
+                            cursor="pointer"
+                            _hover={{ bg: "whiteAlpha.100" }}
+                            onClick={() => {
+                              setForumPostId(p.id);
+                              setForumPostTitle(p.title ?? "");
+                              setForumQuery("");
+                              setForumResults([]);
+                            }}
+                          >
+                            <Text
+                              fontSize="sm"
+                              color="nexzy.white"
+                              lineClamp={1}
+                            >
+                              {p.title || "(untitled thread)"}
+                            </Text>
+                            <Text fontSize="xs" color="whiteAlpha.500">
+                              {p.createdAt
+                                ? new Date(p.createdAt).toLocaleDateString()
+                                : ""}
+                            </Text>
+                          </Box>
+                        ))
+                      )}
+                    </Box>
+                  )}
+                  <Text
+                    fontSize="xs"
+                    color="whiteAlpha.500"
+                    mt={1}
+                    cursor="pointer"
+                    onClick={() => setManualForumId(true)}
+                  >
+                    or paste a thread ID manually
                   </Text>
                 </>
               )}
