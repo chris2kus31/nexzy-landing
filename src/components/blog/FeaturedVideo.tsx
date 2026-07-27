@@ -113,12 +113,13 @@ export default function FeaturedVideo({
       direction={{ base: "column", md: "row" }}
       gap={{ base: 5, md: 8 }}
       align={{ base: "stretch", md: "center" }}
+      maxW={short ? { base: "full", md: "720px" } : "full"}
     >
       <Box
-        w={{ base: "full", md: short ? "300px" : "560px" }}
+        w={{ base: "230px", md: short ? "250px" : "540px" }}
         maxW="full"
         flexShrink={0}
-        mx={{ base: short ? "auto" : undefined, md: 0 }}
+        mx={{ base: "auto", md: 0 }}
       >
         {media}
       </Box>
@@ -163,7 +164,11 @@ export default function FeaturedVideo({
           lineHeight="1.15"
           mb={video.caption ? 3 : 4}
         >
-          <Link asChild _hover={{ textDecoration: "none", color: "gray.100" }}>
+          <Link
+            asChild
+            color="white"
+            _hover={{ textDecoration: "none", color: "gray.100" }}
+          >
             <NextLink href={href}>{video.title}</NextLink>
           </Link>
         </Heading>

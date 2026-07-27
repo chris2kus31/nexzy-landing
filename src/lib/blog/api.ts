@@ -445,10 +445,12 @@ export interface VideoList {
 export async function fetchVideos(params?: {
   page?: number;
   pageSize?: number;
+  sort?: "latest" | "trending";
 }): Promise<VideoList> {
   const q = new URLSearchParams();
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  if (params?.sort) q.set("sort", params.sort);
   const qs = q.toString();
   const res = await fetch(
     `${API}/newsroom/public/videos${qs ? `?${qs}` : ""}`,

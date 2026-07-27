@@ -102,6 +102,19 @@ export default function Navigation() {
               </NextLink>
             </Link>
 
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
+              <NextLink href="/videos" onClick={() => nav("videos")}>
+                Videos
+              </NextLink>
+            </Link>
+
             {/* Guides dropdown (reveals on hover) */}
             <Box position="relative" className="group">
               <HStack
@@ -278,6 +291,18 @@ export default function Navigation() {
                   }}
                 >
                   News
+                </NextLink>
+              </Link>
+
+              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+                <NextLink
+                  href="/videos"
+                  onClick={() => {
+                    nav("videos");
+                    close();
+                  }}
+                >
+                  Videos
                 </NextLink>
               </Link>
 

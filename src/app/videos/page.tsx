@@ -9,11 +9,11 @@ import {
   HStack,
   Button,
   Icon,
-  Separator,
 } from "@chakra-ui/react";
 import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import { fetchVideos } from "@/lib/blog/api";
 import VideoTile from "@/components/blog/VideoTile";
+import VideoShelf from "@/components/blog/VideoShelf";
 import FeaturedVideo from "@/components/blog/FeaturedVideo";
 import AppCta from "@/components/blog/AppCta";
 
@@ -32,9 +32,37 @@ export async function generateMetadata({
   return {
     title: "Gaming Videos & Shorts",
     description:
-      "Nexzy gaming videos and Shorts — quick clips, boss moments, tips, and highlights for the games you play. New drops every week, from YouTube, TikTok & Reels.",
+      "Nexzy gaming videos and Shorts — trending clips, boss moments, tips, and highlights for the games you play. New drops every week, from YouTube, TikTok & Reels.",
     alternates: { canonical: page > 1 ? `/videos?page=${page}` : "/videos" },
   };
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+}: {
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <Box mb={5}>
+      <HStack gap={2.5} mb={2}>
+        <Box w="20px" h="2px" bg="pink.400" borderRadius="full" />
+        <Text
+          fontSize="xs"
+          fontWeight="800"
+          letterSpacing="0.14em"
+          textTransform="uppercase"
+          color="pink.300"
+        >
+          {eyebrow}
+        </Text>
+      </HStack>
+      <Heading as="h2" size={{ base: "lg", md: "xl" }} color="white">
+        {title}
+      </Heading>
+    </Box>
+  );
 }
 
 export default async function VideosIndexPage({
@@ -44,16 +72,26 @@ export default async function VideosIndexPage({
 }) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp?.page || "1", 10) || 1);
-  const { items, total } = await fetchVideos({ page, pageSize: PAGE_SIZE });
+
+  const [latest, trending] = await Promise.all([
+    fetchVideos({ page, pageSize: PAGE_SIZE, sort: "latest" }),
+    page === 1
+      ? fetchVideos({ pageSize: 12, sort: "trending" })
+      : Promise.resolve({ items: [], total: 0, page: 1, pageSize: 12 }),
+  ]);
+  const { items, total } = latest;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Spotlight the featured video (or newest) on page 1; the rest fill the grid.
+  // Featured hero (or newest) on page 1; keep it out of the rows below.
   const hero =
     page === 1 ? (items.find((v) => v.featured) ?? items[0] ?? null) : null;
-  const gridItems = hero ? items.filter((v) => v.slug !== hero.slug) : items;
+  const heroSlug = hero?.slug;
+  const trendingItems = trending.items
+    .filter((v) => v.slug !== heroSlug)
+    .slice(0, 10);
+  const showTrending = page === 1 && trendingItems.length >= 4;
+  const latestItems = items.filter((v) => v.slug !== heroSlug);
 
-  // CollectionPage always; wrap an ItemList only with >=2 real items (thin-
-  // schema guard) so we never ship an empty ItemList.
   const collectionLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -73,7 +111,6 @@ export default async function VideosIndexPage({
       })),
     };
   }
-
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -136,36 +173,33 @@ export default async function VideosIndexPage({
         ) : (
           <>
             {hero && (
-              <Box mb={{ base: 10, md: 14 }}>
+              <Box mb={{ base: 12, md: 16 }}>
                 <FeaturedVideo video={hero} play />
               </Box>
             )}
 
-            {gridItems.length > 0 && (
-              <>
-                {hero && (
-                  <HStack mb={5} gap={3}>
-                    <Text
-                      color="gray.400"
-                      fontSize="xs"
-                      fontWeight="800"
-                      letterSpacing="0.14em"
-                      textTransform="uppercase"
-                    >
-                      {page > 1 ? "More videos" : "Latest drops"}
-                    </Text>
-                    <Separator flex="1" borderColor="whiteAlpha.200" />
-                  </HStack>
-                )}
+            {showTrending && (
+              <Box mb={{ base: 12, md: 16 }}>
+                <SectionHeading eyebrow="Most watched" title="Trending" />
+                <VideoShelf items={trendingItems} from="videos_trending" />
+              </Box>
+            )}
+
+            {latestItems.length > 0 && (
+              <Box>
+                <SectionHeading
+                  eyebrow={page > 1 ? `Page ${page}` : "Fresh drops"}
+                  title="Latest"
+                />
                 <SimpleGrid
                   columns={{ base: 2, sm: 3, md: 4, lg: 5 }}
                   gap={{ base: 4, md: 6 }}
                 >
-                  {gridItems.map((v) => (
-                    <VideoTile key={v.slug} video={v} />
+                  {latestItems.map((v) => (
+                    <VideoTile key={v.slug} video={v} from="videos_latest" />
                   ))}
                 </SimpleGrid>
-              </>
+              </Box>
             )}
 
             {totalPages > 1 && (
@@ -226,7 +260,7 @@ export default async function VideosIndexPage({
               </HStack>
             )}
 
-            <Box mt={14}>
+            <Box mt={16}>
               <AppCta variant="inline" location="videos" />
             </Box>
           </>

@@ -48,6 +48,9 @@ export default async function HomePage() {
         {/* Section bar — browse the newsroom by beat */}
         <TopicBar />
 
+        {/* Videos & Shorts — high on the page so video content is visible first */}
+        <HomeVideos items={videos} />
+
         {/* Daily newsroom — nostalgia spotlight + what's trending */}
         <HomeNewsroom
           nostalgia={nostalgia}
@@ -58,9 +61,6 @@ export default async function HomePage() {
 
         {/* Guides, walkthroughs & lists rail */}
         <HomeLibrary items={library} />
-
-        {/* Latest & featured videos rail */}
-        <HomeVideos items={videos} />
 
         {/* The app — one "make it yours" band, low on the page */}
         <CTA />
