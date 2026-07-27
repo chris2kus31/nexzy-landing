@@ -1214,6 +1214,7 @@ export type AdminNotifType = "system-announcement" | "engagement";
 
 export type AdminNotifDestKind =
   | "article"
+  | "newsArticle"
   | "game"
   | "coinStore"
   | "library"
@@ -1226,6 +1227,7 @@ export type AdminNotifDestKind =
 export type AdminNotifDest = {
   kind: AdminNotifDestKind;
   postId?: string;
+  slug?: string;
   gameId?: string;
   gameName?: string;
   url?: string;
@@ -1571,5 +1573,115 @@ export async function runAiVisibility(): Promise<{
 }> {
   return handle(
     await fetch("/api/newsroom/admin/ai-visibility/run", { method: "POST" }),
+  );
+}
+
+// --- Videos (game-linked video content graph) -------------------------------
+
+export interface AdminVideo {
+  id: string;
+  slug: string;
+  title: string;
+  caption: string | null;
+  thumbnailUrl: string | null;
+  youtubeUrl: string | null;
+  platformLinks: Record<string, string> | null;
+  source: "nexzy" | "external";
+  status: "draft" | "published" | "hidden";
+  tags: string[] | null;
+  viewCount: number;
+  createdBy: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One video as served for a game (admin by-game view + app Media tab). */
+export interface GameVideoItem {
+  id: string | null;
+  source: "nexzy" | "external" | "article" | "rawg";
+  title: string | null;
+  youtubeId: string | null;
+  youtubeUrl: string | null;
+  thumbnailUrl: string | null;
+  platformLinks: Record<string, string> | null;
+  postSlug?: string | null;
+}
+
+export interface CreateVideoPayload {
+  title: string;
+  youtubeUrl?: string;
+  platformLinks?: Record<string, string>;
+  thumbnailUrl?: string;
+  caption?: string;
+  tags?: string[];
+  source?: "nexzy" | "external";
+  gameIds?: string[];
+  primaryGameId?: string;
+}
+
+export async function listVideos(limit = 100): Promise<AdminVideo[]> {
+  return handle(await fetch(`/api/newsroom/admin/videos?limit=${limit}`));
+}
+
+export async function createVideo(
+  payload: CreateVideoPayload,
+): Promise<AdminVideo> {
+  return handle(
+    await fetch("/api/newsroom/admin/videos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function updateVideo(
+  id: string,
+  payload: Partial<CreateVideoPayload> & {
+    status?: "draft" | "published" | "hidden";
+  },
+): Promise<AdminVideo> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function deleteVideo(id: string): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${id}`, { method: "DELETE" }),
+  );
+}
+
+export async function getGameVideos(gameId: string): Promise<GameVideoItem[]> {
+  return handle(await fetch(`/api/newsroom/admin/videos/by-game/${gameId}`));
+}
+
+export async function attachVideoGame(
+  videoId: string,
+  gameId: string,
+  opts: { isPrimary?: boolean; position?: number } = {},
+): Promise<unknown> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${videoId}/games`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId, ...opts }),
+    }),
+  );
+}
+
+export async function detachVideoGame(
+  videoId: string,
+  gameId: string,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${videoId}/games/${gameId}`, {
+      method: "DELETE",
+    }),
   );
 }

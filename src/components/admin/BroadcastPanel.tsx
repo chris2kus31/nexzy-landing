@@ -15,6 +15,8 @@ import {
   getNotificationAudience,
   sendNotificationTest,
   sendNotificationBroadcast,
+  getPublished,
+  type BlogPost,
   type AdminNotifType,
   type AdminNotifDest,
   type AdminNotifDestKind,
@@ -55,7 +57,7 @@ type DestKind = "none" | AdminNotifDestKind;
 
 const DEST_OPTIONS: { value: DestKind; label: string }[] = [
   { value: "none", label: "Just open the app" },
-  { value: "article", label: "Article / post" },
+  { value: "newsArticle", label: "News article" },
   { value: "game", label: "Game" },
   { value: "coinStore", label: "Coin Store" },
   { value: "library", label: "Game Library" },
@@ -79,10 +81,17 @@ export default function BroadcastPanel() {
   const [email, setEmail] = useState("");
 
   const [destKind, setDestKind] = useState<DestKind>("none");
-  const [postId, setPostId] = useState("");
+  const [slug, setSlug] = useState("");
   const [gameId, setGameId] = useState("");
   const [gameName, setGameName] = useState("");
   const [url, setUrl] = useState("");
+
+  // News-article picker: load the published-articles list once and filter it
+  // client-side by title, so you pick the real story instead of pasting a slug.
+  const [articles, setArticles] = useState<BlogPost[] | null>(null);
+  const [articlesLoading, setArticlesLoading] = useState(false);
+  const [articleQuery, setArticleQuery] = useState("");
+  const [manualSlug, setManualSlug] = useState(false);
 
   const [audience, setAudience] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -100,6 +109,32 @@ export default function BroadcastPanel() {
     };
   }, [type]);
 
+  // Lazy-load published articles the first time the News-article dest is used.
+  useEffect(() => {
+    if (destKind !== "newsArticle" || articles || articlesLoading) return;
+    setArticlesLoading(true);
+    getPublished()
+      .then((rows) => setArticles(rows))
+      .catch(() => setArticles([]))
+      .finally(() => setArticlesLoading(false));
+  }, [destKind, articles, articlesLoading]);
+
+  // Title-filtered results (published list is newest-first, capped server-side).
+  const q = articleQuery.trim().toLowerCase();
+  const filteredArticles = q
+    ? (articles ?? [])
+        .filter((a) => (a.title ?? "").toLowerCase().includes(q))
+        .slice(0, 8)
+    : [];
+  // The currently-chosen article (for the confirmation chip), if any.
+  const selectedArticle: Pick<BlogPost, "slug" | "title"> | null =
+    slug && !manualSlug
+      ? ((articles ?? []).find((a) => a.slug === slug) ?? {
+          slug,
+          title: null,
+        })
+      : null;
+
   const canSend = title.trim().length > 0 && body.trim().length > 0;
   const kindLabel = type === "system-announcement" ? "announcement" : "promotion";
   const prefLabel =
@@ -110,9 +145,10 @@ export default function BroadcastPanel() {
     switch (destKind) {
       case "none":
         return {};
-      case "article":
-        if (!postId.trim()) return { error: "Enter the article/post ID." };
-        return { dest: { kind: "article", postId: postId.trim() } };
+      case "newsArticle":
+        if (!slug.trim())
+          return { error: "Pick a news article (or enter its slug)." };
+        return { dest: { kind: "newsArticle", slug: slug.trim() } };
       case "game":
         if (!gameId.trim()) return { error: "Enter the game ID." };
         return {
@@ -297,14 +333,134 @@ export default function BroadcastPanel() {
             ))}
           </select>
 
-          {destKind === "article" && (
-            <Input
-              {...inputProps}
-              mt={2}
-              value={postId}
-              onChange={(e) => setPostId(e.target.value)}
-              placeholder="Article / post ID (e.g. from the newsroom URL)"
-            />
+          {destKind === "newsArticle" && (
+            <Box mt={2}>
+              {manualSlug ? (
+                <>
+                  <Input
+                    {...inputProps}
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    placeholder="Article slug (the last part of its /blog/ URL)"
+                  />
+                  <Text
+                    fontSize="xs"
+                    color="nexzy.lightBlue"
+                    mt={1}
+                    cursor="pointer"
+                    onClick={() => setManualSlug(false)}
+                  >
+                    Pick from published articles instead
+                  </Text>
+                </>
+              ) : selectedArticle ? (
+                <HStack
+                  justify="space-between"
+                  bg="whiteAlpha.50"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.300"
+                  borderRadius="6px"
+                  px={3}
+                  py={2}
+                >
+                  <VStack align="start" gap={0} flex={1} minW={0}>
+                    <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                      {selectedArticle.title || `Selected article (${slug})`}
+                    </Text>
+                    <Text fontSize="xs" color="whiteAlpha.500">
+                      Opens this article on tap
+                    </Text>
+                  </VStack>
+                  <Button
+                    size="xs"
+                    {...outlineBtn}
+                    onClick={() => {
+                      setSlug("");
+                      setArticleQuery("");
+                    }}
+                  >
+                    Change
+                  </Button>
+                </HStack>
+              ) : (
+                <>
+                  <Input
+                    {...inputProps}
+                    value={articleQuery}
+                    onChange={(e) => setArticleQuery(e.target.value)}
+                    placeholder={
+                      articlesLoading
+                        ? "Loading published articles…"
+                        : "Search published articles by title…"
+                    }
+                  />
+                  {q && (
+                    <Box
+                      mt={1}
+                      maxH="220px"
+                      overflowY="auto"
+                      borderWidth="1px"
+                      borderColor="whiteAlpha.200"
+                      borderRadius="6px"
+                    >
+                      {filteredArticles.length === 0 ? (
+                        <Text
+                          fontSize="xs"
+                          color="whiteAlpha.500"
+                          px={3}
+                          py={2}
+                        >
+                          {articlesLoading
+                            ? "Loading…"
+                            : `No published article matches “${articleQuery.trim()}”.`}
+                        </Text>
+                      ) : (
+                        filteredArticles.map((a) => (
+                          <Box
+                            key={a.id}
+                            px={3}
+                            py={2}
+                            cursor="pointer"
+                            _hover={{ bg: "whiteAlpha.100" }}
+                            onClick={() => {
+                              setSlug(a.slug);
+                              setArticleQuery("");
+                            }}
+                          >
+                            <Text
+                              fontSize="sm"
+                              color="nexzy.white"
+                              lineClamp={1}
+                            >
+                              {a.title || "(untitled)"}
+                            </Text>
+                            <Text fontSize="xs" color="whiteAlpha.500">
+                              {[
+                                a.publishedAt
+                                  ? new Date(a.publishedAt).toLocaleDateString()
+                                  : null,
+                                a.beat,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </Text>
+                          </Box>
+                        ))
+                      )}
+                    </Box>
+                  )}
+                  <Text
+                    fontSize="xs"
+                    color="whiteAlpha.500"
+                    mt={1}
+                    cursor="pointer"
+                    onClick={() => setManualSlug(true)}
+                  >
+                    or paste the article slug manually
+                  </Text>
+                </>
+              )}
+            </Box>
           )}
           {destKind === "game" && (
             <VStack align="stretch" gap={2} mt={2}>
