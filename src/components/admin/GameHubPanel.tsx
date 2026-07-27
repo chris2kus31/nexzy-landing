@@ -15,11 +15,18 @@ import {
   Badge,
   Spinner,
 } from "@chakra-ui/react";
-import { FiSearch, FiTrash2, FiPlus, FiExternalLink } from "react-icons/fi";
+import {
+  FiSearch,
+  FiTrash2,
+  FiPlus,
+  FiExternalLink,
+  FiEdit2,
+} from "react-icons/fi";
 import {
   searchGamesForLink,
   getGameVideos,
   createVideo,
+  updateVideo,
   detachVideoGame,
   type GameLite,
   type GameVideoItem,
@@ -46,15 +53,14 @@ const inputStyle = {
 
 function thumbFor(v: GameVideoItem): string | null {
   if (v.thumbnailUrl) return v.thumbnailUrl;
-  if (v.youtubeId)
-    return `https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg`;
+  if (v.youtubeId) return `https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`;
   return null;
 }
 
 /**
  * Game hub — manage the videos attached to a game. Search a game, see its
- * Nexzy + external videos, add a new one (YouTube plays inline in-app; TikTok /
- * Reels are "also on" links), and remove. Talks to /newsroom/admin/videos.
+ * Nexzy + external videos, add / edit / remove. YouTube plays inline in-app;
+ * TikTok / Reels are "also on" links. Talks to /newsroom/admin/videos.
  */
 export default function GameHubPanel() {
   const [q, setQ] = useState("");
@@ -67,6 +73,8 @@ export default function GameHubPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // add / edit form (editingId null = adding, set = editing that video)
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [tiktok, setTiktok] = useState("");
@@ -104,6 +112,7 @@ export default function GameHubPanel() {
     setGame(g);
     setResults([]);
     setQ("");
+    cancelEdit();
     await loadVideos(g.id);
   }
 
@@ -116,7 +125,26 @@ export default function GameHubPanel() {
     setSource("nexzy");
   }
 
-  async function add() {
+  function cancelEdit() {
+    setEditingId(null);
+    resetForm();
+  }
+
+  function startEdit(v: GameVideoItem) {
+    if (!v.id) return;
+    setEditingId(v.id);
+    setTitle(v.title ?? "");
+    setYoutubeUrl(v.youtubeUrl ?? "");
+    setTiktok(v.platformLinks?.tiktok ?? "");
+    setReels(v.platformLinks?.reels ?? "");
+    setThumbnailUrl(v.thumbnailUrl ?? "");
+    setSource(v.source === "external" ? "external" : "nexzy");
+    setMsg(null);
+    if (typeof window !== "undefined")
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  async function save() {
     if (!game || title.trim().length < 1) return;
     setSaving(true);
     setMsg(null);
@@ -124,18 +152,23 @@ export default function GameHubPanel() {
       const platformLinks: Record<string, string> = {};
       if (tiktok.trim()) platformLinks.tiktok = tiktok.trim();
       if (reels.trim()) platformLinks.reels = reels.trim();
-      await createVideo({
+      const payload = {
         title: title.trim(),
-        youtubeUrl: youtubeUrl.trim() || undefined,
-        platformLinks: Object.keys(platformLinks).length
-          ? platformLinks
-          : undefined,
-        thumbnailUrl: thumbnailUrl.trim() || undefined,
+        youtubeUrl: youtubeUrl.trim(),
+        platformLinks,
+        thumbnailUrl: thumbnailUrl.trim(),
         source,
-        gameIds: [game.id],
-        primaryGameId: game.id,
-      });
-      resetForm();
+      };
+      if (editingId) {
+        await updateVideo(editingId, payload);
+      } else {
+        await createVideo({
+          ...payload,
+          gameIds: [game.id],
+          primaryGameId: game.id,
+        });
+      }
+      cancelEdit();
       await loadVideos(game.id);
     } catch (e) {
       setMsg((e as Error).message);
@@ -150,6 +183,7 @@ export default function GameHubPanel() {
     setMsg(null);
     try {
       await detachVideoGame(v.id, game.id);
+      if (editingId === v.id) cancelEdit();
       await loadVideos(game.id);
     } catch (e) {
       setMsg((e as Error).message);
@@ -209,6 +243,14 @@ export default function GameHubPanel() {
                   borderRadius="md"
                   cursor="pointer"
                   _hover={{ bg: "whiteAlpha.100" }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      pick(g);
+                    }
+                  }}
                   onClick={() => pick(g)}
                 >
                   {g.backgroundImage && (
@@ -277,6 +319,7 @@ export default function GameHubPanel() {
               onClick={() => {
                 setGame(null);
                 setVideos([]);
+                cancelEdit();
               }}
             >
               Change game
@@ -293,6 +336,7 @@ export default function GameHubPanel() {
             <VStack align="stretch" gap={2} mb={6}>
               {videos.map((v) => {
                 const thumb = thumbFor(v);
+                const isEditing = editingId === v.id;
                 return (
                   <Flex
                     key={v.id ?? v.youtubeId ?? v.youtubeUrl ?? ""}
@@ -300,7 +344,7 @@ export default function GameHubPanel() {
                     gap={3}
                     p={2}
                     borderWidth="1px"
-                    borderColor="whiteAlpha.200"
+                    borderColor={isEditing ? "nexzy.blue" : "whiteAlpha.200"}
                     borderRadius="md"
                   >
                     {thumb ? (
@@ -331,6 +375,11 @@ export default function GameHubPanel() {
                         >
                           {v.source}
                         </Badge>
+                        {v.isShort && (
+                          <Badge colorPalette="pink" variant="subtle">
+                            Short
+                          </Badge>
+                        )}
                         {v.platformLinks?.tiktok && (
                           <Badge colorPalette="pink" variant="subtle">
                             TikTok
@@ -343,11 +392,25 @@ export default function GameHubPanel() {
                         )}
                       </HStack>
                     </Box>
+                    <Button
+                      size="xs"
+                      {...outlineBtn}
+                      onClick={() => startEdit(v)}
+                      title="Edit"
+                    >
+                      <FiEdit2 />
+                    </Button>
                     {v.youtubeUrl && (
                       <Button
                         size="xs"
                         {...outlineBtn}
-                        onClick={() => window.open(v.youtubeUrl!, "_blank")}
+                        onClick={() =>
+                          window.open(
+                            v.youtubeUrl!,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
                         title="Open on YouTube"
                       >
                         <FiExternalLink />
@@ -370,12 +433,12 @@ export default function GameHubPanel() {
 
           <Box
             borderWidth="1px"
-            borderColor="whiteAlpha.200"
+            borderColor={editingId ? "nexzy.blue" : "whiteAlpha.200"}
             borderRadius="md"
             p={4}
           >
             <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={3}>
-              Add a video
+              {editingId ? "Edit video" : "Add a video"}
             </Text>
             <VStack align="stretch" gap={2}>
               <Input
@@ -429,16 +492,34 @@ export default function GameHubPanel() {
                   External
                 </Button>
               </HStack>
-              <Button
-                size="sm"
-                {...primaryBtn}
-                onClick={add}
-                loading={saving}
-                disabled={title.trim().length < 1}
-                alignSelf="flex-start"
-              >
-                <FiPlus /> Add video
-              </Button>
+              <Text fontSize="xs" color="whiteAlpha.500">
+                Nexzy-made = a video you produced (ranks first in the app).
+                External = a hand-picked third-party YouTube video.
+              </Text>
+              <HStack gap={2}>
+                <Button
+                  size="sm"
+                  {...primaryBtn}
+                  onClick={save}
+                  loading={saving}
+                  disabled={title.trim().length < 1}
+                >
+                  {editingId ? (
+                    <>
+                      <FiEdit2 /> Save changes
+                    </>
+                  ) : (
+                    <>
+                      <FiPlus /> Add video
+                    </>
+                  )}
+                </Button>
+                {editingId && (
+                  <Button size="sm" {...outlineBtn} onClick={cancelEdit}>
+                    Cancel
+                  </Button>
+                )}
+              </HStack>
             </VStack>
           </Box>
         </>

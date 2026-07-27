@@ -1215,6 +1215,7 @@ export type AdminNotifType = "system-announcement" | "engagement";
 export type AdminNotifDestKind =
   | "article"
   | "newsArticle"
+  | "forumPost"
   | "game"
   | "coinStore"
   | "library"
@@ -1223,6 +1224,21 @@ export type AdminNotifDestKind =
   | "games"
   | "news"
   | "url";
+
+export interface ForumPostLite {
+  id: string;
+  title: string | null;
+  createdAt: string | null;
+}
+
+/** Search forum threads by title for the notification composer's picker. */
+export async function searchForumPosts(q: string): Promise<ForumPostLite[]> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/forum/posts/search?q=${encodeURIComponent(q)}`,
+    ),
+  );
+}
 
 export type AdminNotifDest = {
   kind: AdminNotifDestKind;
@@ -1605,6 +1621,7 @@ export interface GameVideoItem {
   youtubeUrl: string | null;
   thumbnailUrl: string | null;
   platformLinks: Record<string, string> | null;
+  isShort: boolean;
   postSlug?: string | null;
 }
 

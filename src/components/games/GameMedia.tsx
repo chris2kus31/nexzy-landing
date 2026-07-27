@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   HStack,
@@ -12,12 +12,19 @@ import {
 } from "@chakra-ui/react";
 import NextImage from "next/image";
 import { FaPlay } from "react-icons/fa";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { GameHubVideo } from "@/lib/blog/api";
 
 type Lightbox =
   | { kind: "video"; video: GameHubVideo }
   | { kind: "shot"; src: string };
+
+const focusRing = {
+  outline: "2px solid",
+  outlineColor: "nexzy.blue",
+  outlineOffset: "2px",
+};
 
 function ytThumb(v: GameHubVideo): string | null {
   if (v.thumbnailUrl) return v.thumbnailUrl;
@@ -34,10 +41,21 @@ function alsoLinks(v: GameHubVideo): { label: string; href: string }[] {
   return out;
 }
 
+/** Fire `fn` on Enter/Space so role=button Boxes are keyboard-operable. */
+function keyActivate(fn: () => void) {
+  return (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fn();
+    }
+  };
+}
+
 /**
- * Game hub Media gallery: a uniform 16:9 thumbnail grid of videos + screenshots
- * with a click-to-play lightbox. Normalizes mixed aspect ratios — Shorts play in
- * a tall 9:16 modal, regular videos in 16:9 — so nothing towers over anything.
+ * Game hub Media gallery. Videos live in a horizontal snap-scroll rail (swipe on
+ * touch, hover arrows on desktop) of uniform 16:9 cards; screenshots stay a
+ * grid. Clicking opens a lightbox that sizes to the video — 9:16 for Shorts,
+ * 16:9 for regular.
  */
 export default function GameMedia({
   videos,
@@ -49,6 +67,7 @@ export default function GameMedia({
   name: string;
 }) {
   const [active, setActive] = useState<Lightbox | null>(null);
+  const railRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!active) return;
@@ -64,112 +83,198 @@ export default function GameMedia({
     };
   }, [active]);
 
+  const scrollRail = (dir: number) => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({
+      left: dir * Math.round(el.clientWidth * 0.85),
+      behavior: "smooth",
+    });
+  };
+
   const hasVideos = videos.length > 0;
   const hasShots = shots.length > 0;
+  const showArrows = videos.length > 3;
 
   return (
     <Box>
       {hasVideos && (
-        <SimpleGrid
-          columns={{ base: 1, sm: 2, md: 3 }}
-          gap={4}
-          mb={hasShots ? 10 : 0}
-        >
-          {videos.map((v, i) => {
-            const thumb = ytThumb(v);
-            const playable = !!youtubeEmbedUrl(v.youtubeUrl);
-            const links = alsoLinks(v);
-            return (
-              <Box
-                key={v.id ?? v.youtubeId ?? i}
-                role="button"
-                aria-label={v.title ?? `${name} video`}
-                onClick={() => {
-                  if (playable) setActive({ kind: "video", video: v });
-                  else if (links[0]) window.open(links[0].href, "_blank");
-                }}
-                cursor="pointer"
-                position="relative"
-                aspectRatio={16 / 9}
-                borderRadius="xl"
-                overflow="hidden"
-                border="1px solid"
-                borderColor="whiteAlpha.100"
-                bg="black"
-                transition="all 0.15s"
-                _hover={{
-                  borderColor: "nexzy.blue/60",
-                  transform: "translateY(-2px)",
-                }}
-              >
-                {thumb && (
-                  <Image
-                    src={thumb}
-                    alt={v.title ?? name}
-                    w="full"
-                    h="full"
-                    objectFit="cover"
-                    opacity={0.9}
-                  />
-                )}
+        <Box position="relative" mb={hasShots ? 10 : 0} role="group">
+          <Box
+            ref={railRef}
+            display="flex"
+            gap={4}
+            overflowX="auto"
+            scrollSnapType="x mandatory"
+            pb={2}
+            css={{
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": { display: "none" },
+            }}
+          >
+            {videos.map((v, i) => {
+              const thumb = ytThumb(v);
+              const playable = !!youtubeEmbedUrl(v.youtubeUrl);
+              const links = alsoLinks(v);
+              const activate = () => {
+                if (playable) setActive({ kind: "video", video: v });
+                else if (links[0])
+                  window.open(links[0].href, "_blank", "noopener,noreferrer");
+              };
+              return (
                 <Box
-                  position="absolute"
-                  inset={0}
-                  style={{
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%)",
-                  }}
-                />
-                <Box
-                  position="absolute"
-                  top="50%"
-                  left="50%"
-                  transform="translate(-50%, -50%)"
-                  w="54px"
-                  h="54px"
-                  borderRadius="full"
-                  bg="blackAlpha.700"
+                  key={v.id ?? v.youtubeId ?? i}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={v.title ?? `${name} video`}
+                  onClick={activate}
+                  onKeyDown={keyActivate(activate)}
+                  cursor="pointer"
+                  flex="0 0 auto"
+                  w={{ base: "260px", sm: "280px", md: "300px" }}
+                  scrollSnapAlign="start"
+                  position="relative"
+                  aspectRatio={16 / 9}
+                  borderRadius="xl"
+                  overflow="hidden"
                   border="1px solid"
-                  borderColor="whiteAlpha.500"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  color="white"
+                  borderColor="whiteAlpha.100"
+                  bg="black"
+                  transition="all 0.15s"
+                  _hover={{
+                    borderColor: "nexzy.blue/60",
+                    transform: "translateY(-2px)",
+                  }}
+                  _focusVisible={focusRing}
                 >
-                  <Box pl="3px">
-                    <FaPlay />
-                  </Box>
-                </Box>
-                <HStack position="absolute" top={2} left={2} gap={1}>
-                  {v.source === "nexzy" && (
-                    <Badge colorPalette="blue" variant="solid">
-                      Nexzy
-                    </Badge>
+                  {thumb && (
+                    <Image
+                      src={thumb}
+                      alt={v.title ?? name}
+                      w="full"
+                      h="full"
+                      objectFit="cover"
+                      opacity={0.9}
+                    />
                   )}
-                  {v.isShort && (
-                    <Badge colorPalette="pink" variant="solid">
-                      Short
-                    </Badge>
-                  )}
-                </HStack>
-                {v.title && (
-                  <Text
+                  <Box
                     position="absolute"
-                    bottom={2}
-                    left={3}
-                    right={3}
-                    color="white"
-                    fontSize="sm"
-                    fontWeight="600"
-                    lineClamp={1}
-                  >
-                    {v.title}
-                  </Text>
-                )}
+                    inset={0}
+                    style={{
+                      background:
+                        "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%)",
+                    }}
+                  />
+                  {playable && (
+                    <Box
+                      position="absolute"
+                      top="50%"
+                      left="50%"
+                      transform="translate(-50%, -50%)"
+                      w="54px"
+                      h="54px"
+                      borderRadius="full"
+                      bg="blackAlpha.700"
+                      border="1px solid"
+                      borderColor="whiteAlpha.500"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="white"
+                    >
+                      <Box pl="3px">
+                        <FaPlay />
+                      </Box>
+                    </Box>
+                  )}
+                  <HStack position="absolute" top={2} left={2} gap={1}>
+                    {v.source === "nexzy" && (
+                      <Badge colorPalette="blue" variant="solid">
+                        Nexzy
+                      </Badge>
+                    )}
+                    {v.isShort && (
+                      <Badge colorPalette="pink" variant="solid">
+                        Short
+                      </Badge>
+                    )}
+                  </HStack>
+                  {v.title && (
+                    <Text
+                      position="absolute"
+                      bottom={2}
+                      left={3}
+                      right={3}
+                      color="white"
+                      fontSize="sm"
+                      fontWeight="600"
+                      lineClamp={1}
+                    >
+                      {v.title}
+                    </Text>
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {showArrows && (
+            <>
+              <Box
+                as="button"
+                aria-label="Scroll left"
+                onClick={() => scrollRail(-1)}
+                display={{ base: "none", md: "flex" }}
+                position="absolute"
+                left="6px"
+                top="50%"
+                transform="translateY(-50%)"
+                w="36px"
+                h="36px"
+                borderRadius="full"
+                bg="blackAlpha.800"
+                border="1px solid"
+                borderColor="whiteAlpha.300"
+                color="white"
+                alignItems="center"
+                justifyContent="center"
+                opacity={0}
+                _groupHover={{ opacity: 1 }}
+                _hover={{ bg: "nexzy.blue" }}
+                _focusVisible={{ opacity: 1, ...focusRing }}
+                transition="opacity 0.15s, background 0.15s"
+              >
+                <FiChevronLeft />
               </Box>
-            );
-          })}
-        </SimpleGrid>
+              <Box
+                as="button"
+                aria-label="Scroll right"
+                onClick={() => scrollRail(1)}
+                display={{ base: "none", md: "flex" }}
+                position="absolute"
+                right="6px"
+                top="50%"
+                transform="translateY(-50%)"
+                w="36px"
+                h="36px"
+                borderRadius="full"
+                bg="blackAlpha.800"
+                border="1px solid"
+                borderColor="whiteAlpha.300"
+                color="white"
+                alignItems="center"
+                justifyContent="center"
+                opacity={0}
+                _groupHover={{ opacity: 1 }}
+                _hover={{ bg: "nexzy.blue" }}
+                _focusVisible={{ opacity: 1, ...focusRing }}
+                transition="opacity 0.15s, background 0.15s"
+              >
+                <FiChevronRight />
+              </Box>
+            </>
+          )}
+        </Box>
       )}
 
       {hasShots && (
@@ -187,32 +292,38 @@ export default function GameMedia({
             </Text>
           )}
           <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} gap={3}>
-            {shots.map((src, i) => (
-              <Box
-                key={i}
-                role="button"
-                aria-label={`${name} screenshot ${i + 1}`}
-                onClick={() => setActive({ kind: "shot", src })}
-                cursor="pointer"
-                position="relative"
-                aspectRatio={16 / 9}
-                borderRadius="lg"
-                overflow="hidden"
-                border="1px solid"
-                borderColor="whiteAlpha.100"
-                bg="whiteAlpha.50"
-                transition="all 0.15s"
-                _hover={{ borderColor: "nexzy.blue/60" }}
-              >
-                <NextImage
-                  src={src}
-                  alt={`${name} screenshot ${i + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 240px"
-                  style={{ objectFit: "cover" }}
-                />
-              </Box>
-            ))}
+            {shots.map((src, i) => {
+              const openShot = () => setActive({ kind: "shot", src });
+              return (
+                <Box
+                  key={i}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${name} screenshot ${i + 1}`}
+                  onClick={openShot}
+                  onKeyDown={keyActivate(openShot)}
+                  cursor="pointer"
+                  position="relative"
+                  aspectRatio={16 / 9}
+                  borderRadius="lg"
+                  overflow="hidden"
+                  border="1px solid"
+                  borderColor="whiteAlpha.100"
+                  bg="whiteAlpha.50"
+                  transition="all 0.15s"
+                  _hover={{ borderColor: "nexzy.blue/60" }}
+                  _focusVisible={focusRing}
+                >
+                  <NextImage
+                    src={src}
+                    alt={`${name} screenshot ${i + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 240px"
+                    style={{ objectFit: "cover" }}
+                  />
+                </Box>
+              );
+            })}
           </SimpleGrid>
         </Box>
       )}
@@ -241,7 +352,7 @@ export default function GameMedia({
             onClick={(e) => e.stopPropagation()}
           >
             <Box
-              role="button"
+              as="button"
               aria-label="Close"
               onClick={() => setActive(null)}
               position="absolute"
@@ -252,6 +363,7 @@ export default function GameMedia({
               lineHeight="1"
               cursor="pointer"
               _hover={{ color: "white" }}
+              _focusVisible={focusRing}
             >
               ×
             </Box>
