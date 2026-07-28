@@ -310,6 +310,10 @@ export interface PlatformKit {
   description?: string;
   caption?: string;
   hashtags?: string[];
+  /** YouTube backend keyword phrases (not hashtags). */
+  tags?: string[];
+  /** Engagement-first CTA with this platform's correct link wording. */
+  cta?: string;
 }
 
 export interface ContentSuggestion {
@@ -335,6 +339,7 @@ export interface ContentSuggestion {
       youtube?: PlatformKit;
       tiktok?: PlatformKit;
       reels?: PlatformKit;
+      facebook?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;

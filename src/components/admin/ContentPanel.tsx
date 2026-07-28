@@ -70,13 +70,13 @@ function KitBlock({
   name,
   kit,
 }: {
-  name: "YouTube Shorts" | "TikTok" | "Instagram Reels";
+  name: "YouTube Shorts" | "TikTok" | "Instagram Reels" | "Facebook Reels";
   kit?: PlatformKit;
 }) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
   const primary = kit.title || kit.caption || "";
-  const full = [kit.title, kit.description, kit.caption, hashtags]
+  const full = [kit.title, kit.description, kit.caption, hashtags, kit.cta]
     .filter(Boolean)
     .join("\n");
   return (
@@ -111,6 +111,16 @@ function KitBlock({
       {hashtags && (
         <Text color="nexzy.lightBlue" fontSize="xs" mt={1}>
           {hashtags}
+        </Text>
+      )}
+      {kit.tags && kit.tags.length > 0 && (
+        <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+          Tags: {kit.tags.join(", ")}
+        </Text>
+      )}
+      {kit.cta && (
+        <Text color="nexzy.gray.100" fontSize="xs" mt={1} fontStyle="italic">
+          CTA: {kit.cta}
         </Text>
       )}
       {!kit.title && !primary && (
@@ -559,6 +569,7 @@ function SuggestionCard({
               <KitBlock name="YouTube Shorts" kit={platforms.youtube} />
               <KitBlock name="TikTok" kit={platforms.tiktok} />
               <KitBlock name="Instagram Reels" kit={platforms.reels} />
+              <KitBlock name="Facebook Reels" kit={platforms.facebook} />
             </VStack>
           )}
 
