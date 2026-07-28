@@ -92,6 +92,7 @@ export default function VideosPanel() {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [reels, setReels] = useState("");
+  const [facebook, setFacebook] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
@@ -124,6 +125,7 @@ export default function VideosPanel() {
     setYoutubeUrl("");
     setTiktok("");
     setReels("");
+    setFacebook("");
     setThumbnailUrl("");
     setCaption("");
     setSource("nexzy");
@@ -140,6 +142,7 @@ export default function VideosPanel() {
     setYoutubeUrl(v.youtubeUrl ?? "");
     setTiktok(v.platformLinks?.tiktok ?? "");
     setReels(v.platformLinks?.reels ?? "");
+    setFacebook(v.platformLinks?.facebook ?? "");
     setThumbnailUrl(v.thumbnailUrl ?? "");
     setCaption(v.caption ?? "");
     setSource(v.source === "external" ? "external" : "nexzy");
@@ -158,6 +161,7 @@ export default function VideosPanel() {
       const platformLinks: Record<string, string> = {};
       if (tiktok.trim()) platformLinks.tiktok = tiktok.trim();
       if (reels.trim()) platformLinks.reels = reels.trim();
+      if (facebook.trim()) platformLinks.facebook = facebook.trim();
       const payload = {
         title: title.trim(),
         youtubeUrl: youtubeUrl.trim(),
@@ -322,6 +326,12 @@ export default function VideosPanel() {
             </SimpleGrid>
             <Input
               {...inputStyle}
+              value={facebook}
+              onChange={(e) => setFacebook(e.target.value)}
+              placeholder="Facebook Reels URL (optional)"
+            />
+            <Input
+              {...inputStyle}
               value={thumbnailUrl}
               onChange={(e) => setThumbnailUrl(e.target.value)}
               placeholder="Thumbnail URL (optional — YouTube auto-derives)"
@@ -467,6 +477,11 @@ export default function VideosPanel() {
                       {v.platformLinks?.reels && (
                         <Badge colorPalette="purple" variant="outline">
                           Reels
+                        </Badge>
+                      )}
+                      {v.platformLinks?.facebook && (
+                        <Badge colorPalette="blue" variant="outline">
+                          Facebook
                         </Badge>
                       )}
                       <Text fontSize="11px" color="whiteAlpha.500">

@@ -1,12 +1,19 @@
 "use client";
 
 import { Button, HStack, Icon, Text } from "@chakra-ui/react";
-import { FaTiktok, FaInstagram, FaXTwitter, FaYoutube } from "react-icons/fa6";
+import {
+  FaTiktok,
+  FaInstagram,
+  FaXTwitter,
+  FaYoutube,
+  FaFacebook,
+} from "react-icons/fa6";
 import { track } from "@/lib/analytics";
 
 const META: Record<string, { label: string; icon: React.ReactNode }> = {
   tiktok: { label: "TikTok", icon: <FaTiktok /> },
   reels: { label: "Reels", icon: <FaInstagram /> },
+  facebook: { label: "Facebook", icon: <FaFacebook /> },
   instagram: { label: "Instagram", icon: <FaInstagram /> },
   x: { label: "X", icon: <FaXTwitter /> },
   youtube: { label: "YouTube", icon: <FaYoutube /> },

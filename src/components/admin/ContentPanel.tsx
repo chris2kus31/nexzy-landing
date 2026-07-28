@@ -281,6 +281,7 @@ function SuggestionCard({
   const [pYoutube, setPYoutube] = useState("");
   const [pTiktok, setPTiktok] = useState("");
   const [pReels, setPReels] = useState("");
+  const [pFacebook, setPFacebook] = useState("");
   const [pThumb, setPThumb] = useState("");
   const platforms = view.payload?.platforms;
   const [persona, setPersona] = useState(s.author);
@@ -342,6 +343,7 @@ function SuggestionCard({
         youtubeUrl: pYoutube.trim() || undefined,
         tiktokUrl: pTiktok.trim() || undefined,
         reelsUrl: pReels.trim() || undefined,
+        facebookUrl: pFacebook.trim() || undefined,
         thumbnailUrl: pThumb.trim() || undefined,
       });
       setProduced({ videoSlug: r.videoSlug, gameLinked: r.gameLinked });
@@ -479,6 +481,12 @@ function SuggestionCard({
             </HStack>
             <Input
               {...fld}
+              value={pFacebook}
+              onChange={(e) => setPFacebook(e.target.value)}
+              placeholder="Facebook Reels URL (optional)"
+            />
+            <Input
+              {...fld}
               value={pThumb}
               onChange={(e) => setPThumb(e.target.value)}
               placeholder="Thumbnail URL (optional — YouTube auto-derives)"
@@ -490,7 +498,12 @@ function SuggestionCard({
                 onClick={produce}
                 loading={busy === "produce"}
                 loadingText="Publishing…"
-                disabled={!pYoutube.trim() && !pTiktok.trim() && !pReels.trim()}
+                disabled={
+                  !pYoutube.trim() &&
+                  !pTiktok.trim() &&
+                  !pReels.trim() &&
+                  !pFacebook.trim()
+                }
               >
                 Publish to /videos
               </Button>

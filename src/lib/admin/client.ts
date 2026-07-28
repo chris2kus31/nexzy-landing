@@ -445,6 +445,7 @@ export async function produceContentVideo(
     youtubeUrl?: string;
     tiktokUrl?: string;
     reelsUrl?: string;
+    facebookUrl?: string;
     thumbnailUrl?: string;
     title?: string;
   },
