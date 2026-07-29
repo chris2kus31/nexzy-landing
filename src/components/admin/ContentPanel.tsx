@@ -282,6 +282,9 @@ function SuggestionCard({
   const longform = view.payload?.longform;
   const decision = view.payload?.decision;
   const fmt = view.payload?.format;
+  const editorReport = view.payload?.editorReport ?? [];
+  const editorFixes = editorReport.filter((n) => n.level === "fixed");
+  const editorFlags = editorReport.filter((n) => n.level === "flag");
   // Non-video formats the format brain can recommend (copy-only cards).
   const isNonVideo =
     fmt === "poll" ||
@@ -544,6 +547,40 @@ function SuggestionCard({
               Creates a Nexzy video linked to this article&rsquo;s game (Nexzy
               videos rank first). At least one platform URL is required.
             </Text>
+          </VStack>
+        </Box>
+      )}
+
+      {/* ✎ What the Editor changed (Tier-1 completeness/structure guards) */}
+      {editorReport.length > 0 && (
+        <Box
+          mb={3}
+          p={2}
+          borderRadius="md"
+          bg={editorFlags.length ? "yellow.500/10" : "green.500/10"}
+          border="1px solid"
+          borderColor={editorFlags.length ? "yellow.400/40" : "green.400/40"}
+        >
+          <Text
+            color={editorFlags.length ? "yellow.200" : "green.200"}
+            fontSize="xs"
+            fontWeight="700"
+            mb={1}
+          >
+            ✎ Editor · {editorFixes.length} fixed · {editorFlags.length} to
+            check
+          </Text>
+          <VStack align="stretch" gap={0.5}>
+            {editorFixes.map((n, i) => (
+              <Text key={`f${i}`} color="green.200" fontSize="xs">
+                ✓ {n.label}
+              </Text>
+            ))}
+            {editorFlags.map((n, i) => (
+              <Text key={`w${i}`} color="yellow.200" fontSize="xs">
+                ⚠ {n.label}
+              </Text>
+            ))}
           </VStack>
         </Box>
       )}

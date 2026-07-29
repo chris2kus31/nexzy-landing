@@ -381,6 +381,8 @@ export interface ContentSuggestion {
     };
     // Non-video formats: the ready-to-post copy (poll/pinned-comment/text post).
     copy?: string;
+    // Tier-1 Editor report: what the deterministic guards fixed or flagged.
+    editorReport?: { level: "fixed" | "flag"; label: string }[];
   } | null;
   status: string;
   createdAt: string;
