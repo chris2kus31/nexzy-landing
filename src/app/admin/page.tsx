@@ -15,19 +15,15 @@ import {
 import AdminShell from "@/components/admin/AdminShell";
 import RunPipelinePanel from "@/components/admin/RunPipelinePanel";
 import CommissionPanel from "@/components/admin/CommissionPanel";
-import GuidePanel from "@/components/admin/GuidePanel";
-import ListPanel from "@/components/admin/ListPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import GrowthPanel from "@/components/admin/GrowthPanel";
 import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import GameHubPanel from "@/components/admin/GameHubPanel";
-import VideosPanel from "@/components/admin/VideosPanel";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
-import ContentPanel from "@/components/admin/ContentPanel";
-import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
+import ContentStudioPanel from "@/components/admin/ContentStudioPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
 import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
@@ -49,15 +45,13 @@ type Tab =
   | "published"
   | "subscribers"
   | "marketing"
-  | "content"
-  | "guides"
+  | "content-studio"
   | "forum"
   | "analytics"
   | "growth"
   | "ai-visibility"
   | "games"
   | "gamehub"
-  | "videos"
   | "writers"
   | "tools"
   | "notify";
@@ -159,9 +153,25 @@ function AdminContent() {
       window.history.replaceState(null, "", `/admin?tab=${t}`);
   }, []);
   useEffect(() => {
+    // Old bookmarks (?tab=content|videos|guides) now live inside Content Studio.
+    const LEGACY: Record<string, string> = {
+      content: "suggestions",
+      videos: "library",
+      guides: "guides",
+    };
     const readTab = () => {
       const t = new URLSearchParams(window.location.search).get("tab");
-      if (t) _setTab(t as Tab);
+      if (!t) return;
+      const legacySub = LEGACY[t];
+      if (legacySub) {
+        _setTab("content-studio");
+        const p = new URLSearchParams(window.location.search);
+        p.set("tab", "content-studio");
+        p.set("sub", legacySub);
+        window.history.replaceState(null, "", `/admin?${p.toString()}`);
+      } else {
+        _setTab(t as Tab);
+      }
     };
     readTab();
     window.addEventListener("popstate", readTab);
@@ -270,14 +280,9 @@ function AdminContent() {
             onClick={() => setTab("marketing")}
           />
           <TabButton
-            label="Content"
-            active={tab === "content"}
-            onClick={() => setTab("content")}
-          />
-          <TabButton
-            label="Guide targets"
-            active={tab === "guides"}
-            onClick={() => setTab("guides")}
+            label="Content Studio"
+            active={tab === "content-studio"}
+            onClick={() => setTab("content-studio")}
           />
           <TabButton
             label="Forum"
@@ -308,11 +313,6 @@ function AdminContent() {
             label="Game hub"
             active={tab === "gamehub"}
             onClick={() => setTab("gamehub")}
-          />
-          <TabButton
-            label="Videos"
-            active={tab === "videos"}
-            onClick={() => setTab("videos")}
           />
           {isOwner && (
             <TabButton
@@ -385,9 +385,9 @@ function AdminContent() {
 
       {tab === "marketing" && <MarketingPanel />}
 
-      {tab === "content" && <ContentPanel isOwner={isOwner} />}
-
-      {tab === "guides" && <GuideTargetsPanel isOwner={isOwner} />}
+      {tab === "content-studio" && (
+        <ContentStudioPanel isOwner={isOwner} onRefresh={load} />
+      )}
 
       {tab === "forum" && (
         <VStack align="stretch" gap={6}>
@@ -433,7 +433,6 @@ function AdminContent() {
       {tab === "ai-visibility" && <AiVisibilityPanel isOwner={isOwner} />}
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
       {tab === "gamehub" && <GameHubPanel />}
-      {tab === "videos" && <VideosPanel />}
 
       {tab === "writers" && isOwner && <WritersPanel />}
 
@@ -447,13 +446,12 @@ function AdminContent() {
             </Heading>
             <Text color="nexzy.gray.100" fontSize="sm">
               Run the pipeline, commission a story, and maintain the article
-              archive.
+              archive. (Guides, walkthroughs &amp; lists moved to Content Studio
+              → Guides &amp; Walkthroughs.)
             </Text>
           </Box>
           <RunPipelinePanel onRan={load} />
           <CommissionPanel onRan={load} />
-          <GuidePanel onRan={load} />
-          <ListPanel onRan={load} />
           <BackfillAuthorsButton />
         </VStack>
       )}
