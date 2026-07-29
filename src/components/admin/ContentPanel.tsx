@@ -285,6 +285,7 @@ function SuggestionCard({
   const editorReport = view.payload?.editorReport ?? [];
   const editorFixes = editorReport.filter((n) => n.level === "fixed");
   const editorFlags = editorReport.filter((n) => n.level === "flag");
+  const editorRewrites = editorReport.filter((n) => n.level === "rewrite");
   // Non-video formats the format brain can recommend (copy-only cards).
   const isNonVideo =
     fmt === "poll" ||
@@ -567,10 +568,15 @@ function SuggestionCard({
             fontWeight="700"
             mb={1}
           >
-            ✎ Editor · {editorFixes.length} fixed · {editorFlags.length} to
-            check
+            ✎ Editor · {editorRewrites.length} rewritten · {editorFixes.length}{" "}
+            fixed · {editorFlags.length} to check
           </Text>
           <VStack align="stretch" gap={0.5}>
+            {editorRewrites.map((n, i) => (
+              <Text key={`r${i}`} color="nexzy.lightBlue" fontSize="xs">
+                ✎ {n.label}
+              </Text>
+            ))}
             {editorFixes.map((n, i) => (
               <Text key={`f${i}`} color="green.200" fontSize="xs">
                 ✓ {n.label}
