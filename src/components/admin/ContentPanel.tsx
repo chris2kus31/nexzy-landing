@@ -400,8 +400,8 @@ function SuggestionCard({
               {decision.when === "pre_event" ? "PRE-EVENT" : "SCHEDULE"}
             </Badge>
           )}
-          <Badge colorPalette="blue" variant="subtle">
-            {view.author}’s voice
+          <Badge colorPalette="blue" variant="solid">
+            ✍ {view.author}
           </Badge>
           <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
             {s.title}
@@ -864,7 +864,7 @@ function SuggestionCard({
                 </Box>
                 {view.payload?.voicePersona && (
                   <Text color="nexzy.gray.100" fontSize="xs">
-                    🗣 Voice: {view.payload.voicePersona}
+                    🗣 Delivery: {view.payload.voicePersona}
                   </Text>
                 )}
                 {view.payload?.music && (
