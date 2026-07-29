@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
+import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
@@ -10,8 +11,9 @@ import ListPanel from "@/components/admin/ListPanel";
 
 /**
  * Content Studio — the consolidated home for the whole content pipeline:
- * suggest → produce → publish. Three sub-views under one admin tab:
- *   - Suggestions:  the format engine's cards (short + long + poll/image/text)
+ * lead → generate → produce → publish. Sub-views under one admin tab:
+ *   - Leads: published articles awaiting a Generate decision (writer + format)
+ *   - Suggestions:  the generated cards (short + long + poll/image/text)
  *   - Video Library: the external videos you've posted (YT/TikTok/IG/FB)
  *   - Guides & Walkthroughs: the targets board + commission a guide/walkthrough/list
  *
@@ -19,16 +21,19 @@ import ListPanel from "@/components/admin/ListPanel";
  * ?tab=content|videos|guides bookmarks (mapped in the parent) land in the right
  * place.
  */
-type Sub = "suggestions" | "library" | "guides";
+type Sub = "leads" | "suggestions" | "library" | "guides";
 
 const SUBS: { key: Sub; label: string }[] = [
+  { key: "leads", label: "Leads" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
   { key: "guides", label: "Guides & Walkthroughs" },
 ];
 
 function isSub(v: string | null): v is Sub {
-  return v === "suggestions" || v === "library" || v === "guides";
+  return (
+    v === "leads" || v === "suggestions" || v === "library" || v === "guides"
+  );
 }
 
 export default function ContentStudioPanel({
@@ -76,6 +81,8 @@ export default function ContentStudioPanel({
           );
         })}
       </HStack>
+
+      {sub === "leads" && <LeadsPanel isOwner={isOwner} />}
 
       {sub === "suggestions" && <ContentPanel isOwner={isOwner} />}
 

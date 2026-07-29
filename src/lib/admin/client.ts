@@ -383,6 +383,15 @@ export interface ContentSuggestion {
     copy?: string;
     // Editor report: Tier-1 deterministic fixes/flags + Tier-2 LLM rewrites.
     editorReport?: { level: "fixed" | "flag" | "rewrite"; label: string }[];
+    // Video LEAD (kind === "video_lead"): the cheap up-front analysis shown
+    // before you pick a writer/format and click Generate.
+    lead?: {
+      summary?: string;
+      suggestedFormat?: string;
+      suggestedWriter?: string;
+      platforms?: string[];
+      reason?: string;
+    };
   } | null;
   status: string;
   createdAt: string;
@@ -391,6 +400,26 @@ export interface ContentSuggestion {
 /** The open board of content suggestions (survives a refresh). */
 export async function getContentSuggestions(): Promise<ContentSuggestion[]> {
   return handle(await fetch("/api/newsroom/admin/content"));
+}
+
+/** Open video LEADS (published articles awaiting a Generate decision). */
+export async function getVideoLeads(): Promise<ContentSuggestion[]> {
+  return handle(await fetch("/api/newsroom/admin/content/leads"));
+}
+
+/** Generate the card from a lead in the chosen writer + format (owner spend). */
+export async function generateFromLead(
+  id: string,
+  writer?: string,
+  format?: string,
+): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/leads/${id}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ writer, format }),
+    }),
+  );
 }
 
 /** Generate fresh suggestions now, then return the open board. */
