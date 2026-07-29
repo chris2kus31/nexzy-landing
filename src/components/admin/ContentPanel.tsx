@@ -66,13 +66,7 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
 }
 
 /** One platform's posting kit (title/caption + hashtags + copy). */
-function KitBlock({
-  name,
-  kit,
-}: {
-  name: "YouTube Shorts" | "TikTok" | "Instagram Reels" | "Facebook Reels";
-  kit?: PlatformKit;
-}) {
+function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
   const primary = kit.title || kit.caption || "";
@@ -284,6 +278,8 @@ function SuggestionCard({
   const [pFacebook, setPFacebook] = useState("");
   const [pThumb, setPThumb] = useState("");
   const platforms = view.payload?.platforms;
+  const isLong = view.payload?.format === "long";
+  const longform = view.payload?.longform;
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
@@ -372,6 +368,11 @@ function SuggestionCard({
           >
             {(s.lane ?? "clip").toUpperCase()}
           </Badge>
+          {isLong && (
+            <Badge colorPalette="purple" variant="solid">
+              LONG-FORM
+            </Badge>
+          )}
           <Badge colorPalette="blue" variant="subtle">
             {view.author}’s voice
           </Badge>
@@ -579,11 +580,82 @@ function SuggestionCard({
           {/* Per-platform posting kits */}
           {platforms && (
             <VStack align="stretch" gap={2}>
-              <KitBlock name="YouTube Shorts" kit={platforms.youtube} />
-              <KitBlock name="TikTok" kit={platforms.tiktok} />
-              <KitBlock name="Instagram Reels" kit={platforms.reels} />
-              <KitBlock name="Facebook Reels" kit={platforms.facebook} />
+              <KitBlock
+                name={isLong ? "YouTube (Long-form)" : "YouTube Shorts"}
+                kit={platforms.youtube}
+              />
+              <KitBlock
+                name={isLong ? "TikTok (teaser)" : "TikTok"}
+                kit={platforms.tiktok}
+              />
+              <KitBlock
+                name={isLong ? "Instagram Reels (teaser)" : "Instagram Reels"}
+                kit={platforms.reels}
+              />
+              <KitBlock
+                name={isLong ? "Facebook Reels (teaser)" : "Facebook Reels"}
+                kit={platforms.facebook}
+              />
             </VStack>
+          )}
+
+          {/* Long-form plan: chapters + thumbnail + teaser advice */}
+          {isLong && longform && (
+            <Box
+              mt={3}
+              pt={3}
+              borderTop="1px solid"
+              borderColor="whiteAlpha.200"
+            >
+              <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
+                Long-form plan (YouTube)
+              </Text>
+              {longform.thumbnailConcept && (
+                <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                  <Text as="span" color="nexzy.white" fontWeight="600">
+                    Thumbnail:{" "}
+                  </Text>
+                  {longform.thumbnailConcept}
+                </Text>
+              )}
+              {Array.isArray(longform.chapters) &&
+                longform.chapters.length > 0 && (
+                  <VStack align="stretch" gap={1} mb={2}>
+                    {longform.chapters.map((c, i) => (
+                      <HStack key={i} gap={2} align="baseline">
+                        <Text
+                          color="nexzy.blue"
+                          fontSize="xs"
+                          fontWeight="700"
+                          minW="38px"
+                        >
+                          {c.timestamp ?? ""}
+                        </Text>
+                        <Text
+                          color="nexzy.white"
+                          fontSize="xs"
+                          fontWeight="600"
+                        >
+                          {c.title}
+                        </Text>
+                        {c.summary && (
+                          <Text color="nexzy.gray.100" fontSize="xs">
+                            — {c.summary}
+                          </Text>
+                        )}
+                      </HStack>
+                    ))}
+                  </VStack>
+                )}
+              {longform.teaserAdvice && (
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  <Text as="span" color="nexzy.white" fontWeight="600">
+                    Teasers:{" "}
+                  </Text>
+                  {longform.teaserAdvice}
+                </Text>
+              )}
+            </Box>
           )}
 
           {/* ElevenLabs shorts script + production notes */}

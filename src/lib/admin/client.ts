@@ -353,6 +353,15 @@ export interface ContentSuggestion {
     onScreenText?: string[];
     music?: string | null;
     voicePersona?: string | null;
+    // Video format: "short" (default) or "long" (guide/walkthrough → YouTube
+    // long-form + teasers). Missing = treat as "short" (older cards).
+    format?: "short" | "long";
+    // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
+    longform?: {
+      chapters?: { title?: string; summary?: string; timestamp?: string }[];
+      thumbnailConcept?: string;
+      teaserAdvice?: string;
+    };
   } | null;
   status: string;
   createdAt: string;
