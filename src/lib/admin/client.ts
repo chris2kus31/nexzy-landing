@@ -354,14 +354,33 @@ export interface ContentSuggestion {
     music?: string | null;
     voicePersona?: string | null;
     // Video format: "short" (default) or "long" (guide/walkthrough → YouTube
-    // long-form + teasers). Missing = treat as "short" (older cards).
-    format?: "short" | "long";
+    // long-form + teasers). Missing = treat as "short" (older cards). The format
+    // brain may also recommend a non-video format below.
+    format?:
+      | "short"
+      | "long"
+      | "image"
+      | "poll"
+      | "pinned_comment"
+      | "text_post"
+      | "none";
     // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
     longform?: {
       chapters?: { title?: string; summary?: string; timestamp?: string }[];
       thumbnailConcept?: string;
       teaserAdvice?: string;
     };
+    // The format brain's decision (news/deal cards): what format, when, where,
+    // and why — plus ready-to-post copy for non-video formats.
+    decision?: {
+      format?: string;
+      when?: "now" | "schedule" | "pre_event";
+      platforms?: string[];
+      reason?: string;
+      copy?: string;
+    };
+    // Non-video formats: the ready-to-post copy (poll/pinned-comment/text post).
+    copy?: string;
   } | null;
   status: string;
   createdAt: string;

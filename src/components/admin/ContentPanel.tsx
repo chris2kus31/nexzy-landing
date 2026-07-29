@@ -280,6 +280,14 @@ function SuggestionCard({
   const platforms = view.payload?.platforms;
   const isLong = view.payload?.format === "long";
   const longform = view.payload?.longform;
+  const decision = view.payload?.decision;
+  const fmt = view.payload?.format;
+  // Non-video formats the format brain can recommend (copy-only cards).
+  const isNonVideo =
+    fmt === "poll" ||
+    fmt === "pinned_comment" ||
+    fmt === "text_post" ||
+    fmt === "none";
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
@@ -373,6 +381,21 @@ function SuggestionCard({
               LONG-FORM
             </Badge>
           )}
+          {isNonVideo && (
+            <Badge
+              colorPalette={fmt === "none" ? "gray" : "yellow"}
+              variant="solid"
+            >
+              {fmt === "none"
+                ? "NO VIDEO"
+                : String(fmt).replace(/_/g, " ").toUpperCase()}
+            </Badge>
+          )}
+          {decision?.when && decision.when !== "now" && (
+            <Badge colorPalette="gray" variant="subtle">
+              {decision.when === "pre_event" ? "PRE-EVENT" : "SCHEDULE"}
+            </Badge>
+          )}
           <Badge colorPalette="blue" variant="subtle">
             {view.author}’s voice
           </Badge>
@@ -381,7 +404,7 @@ function SuggestionCard({
           </Text>
         </HStack>
         <HStack gap={1}>
-          {s.kind === "video" && !produced && (
+          {s.kind === "video" && !produced && !isNonVideo && (
             <Button
               size="xs"
               colorPalette="green"
@@ -441,7 +464,7 @@ function SuggestionCard({
         </Box>
       )}
 
-      {s.kind === "video" && showProduce && !produced && (
+      {s.kind === "video" && showProduce && !produced && !isNonVideo && (
         <Box
           mb={3}
           p={3}
@@ -525,6 +548,44 @@ function SuggestionCard({
         </Box>
       )}
 
+      {/* Format brain's recommendation (why this format) */}
+      {decision?.reason && (
+        <Box
+          mb={3}
+          p={2}
+          borderRadius="md"
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text color="nexzy.gray.100" fontSize="xs">
+            <b>Format brain:</b> {decision.reason}
+          </Text>
+        </Box>
+      )}
+
+      {/* Non-video formats: ready-to-post copy with a Copy button */}
+      {isNonVideo && fmt !== "none" && view.payload?.copy && (
+        <Box
+          mb={3}
+          p={3}
+          borderRadius="lg"
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Flex justify="space-between" align="center" mb={1} gap={2}>
+            <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+              Ready to post
+            </Text>
+            <CopyBtn text={view.payload.copy} label="Copy" />
+          </Flex>
+          <Text color="nexzy.white" fontSize="sm" whiteSpace="pre-wrap">
+            {view.payload.copy}
+          </Text>
+        </Box>
+      )}
+
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>
         {view.hook && (
@@ -532,7 +593,7 @@ function SuggestionCard({
             <b>Hook:</b> {view.hook}
           </Text>
         )}
-        {view.script && (
+        {view.script && !isNonVideo && (
           <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
             {view.script}
           </Text>
@@ -561,21 +622,23 @@ function SuggestionCard({
       </VStack>
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
-      <Button
-        size="xs"
-        variant="ghost"
-        color="nexzy.gray.100"
-        _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
-        onClick={() => setShowDetails((v) => !v)}
-        mb={2}
-      >
-        {showDetails ? "▾ Hide" : "▸ Show"} kits &amp; ElevenLabs script
-        {view.ttsScript
-          ? ` · ~${secs}s · ${credits.toLocaleString()} credits`
-          : ""}
-      </Button>
+      {!isNonVideo && (
+        <Button
+          size="xs"
+          variant="ghost"
+          color="nexzy.gray.100"
+          _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
+          onClick={() => setShowDetails((v) => !v)}
+          mb={2}
+        >
+          {showDetails ? "▾ Hide" : "▸ Show"} kits &amp; ElevenLabs script
+          {view.ttsScript
+            ? ` · ~${secs}s · ${credits.toLocaleString()} credits`
+            : ""}
+        </Button>
+      )}
 
-      {showDetails && (
+      {!isNonVideo && showDetails && (
         <>
           {/* Per-platform posting kits */}
           {platforms && (
