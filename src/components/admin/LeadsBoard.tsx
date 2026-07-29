@@ -17,6 +17,7 @@ import {
   runDesk,
   sendLeadDigest,
   writeLead,
+  writeLeadReview,
   skipLead,
   getWriterNames,
   type Lead,
@@ -51,7 +52,12 @@ function LeadCard({
   authors,
 }: {
   lead: Lead;
-  onWrite: (id: string, author: string, noImage: boolean) => void;
+  onWrite: (
+    id: string,
+    author: string,
+    noImage: boolean,
+    treatment: "news" | "review",
+  ) => void;
   onSkip: (id: string) => void;
   busy: boolean;
   authors: string[];
@@ -59,6 +65,9 @@ function LeadCard({
   const [showSources, setShowSources] = useState(false);
   const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
   const [noImage, setNoImage] = useState(false);
+  const [treatment, setTreatment] = useState<"news" | "review">(
+    lead.suggestedTreatment || "news",
+  );
   const hot = lead.trendScore >= 60;
   return (
     <Box
@@ -87,6 +96,20 @@ function LeadCard({
             >
               {beatLabel(lead.beat)}
             </Box>
+            {lead.suggestedTreatment === "review" && (
+              <Box
+                px={2}
+                py="1px"
+                borderRadius="md"
+                bg="purple.500"
+                color="white"
+                fontSize="xs"
+                fontWeight="700"
+                title="The desk thinks this reads better as a review — you can switch it back to news below."
+              >
+                🎬 Review?
+              </Box>
+            )}
             <Text
               color={trendColor(lead.trendScore)}
               fontSize="xs"
@@ -210,6 +233,35 @@ function LeadCard({
           minW={{ base: "auto", md: "120px" }}
           w={{ base: "full", md: "auto" }}
         >
+          {/* News ⇄ Review — pre-set to the desk's suggestion; the Write button
+              writes against whatever is selected here. */}
+          <HStack gap={1}>
+            {(["news", "review"] as const).map((t) => {
+              const active = treatment === t;
+              const accent = t === "review" ? "purple.500" : "nexzy.blue";
+              return (
+                <Box
+                  as="button"
+                  key={t}
+                  onClick={() => setTreatment(t)}
+                  flex={1}
+                  px={2}
+                  py="3px"
+                  borderRadius="md"
+                  fontSize="xs"
+                  fontWeight="700"
+                  textTransform="capitalize"
+                  borderWidth="1px"
+                  bg={active ? accent : "transparent"}
+                  color={active ? "white" : "nexzy.gray.100"}
+                  borderColor={active ? accent : "whiteAlpha.300"}
+                >
+                  {t}
+                  {lead.suggestedTreatment === t ? " ★" : ""}
+                </Box>
+              );
+            })}
+          </HStack>
           <Box>
             <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
               Write as{" "}
@@ -263,11 +315,11 @@ function LeadCard({
           </Box>
           <Button
             size="sm"
-            colorPalette="blue"
-            onClick={() => onWrite(lead.id, author, noImage)}
+            colorPalette={treatment === "review" ? "purple" : "blue"}
+            onClick={() => onWrite(lead.id, author, noImage, treatment)}
             loading={busy}
           >
-            Write this
+            {treatment === "review" ? "Write as review" : "Write this"}
           </Button>
           <Button
             size="sm"
@@ -352,10 +404,19 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     }
   };
 
-  const doWrite = async (id: string, author: string, noImage: boolean) => {
+  const doWrite = async (
+    id: string,
+    author: string,
+    noImage: boolean,
+    treatment: "news" | "review",
+  ) => {
     setBusyId(id);
     try {
-      await writeLead(id, author, noImage);
+      if (treatment === "review") {
+        await writeLeadReview(id, author, noImage);
+      } else {
+        await writeLead(id, author, noImage);
+      }
       setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
     } catch (e) {
       setMsg((e as Error)?.message || "Could not assign the lead.");

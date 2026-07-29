@@ -310,10 +310,6 @@ export interface PlatformKit {
   description?: string;
   caption?: string;
   hashtags?: string[];
-  /** YouTube backend keyword phrases (not hashtags). */
-  tags?: string[];
-  /** Engagement-first CTA with this platform's correct link wording. */
-  cta?: string;
 }
 
 export interface ContentSuggestion {
@@ -339,7 +335,6 @@ export interface ContentSuggestion {
       youtube?: PlatformKit;
       tiktok?: PlatformKit;
       reels?: PlatformKit;
-      facebook?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;
@@ -353,45 +348,6 @@ export interface ContentSuggestion {
     onScreenText?: string[];
     music?: string | null;
     voicePersona?: string | null;
-    // Video format: "short" (default) or "long" (guide/walkthrough → YouTube
-    // long-form + teasers). Missing = treat as "short" (older cards). The format
-    // brain may also recommend a non-video format below.
-    format?:
-      | "short"
-      | "long"
-      | "image"
-      | "poll"
-      | "pinned_comment"
-      | "text_post"
-      | "none";
-    // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
-    longform?: {
-      chapters?: { title?: string; summary?: string; timestamp?: string }[];
-      thumbnailConcept?: string;
-      teaserAdvice?: string;
-    };
-    // The format brain's decision (news/deal cards): what format, when, where,
-    // and why — plus ready-to-post copy for non-video formats.
-    decision?: {
-      format?: string;
-      when?: "now" | "schedule" | "pre_event";
-      platforms?: string[];
-      reason?: string;
-      copy?: string;
-    };
-    // Non-video formats: the ready-to-post copy (poll/pinned-comment/text post).
-    copy?: string;
-    // Editor report: Tier-1 deterministic fixes/flags + Tier-2 LLM rewrites.
-    editorReport?: { level: "fixed" | "flag" | "rewrite"; label: string }[];
-    // Video LEAD (kind === "video_lead"): the cheap up-front analysis shown
-    // before you pick a writer/format and click Generate.
-    lead?: {
-      summary?: string;
-      suggestedFormat?: string;
-      suggestedWriter?: string;
-      platforms?: string[];
-      reason?: string;
-    };
   } | null;
   status: string;
   createdAt: string;
@@ -400,26 +356,6 @@ export interface ContentSuggestion {
 /** The open board of content suggestions (survives a refresh). */
 export async function getContentSuggestions(): Promise<ContentSuggestion[]> {
   return handle(await fetch("/api/newsroom/admin/content"));
-}
-
-/** Open video LEADS (published articles awaiting a Generate decision). */
-export async function getVideoLeads(): Promise<ContentSuggestion[]> {
-  return handle(await fetch("/api/newsroom/admin/content/leads"));
-}
-
-/** Generate the card from a lead in the chosen writer + format (owner spend). */
-export async function generateFromLead(
-  id: string,
-  writer?: string,
-  format?: string,
-): Promise<ContentSuggestion | null> {
-  return handle(
-    await fetch(`/api/newsroom/admin/content/leads/${id}/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ writer, format }),
-    }),
-  );
 }
 
 /** Generate fresh suggestions now, then return the open board. */
@@ -504,7 +440,6 @@ export async function produceContentVideo(
     youtubeUrl?: string;
     tiktokUrl?: string;
     reelsUrl?: string;
-    facebookUrl?: string;
     thumbnailUrl?: string;
     title?: string;
   },
@@ -673,6 +608,8 @@ export interface Lead {
   confidenceFacts: "high" | "medium" | "low" | null;
   status: string;
   suggestedAuthor?: string;
+  /** Desk's News vs Review suggestion for this lead (editor overrides it). */
+  suggestedTreatment?: "news" | "review";
   youtubeUrl: string | null;
   createdAt: string;
 }
@@ -707,6 +644,24 @@ export async function writeLead(
 ): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(author ? { author } : {}),
+        ...(noImage ? { noImage: true } : {}),
+      }),
+    }),
+  );
+}
+
+/** "Write as review": assign a lead to the REVIEW pipeline (content queue). */
+export async function writeLeadReview(
+  id: string,
+  author?: string,
+  noImage?: boolean,
+): Promise<Lead> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/write-review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
