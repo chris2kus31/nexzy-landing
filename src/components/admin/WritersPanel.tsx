@@ -23,6 +23,7 @@ import {
   type WriterPersona,
   type PersonaInput,
 } from "@/lib/admin/client";
+import { verdictTierFor } from "@/lib/blog/verdict";
 import { BEATS } from "@/lib/blog/beats";
 
 const CHANNELS = ["x", "facebook", "discord", "reddit"];
@@ -104,6 +105,10 @@ function PersonaForm({
     exemplars: persona?.exemplars ?? "",
     styleNotes: persona?.styleNotes ?? "",
     guideBible: persona?.guideBible ?? "",
+    reviewBible: persona?.reviewBible ?? "",
+    reviewExemplar: persona?.reviewExemplar ?? "",
+    reviewStructure: persona?.reviewStructure ?? "",
+    verdictLadder: persona?.verdictLadder ?? [],
     beats: persona?.beats ?? [],
     channels: persona?.channels ?? [],
     nowPlaying: persona?.nowPlaying ?? [],
@@ -113,6 +118,13 @@ function PersonaForm({
 
   const set = (patch: Partial<PersonaInput>) =>
     setF((p) => ({ ...p, ...patch }));
+
+  const setTier = (i: number, v: string) =>
+    setF((p) => {
+      const cur = (p.verdictLadder ?? ["", "", "", "", ""]).slice();
+      cur[i] = v;
+      return { ...p, verdictLadder: cur };
+    });
 
   const toggleIn = (k: "beats" | "channels", v: string) =>
     setF((p) => {
@@ -136,9 +148,15 @@ function PersonaForm({
     setSaving(true);
     setMsg(null);
     try {
+      const ladder = (f.verdictLadder ?? []).map((x) => (x ?? "").trim());
       const payload: PersonaInput = {
         ...f,
         slug: (f.slug ?? "").trim() || slugify(f.name ?? ""),
+        reviewBible: (f.reviewBible ?? "").trim() || undefined,
+        reviewExemplar: (f.reviewExemplar ?? "").trim() || undefined,
+        reviewStructure: (f.reviewStructure ?? "").trim() || undefined,
+        verdictLadder:
+          ladder.length === 5 && ladder.every(Boolean) ? ladder : undefined,
       };
       if (isEdit) await updatePersona(persona!.id, payload);
       else await createPersona(payload);
@@ -321,6 +339,80 @@ function PersonaForm({
             fontSize="xs"
             {...inputProps}
           />
+        </Field>
+
+        <Field
+          label="Review voice (optional)"
+          hint="This persona's REVIEW bible (verdict valve open); blank = the code default."
+        >
+          <Textarea
+            value={f.reviewBible ?? ""}
+            onChange={(e) => set({ reviewBible: e.target.value })}
+            rows={4}
+            fontFamily="mono"
+            fontSize="xs"
+            {...inputProps}
+          />
+        </Field>
+
+        <Field
+          label="Review exemplar (optional)"
+          hint="A sample review in this voice; blank = the code default."
+        >
+          <Textarea
+            value={f.reviewExemplar ?? ""}
+            onChange={(e) => set({ reviewExemplar: e.target.value })}
+            rows={3}
+            fontFamily="mono"
+            fontSize="xs"
+            {...inputProps}
+          />
+        </Field>
+
+        <Field
+          label="Review structure (optional)"
+          hint="Section flow for this persona's reviews; blank = the code default."
+        >
+          <Textarea
+            value={f.reviewStructure ?? ""}
+            onChange={(e) => set({ reviewStructure: e.target.value })}
+            rows={4}
+            fontFamily="mono"
+            fontSize="xs"
+            {...inputProps}
+          />
+        </Field>
+
+        <Field
+          label="Verdict ladder (optional)"
+          hint="This writer's 5 tier labels by score; fill ALL 5 to override, or leave blank for the code default."
+        >
+          <Stack gap={2}>
+            {[
+              { i: 0, band: "9–10", mid: 10 },
+              { i: 1, band: "7–8", mid: 8 },
+              { i: 2, band: "5–6", mid: 6 },
+              { i: 3, band: "3–4", mid: 4 },
+              { i: 4, band: "1–2", mid: 2 },
+            ].map(({ i, band, mid }) => (
+              <HStack key={i} gap={2}>
+                <Text
+                  w="48px"
+                  color="nexzy.gray.100"
+                  fontSize="xs"
+                  textAlign="right"
+                >
+                  {band}
+                </Text>
+                <Input
+                  value={f.verdictLadder?.[i] ?? ""}
+                  onChange={(e) => setTier(i, e.target.value)}
+                  placeholder={verdictTierFor(f.name || "Chuy", mid)}
+                  {...inputProps}
+                />
+              </HStack>
+            ))}
+          </Stack>
         </Field>
 
         <Flex justify="space-between" align="center">

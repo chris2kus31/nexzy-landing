@@ -1547,6 +1547,10 @@ export interface WriterPersona {
   exemplars: string | null;
   styleNotes: string | null;
   guideBible: string | null;
+  reviewBible: string | null;
+  reviewExemplar: string | null;
+  reviewStructure: string | null;
+  verdictLadder: string[] | null;
   modelWriter: string | null;
   promptVersion: string | null;
   beats: string[] | null;
@@ -1570,6 +1574,10 @@ export type PersonaInput = Partial<
     | "exemplars"
     | "styleNotes"
     | "guideBible"
+    | "reviewBible"
+    | "reviewExemplar"
+    | "reviewStructure"
+    | "verdictLadder"
     | "modelWriter"
     | "beats"
     | "channels"
