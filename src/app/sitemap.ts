@@ -7,6 +7,7 @@ import {
   fetchPosts,
   fetchGuides,
   fetchLists,
+  fetchReviews,
   fetchWalkthroughs,
   fetchWalkthroughChapters,
   fetchGamesWithContent,
@@ -43,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guides",
     "/walkthroughs",
     "/lists",
+    "/reviews",
     "/videos",
     "/games",
     "/app",
@@ -53,6 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/guides",
     "/walkthroughs",
     "/lists",
+    "/reviews",
     "/videos",
     "/games",
   ]);
@@ -99,6 +102,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { prefix: "/guides", fetch: fetchGuides },
     { prefix: "/walkthroughs", fetch: fetchWalkthroughs },
     { prefix: "/lists", fetch: fetchLists },
+    { prefix: "/reviews", fetch: fetchReviews },
   ];
   for (const { prefix, fetch } of evergreen) {
     try {

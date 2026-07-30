@@ -36,6 +36,7 @@ const LIBRARY = [
   { label: "Guides", href: "/guides" },
   { label: "Walkthroughs", href: "/walkthroughs" },
   { label: "Lists", href: "/lists" },
+  { label: "Reviews", href: "/reviews" },
 ];
 
 export default function Navigation() {

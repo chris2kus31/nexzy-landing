@@ -17,6 +17,9 @@ export function GET(): Response {
 - [RSS feed](${SITE_URL}/rss.xml): Latest articles.
 - [News sitemap](${SITE_URL}/news-sitemap.xml): Articles from the last 48 hours.
 
+## Reviews
+- [Reviews](${SITE_URL}/reviews): Reviews of game adaptations — movies and TV based on games — each with a spoiler-free verdict and a score out of 10.
+
 ## About
 - [Editorial standards](${SITE_URL}/editorial-standards): How stories are
   written, researched, fact-checked, and human-reviewed before publishing.

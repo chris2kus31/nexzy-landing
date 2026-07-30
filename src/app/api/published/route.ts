@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { pingIndexNow } from "@/lib/seo/indexnow";
+import { publicPathForType } from "@/lib/blog/publicPath";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (
       body?.type === "guide" ||
       body?.type === "list" ||
-      body?.type === "walkthrough"
+      body?.type === "walkthrough" ||
+      body?.type === "review"
     )
       type = body.type;
   } catch {
@@ -34,15 +36,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   // Content type → its own URL home, so we revalidate + ping the RIGHT path
-  // (a guide lives at /guides/<slug>, a list at /lists/<slug>, not /blog).
-  const base =
-    type === "guide"
-      ? "/guides"
-      : type === "list"
-        ? "/lists"
-        : type === "walkthrough"
-          ? "/walkthroughs"
-          : "/blog";
+  // (a guide lives at /guides/<slug>, a review at /reviews/<slug>, not /blog).
+  const base = publicPathForType(type);
 
   // Refresh the affected page + its index + feeds.
   if (slug) revalidatePath(`${base}/${slug}`);

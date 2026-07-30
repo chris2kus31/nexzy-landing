@@ -40,6 +40,13 @@ export interface PublicPost {
     genres: string[];
   } | null;
   faq?: { q: string; a: string }[] | null;
+  // Reviews only: the score + what's reviewed (star UI + Review JSON-LD).
+  review?: {
+    rating: number;
+    ratingScale: number;
+    verdictLine: string | null;
+    itemReviewed: { type: string; name: string } | null;
+  } | null;
 }
 
 export interface PostList {
@@ -100,6 +107,15 @@ export async function fetchLists(params?: {
   pageSize?: number;
 }): Promise<PostList> {
   return fetchPosts({ ...params, type: "list" });
+}
+
+/** Reviews index (game adaptations — movies/TV — with a score). Newest first. */
+export async function fetchReviews(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PostList> {
+  return fetchPosts({ ...params, type: "review" });
 }
 
 /**

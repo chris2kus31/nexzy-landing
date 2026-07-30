@@ -41,6 +41,7 @@ export default function Footer() {
       { label: "Game Guides", href: "/guides" },
       { label: "Walkthroughs", href: "/walkthroughs" },
       { label: "Game Lists", href: "/lists" },
+      { label: "Reviews", href: "/reviews" },
       { label: "By Game", href: "/games" },
     ],
     Company: [

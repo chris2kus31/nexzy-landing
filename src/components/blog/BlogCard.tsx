@@ -3,6 +3,7 @@ import NextImage from "next/image";
 import { Box, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
+import { publicPathForType } from "@/lib/blog/publicPath";
 
 function fmt(date: string | null): string {
   if (!date) return "";
@@ -19,27 +20,26 @@ export default function BlogCard({ post }: { post: PublicPost }) {
   const isGuide = post.type === "guide";
   const isList = post.type === "list";
   const isWalkthrough = post.type === "walkthrough";
-  const href = isGuide
-    ? `/guides/${post.slug}`
-    : isList
-      ? `/lists/${post.slug}`
-      : isWalkthrough
-        ? `/walkthroughs/${post.slug}`
-        : `/blog/${post.slug}`;
+  const isReview = post.type === "review";
+  const href = `${publicPathForType(post.type)}/${post.slug}`;
   const badgeLabel = isGuide
     ? "Guide"
     : isList
       ? "List"
       : isWalkthrough
         ? "Walkthrough"
-        : beatLabel(post.beat);
+        : isReview
+          ? "Review"
+          : beatLabel(post.beat);
   const badgePalette = isGuide
     ? "cyan"
     : isList
       ? "purple"
       : isWalkthrough
         ? "orange"
-        : beatPalette(post.beat);
+        : isReview
+          ? "teal"
+          : beatPalette(post.beat);
   return (
     <TrackedLink
       href={href}

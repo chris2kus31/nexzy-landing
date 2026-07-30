@@ -15,23 +15,22 @@ import {
   Separator,
   Icon,
 } from "@chakra-ui/react";
-import { HiCalendar, HiClock } from "react-icons/hi";
+import { HiClock } from "react-icons/hi";
 import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
-import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
-import { getAuthorByName } from "@/lib/blog/authors";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
+import { authorJsonLd } from "@/lib/blog/authors";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
-// ISR: article pages are cached and rebuilt in the background (fast + crawlable).
+// ISR: review pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -42,6 +41,12 @@ function readingMinutes(markdown?: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
+/** A 5-star string from a rating on its scale (e.g. 8/10 → "★★★★☆"). */
+function starString(rating: number, scale: number): string {
+  const filled = Math.max(0, Math.min(5, Math.round((rating / scale) * 5)));
+  return "★★★★★".slice(0, filled) + "☆☆☆☆☆".slice(0, 5 - filled);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -49,19 +54,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = await fetchPost(slug);
-  if (!post) return { title: "Article not found — Nexzy News" };
+  if (!post || post.type !== "review")
+    return { title: "Review not found — Nexzy" };
 
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || post.excerpt || undefined;
   return {
     title,
     description,
-    alternates: { canonical: `/blog/${post.slug}` },
+    alternates: { canonical: `/reviews/${post.slug}` },
     openGraph: {
       title,
       description,
       type: "article",
-      publishedTime: post.publishedAt || undefined,
       images: post.heroImageUrl
         ? [{ url: post.heroImageUrl, alt: post.imageAlt || post.title }]
         : undefined,
@@ -77,7 +82,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function BlogArticlePage({
+export default async function ReviewPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -85,17 +90,9 @@ export default async function BlogArticlePage({
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
-  // Guides (/guides/[slug], HowTo schema) and lists (/lists/[slug], ItemList
-  // schema) have their own homes — keep the canonical URL single by 404-ing
-  // those slugs here.
-  if (
-    post.type === "guide" ||
-    post.type === "list" ||
-    post.type === "review"
-  )
-    notFound();
+  // Only reviews live here; any other type 404s (each has its own home).
+  if (post.type !== "review") notFound();
 
-  // Related: tag-aware (shared topic first, then same beat), excluding self.
   const related = await fetchRelated(post.slug, 3);
   const byGame = await fetchRelatedByGame(post.slug, 4);
   const byGameSlugs = new Set(byGame.items.map((p) => p.slug));
@@ -104,58 +101,73 @@ export default async function BlogArticlePage({
     .map((t) => ({ label: t, slug: slugifyTag(t) }))
     .filter((t) => t.slug);
 
-  const shareUrl = `${SITE_URL}/blog/${post.slug}`;
+  const shareUrl = `${SITE_URL}/reviews/${post.slug}`;
   const minutes = readingMinutes(post.bodyMarkdown);
   const videoEmbed = youtubeEmbedUrl(post.youtubeUrl);
   const videoIsShort = isYoutubeShort(post.youtubeUrl);
-  // Normalize any older credit like "AI-generated (Gemini …)" to a clean label.
   const imageCredit = post.imageCredit
     ? post.imageCredit
         .replace(/\s*\(.*?\)\s*$/, "")
         .replace(/^(AI-generated|Generated with AI)$/i, "AI illustration")
     : null;
 
-  const articleUrl = `${SITE_URL}/blog/${post.slug}`;
-  const sectionLabel = beatLabel(post.beat);
-  const authorPersona = getAuthorByName(post.author);
+  const reviewUrl = `${SITE_URL}/reviews/${post.slug}`;
+  const rv = post.review;
+  const hasRating = !!rv && typeof rv.rating === "number";
+  const scale = rv?.ratingScale || 10;
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: post.title,
-    description: post.seoDescription || post.excerpt || undefined,
-    image: imageObjectLd(post),
-    datePublished: post.publishedAt || undefined,
-    dateModified: post.updatedAt || post.publishedAt || undefined,
-    articleSection: sectionLabel,
-    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
-    author: authorPersona
-      ? {
-          "@type": "Person",
-          name: authorPersona.name,
-          jobTitle: authorPersona.role,
-          url: `${SITE_URL}/author/${authorPersona.slug}`,
-          ...(authorPersona.x || authorPersona.instagram
-            ? {
-                sameAs: [authorPersona.x, authorPersona.instagram].filter(
-                  Boolean,
-                ),
-              }
-            : {}),
-        }
-      : { "@type": "Organization", name: post.author || "Nexzy Editorial" },
-    publisher: {
-      "@type": "Organization",
-      "@id": `${SITE_URL}/#organization`,
-      name: "Nexzy",
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/android-chrome-512x512.png`,
-        width: 512,
-        height: 512,
-      },
+  const reviewPublisher = {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: "Nexzy",
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/android-chrome-512x512.png`,
+      width: 512,
+      height: 512,
     },
   };
+  // A scored review is a schema.org Review with a reviewRating + itemReviewed
+  // (the star rich-result unlock). A review with no rating falls back to a plain
+  // Article rather than shipping an empty/fake Rating node.
+  const reviewLd =
+    hasRating && rv
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Review",
+          name: post.title,
+          reviewBody: rv.verdictLine || post.excerpt || undefined,
+          image: imageObjectLd(post),
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          publisher: reviewPublisher,
+          mainEntityOfPage: { "@type": "WebPage", "@id": reviewUrl },
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: rv.rating,
+            bestRating: scale,
+            worstRating: 1,
+          },
+          itemReviewed: rv.itemReviewed
+            ? {
+                "@type": rv.itemReviewed.type || "Movie",
+                name: rv.itemReviewed.name,
+              }
+            : { "@type": "CreativeWork", name: post.title },
+        }
+      : {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          description: post.seoDescription || post.excerpt || undefined,
+          image: imageObjectLd(post),
+          datePublished: post.publishedAt || undefined,
+          dateModified: post.updatedAt || post.publishedAt || undefined,
+          author: authorJsonLd(post.author, SITE_URL),
+          mainEntityOfPage: { "@type": "WebPage", "@id": reviewUrl },
+          publisher: reviewPublisher,
+        };
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -165,16 +177,10 @@ export default async function BlogArticlePage({
       {
         "@type": "ListItem",
         position: 2,
-        name: "Game News",
-        item: `${SITE_URL}/blog`,
+        name: "Reviews",
+        item: `${SITE_URL}/reviews`,
       },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: sectionLabel,
-        item: `${SITE_URL}/blog?beat=${post.beat}`,
-      },
-      { "@type": "ListItem", position: 4, name: post.title, item: articleUrl },
+      { "@type": "ListItem", position: 3, name: post.title, item: reviewUrl },
     ],
   };
 
@@ -184,11 +190,7 @@ export default async function BlogArticlePage({
         {/* Visible breadcrumb (matches BreadcrumbList JSON-LD) */}
         <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
           <Link asChild color="nexzy.lightBlue">
-            <NextLink href="/blog">Game News</NextLink>
-          </Link>
-          <Text>/</Text>
-          <Link asChild color="nexzy.lightBlue">
-            <NextLink href={`/blog?beat=${post.beat}`}>{sectionLabel}</NextLink>
+            <NextLink href="/reviews">Reviews</NextLink>
           </Link>
           <Text>/</Text>
           <Text color="gray.500" lineClamp={1}>
@@ -196,25 +198,12 @@ export default async function BlogArticlePage({
           </Text>
         </HStack>
 
-        {/* Meta row */}
+        {/* Meta row — labeled "Review" so readers + Google never mistake a
+            take for reporting. */}
         <HStack gap={4} mb={4} flexWrap="wrap">
-          <Badge colorPalette={beatPalette(post.beat)} variant="solid">
-            {beatLabel(post.beat)}
+          <Badge colorPalette="teal" variant="solid">
+            Review
           </Badge>
-          {post.publishedAt && (
-            <HStack gap={1} color="gray.400" fontSize="sm">
-              <Icon>
-                <HiCalendar />
-              </Icon>
-              <Text>
-                {new Date(post.publishedAt).toLocaleDateString(undefined, {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-            </HStack>
-          )}
           <HStack gap={1} color="gray.400" fontSize="sm">
             <Icon>
               <HiClock />
@@ -240,6 +229,48 @@ export default async function BlogArticlePage({
           <Text color="gray.300" fontSize="lg" mb={6} lineHeight="1.6">
             {post.excerpt}
           </Text>
+        )}
+
+        {/* The verdict capsule — spoiler-free score + one-line verdict, above
+            the fold. This is the answer an AI engine / featured snippet lifts. */}
+        {hasRating && rv && (
+          <HStack
+            gap={4}
+            align="center"
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="teal.400/40"
+            borderRadius="xl"
+            p={4}
+            mb={6}
+            flexWrap="wrap"
+          >
+            <VStack gap={0} align="center" minW="72px">
+              <Text
+                color="teal.300"
+                fontFamily="title"
+                fontSize="3xl"
+                fontWeight="800"
+                lineHeight="1"
+              >
+                {rv.rating}
+                <Text as="span" color="gray.500" fontSize="lg">
+                  /{scale}
+                </Text>
+              </Text>
+              <Text color="teal.300" fontSize="lg" letterSpacing="1px" mt={1}>
+                {starString(rv.rating, scale)}
+              </Text>
+            </VStack>
+            <Box flex={1} minW="200px">
+              <Text color="gray.400" fontSize="xs" fontWeight="700" mb={1}>
+                THE VERDICT
+              </Text>
+              <Text color="white" fontSize="md" lineHeight="1.5">
+                {rv.verdictLine || post.excerpt}
+              </Text>
+            </Box>
+          </HStack>
         )}
 
         <Box mb={8}>
@@ -283,7 +314,7 @@ export default async function BlogArticlePage({
         )}
 
         {post.bodyMarkdown && (
-          <ArticleBody body={post.bodyMarkdown} location="blog" />
+          <ArticleBody body={post.bodyMarkdown} location="reviews" />
         )}
 
         {videoEmbed && (
@@ -293,8 +324,6 @@ export default async function BlogArticlePage({
             </Heading>
             <Box
               position="relative"
-              // Shorts are vertical (9:16) and capped in width so they don't
-              // tower over the article; regular videos fill the column at 16:9.
               w={videoIsShort ? { base: "full", sm: "340px" } : "full"}
               aspectRatio={videoIsShort ? 9 / 16 : 16 / 9}
               borderRadius="2xl"
@@ -374,9 +403,15 @@ export default async function BlogArticlePage({
           </Box>
         )}
 
-        {/* Turn readers into installs — the newsroom's app funnel. */}
+        {/* Turn readers into installs — the app tracks every game behind the
+            adaptations. */}
         <Box mt={10}>
-          <AppCta variant="inline" location="blog" />
+          <AppCta
+            variant="inline"
+            location="reviews"
+            heading="Love the games behind the screen? Get Nexzy."
+            subtext="Track every game these adaptations are based on, get price-drop alerts, and AI help when you're stuck — free on iOS & Android."
+          />
         </Box>
 
         <HStack
@@ -393,14 +428,14 @@ export default async function BlogArticlePage({
         </HStack>
       </Container>
 
-      {/* Related news */}
+      {/* Related by game */}
       <MoreOnGame game={byGame.game} items={byGame.items} />
 
       {relatedDeduped.length > 0 && (
         <Box borderTop="1px solid" borderColor="whiteAlpha.100" py={12}>
           <Container maxW="container.xl">
             <Heading as="h2" size="lg" color="white" mb={6}>
-              Keep reading
+              More reviews
             </Heading>
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
               {relatedDeduped.map((p) => (
@@ -412,11 +447,11 @@ export default async function BlogArticlePage({
       )}
 
       <ViewPing slug={post.slug} />
-      <ArticleAnalytics slug={post.slug} type="article" author={post.author} />
+      <ArticleAnalytics slug={post.slug} type="review" author={post.author} />
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewLd) }}
       />
       <script
         type="application/ld+json"
