@@ -46,6 +46,7 @@ export interface PublicPost {
     ratingScale: number;
     verdictLine: string | null;
     itemReviewed: { type: string; name: string } | null;
+    verdictTier?: string;
   } | null;
 }
 

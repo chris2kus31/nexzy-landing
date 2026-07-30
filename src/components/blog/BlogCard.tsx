@@ -110,6 +110,20 @@ export default function BlogCard({ post }: { post: PublicPost }) {
           <Heading as="h3" size="md" color="white" lineClamp={2} mb={2}>
             {post.title}
           </Heading>
+          {isReview && post.review?.verdictTier && (
+            <Text
+              color="teal.300"
+              fontSize="xs"
+              fontWeight="700"
+              mb={2}
+              lineClamp={1}
+            >
+              {post.review.verdictTier}
+              {typeof post.review.rating === "number"
+                ? ` · ${post.review.rating}/${post.review.ratingScale}`
+                : ""}
+            </Text>
+          )}
           {post.excerpt && (
             <Text color="gray.300" fontSize="sm" lineClamp={3} mb={3}>
               {post.excerpt}

@@ -21,6 +21,7 @@ import {
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
+import ReviewVerdictEditor from "./ReviewVerdictEditor";
 
 /**
  * The shared right rail: byline, linked games, hero image + alt/credit, video,
@@ -49,6 +50,7 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
 
   return (
     <VStack align="stretch" gap={4}>
+      {post.type === "review" && <ReviewVerdictEditor ed={ed} />}
       <Box
         bg="whiteAlpha.50"
         border="1px solid"

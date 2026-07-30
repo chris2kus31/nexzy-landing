@@ -1815,3 +1815,35 @@ export async function generateFromLead(
     }),
   );
 }
+
+/** Adjust a review's 1–10 rating (re-derives the verdict tier + schema stars). */
+export async function setReviewRating(
+  id: string,
+  rating: number,
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/review-rating`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating }),
+    }),
+  );
+}
+
+/** Commission a MANUAL review (Reviews road) from your own notes + rating. */
+export async function commissionReview(input: {
+  title: string;
+  author?: string;
+  rating: number;
+  notes: string;
+  angle?: string;
+  noImage?: boolean;
+}): Promise<{ briefId: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/commission-review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}

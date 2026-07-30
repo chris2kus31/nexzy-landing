@@ -234,43 +234,54 @@ export default async function ReviewPage({
         {/* The verdict capsule — spoiler-free score + one-line verdict, above
             the fold. This is the answer an AI engine / featured snippet lifts. */}
         {hasRating && rv && (
-          <HStack
-            gap={4}
-            align="center"
+          <Box
             bg="whiteAlpha.50"
             border="1px solid"
             borderColor="teal.400/40"
             borderRadius="xl"
             p={4}
             mb={6}
-            flexWrap="wrap"
           >
-            <VStack gap={0} align="center" minW="72px">
-              <Text
-                color="teal.300"
-                fontFamily="title"
-                fontSize="3xl"
-                fontWeight="800"
-                lineHeight="1"
-              >
-                {rv.rating}
-                <Text as="span" color="gray.500" fontSize="lg">
-                  /{scale}
+            <HStack
+              justify="space-between"
+              align="flex-start"
+              gap={4}
+              mb={3}
+              flexWrap="wrap"
+            >
+              <VStack gap={1} align="flex-start" flex={1} minW="200px">
+                <Text
+                  color="gray.400"
+                  fontSize="xs"
+                  fontWeight="700"
+                  letterSpacing="wide"
+                  textTransform="uppercase"
+                >
+                  {post.author ? `${post.author}'s verdict` : "The verdict"}
                 </Text>
-              </Text>
-              <Text color="teal.300" fontSize="lg" letterSpacing="1px" mt={1}>
-                {starString(rv.rating, scale)}
-              </Text>
-            </VStack>
-            <Box flex={1} minW="200px">
-              <Text color="gray.400" fontSize="xs" fontWeight="700" mb={1}>
-                THE VERDICT
-              </Text>
-              <Text color="white" fontSize="md" lineHeight="1.5">
-                {rv.verdictLine || post.excerpt}
-              </Text>
-            </Box>
-          </HStack>
+                <Text
+                  color="teal.300"
+                  fontFamily="title"
+                  fontSize={{ base: "2xl", md: "3xl" }}
+                  fontWeight="800"
+                  lineHeight="1.1"
+                >
+                  {rv.verdictTier ?? "The Verdict"}
+                </Text>
+              </VStack>
+              <VStack gap={0} align="flex-end" minW="72px">
+                <Text color="teal.300" fontSize="lg" letterSpacing="1px">
+                  {starString(rv.rating, scale)}
+                </Text>
+                <Text color="gray.500" fontSize="sm" fontWeight="700">
+                  {rv.rating}/{scale}
+                </Text>
+              </VStack>
+            </HStack>
+            <Text color="white" fontSize="md" lineHeight="1.5">
+              {rv.verdictLine || post.excerpt}
+            </Text>
+          </Box>
         )}
 
         <Box mb={8}>
