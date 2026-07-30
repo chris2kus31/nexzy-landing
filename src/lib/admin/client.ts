@@ -348,6 +348,13 @@ export interface ContentSuggestion {
     onScreenText?: string[];
     music?: string | null;
     voicePersona?: string | null;
+    lead?: {
+      summary?: string;
+      suggestedFormat?: string;
+      suggestedWriter?: string;
+      platforms?: string[];
+      reason?: string;
+    };
   } | null;
   status: string;
   createdAt: string;
@@ -1746,6 +1753,30 @@ export async function detachVideoGame(
   return handle(
     await fetch(`/api/newsroom/admin/videos/${videoId}/games/${gameId}`, {
       method: "DELETE",
+    }),
+  );
+}
+
+
+/** Video leads - each published article as a pick-writer+format lead. */
+export async function getVideoLeads(): Promise<ContentSuggestion[]> {
+  return handle(await fetch("/api/newsroom/admin/content/leads"));
+}
+
+/** Generate the real card FROM a lead in the chosen writer + format (spends tokens). */
+export async function generateFromLead(
+  id: string,
+  writer?: string,
+  format?: string,
+): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(writer ? { writer } : {}),
+        ...(format ? { format } : {}),
+      }),
     }),
   );
 }
