@@ -282,6 +282,7 @@ function SuggestionCard({
   const longform = view.payload?.longform;
   const decision = view.payload?.decision;
   const fmt = view.payload?.format;
+  const postTiming = view.payload?.postTiming;
   const editorReport = view.payload?.editorReport ?? [];
   const editorFixes = editorReport.filter((n) => n.level === "fixed");
   const editorFlags = editorReport.filter((n) => n.level === "flag");
@@ -603,6 +604,22 @@ function SuggestionCard({
         >
           <Text color="nexzy.gray.100" fontSize="xs">
             <b>Format brain:</b> {decision.reason}
+          </Text>
+        </Box>
+      )}
+
+      {/* Suggested posting time, carried from the lead */}
+      {postTiming?.timing && (
+        <Box
+          mb={3}
+          p={2}
+          borderRadius="md"
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text color="nexzy.lightBlue" fontSize="xs">
+            🕒 <b>When to post:</b> {postTiming.timing}
           </Text>
         </Box>
       )}

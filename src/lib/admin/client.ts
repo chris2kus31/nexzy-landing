@@ -389,7 +389,11 @@ export interface ContentSuggestion {
       suggestedWriter?: string;
       platforms?: string[];
       reason?: string;
+      when?: "now" | "schedule" | "pre_event";
+      timing?: string;
     };
+    // Suggested posting time carried from the lead onto the generated card.
+    postTiming?: { when?: string; timing?: string };
   } | null;
   status: string;
   createdAt: string;

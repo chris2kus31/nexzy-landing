@@ -104,6 +104,24 @@ function LeadCard({
           <Badge colorPalette="purple" variant="subtle">
             suggests: {fmtLabel(lead?.suggestedFormat)}
           </Badge>
+          {lead?.when && (
+            <Badge
+              colorPalette={
+                lead.when === "now"
+                  ? "green"
+                  : lead.when === "pre_event"
+                    ? "orange"
+                    : "blue"
+              }
+              variant="subtle"
+            >
+              {lead.when === "now"
+                ? "POST NOW"
+                : lead.when === "pre_event"
+                  ? "PRE-EVENT"
+                  : "SCHEDULE"}
+            </Badge>
+          )}
           <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
             {s.title}
           </Text>
@@ -113,6 +131,11 @@ function LeadCard({
       {lead?.summary && (
         <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
           {lead.summary}
+        </Text>
+      )}
+      {lead?.timing && (
+        <Text color="nexzy.lightBlue" fontSize="xs" mb={2}>
+          🕒 {lead.timing}
         </Text>
       )}
       {lead?.reason && (
