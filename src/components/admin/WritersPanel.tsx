@@ -139,8 +139,11 @@ function PersonaForm({
         reviewStructure: d.reviewStructure,
         verdictLadder: d.verdictLadder,
       });
+      setMsg(`Loaded ${n}'s current review defaults — edit and Save to override.`);
     } catch {
-      // ignore — leave fields as-is
+      setMsg(
+        "Couldn't load defaults — the API may need a rebuild/restart (new endpoint).",
+      );
     } finally {
       setLoadingDefaults(false);
     }
@@ -386,6 +389,7 @@ function PersonaForm({
           <Textarea
             value={f.reviewBible ?? ""}
             onChange={(e) => set({ reviewBible: e.target.value })}
+            placeholder="Blank = the code default. Use “Load current defaults” above to view or edit."
             rows={4}
             fontFamily="mono"
             fontSize="xs"
@@ -400,6 +404,7 @@ function PersonaForm({
           <Textarea
             value={f.reviewExemplar ?? ""}
             onChange={(e) => set({ reviewExemplar: e.target.value })}
+            placeholder="Blank = the code default. Use “Load current defaults” above to view or edit."
             rows={3}
             fontFamily="mono"
             fontSize="xs"
@@ -414,6 +419,7 @@ function PersonaForm({
           <Textarea
             value={f.reviewStructure ?? ""}
             onChange={(e) => set({ reviewStructure: e.target.value })}
+            placeholder="Blank = the code default. Use “Load current defaults” above to view or edit."
             rows={4}
             fontFamily="mono"
             fontSize="xs"
