@@ -310,6 +310,10 @@ export interface PlatformKit {
   description?: string;
   caption?: string;
   hashtags?: string[];
+  /** YouTube backend keyword phrases (not hashtags). */
+  tags?: string[];
+  /** Engagement-first CTA with this platform's correct link wording. */
+  cta?: string;
 }
 
 export interface ContentSuggestion {
@@ -335,6 +339,7 @@ export interface ContentSuggestion {
       youtube?: PlatformKit;
       tiktok?: PlatformKit;
       reels?: PlatformKit;
+      facebook?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;
@@ -348,6 +353,36 @@ export interface ContentSuggestion {
     onScreenText?: string[];
     music?: string | null;
     voicePersona?: string | null;
+    // Video format: "short" (default), "long" (guide/walkthrough → YouTube
+    // long-form + teasers), or a non-video format from the format brain.
+    format?:
+      | "short"
+      | "long"
+      | "image"
+      | "poll"
+      | "pinned_comment"
+      | "text_post"
+      | "none";
+    // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
+    longform?: {
+      chapters?: { title?: string; summary?: string; timestamp?: string }[];
+      thumbnailConcept?: string;
+      teaserAdvice?: string;
+    };
+    // The format brain's decision (news/deal cards): what format, when, where, why.
+    decision?: {
+      format?: string;
+      when?: "now" | "schedule" | "pre_event";
+      platforms?: string[];
+      reason?: string;
+      copy?: string;
+    };
+    // Non-video formats: the ready-to-post copy (poll/pinned-comment/text post).
+    copy?: string;
+    // Editor report: Tier-1 deterministic fixes/flags + Tier-2 LLM rewrites.
+    editorReport?: { level: "fixed" | "flag" | "rewrite"; label: string }[];
+    // Video LEAD (kind === "video_lead"): the cheap up-front analysis shown
+    // before you pick a writer/format and click Generate.
     lead?: {
       summary?: string;
       suggestedFormat?: string;
@@ -447,6 +482,7 @@ export async function produceContentVideo(
     youtubeUrl?: string;
     tiktokUrl?: string;
     reelsUrl?: string;
+    facebookUrl?: string;
     thumbnailUrl?: string;
     title?: string;
   },
@@ -1756,7 +1792,6 @@ export async function detachVideoGame(
     }),
   );
 }
-
 
 /** Video leads - each published article as a pick-writer+format lead. */
 export async function getVideoLeads(): Promise<ContentSuggestion[]> {
