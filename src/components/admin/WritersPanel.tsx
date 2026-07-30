@@ -20,6 +20,7 @@ import {
   listPersonas,
   createPersona,
   updatePersona,
+  getReviewDefaults,
   type WriterPersona,
   type PersonaInput,
 } from "@/lib/admin/client";
@@ -125,6 +126,25 @@ function PersonaForm({
       cur[i] = v;
       return { ...p, verdictLadder: cur };
     });
+
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
+  const loadDefaults = async () => {
+    const n = (f.name ?? "").trim() || "Chuy";
+    setLoadingDefaults(true);
+    try {
+      const d = await getReviewDefaults(n);
+      set({
+        reviewBible: d.reviewBible,
+        reviewExemplar: d.reviewExemplar,
+        reviewStructure: d.reviewStructure,
+        verdictLadder: d.verdictLadder,
+      });
+    } catch {
+      // ignore — leave fields as-is
+    } finally {
+      setLoadingDefaults(false);
+    }
+  };
 
   const toggleIn = (k: "beats" | "channels", v: string) =>
     setF((p) => {
@@ -340,6 +360,24 @@ function PersonaForm({
             {...inputProps}
           />
         </Field>
+
+        <HStack justify="space-between" align="center" pt={2}>
+          <Text color="nexzy.gray.100" fontSize="xs" fontWeight="700">
+            REVIEW ROAD
+          </Text>
+          <Button
+            size="xs"
+            variant="outline"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={loadDefaults}
+            loading={loadingDefaults}
+            loadingText="Loading…"
+          >
+            Load current defaults
+          </Button>
+        </HStack>
 
         <Field
           label="Review voice (optional)"

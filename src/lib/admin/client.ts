@@ -1855,3 +1855,20 @@ export async function commissionReview(input: {
     }),
   );
 }
+
+/** Code-default review voice for a persona name (Writers-tab "Load defaults"). */
+export async function getReviewDefaults(name: string): Promise<{
+  author: string;
+  reviewBible: string;
+  reviewExemplar: string;
+  reviewStructure: string;
+  verdictLadder: string[];
+}> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/personas/review-defaults?name=${encodeURIComponent(
+        name,
+      )}`,
+    ),
+  );
+}
