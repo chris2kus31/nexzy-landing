@@ -17,11 +17,9 @@ import {
 } from "@chakra-ui/react";
 import {
   getContentSuggestions,
-  suggestContentNow,
   skipContentSuggestion,
   useContentSuggestion,
   produceContentVideo,
-  approveContentGuide,
   regenerateContentCard,
   updateContentScript,
   getWriterNames,
@@ -122,121 +120,6 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
           —
         </Text>
       )}
-    </Box>
-  );
-}
-
-/**
- * A guide LEAD (kind === "guide"): a recently-released game worth a how-to.
- * "Generate guide" kicks off the grounded GuideWriter → review queue. An
- * optional focus lets you steer the angle (e.g. a specific boss) first.
- */
-function GuideLeadCard({
-  s,
-  onDone,
-  isOwner,
-}: {
-  s: ContentSuggestion;
-  onDone: (id: string) => void;
-  isOwner: boolean;
-}) {
-  const [busy, setBusy] = useState<"skip" | "gen" | null>(null);
-  const [focus, setFocus] = useState("");
-  const angles = s.payload?.angles ?? [];
-  const game = s.payload?.game ?? s.title.replace(/^Guide:\s*/i, "");
-
-  const generate = async () => {
-    setBusy("gen");
-    try {
-      await approveContentGuide(s.id, { focus: focus.trim() || undefined });
-      onDone(s.id);
-    } catch {
-      setBusy(null);
-    }
-  };
-  const skip = async () => {
-    setBusy("skip");
-    try {
-      await skipContentSuggestion(s.id);
-      onDone(s.id);
-    } catch {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <Box
-      bg="whiteAlpha.50"
-      border="1px solid"
-      borderColor="whiteAlpha.200"
-      borderRadius="xl"
-      p={4}
-    >
-      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
-        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
-          <Badge colorPalette="cyan" variant="solid">
-            GUIDE LEAD
-          </Badge>
-          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-            {game}
-          </Text>
-        </HStack>
-      </Flex>
-
-      {s.rationale && (
-        <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
-          {s.rationale}
-        </Text>
-      )}
-
-      {angles.length > 0 && (
-        <HStack gap={2} wrap="wrap" mb={3}>
-          {angles.map((a) => (
-            <Badge key={a} colorPalette="gray" variant="subtle">
-              {a}
-            </Badge>
-          ))}
-        </HStack>
-      )}
-
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        Optional focus (boss / level / system) — leave blank for a general guide
-      </Text>
-      <Input
-        value={focus}
-        onChange={(e) => setFocus(e.target.value)}
-        placeholder={`e.g. a specific boss in ${game}`}
-        color="nexzy.white"
-        bg="whiteAlpha.50"
-        borderColor="whiteAlpha.300"
-        _placeholder={{ color: "nexzy.gray.100" }}
-        mb={3}
-      />
-
-      <HStack gap={2} justify="flex-end">
-        {isOwner && (
-          <Button
-            size="xs"
-            colorPalette="cyan"
-            onClick={generate}
-            loading={busy === "gen"}
-            loadingText="Generating…"
-          >
-            Generate guide
-          </Button>
-        )}
-        <Button
-          size="xs"
-          variant="ghost"
-          color="nexzy.gray.100"
-          _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
-          onClick={skip}
-          loading={busy === "skip"}
-          loadingText="…"
-        >
-          Skip
-        </Button>
-      </HStack>
     </Box>
   );
 }
@@ -921,11 +804,8 @@ export default function ContentPanel({
   isOwner?: boolean;
 }) {
   const [items, setItems] = useState<ContentSuggestion[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
   const [budget, setBudget] = useState<TtsBudget | null>(null);
   const [writers, setWriters] = useState<string[]>(["Chuy", "Eli", "Leslie"]);
-  const [batchVoice, setBatchVoice] = useState("All");
   const loadBudget = () => {
     getTtsBudget()
       .then(setBudget)
@@ -942,34 +822,23 @@ export default function ContentPanel({
       .catch(() => {});
   }, []);
 
-  const suggest = async () => {
-    setLoading(true);
-    setErr("");
-    try {
-      setItems(
-        await suggestContentNow(batchVoice === "All" ? undefined : batchVoice),
-      );
-    } catch (e) {
-      setErr((e as Error)?.message || "Could not generate suggestions.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const remove = (id: string) =>
     setItems((xs) => (xs ? xs.filter((x) => x.id !== id) : xs));
+
+  // Suggestions shows ONLY generated video cards. Leads (kind "video_lead")
+  // live in the Leads tab; guide leads live in Guides & Walkthroughs.
+  const cards = items?.filter((s) => s.kind === "video") ?? null;
 
   return (
     <VStack align="stretch" gap={5}>
       <Box>
         <Heading size="md" color="nexzy.white" mb={1}>
-          Content Desk
+          Generated video cards
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
-          Ready-to-shoot short-form clips from your published content (3-beat
-          script + per-platform posting kit), plus guide leads for
-          recently-released games. Shoot the clips; hit &ldquo;Generate
-          guide&rdquo; to turn a lead into a full guide in your review queue.
+          The finished, ready-to-shoot content generated from your leads —
+          3-beat script, per-platform posting kits, and the ElevenLabs script.
+          Generate new ones from the <b>Leads</b> tab.
         </Text>
       </Box>
 
@@ -1013,90 +882,33 @@ export default function ContentPanel({
         </Box>
       )}
 
-      <Flex align="center" justify="space-between" gap={2} wrap="wrap">
-        <Text color="nexzy.gray.100" fontSize="sm">
-          {items === null
-            ? ""
-            : `${items.length} open suggestion${items.length === 1 ? "" : "s"}`}
-        </Text>
-        {isOwner && (
-          <HStack gap={2} wrap="wrap">
-            <HStack gap={1}>
-              <Text color="nexzy.gray.100" fontSize="xs">
-                Voice:
-              </Text>
-              {["All", ...writers].map((w) => {
-                const active = batchVoice === w;
-                return (
-                  <Button
-                    key={w}
-                    size="xs"
-                    onClick={() => setBatchVoice(w)}
-                    bg={active ? "nexzy.blue" : "transparent"}
-                    color={active ? "white" : "nexzy.gray.100"}
-                    borderWidth="1px"
-                    borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                    _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-                  >
-                    {w}
-                  </Button>
-                );
-              })}
-            </HStack>
-            <Button
-              size="sm"
-              colorPalette="blue"
-              onClick={suggest}
-              loading={loading}
-              loadingText="Thinking…"
-            >
-              {items && items.length ? "↻ Suggest more" : "Suggest now"}
-            </Button>
-          </HStack>
-        )}
-      </Flex>
+      <Text color="nexzy.gray.100" fontSize="sm">
+        {cards === null
+          ? ""
+          : `${cards.length} generated card${cards.length === 1 ? "" : "s"}`}
+      </Text>
 
-      {err && (
-        <Text color="red.300" fontSize="sm">
-          {err}
-        </Text>
-      )}
-
-      {loading && !items ? (
+      {cards === null ? (
         <Flex justify="center" py={8}>
           <Spinner color="nexzy.blue" size="lg" />
         </Flex>
-      ) : items === null ? (
+      ) : cards.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          Hit “Suggest now” — the Content Desk scans your published deals + news
-          and drafts clips you can shoot.
-        </Text>
-      ) : items.length === 0 ? (
-        <Text color="nexzy.gray.100" fontSize="sm">
-          Nothing new to suggest. Publish a deals or news article, then hit
-          “Suggest now”. (Repeats are skipped automatically.)
+          No generated cards yet. Head to the <b>Leads</b> tab, pick a writer +
+          format, and hit Generate — the finished card shows up here.
         </Text>
       ) : (
         <VStack align="stretch" gap={4}>
-          {items.map((s) =>
-            s.kind === "guide" ? (
-              <GuideLeadCard
-                key={s.id}
-                s={s}
-                onDone={remove}
-                isOwner={isOwner}
-              />
-            ) : (
-              <SuggestionCard
-                key={s.id}
-                s={s}
-                onDone={remove}
-                isOwner={isOwner}
-                onBudget={loadBudget}
-                writers={writers}
-              />
-            ),
-          )}
+          {cards.map((s) => (
+            <SuggestionCard
+              key={s.id}
+              s={s}
+              onDone={remove}
+              isOwner={isOwner}
+              onBudget={loadBudget}
+              writers={writers}
+            />
+          ))}
         </VStack>
       )}
     </VStack>
