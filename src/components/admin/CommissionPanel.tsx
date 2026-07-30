@@ -12,49 +12,78 @@ import {
   Textarea,
   Button,
 } from "@chakra-ui/react";
-import { commissionStory, getWriterNames } from "@/lib/admin/client";
+import {
+  commissionStory,
+  commissionReview,
+  getWriterNames,
+} from "@/lib/admin/client";
 import { BEATS } from "@/lib/blog/beats";
+import { verdictTierFor } from "@/lib/blog/verdict";
 
 /**
- * "Commission a story" desk. The Editor-in-Chief hands the newsroom a seed —
- * the angle, an optional source link, the target beat — and the AI staff
- * researches → writes → edits → images it. It lands in the review queue and is
- * never auto-rejected. onRan lets the parent refresh the queue afterward.
+ * "Commission" desk. Two roads:
+ *  - News: hand the AI staff an angle + optional source; they research → write.
+ *  - Review: YOU supply the substance — persona, your rating, and the real
+ *    points to cover — and the writer turns it into their review voice with
+ *    your verdict locked in (no AI research, no invented scenes).
+ * It lands in the review queue and is never auto-rejected.
  */
 export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
+  const [mode, setMode] = useState<"news" | "review">("news");
   const [beat, setBeat] = useState(BEATS[0].key);
   const [title, setTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [rating, setRating] = useState(7);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [author, setAuthor] = useState("");
   const [authors, setAuthors] = useState<string[]>([]);
   const [noImage, setNoImage] = useState(false);
+
   useEffect(() => {
     getWriterNames()
       .then(setAuthors)
       .catch(() => {});
   }, []);
 
-  const canSend = instructions.trim().length >= 10 && !sending;
+  const isReview = mode === "review";
+  const clampR = (n: number) => Math.max(1, Math.min(10, Math.round(n)));
+  const tier = verdictTierFor(author || "Chuy", rating);
+  const canSend = isReview
+    ? title.trim().length >= 2 && instructions.trim().length >= 10 && !sending
+    : instructions.trim().length >= 10 && !sending;
 
   const submit = async () => {
     setSending(true);
     setMsg(null);
     try {
-      await commissionStory({
-        beat,
-        instructions: instructions.trim(),
-        sourceUrl: sourceUrl.trim() || undefined,
-        workingTitle: title.trim() || undefined,
-        author: author || undefined,
-        noImage: noImage || undefined,
-      });
-      setMsg({
-        ok: true,
-        text: "Commissioned. The newsroom is researching and writing it now — it'll appear in the review queue below in a few minutes. Hit Refresh to check.",
-      });
+      if (isReview) {
+        await commissionReview({
+          title: title.trim(),
+          author: author || undefined,
+          rating,
+          notes: instructions.trim(),
+          noImage: noImage || undefined,
+        });
+        setMsg({
+          ok: true,
+          text: "Review commissioned. Your writer is drafting it in their voice with your rating locked in — it'll land in the review queue below in a few minutes. Hit Refresh.",
+        });
+      } else {
+        await commissionStory({
+          beat,
+          instructions: instructions.trim(),
+          sourceUrl: sourceUrl.trim() || undefined,
+          workingTitle: title.trim() || undefined,
+          author: author || undefined,
+          noImage: noImage || undefined,
+        });
+        setMsg({
+          ok: true,
+          text: "Commissioned. The newsroom is researching and writing it now — it'll appear in the review queue below in a few minutes. Hit Refresh to check.",
+        });
+      }
       setTitle("");
       setSourceUrl("");
       setInstructions("");
@@ -63,12 +92,69 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
     } catch (e) {
       setMsg({
         ok: false,
-        text: (e as Error)?.message || "Could not commission the story.",
+        text: (e as Error)?.message || "Could not commission.",
       });
     } finally {
       setSending(false);
     }
   };
+
+  const modeBtn = (m: "news" | "review", label: string, palette: string) => {
+    const active = mode === m;
+    return (
+      <Button
+        size="sm"
+        onClick={() => setMode(m)}
+        bg={active ? (palette === "purple" ? "purple.500" : "nexzy.blue") : "transparent"}
+        color={active ? "white" : "nexzy.gray.100"}
+        borderWidth="1px"
+        borderColor={active ? (palette === "purple" ? "purple.500" : "nexzy.blue") : "whiteAlpha.300"}
+        _hover={{ bg: active ? undefined : "whiteAlpha.100" }}
+      >
+        {label}
+      </Button>
+    );
+  };
+
+  const writerPicker = (
+    <Box>
+      <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+        {isReview
+          ? "Reviewer / persona (their voice + verdict wording)"
+          : "Writer (optional — the desk picks by default)"}
+      </Text>
+      <HStack gap={2} wrap="wrap">
+        <Button
+          size="sm"
+          onClick={() => setAuthor("")}
+          bg={author === "" ? "nexzy.blue" : "transparent"}
+          color={author === "" ? "white" : "nexzy.gray.100"}
+          borderWidth="1px"
+          borderColor={author === "" ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: author === "" ? "nexzy.blue" : "whiteAlpha.100" }}
+        >
+          Auto
+        </Button>
+        {authors.map((a) => {
+          const active = author === a;
+          return (
+            <Button
+              key={a}
+              size="sm"
+              onClick={() => setAuthor(a)}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderWidth="1px"
+              borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+            >
+              {a}
+            </Button>
+          );
+        })}
+      </HStack>
+    </Box>
+  );
 
   return (
     <Box
@@ -79,85 +165,64 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       p={5}
       mb={8}
     >
+      <HStack gap={2} mb={4}>
+        {modeBtn("news", "News story", "blue")}
+        {modeBtn("review", "Review", "purple")}
+      </HStack>
+
       <Heading size="md" color="nexzy.white" mb={1}>
-        Commission a story
+        {isReview ? "Commission a review" : "Commission a story"}
       </Heading>
       <Text color="nexzy.gray.100" fontSize="sm" mb={4}>
-        Found a story you want covered? Give your staff the angle (and a source
-        link if you have one). They&apos;ll research, write, edit, and
-        illustrate it — then it lands in your review queue to publish.
+        {isReview
+          ? "Reviewing something yourself? Pick the persona, set your rating, and give them the real points to hit — what works, where it stumbles, the standout moments. They write it up in their voice with your verdict locked in. No AI research, no invented scenes."
+          : "Found a story you want covered? Give your staff the angle (and a source link if you have one). They research, write, edit, and illustrate it — then it lands in your review queue to publish."}
       </Text>
 
       <Stack gap={4}>
-        <Box>
-          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-            Beat
-          </Text>
-          <HStack gap={2} wrap="wrap">
-            {BEATS.map((b) => {
-              const active = beat === b.key;
-              return (
-                <Button
-                  key={b.key}
-                  size="sm"
-                  onClick={() => setBeat(b.key)}
-                  bg={active ? "nexzy.blue" : "transparent"}
-                  color={active ? "white" : "nexzy.gray.100"}
-                  borderWidth="1px"
-                  borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                  _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-                >
-                  {b.label}
-                </Button>
-              );
-            })}
-          </HStack>
-        </Box>
+        {!isReview && (
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Beat
+            </Text>
+            <HStack gap={2} wrap="wrap">
+              {BEATS.map((b) => {
+                const active = beat === b.key;
+                return (
+                  <Button
+                    key={b.key}
+                    size="sm"
+                    onClick={() => setBeat(b.key)}
+                    bg={active ? "nexzy.blue" : "transparent"}
+                    color={active ? "white" : "nexzy.gray.100"}
+                    borderWidth="1px"
+                    borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                    _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                  >
+                    {b.label}
+                  </Button>
+                );
+              })}
+            </HStack>
+          </Box>
+        )}
+
+        {writerPicker}
 
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-            Writer (optional — the desk picks by default)
-          </Text>
-          <HStack gap={2} wrap="wrap">
-            <Button
-              size="sm"
-              onClick={() => setAuthor("")}
-              bg={author === "" ? "nexzy.blue" : "transparent"}
-              color={author === "" ? "white" : "nexzy.gray.100"}
-              borderWidth="1px"
-              borderColor={author === "" ? "nexzy.blue" : "whiteAlpha.300"}
-              _hover={{ bg: author === "" ? "nexzy.blue" : "whiteAlpha.100" }}
-            >
-              Auto
-            </Button>
-            {authors.map((a) => {
-              const active = author === a;
-              return (
-                <Button
-                  key={a}
-                  size="sm"
-                  onClick={() => setAuthor(a)}
-                  bg={active ? "nexzy.blue" : "transparent"}
-                  color={active ? "white" : "nexzy.gray.100"}
-                  borderWidth="1px"
-                  borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                  _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
-                >
-                  {a}
-                </Button>
-              );
-            })}
-          </HStack>
-        </Box>
-
-        <Box>
-          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-            Working title (optional)
+            {isReview
+              ? "What you're reviewing (movie or show)"
+              : "Working title (optional)"}
           </Text>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. GTA 6 delayed again"
+            placeholder={
+              isReview
+                ? "e.g. Spider-Man: Brand New Day"
+                : "e.g. GTA 6 delayed again"
+            }
             color="nexzy.white"
             bg="whiteAlpha.50"
             borderColor="whiteAlpha.300"
@@ -165,30 +230,90 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           />
         </Box>
 
-        <Box>
-          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-            Source link (optional)
-          </Text>
-          <Input
-            value={sourceUrl}
-            onChange={(e) => setSourceUrl(e.target.value)}
-            placeholder="https://…"
-            color="nexzy.white"
-            bg="whiteAlpha.50"
-            borderColor="whiteAlpha.300"
-            _placeholder={{ color: "nexzy.gray.100" }}
-          />
-        </Box>
+        {!isReview && (
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Source link (optional)
+            </Text>
+            <Input
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://…"
+              color="nexzy.white"
+              bg="whiteAlpha.50"
+              borderColor="whiteAlpha.300"
+              _placeholder={{ color: "nexzy.gray.100" }}
+            />
+          </Box>
+        )}
+
+        {isReview && (
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Your rating
+            </Text>
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: "whiteAlpha.100" }}
+                onClick={() => setRating((r) => clampR(r - 1))}
+                disabled={rating <= 1}
+              >
+                −
+              </Button>
+              <Input
+                w="64px"
+                textAlign="center"
+                type="number"
+                value={rating}
+                onChange={(e) => setRating(clampR(Number(e.target.value) || 1))}
+                color="nexzy.white"
+                bg="whiteAlpha.50"
+                borderColor="whiteAlpha.300"
+              />
+              <Text color="nexzy.gray.100" fontSize="sm">
+                / 10
+              </Text>
+              <Button
+                size="sm"
+                variant="outline"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: "whiteAlpha.100" }}
+                onClick={() => setRating((r) => clampR(r + 1))}
+                disabled={rating >= 10}
+              >
+                +
+              </Button>
+              <Text color="teal.300" fontWeight="700" fontSize="sm" ml={2}>
+                {tier}
+              </Text>
+            </HStack>
+            <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+              The tier is {author || "the assigned writer"}&apos;s wording for
+              this score; the number stays for the star rating.
+            </Text>
+          </Box>
+        )}
 
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-            What&apos;s the story + your angle
+            {isReview
+              ? "The real points to cover (your grounding — the writer works only from these)"
+              : "What's the story + your angle"}
           </Text>
           <Textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Tell your staff what to cover and how to frame it. e.g. 'Rockstar just pushed GTA 6 to late 2026. Cover the new date, why it slipped, and what it means for the delay-weary fanbase — keep it sharp.'"
-            rows={4}
+            placeholder={
+              isReview
+                ? "One point per line — what works, where it stumbles, standout moments, who it's for. e.g.\n- Combat is lifted straight from the Insomniac games; feels incredible\n- Plot is thin and predictable through the middle\n- Best for franchise fans; newcomers will shrug"
+                : "Tell your staff what to cover and how to frame it. e.g. 'Rockstar just pushed GTA 6 to late 2026. Cover the new date, why it slipped, and what it means for the delay-weary fanbase — keep it sharp.'"
+            }
+            rows={isReview ? 6 : 4}
             color="nexzy.white"
             bg="whiteAlpha.50"
             borderColor="whiteAlpha.300"
@@ -216,13 +341,13 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         <Flex justify="flex-end">
           <Button
             size="sm"
-            colorPalette="blue"
+            colorPalette={isReview ? "purple" : "blue"}
             onClick={submit}
             disabled={!canSend}
             loading={sending}
             loadingText="Commissioning…"
           >
-            Commission story
+            {isReview ? "Commission review" : "Commission story"}
           </Button>
         </Flex>
       </Stack>
