@@ -509,6 +509,51 @@ export async function produceContentVideo(
   );
 }
 
+/** Upload a finished video for a card → S3; returns the public URL to publish with. */
+export async function uploadContentVideo(
+  id: string,
+  file: File,
+): Promise<{ url: string }> {
+  const fd = new FormData();
+  fd.append("video", file);
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/upload-video`, {
+      method: "POST",
+      body: fd, // no Content-Type — browser sets the multipart boundary
+    }),
+  );
+}
+
+export interface PublishResult {
+  platform: "facebook" | "instagram" | "threads";
+  ok: boolean;
+  id?: string;
+  skipped?: boolean;
+  error?: string;
+}
+
+/** Publish a card to the selected social platforms (FB/IG Reels + Threads text). */
+export async function publishContentCard(
+  id: string,
+  opts: {
+    videoUrl?: string;
+    facebook?: boolean;
+    instagram?: boolean;
+    threads?: boolean;
+    fbCaption?: string;
+    igCaption?: string;
+    threadsText?: string;
+  },
+): Promise<{ results: PublishResult[] }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(opts),
+    }),
+  );
+}
+
 /**
  * Approve a guide LEAD → generate the real guide (lands in the review queue).
  * Optional focus/instructions steer the angle before generating.

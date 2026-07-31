@@ -23,10 +23,13 @@ import {
   produceContentVideo,
   regenerateContentCard,
   updateContentScript,
+  uploadContentVideo,
+  publishContentCard,
   getWriterNames,
   getTtsBudget,
   type ContentSuggestion,
   type PlatformKit,
+  type PublishResult,
   type TtsBudget,
 } from "@/lib/admin/client";
 
@@ -174,6 +177,206 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
         <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
           —
         </Text>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Publish a finished video card straight to Facebook + Instagram Reels (upload
+ * the video) and a Threads text post. Calls the publish endpoints; shows each
+ * platform's result. Threads doesn't need the video (it's a text take).
+ */
+function PublishBox({ s }: { s: ContentSuggestion }) {
+  const p = s.payload?.platforms;
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [results, setResults] = useState<PublishResult[] | null>(null);
+  const [fb, setFb] = useState(!!p?.facebook);
+  const [ig, setIg] = useState(!!p?.reels);
+  const [th, setTh] = useState(!!p?.threads);
+  const [fbCaption, setFbCaption] = useState(p?.facebook?.caption ?? "");
+  const [igCaption, setIgCaption] = useState(p?.reels?.caption ?? "");
+  const [threadsText, setThreadsText] = useState(p?.threads?.caption ?? "");
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    try {
+      const r = await uploadContentVideo(s.id, file);
+      setVideoUrl(r.url);
+    } catch {
+      /* leave unset on failure */
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const publish = async () => {
+    setPublishing(true);
+    try {
+      const r = await publishContentCard(s.id, {
+        videoUrl: videoUrl ?? undefined,
+        facebook: fb,
+        instagram: ig,
+        threads: th,
+        fbCaption,
+        igCaption,
+        threadsText,
+      });
+      setResults(r.results);
+    } catch {
+      setResults([
+        { platform: "facebook", ok: false, error: "request failed" },
+      ]);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const needsVideo = fb || ig;
+  const canPublish = (fb || ig || th) && (!needsVideo || !!videoUrl);
+  const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
+    <Button
+      size="xs"
+      variant={on ? "solid" : "outline"}
+      bg={on ? "nexzy.blue" : "transparent"}
+      color={on ? "white" : "nexzy.gray.100"}
+      borderColor="whiteAlpha.300"
+      _hover={{ bg: on ? "nexzy.blue" : "whiteAlpha.100" }}
+      onClick={() => set(!on)}
+    >
+      {on ? "✓ " : ""}
+      {label}
+    </Button>
+  );
+  const ta = {
+    rows: 3,
+    bg: "whiteAlpha.50",
+    color: "nexzy.white",
+    borderColor: "whiteAlpha.300",
+    fontSize: "sm" as const,
+  };
+
+  return (
+    <Box
+      mt={3}
+      p={3}
+      borderRadius="lg"
+      bg="blue.500/5"
+      border="1px solid"
+      borderColor="nexzy.blue/40"
+    >
+      <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
+        📣 Publish to social
+      </Text>
+
+      {/* Video upload — needed for Facebook + Instagram */}
+      {needsVideo && (
+        <Box mb={2}>
+          <Input
+            type="file"
+            accept="video/*"
+            size="sm"
+            p={1}
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload(f);
+            }}
+          />
+          <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
+            {uploading
+              ? "Uploading…"
+              : videoUrl
+                ? "✓ Video uploaded"
+                : "Upload the finished video (Facebook + Instagram need it)."}
+          </Text>
+        </Box>
+      )}
+
+      {/* Which platforms */}
+      <HStack gap={2} mb={2} wrap="wrap">
+        {p?.facebook && toggle(fb, setFb, "Facebook")}
+        {p?.reels && toggle(ig, setIg, "Instagram")}
+        {p?.threads && toggle(th, setTh, "Threads")}
+      </HStack>
+
+      {/* Editable captions per selected platform */}
+      <VStack align="stretch" gap={2} mb={2}>
+        {fb && p?.facebook && (
+          <Box>
+            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+              FACEBOOK CAPTION
+            </Text>
+            <Textarea
+              {...ta}
+              value={fbCaption}
+              onChange={(e) => setFbCaption(e.target.value)}
+            />
+          </Box>
+        )}
+        {ig && p?.reels && (
+          <Box>
+            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+              INSTAGRAM CAPTION
+            </Text>
+            <Textarea
+              {...ta}
+              value={igCaption}
+              onChange={(e) => setIgCaption(e.target.value)}
+            />
+          </Box>
+        )}
+        {th && p?.threads && (
+          <Box>
+            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+              THREADS TEXT (≤500 chars)
+            </Text>
+            <Textarea
+              {...ta}
+              value={threadsText}
+              maxLength={500}
+              onChange={(e) => setThreadsText(e.target.value)}
+            />
+          </Box>
+        )}
+      </VStack>
+
+      <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
+        Make sure nexzy_app is a <b>public</b> account, or the API will reject
+        the post.
+      </Text>
+
+      <Button
+        size="sm"
+        colorPalette="blue"
+        onClick={publish}
+        loading={publishing}
+        loadingText="Publishing…"
+        disabled={!canPublish}
+      >
+        Publish now
+      </Button>
+
+      {results && (
+        <VStack align="stretch" gap={0.5} mt={2}>
+          {results.map((r, i) => (
+            <Text
+              key={i}
+              fontSize="xs"
+              color={r.ok ? "green.200" : r.skipped ? "whiteAlpha.500" : "red.300"}
+            >
+              {r.platform}:{" "}
+              {r.skipped
+                ? "skipped (off / not configured)"
+                : r.ok
+                  ? `✓ posted (${r.id})`
+                  : `✗ ${r.error}`}
+            </Text>
+          ))}
+        </VStack>
       )}
     </Box>
   );
@@ -707,6 +910,11 @@ function SuggestionCard({
           </Link>
         )}
       </VStack>
+
+      {/* Publish this card straight to FB/IG Reels + a Threads text post */}
+      {s.kind === "video" && !isNonVideo && !isImage && isOwner && (
+        <PublishBox s={view} />
+      )}
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
       {!isNonVideo && !isImage && (
