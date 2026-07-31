@@ -25,11 +25,13 @@ import {
   updateContentScript,
   uploadContentVideo,
   publishContentCard,
+  refreshContentInsights,
   getWriterNames,
   getTtsBudget,
   type ContentSuggestion,
   type PlatformKit,
   type PublishResult,
+  type PlatformInsights,
   type TtsBudget,
 } from "@/lib/admin/client";
 
@@ -193,6 +195,22 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [results, setResults] = useState<PublishResult[] | null>(null);
+  const [insights, setInsights] = useState<PlatformInsights[]>(
+    s.payload?.insights ?? [],
+  );
+  const [refreshing, setRefreshing] = useState(false);
+  const published = (s.payload?.publishResults ?? []).some((r) => r.ok);
+  const refreshInsights = async () => {
+    setRefreshing(true);
+    try {
+      const card = await refreshContentInsights(s.id);
+      setInsights(card.payload?.insights ?? []);
+    } catch {
+      /* leave as-is */
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const [fb, setFb] = useState(!!p?.facebook);
   const [ig, setIg] = useState(!!p?.reels);
   const [th, setTh] = useState(!!p?.threads);
@@ -377,6 +395,47 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             </Text>
           ))}
         </VStack>
+      )}
+
+      {/* Real performance — pulled from the published posts' ids */}
+      {published && (
+        <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Flex justify="space-between" align="center" mb={1} gap={2}>
+            <Text color="nexzy.white" fontWeight="700" fontSize="sm">
+              📊 Performance
+            </Text>
+            <Button
+              size="xs"
+              variant="outline"
+              color="nexzy.gray.100"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={refreshInsights}
+              loading={refreshing}
+              loadingText="Refreshing…"
+            >
+              ↻ Refresh
+            </Button>
+          </Flex>
+          {insights.length === 0 ? (
+            <Text fontSize="xs" color="whiteAlpha.500">
+              No numbers yet — hit Refresh (they mature over a day or two).
+            </Text>
+          ) : (
+            <VStack align="stretch" gap={0.5}>
+              {insights.map((it, i) => (
+                <Text key={i} fontSize="xs" color="nexzy.gray.100">
+                  <b>{it.platform}:</b>{" "}
+                  {it.error
+                    ? `— (${it.error})`
+                    : Object.entries(it.metrics)
+                        .map(([k, v]) => `${k} ${v.toLocaleString()}`)
+                        .join(" · ") || "—"}
+                </Text>
+              ))}
+            </VStack>
+          )}
+        </Box>
       )}
     </Box>
   );

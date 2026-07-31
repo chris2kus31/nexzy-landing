@@ -362,6 +362,11 @@ export interface ContentSuggestion {
     dealImageUrl?: string | null;
     // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
     groundedOn?: { title: string; views?: string }[];
+    // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
+    // real performance pulled back for those posts.
+    publishResults?: PublishResult[];
+    insights?: PlatformInsights[];
+    insightsFetchedAt?: string;
     // Video format: "short" (default), "long" (guide/walkthrough → YouTube
     // long-form + teasers), or a non-video format from the format brain.
     format?:
@@ -550,6 +555,25 @@ export async function publishContentCard(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(opts),
+    }),
+  );
+}
+
+export interface PlatformInsights {
+  platform: "facebook" | "instagram" | "threads";
+  postId: string;
+  metrics: Record<string, number>;
+  fetchedAt: string;
+  error?: string;
+}
+
+/** Pull real performance for a card's published posts → returns the updated card. */
+export async function refreshContentInsights(
+  id: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/refresh-insights`, {
+      method: "POST",
     }),
   );
 }
