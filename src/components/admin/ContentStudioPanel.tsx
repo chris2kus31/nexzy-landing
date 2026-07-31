@@ -5,6 +5,7 @@ import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
 import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
+import InsightsPanel from "@/components/admin/InsightsPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
 import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
@@ -21,18 +22,23 @@ import ListPanel from "@/components/admin/ListPanel";
  * ?tab=content|videos|guides bookmarks (mapped in the parent) land in the right
  * place.
  */
-type Sub = "leads" | "suggestions" | "library" | "guides";
+type Sub = "leads" | "suggestions" | "library" | "performance" | "guides";
 
 const SUBS: { key: Sub; label: string }[] = [
   { key: "leads", label: "Leads" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
+  { key: "performance", label: "Performance" },
   { key: "guides", label: "Guides & Walkthroughs" },
 ];
 
 function isSub(v: string | null): v is Sub {
   return (
-    v === "leads" || v === "suggestions" || v === "library" || v === "guides"
+    v === "leads" ||
+    v === "suggestions" ||
+    v === "library" ||
+    v === "performance" ||
+    v === "guides"
   );
 }
 
@@ -87,6 +93,8 @@ export default function ContentStudioPanel({
       {sub === "suggestions" && <ContentPanel isOwner={isOwner} />}
 
       {sub === "library" && <VideosPanel />}
+
+      {sub === "performance" && <InsightsPanel />}
 
       {sub === "guides" && (
         <VStack align="stretch" gap={6}>
