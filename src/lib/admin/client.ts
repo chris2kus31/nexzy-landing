@@ -314,6 +314,8 @@ export interface PlatformKit {
   tags?: string[];
   /** Engagement-first CTA with this platform's correct link wording. */
   cta?: string;
+  /** The comment to PIN on this platform's post after publishing. */
+  pinnedComment?: string;
 }
 
 export interface ContentSuggestion {
@@ -353,6 +355,9 @@ export interface ContentSuggestion {
     onScreenText?: string[];
     music?: string | null;
     voicePersona?: string | null;
+    // Deal IMAGE card (format === "image"): the generated graphic + overlay
+    // lines (onScreenText carries the overlay text for this format).
+    dealImageUrl?: string | null;
     // Video format: "short" (default), "long" (guide/walkthrough → YouTube
     // long-form + teasers), or a non-video format from the format brain.
     format?:

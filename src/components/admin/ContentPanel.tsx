@@ -11,6 +11,7 @@ import {
   Button,
   Badge,
   Link,
+  Image,
   Input,
   Textarea,
   Spinner,
@@ -63,14 +64,42 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
   );
 }
 
-/** One platform's posting kit (title/caption + hashtags + copy). */
+/** A small "FIELD LABEL" + copy button row used inside a kit. */
+function FieldLabel({ text, copy }: { text: string; copy: string }) {
+  return (
+    <Flex justify="space-between" align="center" gap={2} mt={2} mb={0.5}>
+      <Text
+        color="whiteAlpha.600"
+        fontSize="10px"
+        fontWeight="700"
+        letterSpacing="0.06em"
+      >
+        {text}
+      </Text>
+      <CopyBtn text={copy} label="Copy" />
+    </Flex>
+  );
+}
+
+/**
+ * One platform's posting kit, broken into copy-per-field so you can paste each
+ * piece straight into that platform's box:
+ *   • Title — its own copy button
+ *   • Description + hashtags (+ CTA) — one copy button for the whole caption
+ *   • Tags — its own copy button (only the platforms that use keyword tags)
+ */
 function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
-  const primary = kit.title || kit.caption || "";
-  const full = [kit.title, kit.description, kit.caption, hashtags, kit.cta]
-    .filter(Boolean)
-    .join("\n");
+  const title = kit.title || "";
+  const body = kit.description || kit.caption || "";
+  // The full caption you'd paste into the post box: body, then hashtags, then
+  // the platform engagement line — one clean block, no re-typing.
+  const caption = [body, hashtags, kit.cta].filter(Boolean).join("\n\n");
+  const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
+  const pinned = kit.pinnedComment || "";
+  const empty = !title && !body && !hashtags && !tags && !pinned;
+
   return (
     <Box
       bg="whiteAlpha.50"
@@ -79,44 +108,70 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
       borderRadius="lg"
       p={3}
     >
-      <Flex justify="space-between" align="center" mb={1} gap={2}>
-        <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-          {name}
-        </Text>
-        <CopyBtn text={full} label="Copy all" />
-      </Flex>
-      {kit.title && (
-        <Text color="nexzy.white" fontSize="sm" fontWeight="600">
-          {kit.title}
-        </Text>
+      <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+        {name}
+      </Text>
+
+      {title && (
+        <>
+          <FieldLabel text="TITLE" copy={title} />
+          <Text color="nexzy.white" fontSize="sm" fontWeight="600">
+            {title}
+          </Text>
+        </>
       )}
-      {kit.description && (
+
+      {(body || hashtags || kit.cta) && (
+        <>
+          <FieldLabel text="DESCRIPTION + HASHTAGS" copy={caption} />
+          {body && (
+            <Text
+              color="nexzy.gray.100"
+              fontSize="sm"
+              whiteSpace="pre-wrap"
+              mt={0.5}
+            >
+              {body}
+            </Text>
+          )}
+          {hashtags && (
+            <Text color="nexzy.lightBlue" fontSize="xs" mt={1}>
+              {hashtags}
+            </Text>
+          )}
+          {kit.cta && (
+            <Text
+              color="nexzy.gray.100"
+              fontSize="xs"
+              mt={1}
+              fontStyle="italic"
+            >
+              {kit.cta}
+            </Text>
+          )}
+        </>
+      )}
+
+      {tags && (
+        <>
+          <FieldLabel text="TAGS / KEYWORDS" copy={tags} />
+          <Text color="nexzy.gray.100" fontSize="xs">
+            {tags}
+          </Text>
+        </>
+      )}
+
+      {pinned && (
+        <>
+          <FieldLabel text="📌 PINNED COMMENT — pin after posting" copy={pinned} />
+          <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
+            {pinned}
+          </Text>
+        </>
+      )}
+
+      {empty && (
         <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
-          {kit.description}
-        </Text>
-      )}
-      {kit.caption && (
-        <Text color="nexzy.gray.100" fontSize="sm" mt={1}>
-          {kit.caption}
-        </Text>
-      )}
-      {hashtags && (
-        <Text color="nexzy.lightBlue" fontSize="xs" mt={1}>
-          {hashtags}
-        </Text>
-      )}
-      {kit.tags && kit.tags.length > 0 && (
-        <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
-          Tags: {kit.tags.join(", ")}
-        </Text>
-      )}
-      {kit.cta && (
-        <Text color="nexzy.gray.100" fontSize="xs" mt={1} fontStyle="italic">
-          CTA: {kit.cta}
-        </Text>
-      )}
-      {!kit.title && !primary && (
-        <Text color="nexzy.gray.100" fontSize="xs">
           —
         </Text>
       )}
@@ -176,6 +231,11 @@ function SuggestionCard({
     fmt === "pinned_comment" ||
     fmt === "text_post" ||
     fmt === "none";
+  // Deal IMAGE card: a static graphic + overlay text + captions — no video,
+  // no ElevenLabs, no Produce-to-/videos.
+  const isImage = fmt === "image";
+  const dealImageUrl = view.payload?.dealImageUrl ?? null;
+  const onScreen = view.payload?.onScreenText ?? [];
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
@@ -269,6 +329,11 @@ function SuggestionCard({
               LONG-FORM
             </Badge>
           )}
+          {isImage && (
+            <Badge colorPalette="pink" variant="solid">
+              IMAGE
+            </Badge>
+          )}
           {isNonVideo && (
             <Badge
               colorPalette={fmt === "none" ? "gray" : "yellow"}
@@ -292,7 +357,7 @@ function SuggestionCard({
           </Text>
         </HStack>
         <HStack gap={1}>
-          {s.kind === "video" && !produced && !isNonVideo && (
+          {s.kind === "video" && !produced && !isNonVideo && !isImage && (
             <Button
               size="xs"
               colorPalette="green"
@@ -352,7 +417,7 @@ function SuggestionCard({
         </Box>
       )}
 
-      {s.kind === "video" && showProduce && !produced && !isNonVideo && (
+      {s.kind === "video" && showProduce && !produced && !isNonVideo && !isImage && (
         <Box
           mb={3}
           p={3}
@@ -529,6 +594,71 @@ function SuggestionCard({
         </Box>
       )}
 
+      {/* Deal IMAGE card: the generated graphic + overlay lines + captions */}
+      {isImage && (
+        <VStack align="stretch" gap={3} mb={3}>
+          {dealImageUrl && (
+            <Box
+              borderRadius="lg"
+              overflow="hidden"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+              maxW="360px"
+            >
+              <Image
+                src={dealImageUrl}
+                alt={s.title}
+                w="100%"
+                h="auto"
+                display="block"
+              />
+            </Box>
+          )}
+          {dealImageUrl && (
+            <Link
+              href={dealImageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              color="nexzy.lightBlue"
+              fontSize="xs"
+            >
+              ⬇ Download image
+            </Link>
+          )}
+          {onScreen.length > 0 && (
+            <Box
+              bg="whiteAlpha.50"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+            >
+              <Flex justify="space-between" align="center" mb={1} gap={2}>
+                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                  ON-SCREEN TEXT (overlay on the image)
+                </Text>
+                <CopyBtn text={onScreen.join("\n")} label="Copy" />
+              </Flex>
+              <VStack align="stretch" gap={0.5}>
+                {onScreen.map((line, i) => (
+                  <Text key={i} color="nexzy.white" fontSize="sm">
+                    {line}
+                  </Text>
+                ))}
+              </VStack>
+            </Box>
+          )}
+          {platforms && (
+            <VStack align="stretch" gap={2}>
+              <KitBlock name="YouTube (community)" kit={platforms.youtube} />
+              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+              <KitBlock name="Instagram" kit={platforms.reels} />
+              <KitBlock name="Facebook" kit={platforms.facebook} />
+            </VStack>
+          )}
+        </VStack>
+      )}
+
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>
         {view.hook && (
@@ -539,11 +669,6 @@ function SuggestionCard({
         {view.script && !isNonVideo && (
           <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
             {view.script}
-          </Text>
-        )}
-        {view.payload?.broll && (
-          <Text color="nexzy.gray.100" fontSize="xs">
-            🎬 B-roll: {view.payload.broll}
           </Text>
         )}
         {view.payload?.cta && (
@@ -565,7 +690,7 @@ function SuggestionCard({
       </VStack>
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
-      {!isNonVideo && (
+      {!isNonVideo && !isImage && (
         <Button
           size="xs"
           variant="ghost"
@@ -581,7 +706,7 @@ function SuggestionCard({
         </Button>
       )}
 
-      {!isNonVideo && showDetails && (
+      {!isNonVideo && !isImage && showDetails && (
         <>
           {/* Per-platform posting kits */}
           {platforms && (
@@ -762,33 +887,60 @@ function SuggestionCard({
                     </Text>
                   )}
                 </Box>
-                {view.payload?.voicePersona && (
-                  <Text color="nexzy.gray.100" fontSize="xs">
-                    🗣 Delivery: {view.payload.voicePersona}
+                {/* One production block: everything you hand the editor to
+                    actually cut the video — delivery, music, footage, captions. */}
+                <Box
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="lg"
+                  p={3}
+                >
+                  <Text
+                    color="nexzy.lightBlue"
+                    fontSize="xs"
+                    fontWeight="700"
+                    mb={1.5}
+                  >
+                    🎬 Production notes
                   </Text>
-                )}
-                {view.payload?.music && (
-                  <Text color="nexzy.gray.100" fontSize="xs">
-                    🎵 Music: {view.payload.music}
-                  </Text>
-                )}
-                {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
-                  <Text color="nexzy.gray.100" fontSize="xs">
-                    🎞 Background (search):{" "}
-                    {(view.payload?.backgroundVideo ?? []).join(" · ")}
-                  </Text>
-                )}
-                {(view.payload?.brollSfx?.length ?? 0) > 0 && (
-                  <Text color="nexzy.gray.100" fontSize="xs">
-                    🎬 B-roll/SFX: {(view.payload?.brollSfx ?? []).join(" · ")}
-                  </Text>
-                )}
-                {(view.payload?.onScreenText?.length ?? 0) > 0 && (
-                  <Text color="nexzy.gray.100" fontSize="xs">
-                    💬 On-screen:{" "}
-                    {(view.payload?.onScreenText ?? []).join(" · ")}
-                  </Text>
-                )}
+                  <VStack align="stretch" gap={1.5}>
+                    {view.payload?.voicePersona && (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        🗣 <b>Delivery:</b> {view.payload.voicePersona}
+                      </Text>
+                    )}
+                    {view.payload?.music && (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        🎵 <b>Music:</b> {view.payload.music}
+                      </Text>
+                    )}
+                    {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        🎞 <b>Background footage:</b>{" "}
+                        {(view.payload?.backgroundVideo ?? []).join(" · ")}
+                      </Text>
+                    )}
+                    {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        🎬 <b>B-roll / SFX:</b>{" "}
+                        {(view.payload?.brollSfx ?? []).join(" · ")}
+                      </Text>
+                    ) : (
+                      view.payload?.broll && (
+                        <Text color="nexzy.gray.100" fontSize="xs">
+                          🎬 <b>B-roll / SFX:</b> {view.payload.broll}
+                        </Text>
+                      )
+                    )}
+                    {(view.payload?.onScreenText?.length ?? 0) > 0 && (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        💬 <b>On-screen text</b> (captions to overlay):{" "}
+                        {(view.payload?.onScreenText ?? []).join(" · ")}
+                      </Text>
+                    )}
+                  </VStack>
+                </Box>
               </VStack>
             )}
           </Box>

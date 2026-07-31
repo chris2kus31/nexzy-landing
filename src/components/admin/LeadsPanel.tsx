@@ -31,7 +31,6 @@ const FORMATS: { key: string; label: string }[] = [
   { key: "short", label: "Short" },
   { key: "long", label: "Long-form" },
   { key: "image", label: "Image" },
-  { key: "pinned_comment", label: "Pinned comment" },
   { key: "text_post", label: "Text post" },
   { key: "none", label: "No video" },
 ];
