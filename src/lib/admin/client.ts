@@ -530,7 +530,7 @@ export async function uploadContentVideo(
 }
 
 export interface PublishResult {
-  platform: "facebook" | "instagram" | "threads";
+  platform: "facebook" | "instagram" | "threads" | "youtube";
   ok: boolean;
   id?: string;
   skipped?: boolean;
@@ -560,7 +560,7 @@ export async function publishContentCard(
 }
 
 export interface PlatformInsights {
-  platform: "facebook" | "instagram" | "threads";
+  platform: "facebook" | "instagram" | "threads" | "youtube";
   postId: string;
   metrics: Record<string, number>;
   fetchedAt: string;
@@ -574,6 +574,20 @@ export async function refreshContentInsights(
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/refresh-insights`, {
       method: "POST",
+    }),
+  );
+}
+
+/** Attach a manually-posted YouTube video (URL or id) → pulls its real analytics. */
+export async function attachContentYoutube(
+  id: string,
+  url: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/youtube`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
     }),
   );
 }

@@ -23,6 +23,7 @@ const PLATFORM_COLOR: Record<string, string> = {
   facebook: "blue",
   instagram: "pink",
   threads: "gray",
+  youtube: "red",
 };
 
 /** One published card: what it went to + its real numbers, with a refresh. */

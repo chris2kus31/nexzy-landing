@@ -26,6 +26,7 @@ import {
   uploadContentVideo,
   publishContentCard,
   refreshContentInsights,
+  attachContentYoutube,
   getWriterNames,
   getTtsBudget,
   type ContentSuggestion,
@@ -199,6 +200,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     s.payload?.insights ?? [],
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytBusy, setYtBusy] = useState(false);
+  const [ytAttached, setYtAttached] = useState(false);
   const published = (s.payload?.publishResults ?? []).some((r) => r.ok);
   const refreshInsights = async () => {
     setRefreshing(true);
@@ -209,6 +213,20 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       /* leave as-is */
     } finally {
       setRefreshing(false);
+    }
+  };
+  const attachYt = async () => {
+    if (!ytUrl.trim()) return;
+    setYtBusy(true);
+    try {
+      const card = await attachContentYoutube(s.id, ytUrl.trim());
+      setInsights(card.payload?.insights ?? []);
+      setYtAttached(true);
+      setYtUrl("");
+    } catch {
+      /* leave as-is */
+    } finally {
+      setYtBusy(false);
     }
   };
   const [fb, setFb] = useState(!!p?.facebook);
@@ -397,8 +415,38 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         </VStack>
       )}
 
+      {/* Attach a manually-posted YouTube video → real analytics join the loop */}
+      <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+        <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
+          YOUTUBE — PASTE THE VIDEO URL TO PULL ITS ANALYTICS
+        </Text>
+        <HStack gap={2}>
+          <Input
+            size="sm"
+            placeholder="https://youtu.be/… or /shorts/…"
+            value={ytUrl}
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            onChange={(e) => setYtUrl(e.target.value)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={attachYt}
+            loading={ytBusy}
+            loadingText="Fetching…"
+            disabled={!ytUrl.trim()}
+          >
+            Fetch
+          </Button>
+        </HStack>
+      </Box>
+
       {/* Real performance — pulled from the published posts' ids */}
-      {published && (
+      {(published || ytAttached) && (
         <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Flex justify="space-between" align="center" mb={1} gap={2}>
             <Text color="nexzy.white" fontWeight="700" fontSize="sm">
