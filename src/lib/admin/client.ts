@@ -342,6 +342,8 @@ export interface ContentSuggestion {
       tiktok?: PlatformKit;
       reels?: PlatformKit;
       facebook?: PlatformKit;
+      /** Threads: a text take (caption) + one topic tag — not the video. */
+      threads?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;

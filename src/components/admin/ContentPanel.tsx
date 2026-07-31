@@ -746,6 +746,7 @@ function SuggestionCard({
                 name={isLong ? "Facebook Reels (teaser)" : "Facebook Reels"}
                 kit={platforms.facebook}
               />
+              <KitBlock name="Threads (text take)" kit={platforms.threads} />
             </VStack>
           )}
 
