@@ -358,6 +358,8 @@ export interface ContentSuggestion {
     // Deal IMAGE card (format === "image"): the generated graphic + overlay
     // lines (onScreenText carries the overlay text for this format).
     dealImageUrl?: string | null;
+    // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
+    groundedOn?: { title: string; views?: string }[];
     // Video format: "short" (default), "long" (guide/walkthrough → YouTube
     // long-form + teasers), or a non-video format from the format brain.
     format?:

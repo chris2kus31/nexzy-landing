@@ -572,6 +572,25 @@ function SuggestionCard({
         </Box>
       )}
 
+      {/* What the free YouTube signal grounded this card against (Phase 1) */}
+      {(view.payload?.groundedOn?.length ?? 0) > 0 && (
+        <Box
+          mb={3}
+          p={2}
+          borderRadius="md"
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text color="nexzy.gray.100" fontSize="xs">
+            🔎 <b>Grounded against</b> (top YouTube now):{" "}
+            {(view.payload?.groundedOn ?? [])
+              .map((g) => `${g.title}${g.views ? ` (${g.views})` : ""}`)
+              .join(" · ")}
+          </Text>
+        </Box>
+      )}
+
       {/* Non-video formats: ready-to-post copy with a Copy button */}
       {isNonVideo && fmt !== "none" && view.payload?.copy && (
         <Box
