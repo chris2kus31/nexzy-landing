@@ -408,6 +408,10 @@ export interface ContentSuggestion {
     };
     // Suggested posting time carried from the lead onto the generated card.
     postTiming?: { when?: string; timing?: string };
+    // Lead generation state (queued job): true while a Generate job runs;
+    // lastError is set when a generation failed (the lead stays OPEN to retry).
+    generating?: boolean;
+    lastError?: string | null;
   } | null;
   status: string;
   createdAt: string;
@@ -589,6 +593,26 @@ export async function attachContentYoutube(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),
     }),
+  );
+}
+
+/** One immutable performance reading (a row of the history table). */
+export interface ContentPostInsight {
+  id: string;
+  cardId: string;
+  platform: "facebook" | "instagram" | "threads" | "youtube";
+  postId: string | null;
+  metrics: Record<string, number>;
+  fetchedAt: string;
+  createdAt: string;
+}
+
+/** Full reading history for a card (every platform, oldest→newest). */
+export async function getContentInsightHistory(
+  id: string,
+): Promise<ContentPostInsight[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/insights-history`),
   );
 }
 
@@ -1907,7 +1931,7 @@ export async function generateFromLead(
   id: string,
   writer?: string,
   format?: string,
-): Promise<ContentSuggestion | null> {
+): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
       method: "POST",

@@ -162,14 +162,17 @@ export default function InsightsPanel() {
           Performance
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
-          Every card you&rsquo;ve published to Facebook / Instagram / Threads and
-          its real numbers. Refreshes daily; hit Refresh for the latest.
+          Every card you&rsquo;ve published to Facebook / Instagram / Threads,
+          plus any YouTube video you attach, with its real numbers. Auto-refreshes
+          daily; each card has its own Refresh for the latest.
         </Text>
       </Box>
       {cards.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          Nothing published to social yet. Publish a card from{" "}
-          <b>Suggestions</b> and it&rsquo;ll show up here.
+          Nothing here yet. Publish a card to Facebook/Instagram/Threads from{" "}
+          <b>Suggestions</b>, or paste a YouTube video&rsquo;s URL into a
+          card&rsquo;s <b>Fetch</b> box there, and it&rsquo;ll show up here with
+          its real numbers.
         </Text>
       ) : (
         cards.map((s) => <PerfRow key={s.id} s={s} />)

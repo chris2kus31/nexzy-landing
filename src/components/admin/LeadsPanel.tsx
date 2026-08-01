@@ -45,11 +45,13 @@ function LeadCard({
   writers,
   isOwner,
   onDone,
+  reload,
 }: {
   s: ContentSuggestion;
   writers: string[];
   isOwner: boolean;
   onDone: (id: string) => void;
+  reload: () => void | Promise<void>;
 }) {
   const lead = s.payload?.lead;
   const [writer, setWriter] = useState(
@@ -57,6 +59,8 @@ function LeadCard({
   );
   const [format, setFormat] = useState(lead?.suggestedFormat || "short");
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
+  const generating = !!s.payload?.generating;
+  const lastError = s.payload?.lastError;
 
   const writerOptions =
     writers.length > 0
@@ -69,8 +73,10 @@ function LeadCard({
     setBusy("gen");
     try {
       await generateFromLead(s.id, writer, format);
-      onDone(s.id);
+      await reload(); // pick up the queued 'generating' state (or removal)
     } catch {
+      /* leave the lead in place so you can retry */
+    } finally {
       setBusy(null);
     }
   };
@@ -143,6 +149,12 @@ function LeadCard({
         </Text>
       )}
 
+      {lastError && (
+        <Text color="red.300" fontSize="xs" mb={3}>
+          ⚠ Last generation failed: {lastError}. Adjust and retry.
+        </Text>
+      )}
+
       {/* Writer picker */}
       <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
         Writer / voice
@@ -205,10 +217,11 @@ function LeadCard({
               size="sm"
               colorPalette="green"
               onClick={generate}
-              loading={busy === "gen"}
+              loading={busy === "gen" || generating}
               loadingText="Generating…"
+              disabled={generating}
             >
-              🎬 Generate
+              {lastError ? "🎬 Retry" : "🎬 Generate"}
             </Button>
           )}
           <Button
@@ -256,6 +269,16 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
     load();
   }, [load]);
 
+  // While any lead is generating (a queued job is running), poll so the board
+  // updates when it finishes (card appears in Suggestions) or fails.
+  useEffect(() => {
+    if (!leads?.some((l) => l.payload?.generating)) return;
+    const t = setInterval(() => {
+      void load();
+    }, 4000);
+    return () => clearInterval(t);
+  }, [leads, load]);
+
   const remove = (id: string) =>
     setLeads((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
 
@@ -297,6 +320,7 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
             writers={writers}
             isOwner={isOwner}
             onDone={remove}
+            reload={load}
           />
         ))
       )}
