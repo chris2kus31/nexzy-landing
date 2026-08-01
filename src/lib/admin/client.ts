@@ -1872,6 +1872,15 @@ export async function refreshVideoInsights(id: string): Promise<AdminVideo> {
   );
 }
 
+/** "Scan now" — refresh insights for every measurable video on demand. */
+export async function scanVideoInsights(): Promise<{ scanned: number }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/scan-video-insights`, {
+      method: "POST",
+    }),
+  );
+}
+
 export async function createVideo(
   payload: CreateVideoPayload,
 ): Promise<AdminVideo> {

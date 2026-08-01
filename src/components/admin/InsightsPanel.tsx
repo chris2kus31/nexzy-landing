@@ -10,12 +10,14 @@ import {
   Text,
   Button,
   Badge,
+  Link,
   Spinner,
 } from "@chakra-ui/react";
 import {
-  getContentSuggestions,
-  refreshContentInsights,
-  type ContentSuggestion,
+  listVideos,
+  refreshVideoInsights,
+  scanVideoInsights,
+  type AdminVideo,
   type PlatformInsights,
 } from "@/lib/admin/client";
 
@@ -24,21 +26,45 @@ const PLATFORM_COLOR: Record<string, string> = {
   instagram: "pink",
   threads: "gray",
   youtube: "red",
+  tiktok: "purple",
+  reels: "pink",
 };
 
-/** One published card: what it went to + its real numbers, with a refresh. */
-function PerfRow({ s }: { s: ContentSuggestion }) {
+/** Which platforms we can pull real numbers for, from this video's sources. */
+function measurablePlatforms(v: AdminVideo): string[] {
+  const out: string[] = [];
+  if (v.youtubeUrl && v.source === "nexzy") out.push("youtube");
+  const ids = v.platformPostIds ?? {};
+  for (const p of ["facebook", "instagram", "threads"]) {
+    if (ids[p]) out.push(p);
+  }
+  return out;
+}
+
+/** True if this video has anything we can measure (so it belongs on Performance). */
+function isMeasurable(v: AdminVideo): boolean {
+  return (
+    measurablePlatforms(v).length > 0 || !!(v.insights && v.insights.length)
+  );
+}
+
+/** One published video: what it can be measured on + its real numbers. */
+function PerfRow({ v }: { v: AdminVideo }) {
   const [insights, setInsights] = useState<PlatformInsights[]>(
-    s.payload?.insights ?? [],
+    v.insights ?? [],
+  );
+  const [fetchedAt, setFetchedAt] = useState<string | null>(
+    v.insightsFetchedAt ?? null,
   );
   const [busy, setBusy] = useState(false);
-  const posted = (s.payload?.publishResults ?? []).filter((r) => r.ok);
+  const platforms = measurablePlatforms(v);
 
   const refresh = async () => {
     setBusy(true);
     try {
-      const card = await refreshContentInsights(s.id);
-      setInsights(card.payload?.insights ?? []);
+      const updated = await refreshVideoInsights(v.id);
+      setInsights(updated.insights ?? []);
+      setFetchedAt(updated.insightsFetchedAt ?? new Date().toISOString());
     } catch {
       /* leave as-is */
     } finally {
@@ -56,17 +82,17 @@ function PerfRow({ s }: { s: ContentSuggestion }) {
     >
       <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
         <HStack gap={2} wrap="wrap" flex={1} minW={0}>
-          {posted.map((r, i) => (
+          {platforms.map((p) => (
             <Badge
-              key={i}
-              colorPalette={PLATFORM_COLOR[r.platform] || "gray"}
+              key={p}
+              colorPalette={PLATFORM_COLOR[p] || "gray"}
               variant="solid"
             >
-              {r.platform}
+              {p}
             </Badge>
           ))}
           <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-            {s.title}
+            {v.title}
           </Text>
         </HStack>
         <Button
@@ -97,39 +123,54 @@ function PerfRow({ s }: { s: ContentSuggestion }) {
               {it.error
                 ? `— (${it.error})`
                 : Object.entries(it.metrics)
-                    .map(([k, v]) => `${k} ${v.toLocaleString()}`)
+                    .map(([k, val]) => `${k} ${val.toLocaleString()}`)
                     .join(" · ") || "—"}
             </Text>
           ))}
         </VStack>
       )}
 
-      {s.payload?.insightsFetchedAt && (
-        <Text fontSize="10px" color="whiteAlpha.400" mt={2}>
-          updated {new Date(s.payload.insightsFetchedAt).toLocaleString()}
-        </Text>
-      )}
+      <Flex justify="space-between" align="center" mt={2}>
+        {v.youtubeUrl ? (
+          <Link
+            href={v.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="nexzy.lightBlue"
+            fontSize="xs"
+          >
+            Watch ↗
+          </Link>
+        ) : (
+          <Box />
+        )}
+        {fetchedAt && (
+          <Text fontSize="10px" color="whiteAlpha.400">
+            updated {new Date(fetchedAt).toLocaleString()}
+          </Text>
+        )}
+      </Flex>
     </Box>
   );
 }
 
 /**
- * Performance — every card you've published to social (FB/IG/Threads), with its
- * real numbers. The insights live on the cards (from the publish hub); this is
- * the one place to see them all and refresh.
+ * Performance — reads the Video Library. Every video you've produced shows here
+ * with its real numbers: YouTube analytics for videos on our channel, plus
+ * Facebook / Instagram / Threads for the posts carried over when you published
+ * the card. Auto-refreshes daily; Scan now pulls the latest on demand, and each
+ * row has its own Refresh.
  */
 export default function InsightsPanel() {
-  const [cards, setCards] = useState<ContentSuggestion[] | null>(null);
+  const [videos, setVideos] = useState<AdminVideo[] | null>(null);
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const all = await getContentSuggestions();
-      // Only cards that were actually published to a social platform.
-      const published = all.filter((s) =>
-        (s.payload?.publishResults ?? []).some((r) => r.ok),
-      );
-      setCards(published);
+      const all = await listVideos(200);
+      setVideos(all.filter(isMeasurable));
       setError("");
     } catch (e) {
       setError((e as Error)?.message || "Failed to load performance.");
@@ -140,6 +181,24 @@ export default function InsightsPanel() {
     load();
   }, [load]);
 
+  const scanAll = async () => {
+    setScanning(true);
+    setScanNote("");
+    try {
+      const { scanned } = await scanVideoInsights();
+      await load();
+      setScanNote(
+        scanned > 0
+          ? `Scanned ${scanned} video${scanned === 1 ? "" : "s"}.`
+          : "No videos to scan yet.",
+      );
+    } catch {
+      setScanNote("Scan failed — try again.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   if (error) {
     return (
       <Text color="red.300" fontSize="sm">
@@ -147,7 +206,7 @@ export default function InsightsPanel() {
       </Text>
     );
   }
-  if (!cards) {
+  if (!videos) {
     return (
       <Flex justify="center" py={12}>
         <Spinner color="nexzy.blue" size="lg" />
@@ -158,24 +217,42 @@ export default function InsightsPanel() {
   return (
     <VStack align="stretch" gap={4}>
       <Box>
-        <Heading size="md" color="nexzy.white" mb={1}>
-          Performance
-        </Heading>
+        <Flex justify="space-between" align="flex-start" gap={3} mb={1}>
+          <Heading size="md" color="nexzy.white">
+            Performance
+          </Heading>
+          <HStack gap={2} flexShrink={0}>
+            {scanNote && (
+              <Text fontSize="xs" color="whiteAlpha.600">
+                {scanNote}
+              </Text>
+            )}
+            <Button
+              size="sm"
+              colorPalette="green"
+              onClick={scanAll}
+              loading={scanning}
+              loadingText="Scanning…"
+            >
+              ↻ Scan now
+            </Button>
+          </HStack>
+        </Flex>
         <Text color="nexzy.gray.100" fontSize="sm">
-          Every card you&rsquo;ve published to Facebook / Instagram / Threads,
-          plus any YouTube video you attach, with its real numbers. Auto-refreshes
-          daily; each card has its own Refresh for the latest.
+          Your Video Library with real numbers — YouTube analytics for videos on
+          our channel, plus Facebook / Instagram / Threads for posts carried over
+          at publish. Auto-refreshes daily; <b>Scan now</b> pulls the latest for
+          every video, or use a row&rsquo;s own Refresh.
         </Text>
       </Box>
-      {cards.length === 0 ? (
+      {videos.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          Nothing here yet. Publish a card to Facebook/Instagram/Threads from{" "}
-          <b>Suggestions</b>, or paste a YouTube video&rsquo;s URL into a
-          card&rsquo;s <b>Fetch</b> box there, and it&rsquo;ll show up here with
-          its real numbers.
+          Nothing to measure yet. Produce a video (with a YouTube URL, or after
+          publishing the card to Facebook/Instagram/Threads) and it&rsquo;ll show
+          up here with its real numbers.
         </Text>
       ) : (
-        cards.map((s) => <PerfRow key={s.id} s={s} />)
+        videos.map((v) => <PerfRow key={v.id} v={v} />)
       )}
     </VStack>
   );
