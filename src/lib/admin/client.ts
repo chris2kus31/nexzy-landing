@@ -1825,6 +1825,10 @@ export interface AdminVideo {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Real-performance snapshot pulled from the platforms (Performance tab).
+  platformPostIds?: Record<string, string> | null;
+  insights?: PlatformInsights[] | null;
+  insightsFetchedAt?: string | null;
   games?: { id: string; name: string; slug: string; isPrimary: boolean }[];
 }
 
@@ -1857,6 +1861,15 @@ export interface CreateVideoPayload {
 
 export async function listVideos(limit = 100): Promise<AdminVideo[]> {
   return handle(await fetch(`/api/newsroom/admin/videos?limit=${limit}`));
+}
+
+/** Pull real performance for a video (Video Library) → returns the updated video. */
+export async function refreshVideoInsights(id: string): Promise<AdminVideo> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${id}/refresh-insights`, {
+      method: "POST",
+    }),
+  );
 }
 
 export async function createVideo(
