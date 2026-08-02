@@ -33,7 +33,13 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [beat, setBeat] = useState(BEATS[0].key);
   const [title, setTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [angle, setAngle] = useState("");
+  // In review mode this textarea holds the points to cover; in news mode it
+  // holds the editor's own first-party NOTES (sent as `notes`).
   const [instructions, setInstructions] = useState("");
+  const [structure, setStructure] = useState("");
+  const [directives, setDirectives] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [rating, setRating] = useState(7);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -50,9 +56,15 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const isReview = mode === "review";
   const clampR = (n: number) => Math.max(1, Math.min(10, Math.round(n)));
   const tier = verdictTierFor(author || "Chuy", rating);
+  // News needs at least one real input: an angle, some notes, or an inspiration
+  // link. Everything else (structure, directives, title) is optional.
+  const newsHasSubstance =
+    angle.trim().length >= 6 ||
+    instructions.trim().length >= 6 ||
+    sourceUrl.trim().length > 0;
   const canSend = isReview
     ? title.trim().length >= 2 && instructions.trim().length >= 10 && !sending
-    : instructions.trim().length >= 10 && !sending;
+    : newsHasSubstance && !sending;
 
   const submit = async () => {
     setSending(true);
@@ -73,7 +85,10 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       } else {
         await commissionStory({
           beat,
-          instructions: instructions.trim(),
+          angle: angle.trim() || undefined,
+          notes: instructions.trim() || undefined,
+          structure: structure.trim() || undefined,
+          directives: directives.trim() || undefined,
           sourceUrl: sourceUrl.trim() || undefined,
           workingTitle: title.trim() || undefined,
           author: author || undefined,
@@ -81,12 +96,15 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         });
         setMsg({
           ok: true,
-          text: "Commissioned. The newsroom is researching and writing it now — it'll appear in the review queue below in a few minutes. Hit Refresh to check.",
+          text: "Commissioned. The newsroom is reading your inspiration, researching real facts, and writing it now — it'll appear in the review queue below in a few minutes. Hit Refresh to check.",
         });
       }
       setTitle("");
       setSourceUrl("");
+      setAngle("");
       setInstructions("");
+      setStructure("");
+      setDirectives("");
       setNoImage(false);
       onRan?.();
     } catch (e) {
@@ -105,10 +123,22 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       <Button
         size="sm"
         onClick={() => setMode(m)}
-        bg={active ? (palette === "purple" ? "purple.500" : "nexzy.blue") : "transparent"}
+        bg={
+          active
+            ? palette === "purple"
+              ? "purple.500"
+              : "nexzy.blue"
+            : "transparent"
+        }
         color={active ? "white" : "nexzy.gray.100"}
         borderWidth="1px"
-        borderColor={active ? (palette === "purple" ? "purple.500" : "nexzy.blue") : "whiteAlpha.300"}
+        borderColor={
+          active
+            ? palette === "purple"
+              ? "purple.500"
+              : "nexzy.blue"
+            : "whiteAlpha.300"
+        }
         _hover={{ bg: active ? undefined : "whiteAlpha.100" }}
       >
         {label}
@@ -176,7 +206,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       <Text color="nexzy.gray.100" fontSize="sm" mb={4}>
         {isReview
           ? "Reviewing something yourself? Pick the persona, set your rating, and give them the real points to hit — what works, where it stumbles, the standout moments. They write it up in their voice with your verdict locked in. No AI research, no invented scenes."
-          : "Found a story you want covered? Give your staff the angle (and a source link if you have one). They research, write, edit, and illustrate it — then it lands in your review queue to publish."}
+          : "Found a story you want covered? Drop an inspiration link (we take the idea + what it covers, never its words), set your angle, and add any of your own facts. The staff searches real current facts, writes it in the chosen voice, edits, and illustrates it — then it lands in your review queue."}
       </Text>
 
       <Stack gap={4}>
@@ -209,6 +239,23 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
 
         {writerPicker}
 
+        {!isReview && (
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Angle
+            </Text>
+            <Input
+              value={angle}
+              onChange={(e) => setAngle(e.target.value)}
+              placeholder="Where you're taking it — e.g. 2026 releases as a fast 60–90-sec read"
+              color="nexzy.white"
+              bg="whiteAlpha.50"
+              borderColor="whiteAlpha.300"
+              _placeholder={{ color: "nexzy.gray.100" }}
+            />
+          </Box>
+        )}
+
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
             {isReview
@@ -233,17 +280,21 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         {!isReview && (
           <Box>
             <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-              Source link (optional)
+              Inspiration link (optional)
             </Text>
             <Input
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="https://…"
+              placeholder="https://… — the story that sparked the idea"
               color="nexzy.white"
               bg="whiteAlpha.50"
               borderColor="whiteAlpha.300"
               _placeholder={{ color: "nexzy.gray.100" }}
             />
+            <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+              We read it for the idea + what it covers — never copied. Real
+              facts come from our own search.
+            </Text>
           </Box>
         )}
 
@@ -303,7 +354,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
             {isReview
               ? "The real points to cover (your grounding — the writer works only from these)"
-              : "What's the story + your angle"}
+              : "Notes — your own facts to include (optional, one per line)"}
           </Text>
           <Textarea
             value={instructions}
@@ -311,7 +362,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
             placeholder={
               isReview
                 ? "One point per line — what works, where it stumbles, standout moments, who it's for. e.g.\n- Combat is lifted straight from the Insomniac games; feels incredible\n- Plot is thin and predictable through the middle\n- Best for franchise fans; newcomers will shrug"
-                : "Tell your staff what to cover and how to frame it. e.g. 'Rockstar just pushed GTA 6 to late 2026. Cover the new date, why it slipped, and what it means for the delay-weary fanbase — keep it sharp.'"
+                : "Things you know that should be baked in as fact (woven in, never labeled). One per line. e.g.\n- Confirmed: the collector's edition ships in March\n- Our readers care most about the Switch 2 launch titles"
             }
             rows={isReview ? 6 : 4}
             color="nexzy.white"
@@ -320,6 +371,57 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
             _placeholder={{ color: "nexzy.gray.100" }}
           />
         </Box>
+
+        {!isReview && (
+          <Box>
+            <Button
+              size="sm"
+              variant="ghost"
+              alignSelf="flex-start"
+              color="nexzy.gray.100"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={() => setShowAdvanced((v) => !v)}
+              mb={showAdvanced ? 3 : 0}
+            >
+              {showAdvanced ? "− Hide" : "+ Add"} structure &amp; directives
+            </Button>
+            {showAdvanced && (
+              <Stack gap={4}>
+                <Box>
+                  <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                    Structure (optional — how to order/shape it)
+                  </Text>
+                  <Textarea
+                    value={structure}
+                    onChange={(e) => setStructure(e.target.value)}
+                    placeholder="e.g. Open with the release window, then one line per game in date order, close with the one to watch."
+                    rows={3}
+                    color="nexzy.white"
+                    bg="whiteAlpha.50"
+                    borderColor="whiteAlpha.300"
+                    _placeholder={{ color: "nexzy.gray.100" }}
+                  />
+                </Box>
+                <Box>
+                  <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                    Extra directives (optional — work for the staff to carry
+                    out)
+                  </Text>
+                  <Textarea
+                    value={directives}
+                    onChange={(e) => setDirectives(e.target.value)}
+                    placeholder="e.g. Research each game in the source for its current release date, platforms, and a one-line description."
+                    rows={3}
+                    color="nexzy.white"
+                    bg="whiteAlpha.50"
+                    borderColor="whiteAlpha.300"
+                    _placeholder={{ color: "nexzy.gray.100" }}
+                  />
+                </Box>
+              </Stack>
+            )}
+          </Box>
+        )}
 
         <Button
           size="sm"

@@ -857,12 +857,22 @@ export async function runPipeline(
 
 export interface CommissionInput {
   beat: string;
-  instructions: string;
+  /** Where to take the story — the angle. */
+  angle?: string;
+  /** The editor's own first-party facts to weave in (one per line), unlabeled. */
+  notes?: string;
+  /** How the editor wants it structured / ordered (optional). */
+  structure?: string;
+  /** Operational directives to carry out — e.g. "research each game for facts". */
+  directives?: string;
+  /** Inspiration link — idea + roster only, not treated as a source. */
   sourceUrl?: string;
   workingTitle?: string;
   author?: string;
   /** Skip AI hero-image generation — you'll drop your own. */
   noImage?: boolean;
+  /** Legacy single free-text seed (kept for back-compat). */
+  instructions?: string;
 }
 
 /** Commission a specific story for the AI staff to research + write. */
