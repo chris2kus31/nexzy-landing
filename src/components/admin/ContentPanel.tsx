@@ -98,13 +98,14 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
   const title = kit.title || "";
-  const body = kit.description || kit.caption || "";
+  const body = kit.description || kit.caption || kit.post || "";
   // The full caption you'd paste into the post box: body, then hashtags, then
   // the platform engagement line — one clean block, no re-typing.
   const caption = [body, hashtags, kit.cta].filter(Boolean).join("\n\n");
   const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
   const pinned = kit.pinnedComment || "";
-  const empty = !title && !body && !hashtags && !tags && !pinned;
+  const firstReply = kit.firstReply || "";
+  const empty = !title && !body && !hashtags && !tags && !pinned && !firstReply;
 
   return (
     <Box
@@ -155,6 +156,18 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
               {kit.cta}
             </Text>
           )}
+        </>
+      )}
+
+      {firstReply && (
+        <>
+          <FieldLabel
+            text="↩ FIRST REPLY (post right after — optional)"
+            copy={firstReply}
+          />
+          <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
+            {firstReply}
+          </Text>
         </>
       )}
 
@@ -983,6 +996,7 @@ function SuggestionCard({
               <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
               <KitBlock name="Instagram" kit={platforms.reels} />
               <KitBlock name="Facebook" kit={platforms.facebook} />
+              <KitBlock name="X (Twitter)" kit={platforms.x} />
             </VStack>
           )}
         </VStack>
@@ -1062,6 +1076,7 @@ function SuggestionCard({
                 kit={platforms.facebook}
               />
               <KitBlock name="Threads (text take)" kit={platforms.threads} />
+              <KitBlock name="X (Twitter)" kit={platforms.x} />
             </VStack>
           )}
 

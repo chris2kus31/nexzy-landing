@@ -316,6 +316,12 @@ export interface PlatformKit {
   cta?: string;
   /** The comment to PIN on this platform's post after publishing. */
   pinnedComment?: string;
+  /** X (Twitter): the hot-take post text (links are fine on X now). */
+  post?: string;
+  /** X (Twitter): optional follow-up reply to keep the thread alive. */
+  firstReply?: string;
+  /** X (Twitter): the recommended format (hot_take/thread/poll/image/clip). */
+  format?: string;
 }
 
 export interface ContentSuggestion {
@@ -344,6 +350,8 @@ export interface ContentSuggestion {
       facebook?: PlatformKit;
       /** Threads: a text take (caption) + one topic tag — not the video. */
       threads?: PlatformKit;
+      /** X (Twitter): a hot-take post (+ the link) — persona voice kept. */
+      x?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;
@@ -401,6 +409,8 @@ export interface ContentSuggestion {
       summary?: string;
       suggestedFormat?: string;
       suggestedWriter?: string;
+      /** Recommended X (Twitter) format for this story. */
+      xFormat?: string;
       platforms?: string[];
       reason?: string;
       when?: "now" | "schedule" | "pre_event";

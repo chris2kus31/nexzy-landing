@@ -109,6 +109,11 @@ function LeadCard({
           <Badge colorPalette="purple" variant="subtle">
             suggests: {fmtLabel(lead?.suggestedFormat)}
           </Badge>
+          {lead?.xFormat && (
+            <Badge colorPalette="cyan" variant="subtle">
+              X: {lead.xFormat.replace(/_/g, " ")}
+            </Badge>
+          )}
           {lead?.when && (
             <Badge
               colorPalette={
