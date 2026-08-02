@@ -25,6 +25,7 @@ import {
   updateContentScript,
   uploadContentVideo,
   publishContentCard,
+  getPublishConfig,
   refreshContentInsights,
   attachContentYoutube,
   getWriterNames,
@@ -248,6 +249,15 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const [fbCaption, setFbCaption] = useState(p?.facebook?.caption ?? "");
   const [igCaption, setIgCaption] = useState(p?.reels?.caption ?? "");
   const [threadsText, setThreadsText] = useState(p?.threads?.caption ?? "");
+  const [xOn, setXOn] = useState(false);
+  const [xPost, setXPost] = useState(p?.x?.post ?? "");
+  const [xReply, setXReply] = useState(p?.x?.firstReply ?? "");
+  const [cfg, setCfg] = useState<{ x?: boolean } | null>(null);
+  useEffect(() => {
+    getPublishConfig()
+      .then((c) => setCfg(c))
+      .catch(() => setCfg(null));
+  }, []);
 
   const upload = async (file: File) => {
     setUploading(true);
@@ -272,6 +282,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         fbCaption,
         igCaption,
         threadsText,
+        x: xOn,
+        xPost,
+        xReply,
       });
       setResults(r.results);
     } catch {
@@ -284,7 +297,8 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   };
 
   const needsVideo = fb || ig;
-  const canPublish = (fb || ig || th) && (!needsVideo || !!videoUrl);
+  const canPublish =
+    (fb || ig || th || xOn) && (!needsVideo || !!videoUrl);
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
     <Button
       size="xs"
@@ -350,6 +364,25 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         {p?.facebook && toggle(fb, setFb, "Facebook")}
         {p?.reels && toggle(ig, setIg, "Instagram")}
         {p?.threads && toggle(th, setTh, "Threads")}
+        {p?.x && (
+          <Button
+            size="xs"
+            variant={xOn ? "solid" : "outline"}
+            bg={xOn ? "nexzy.blue" : "transparent"}
+            color={xOn ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: xOn ? "nexzy.blue" : "whiteAlpha.100" }}
+            onClick={() => setXOn(!xOn)}
+            disabled={!cfg?.x}
+            title={
+              cfg?.x
+                ? ""
+                : "Add the X API keys + set X_PUBLISH_ENABLED=true to enable"
+            }
+          >
+            {xOn ? "✓ " : ""}X{cfg?.x ? "" : " (needs API keys)"}
+          </Button>
+        )}
       </HStack>
 
       {/* Editable captions per selected platform */}
@@ -388,6 +421,34 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               value={threadsText}
               maxLength={500}
               onChange={(e) => setThreadsText(e.target.value)}
+            />
+          </Box>
+        )}
+        {xOn && p?.x && (
+          <Box>
+            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+              X POST (≤280 — the link is fine in the post)
+            </Text>
+            <Textarea
+              {...ta}
+              value={xPost}
+              maxLength={280}
+              onChange={(e) => setXPost(e.target.value)}
+            />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mt={2}
+              mb={0.5}
+            >
+              X FIRST REPLY (optional)
+            </Text>
+            <Textarea
+              {...ta}
+              value={xReply}
+              maxLength={280}
+              onChange={(e) => setXReply(e.target.value)}
             />
           </Box>
         )}

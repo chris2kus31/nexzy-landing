@@ -544,7 +544,7 @@ export async function uploadContentVideo(
 }
 
 export interface PublishResult {
-  platform: "facebook" | "instagram" | "threads" | "youtube";
+  platform: "facebook" | "instagram" | "threads" | "youtube" | "x";
   ok: boolean;
   id?: string;
   skipped?: boolean;
@@ -562,6 +562,9 @@ export async function publishContentCard(
     fbCaption?: string;
     igCaption?: string;
     threadsText?: string;
+    x?: boolean;
+    xPost?: string;
+    xReply?: string;
   },
 ): Promise<{ results: PublishResult[] }> {
   return handle(
@@ -571,6 +574,16 @@ export async function publishContentCard(
       body: JSON.stringify(opts),
     }),
   );
+}
+
+/** Which social platforms are enabled + configured (publish UI toggles). */
+export async function getPublishConfig(): Promise<{
+  facebook: boolean;
+  instagram: boolean;
+  threads: boolean;
+  x: boolean;
+}> {
+  return handle(await fetch(`/api/newsroom/admin/content/publish-config`));
 }
 
 export interface PlatformInsights {
