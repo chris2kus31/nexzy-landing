@@ -200,6 +200,35 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
 }
 
 /**
+ * Assemble the FULL post text an operator would type manually: body, then the
+ * hashtag line, then the platform CTA — one clean block. Matches the KitBlock
+ * "DESCRIPTION + HASHTAGS" copy so what you publish == what you'd paste.
+ */
+function assembleCaption(kit?: PlatformKit): string {
+  if (!kit) return "";
+  const body = kit.description || kit.caption || "";
+  const hashtags = (kit.hashtags || []).join(" ");
+  return [body, hashtags, kit.cta].filter(Boolean).join("\n\n");
+}
+
+/**
+ * Threads renders inline hashtags as plain grey text (no discoverability) and
+ * allows only ONE clickable topic tag per post — so we send clean prose here
+ * and the single topic tag separately.
+ */
+function assembleThreadsText(kit?: PlatformKit): string {
+  if (!kit) return "";
+  const body = kit.description || kit.caption || "";
+  return [body, kit.cta].filter(Boolean).join("\n\n");
+}
+
+/** Threads' single topic tag: first/strongest hashtag, cleaned per Meta rules. */
+function firstTopicTag(kit?: PlatformKit): string {
+  const raw = (kit?.hashtags || [])[0] || "";
+  return raw.replace(/^#/, "").replace(/[.&]/g, "").trim().slice(0, 50);
+}
+
+/**
  * Publish a finished video card straight to Facebook + Instagram Reels (upload
  * the video) and a Threads text post. Calls the publish endpoints; shows each
  * platform's result. Threads doesn't need the video (it's a text take).
@@ -246,9 +275,19 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const [fb, setFb] = useState(!!p?.facebook);
   const [ig, setIg] = useState(!!p?.reels);
   const [th, setTh] = useState(!!p?.threads);
-  const [fbCaption, setFbCaption] = useState(p?.facebook?.caption ?? "");
-  const [igCaption, setIgCaption] = useState(p?.reels?.caption ?? "");
-  const [threadsText, setThreadsText] = useState(p?.threads?.caption ?? "");
+  const [fbCaption, setFbCaption] = useState(assembleCaption(p?.facebook));
+  const [igCaption, setIgCaption] = useState(assembleCaption(p?.reels));
+  const [threadsText, setThreadsText] = useState(
+    assembleThreadsText(p?.threads),
+  );
+  const [threadsTopicTag, setThreadsTopicTag] = useState(
+    firstTopicTag(p?.threads),
+  );
+  const [fbPinned, setFbPinned] = useState(p?.facebook?.pinnedComment ?? "");
+  const [igPinned, setIgPinned] = useState(p?.reels?.pinnedComment ?? "");
+  const [threadsPinned, setThreadsPinned] = useState(
+    p?.threads?.pinnedComment ?? "",
+  );
   const [xOn, setXOn] = useState(false);
   const [xPost, setXPost] = useState(p?.x?.post ?? "");
   const [xReply, setXReply] = useState(p?.x?.firstReply ?? "");
@@ -282,6 +321,10 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         fbCaption,
         igCaption,
         threadsText,
+        threadsTopicTag,
+        fbPinned,
+        igPinned,
+        threadsPinned,
         x: xOn,
         xPost,
         xReply,
@@ -397,6 +440,21 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               value={fbCaption}
               onChange={(e) => setFbCaption(e.target.value)}
             />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mt={2}
+              mb={0.5}
+            >
+              FACEBOOK FIRST COMMENT (auto-posted — pin it manually)
+            </Text>
+            <Textarea
+              {...ta}
+              rows={2}
+              value={fbPinned}
+              onChange={(e) => setFbPinned(e.target.value)}
+            />
           </Box>
         )}
         {ig && p?.reels && (
@@ -408,6 +466,21 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               {...ta}
               value={igCaption}
               onChange={(e) => setIgCaption(e.target.value)}
+            />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mt={2}
+              mb={0.5}
+            >
+              INSTAGRAM FIRST COMMENT (auto-posted — pin it manually)
+            </Text>
+            <Textarea
+              {...ta}
+              rows={2}
+              value={igPinned}
+              onChange={(e) => setIgPinned(e.target.value)}
             />
           </Box>
         )}
@@ -421,6 +494,46 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               value={threadsText}
               maxLength={500}
               onChange={(e) => setThreadsText(e.target.value)}
+            />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mt={2}
+              mb={0.5}
+            >
+              THREADS TOPIC TAG (one clickable tag — # optional)
+            </Text>
+            <Input
+              size="sm"
+              bg="whiteAlpha.50"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              fontSize="sm"
+              value={threadsTopicTag}
+              maxLength={50}
+              placeholder="e.g. gaming"
+              onChange={(e) => setThreadsTopicTag(e.target.value)}
+            />
+            <Text color="whiteAlpha.600" fontSize="10px" mt={1}>
+              Threads allows one clickable topic tag; extra #tags in the text
+              show as plain grey words.
+            </Text>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mt={2}
+              mb={0.5}
+            >
+              THREADS FIRST REPLY (auto-posted — pin it manually)
+            </Text>
+            <Textarea
+              {...ta}
+              rows={2}
+              maxLength={500}
+              value={threadsPinned}
+              onChange={(e) => setThreadsPinned(e.target.value)}
             />
           </Box>
         )}

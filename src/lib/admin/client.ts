@@ -562,6 +562,10 @@ export async function publishContentCard(
     fbCaption?: string;
     igCaption?: string;
     threadsText?: string;
+    threadsTopicTag?: string;
+    fbPinned?: string;
+    igPinned?: string;
+    threadsPinned?: string;
     x?: boolean;
     xPost?: string;
     xReply?: string;
