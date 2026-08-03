@@ -22,6 +22,7 @@ import {
   useContentSuggestion,
   produceContentVideo,
   regenerateContentCard,
+  regenerateScript,
   updateContentScript,
   uploadContentVideo,
   publishContentCard,
@@ -690,7 +691,7 @@ function SuggestionCard({
   writers: string[];
 }) {
   const [busy, setBusy] = useState<
-    "skip" | "use" | "script" | "produce" | null
+    "skip" | "use" | "script" | "produce" | "rescript" | null
   >(null);
   const [gen, setGen] = useState<ContentSuggestion | null>(null);
   const view = gen ?? s;
@@ -737,6 +738,8 @@ function SuggestionCard({
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [scriptSteer, setScriptSteer] = useState("");
   const credits = view.charCount ?? view.ttsScript?.length ?? 0;
   const secs = Math.max(1, Math.round(credits / 15)); // ~15 chars/sec speech
   // Keep the editable draft in sync when the script is (re)generated.
@@ -764,6 +767,21 @@ function SuggestionCard({
       setGen(await regenerateContentCard(s.id, persona));
     } catch {
       /* leave as-is on failure */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const regenScript = async () => {
+    setBusy("rescript");
+    try {
+      // Regenerate ONLY the ElevenLabs script, honoring the steer note.
+      setGen(
+        await regenerateScript(s.id, persona, scriptSteer.trim() || undefined),
+      );
+      setScriptSteer("");
+    } catch {
+      /* keep the current script on failure */
     } finally {
       setBusy(null);
     }
@@ -854,6 +872,16 @@ function SuggestionCard({
           </Text>
         </HStack>
         <HStack gap={1}>
+          <Button
+            size="xs"
+            variant="ghost"
+            color="nexzy.gray.100"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? "Expand card" : "Collapse card"}
+          >
+            {collapsed ? "▸" : "▾"}
+          </Button>
           {s.kind === "video" && !produced && !isNonVideo && !isImage && (
             <Button
               size="xs"
@@ -888,6 +916,8 @@ function SuggestionCard({
         </HStack>
       </Flex>
 
+      {!collapsed && (
+        <>
       {produced && (
         <Box
           mb={3}
@@ -1355,6 +1385,31 @@ function SuggestionCard({
                     ? "↻ Regenerate in " + persona + "\u2019s voice"
                     : "🎙 Generate in " + persona + "\u2019s voice"}
                 </Button>
+                {view.ttsScript && (
+                  <HStack gap={1} flex={1} minW="220px">
+                    <Input
+                      size="xs"
+                      bg="whiteAlpha.50"
+                      color="nexzy.white"
+                      borderColor="whiteAlpha.300"
+                      fontSize="xs"
+                      placeholder="steer the script (e.g. more excited, less sarcastic)"
+                      value={scriptSteer}
+                      onChange={(e) => setScriptSteer(e.target.value)}
+                    />
+                    <Button
+                      size="xs"
+                      colorPalette="purple"
+                      variant="solid"
+                      onClick={regenScript}
+                      loading={busy === "rescript"}
+                      loadingText="Rewriting…"
+                      disabled={!scriptSteer.trim()}
+                    >
+                      ↻ Script only
+                    </Button>
+                  </HStack>
+                )}
               </Flex>
             )}
             {view.ttsScript && (
@@ -1468,6 +1523,8 @@ function SuggestionCard({
               </VStack>
             )}
           </Box>
+        </>
+      )}
         </>
       )}
     </Box>

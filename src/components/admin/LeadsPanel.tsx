@@ -12,6 +12,7 @@ import {
   Badge,
   Link,
   Spinner,
+  Textarea,
 } from "@chakra-ui/react";
 import {
   getVideoLeads,
@@ -59,6 +60,7 @@ function LeadCard({
   );
   const [format, setFormat] = useState(lead?.suggestedFormat || "short");
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
+  const [steer, setSteer] = useState("");
   const generating = !!s.payload?.generating;
   const lastError = s.payload?.lastError;
 
@@ -72,7 +74,7 @@ function LeadCard({
   const generate = async () => {
     setBusy("gen");
     try {
-      await generateFromLead(s.id, writer, format);
+      await generateFromLead(s.id, writer, format, steer.trim() || undefined);
       await reload(); // pick up the queued 'generating' state (or removal)
     } catch {
       /* leave the lead in place so you can retry */
@@ -201,6 +203,21 @@ function LeadCard({
           </Button>
         ))}
       </HStack>
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Notes / steer (optional — factored into the generated video)
+      </Text>
+      <Textarea
+        value={steer}
+        onChange={(e) => setSteer(e.target.value)}
+        rows={2}
+        mb={4}
+        bg="whiteAlpha.50"
+        color="nexzy.white"
+        borderColor="whiteAlpha.300"
+        fontSize="sm"
+        placeholder="e.g. sound excited; note it's a sequel; keep it tight"
+      />
 
       <Flex justify="space-between" align="center" gap={2}>
         {s.url ? (

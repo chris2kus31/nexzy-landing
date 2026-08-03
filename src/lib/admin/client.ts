@@ -496,6 +496,24 @@ export async function updateContentScript(
   );
 }
 
+/** Regenerate ONLY the ElevenLabs TTS script, optionally with a steer note. */
+export async function regenerateScript(
+  id: string,
+  persona?: string,
+  steer?: string,
+): Promise<ContentSuggestion> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/script`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(persona ? { persona } : {}),
+        ...(steer ? { steer } : {}),
+      }),
+    }),
+  );
+}
+
 export async function useContentSuggestion(
   id: string,
 ): Promise<ContentSuggestion> {
@@ -1990,6 +2008,7 @@ export async function generateFromLead(
   id: string,
   writer?: string,
   format?: string,
+  steer?: string,
 ): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
@@ -1998,6 +2017,7 @@ export async function generateFromLead(
       body: JSON.stringify({
         ...(writer ? { writer } : {}),
         ...(format ? { format } : {}),
+        ...(steer ? { steer } : {}),
       }),
     }),
   );
