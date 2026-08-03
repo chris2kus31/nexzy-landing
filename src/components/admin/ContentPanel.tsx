@@ -107,7 +107,20 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
   const pinned = kit.pinnedComment || "";
   const firstReply = kit.firstReply || "";
-  const empty = !title && !body && !hashtags && !tags && !pinned && !firstReply;
+  const thread = kit.thread && kit.thread.length > 0 ? kit.thread : [];
+  const poll =
+    kit.poll && kit.poll.options && kit.poll.options.length > 0
+      ? kit.poll
+      : null;
+  const empty =
+    !title &&
+    !body &&
+    !hashtags &&
+    !tags &&
+    !pinned &&
+    !firstReply &&
+    thread.length === 0 &&
+    !poll;
 
   return (
     <Box
@@ -170,6 +183,50 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
           <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
             {firstReply}
           </Text>
+        </>
+      )}
+
+      {thread.length > 0 && (
+        <>
+          <FieldLabel
+            text="🧵 THREAD (post as replies, in order)"
+            copy={thread.join("\n\n")}
+          />
+          <VStack align="stretch" gap={1} mt={0.5}>
+            {thread.map((t, i) => (
+              <Text
+                key={i}
+                color="nexzy.gray.100"
+                fontSize="xs"
+                whiteSpace="pre-wrap"
+              >
+                {i + 1}. {t}
+              </Text>
+            ))}
+          </VStack>
+        </>
+      )}
+
+      {poll && (
+        <>
+          <FieldLabel
+            text="📊 POLL"
+            copy={[poll.question, ...(poll.options || [])]
+              .filter(Boolean)
+              .join("\n")}
+          />
+          {poll.question && (
+            <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
+              {poll.question}
+            </Text>
+          )}
+          <VStack align="stretch" gap={0.5} mt={0.5}>
+            {(poll.options || []).map((o, i) => (
+              <Text key={i} color="nexzy.lightBlue" fontSize="xs">
+                • {o}
+              </Text>
+            ))}
+          </VStack>
         </>
       )}
 

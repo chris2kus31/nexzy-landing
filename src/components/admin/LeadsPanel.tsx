@@ -36,6 +36,14 @@ const FORMATS: { key: string; label: string }[] = [
   { key: "none", label: "No video" },
 ];
 
+const X_FORMATS: { key: string; label: string }[] = [
+  { key: "hot_take", label: "Hot take" },
+  { key: "thread", label: "Thread" },
+  { key: "poll", label: "Poll" },
+  { key: "image", label: "Image" },
+  { key: "clip", label: "Clip" },
+];
+
 function fmtLabel(key?: string): string {
   return FORMATS.find((f) => f.key === key)?.label ?? key ?? "Short";
 }
@@ -61,6 +69,7 @@ function LeadCard({
   const [format, setFormat] = useState(lead?.suggestedFormat || "short");
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
   const [steer, setSteer] = useState("");
+  const [xFormat, setXFormat] = useState(lead?.xFormat || "hot_take");
   const generating = !!s.payload?.generating;
   const lastError = s.payload?.lastError;
 
@@ -74,7 +83,13 @@ function LeadCard({
   const generate = async () => {
     setBusy("gen");
     try {
-      await generateFromLead(s.id, writer, format, steer.trim() || undefined);
+      await generateFromLead(
+        s.id,
+        writer,
+        format,
+        steer.trim() || undefined,
+        xFormat,
+      );
       await reload(); // pick up the queued 'generating' state (or removal)
     } catch {
       /* leave the lead in place so you can retry */
@@ -198,6 +213,26 @@ function LeadCard({
             borderColor="whiteAlpha.300"
             _hover={{ bg: format === f.key ? "nexzy.blue" : "whiteAlpha.100" }}
             onClick={() => setFormat(f.key)}
+          >
+            {f.label}
+          </Button>
+        ))}
+      </HStack>
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        X format{lead?.xFormat ? ` · suggested: ${lead.xFormat.replace(/_/g, " ")}` : ""}
+      </Text>
+      <HStack gap={1} wrap="wrap" mb={4}>
+        {X_FORMATS.map((f) => (
+          <Button
+            key={f.key}
+            size="xs"
+            variant={xFormat === f.key ? "solid" : "outline"}
+            bg={xFormat === f.key ? "nexzy.blue" : "transparent"}
+            color={xFormat === f.key ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: xFormat === f.key ? "nexzy.blue" : "whiteAlpha.100" }}
+            onClick={() => setXFormat(f.key)}
           >
             {f.label}
           </Button>

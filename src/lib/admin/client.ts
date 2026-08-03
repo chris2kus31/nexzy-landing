@@ -322,6 +322,10 @@ export interface PlatformKit {
   firstReply?: string;
   /** X (Twitter): the recommended format (hot_take/thread/poll/image/clip). */
   format?: string;
+  /** X (Twitter): follow-up tweets for a thread (post is the hook). */
+  thread?: string[];
+  /** X (Twitter): a poll — question + 2-4 options. */
+  poll?: { question?: string; options?: string[] };
 }
 
 export interface ContentSuggestion {
@@ -2009,6 +2013,7 @@ export async function generateFromLead(
   writer?: string,
   format?: string,
   steer?: string,
+  xFormat?: string,
 ): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
@@ -2018,6 +2023,7 @@ export async function generateFromLead(
         ...(writer ? { writer } : {}),
         ...(format ? { format } : {}),
         ...(steer ? { steer } : {}),
+        ...(xFormat ? { xFormat } : {}),
       }),
     }),
   );
