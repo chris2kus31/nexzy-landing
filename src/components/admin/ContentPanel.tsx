@@ -341,8 +341,23 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   };
 
   const needsVideo = fb || ig;
-  const canPublish =
-    (fb || ig || th || xOn) && (!needsVideo || !!videoUrl);
+  // Human-readable reasons publishing is blocked (shown under the button so a
+  // missing piece can't be published by accident).
+  const publishBlockers: string[] = [];
+  if (!fb && !ig && !th && !xOn) {
+    publishBlockers.push("Select at least one platform above.");
+  }
+  if (needsVideo && !videoUrl) {
+    publishBlockers.push(
+      "Upload the finished video — Facebook and Instagram need it.",
+    );
+  }
+  if (fb && !fbCaption.trim()) publishBlockers.push("Facebook caption is empty.");
+  if (ig && !igCaption.trim())
+    publishBlockers.push("Instagram caption is empty.");
+  if (th && !threadsText.trim()) publishBlockers.push("Threads text is empty.");
+  if (xOn && !xPost.trim()) publishBlockers.push("X post is empty.");
+  const canPublish = publishBlockers.length === 0;
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
     <Button
       size="xs"
@@ -568,10 +583,231 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         )}
       </VStack>
 
+      {(fb || ig || th || xOn) && (
+        <Box
+          mb={2}
+          p={3}
+          borderRadius="lg"
+          bg="blackAlpha.400"
+          border="1px solid"
+          borderColor="nexzy.blue/40"
+        >
+          <Text color="nexzy.white" fontSize="xs" fontWeight="700" mb={2}>
+            📋 Exactly what will publish when you press Publish now
+          </Text>
+          <VStack align="stretch" gap={3}>
+            {fb && p?.facebook && (
+              <Box>
+                <Text
+                  color="nexzy.lightBlue"
+                  fontSize="11px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  ▸ Facebook — video Reel + comment
+                </Text>
+                <Text
+                  color={videoUrl ? "green.300" : "orange.300"}
+                  fontSize="xs"
+                  mb={1}
+                >
+                  🎬 Video:{" "}
+                  {videoUrl
+                    ? "✓ uploaded — posts as a Reel"
+                    : "⚠ none uploaded yet (required)"}
+                </Text>
+                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
+                  CAPTION (posts exactly as shown)
+                </Text>
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="xs"
+                  whiteSpace="pre-wrap"
+                  mb={fbPinned.trim() ? 1 : 0}
+                >
+                  {fbCaption.trim() || "— empty —"}
+                </Text>
+                {fbPinned.trim() && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      FIRST COMMENT (auto-posted, not pinned)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {fbPinned}
+                    </Text>
+                  </>
+                )}
+              </Box>
+            )}
+            {ig && p?.reels && (
+              <Box>
+                <Text
+                  color="nexzy.lightBlue"
+                  fontSize="11px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  ▸ Instagram — video Reel + comment
+                </Text>
+                <Text
+                  color={videoUrl ? "green.300" : "orange.300"}
+                  fontSize="xs"
+                  mb={1}
+                >
+                  🎬 Video:{" "}
+                  {videoUrl
+                    ? "✓ uploaded — posts as a Reel"
+                    : "⚠ none uploaded yet (required)"}
+                </Text>
+                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
+                  CAPTION (posts exactly as shown)
+                </Text>
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="xs"
+                  whiteSpace="pre-wrap"
+                  mb={igPinned.trim() ? 1 : 0}
+                >
+                  {igCaption.trim() || "— empty —"}
+                </Text>
+                {igPinned.trim() && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      FIRST COMMENT (auto-posted, not pinned)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {igPinned}
+                    </Text>
+                  </>
+                )}
+              </Box>
+            )}
+            {th && p?.threads && (
+              <Box>
+                <Text
+                  color="nexzy.lightBlue"
+                  fontSize="11px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  ▸ Threads — text post (no video)
+                </Text>
+                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
+                  TEXT (posts exactly as shown)
+                </Text>
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="xs"
+                  whiteSpace="pre-wrap"
+                  mb={1}
+                >
+                  {threadsText.trim() || "— empty —"}
+                </Text>
+                <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                  🏷 Topic tag:{" "}
+                  {threadsTopicTag.trim()
+                    ? "#" + threadsTopicTag.trim().replace(/^#/, "")
+                    : "none"}
+                </Text>
+                {threadsPinned.trim() && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      FIRST REPLY (auto-posted)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {threadsPinned}
+                    </Text>
+                  </>
+                )}
+              </Box>
+            )}
+            {xOn && p?.x && (
+              <Box>
+                <Text
+                  color="nexzy.lightBlue"
+                  fontSize="11px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  ▸ X{cfg?.x ? "" : " (disabled — needs API keys)"}
+                </Text>
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                >
+                  POST (posts exactly as shown)
+                </Text>
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="xs"
+                  whiteSpace="pre-wrap"
+                  mb={xReply.trim() ? 1 : 0}
+                >
+                  {xPost.trim() || "— empty —"}
+                </Text>
+                {xReply.trim() && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      FIRST REPLY
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {xReply}
+                    </Text>
+                  </>
+                )}
+              </Box>
+            )}
+          </VStack>
+        </Box>
+      )}
+
       <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
         Make sure nexzy_app is a <b>public</b> account, or the API will reject
         the post.
       </Text>
+
+      {publishBlockers.length > 0 && (
+        <VStack align="stretch" gap={0.5} mb={2}>
+          {publishBlockers.map((b) => (
+            <Text key={b} color="orange.300" fontSize="xs">
+              ⚠ {b}
+            </Text>
+          ))}
+        </VStack>
+      )}
 
       <Button
         size="sm"
