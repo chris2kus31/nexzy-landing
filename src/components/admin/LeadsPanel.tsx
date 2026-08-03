@@ -72,12 +72,14 @@ function LeadCard({
   isOwner,
   onDone,
   reload,
+  audienceByDay,
 }: {
   s: ContentSuggestion;
   writers: string[];
   isOwner: boolean;
   onDone: (id: string) => void;
   reload: () => void | Promise<void>;
+  audienceByDay?: Record<string, string>;
 }) {
   const lead = s.payload?.lead;
   const [writer, setWriter] = useState(
@@ -181,6 +183,31 @@ function LeadCard({
         <Text color="nexzy.lightBlue" fontSize="xs" mb={2}>
           🕒 {lead.timing}
         </Text>
+      )}
+
+      {audienceByDay && Object.keys(audienceByDay).length > 0 && (
+        <Box mb={2}>
+          <Text
+            color="whiteAlpha.600"
+            fontSize="10px"
+            fontWeight="700"
+            mb={0.5}
+          >
+            📅 BEST TIMES TO POST (by day)
+          </Text>
+          <Flex gap={3} wrap="wrap">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+              .filter((d) => audienceByDay[d])
+              .map((d) => (
+                <Text key={d} color="nexzy.gray.100" fontSize="xs">
+                  <Text as="span" color="nexzy.white" fontWeight="700">
+                    {d}
+                  </Text>{" "}
+                  {audienceByDay[d]}
+                </Text>
+              ))}
+          </Flex>
+        </Box>
       )}
       {lead?.reason && (
         <Text color="nexzy.gray.100" fontSize="xs" mb={3} fontStyle="italic">
@@ -480,6 +507,7 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
             isOwner={isOwner}
             onDone={remove}
             reload={load}
+            audienceByDay={audience?.bestTimes?.byDay}
           />
         ))
       )}

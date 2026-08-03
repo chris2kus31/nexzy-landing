@@ -2013,7 +2013,7 @@ export interface AudienceProfile {
   ageBrackets?: Record<string, number>;
   gender?: Record<string, number>;
   topCountries?: Record<string, number>;
-  bestTimes?: { byHourUtc?: number[]; note?: string };
+  bestTimes?: { byHourUtc?: number[]; byDay?: Record<string, string>; note?: string };
   sources?: string[];
   errors?: Record<string, string>;
   fetchedAt?: string | null;
