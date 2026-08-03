@@ -19,6 +19,9 @@ import {
   generateFromLead,
   skipContentSuggestion,
   getWriterNames,
+  getAudienceProfile,
+  refreshAudienceProfile,
+  type AudienceProfile,
   type ContentSuggestion,
 } from "@/lib/admin/client";
 
@@ -43,6 +46,20 @@ const X_FORMATS: { key: string; label: string }[] = [
   { key: "image", label: "Image" },
   { key: "clip", label: "Clip" },
 ];
+
+function topEntry(m?: Record<string, number>): [string, number] | null {
+  const e = Object.entries(m || {}).sort((a, b) => b[1] - a[1]);
+  return e.length ? e[0] : null;
+}
+function peakHours(hours?: number[]): string {
+  if (!Array.isArray(hours) || !hours.some((n) => n > 0)) return "";
+  return hours
+    .map((n, h) => ({ n, h }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 2)
+    .map((x) => `${String(x.h).padStart(2, "0")}:00`)
+    .join(", ");
+}
 
 function fmtLabel(key?: string): string {
   return FORMATS.find((f) => f.key === key)?.label ?? key ?? "Short";
@@ -307,6 +324,8 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const [leads, setLeads] = useState<ContentSuggestion[] | null>(null);
   const [writers, setWriters] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [audience, setAudience] = useState<AudienceProfile | null>(null);
+  const [audBusy, setAudBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -326,6 +345,12 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    getAudienceProfile()
+      .then(setAudience)
+      .catch(() => setAudience(null));
+  }, []);
+
   // While any lead is generating (a queued job is running), poll so the board
   // updates when it finishes (card appears in Suggestions) or fails.
   useEffect(() => {
@@ -338,6 +363,17 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
 
   const remove = (id: string) =>
     setLeads((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
+
+  const refreshAud = async () => {
+    setAudBusy(true);
+    try {
+      setAudience(await refreshAudienceProfile());
+    } catch {
+      /* leave as-is on failure */
+    } finally {
+      setAudBusy(false);
+    }
+  };
 
   if (error) {
     return (
@@ -365,6 +401,72 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
           then Generate — nothing heavy runs until you do.
         </Text>
       </Box>
+
+      {(isOwner || audience?.dominantAge) && (
+        <Box
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          px={4}
+          py={3}
+        >
+          <Flex justify="space-between" align="center" gap={2} wrap="wrap">
+            <Box minW={0}>
+              <Text color="nexzy.white" fontSize="sm" fontWeight="700">
+                👥 Audience{audience?.dominantAge ? "" : " — not pulled yet"}
+              </Text>
+              {audience?.dominantAge ? (
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  {[
+                    `Age ${audience.dominantAge}`,
+                    topEntry(audience.gender)
+                      ? `${topEntry(audience.gender)![1]}% ${topEntry(audience.gender)![0]}`
+                      : "",
+                    topEntry(audience.topCountries)
+                      ? `top ${topEntry(audience.topCountries)![0]}`
+                      : "",
+                    peakHours(audience.bestTimes?.byHourUtc)
+                      ? `peak ${peakHours(audience.bestTimes?.byHourUtc)} UTC`
+                      : "",
+                    audience.sources?.length
+                      ? `from ${audience.sources.join(", ")}`
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Text>
+              ) : (
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  Pull IG + YouTube demographics to tailor leads — audience age,
+                  best posting times, and tone delivery. (IG online-hours need
+                  ~100 followers.)
+                </Text>
+              )}
+            </Box>
+            {isOwner && (
+              <Button
+                size="xs"
+                variant="outline"
+                colorPalette="blue"
+                onClick={refreshAud}
+                loading={audBusy}
+                loadingText="Pulling…"
+              >
+                ↻ Refresh audience
+              </Button>
+            )}
+          </Flex>
+          {audience?.errors && Object.keys(audience.errors).length > 0 && (
+            <Text color="orange.300" fontSize="10px" mt={1}>
+              {Object.entries(audience.errors)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(" · ")}
+            </Text>
+          )}
+        </Box>
+      )}
+
       {leads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
           No open leads right now.

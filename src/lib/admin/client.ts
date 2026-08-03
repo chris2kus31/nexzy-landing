@@ -2007,6 +2007,30 @@ export async function getVideoLeads(): Promise<ContentSuggestion[]> {
   return handle(await fetch("/api/newsroom/admin/content/leads"));
 }
 
+/** The account audience profile (who + when) — powers lead/writer tailoring. */
+export interface AudienceProfile {
+  dominantAge?: string | null;
+  ageBrackets?: Record<string, number>;
+  gender?: Record<string, number>;
+  topCountries?: Record<string, number>;
+  bestTimes?: { byHourUtc?: number[]; note?: string };
+  sources?: string[];
+  errors?: Record<string, string>;
+  fetchedAt?: string | null;
+}
+
+export async function getAudienceProfile(): Promise<AudienceProfile | null> {
+  return handle(await fetch("/api/newsroom/admin/content/audience"));
+}
+
+export async function refreshAudienceProfile(): Promise<AudienceProfile> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/refresh-audience", {
+      method: "POST",
+    }),
+  );
+}
+
 /** Generate the real card FROM a lead in the chosen writer + format (spends tokens). */
 export async function generateFromLead(
   id: string,
