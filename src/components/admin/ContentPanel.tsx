@@ -823,10 +823,48 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                   color="nexzy.gray.100"
                   fontSize="xs"
                   whiteSpace="pre-wrap"
-                  mb={xReply.trim() ? 1 : 0}
+                  mb={1}
                 >
                   {xPost.trim() || "— empty —"}
                 </Text>
+                {(p?.x?.thread?.length ?? 0) > 0 && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      THREAD (posted as chained replies)
+                    </Text>
+                    {(p?.x?.thread ?? []).map((t, i) => (
+                      <Text
+                        key={i}
+                        color="nexzy.gray.100"
+                        fontSize="xs"
+                        whiteSpace="pre-wrap"
+                      >
+                        {i + 1}. {t}
+                      </Text>
+                    ))}
+                  </>
+                )}
+                {(p?.x?.poll?.options?.length ?? 0) > 0 && (
+                  <>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                      mt={1}
+                    >
+                      POLL (attached to the post)
+                    </Text>
+                    {(p?.x?.poll?.options ?? []).map((o, i) => (
+                      <Text key={i} color="nexzy.lightBlue" fontSize="xs">
+                        • {o}
+                      </Text>
+                    ))}
+                  </>
+                )}
                 {xReply.trim() && (
                   <>
                     <Text
