@@ -20,7 +20,6 @@ import {
   skipContentSuggestion,
   getWriterNames,
   getAudienceProfile,
-  refreshAudienceProfile,
   type AudienceProfile,
   type ContentSuggestion,
 } from "@/lib/admin/client";
@@ -535,7 +534,7 @@ function slotForDay(
 }
 
 /** Rich, day-selectable audience + best-times stats hub for the Leads header. */
-function AudiencePanel({
+export function AudiencePanel({
   audience,
   isOwner,
   onRefresh,
@@ -829,7 +828,6 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const [writers, setWriters] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [audience, setAudience] = useState<AudienceProfile | null>(null);
-  const [audBusy, setAudBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -868,17 +866,6 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const remove = (id: string) =>
     setLeads((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
 
-  const refreshAud = async () => {
-    setAudBusy(true);
-    try {
-      setAudience(await refreshAudienceProfile());
-    } catch {
-      /* leave as-is on failure */
-    } finally {
-      setAudBusy(false);
-    }
-  };
-
   if (error) {
     return (
       <Text color="red.300" fontSize="sm">
@@ -905,15 +892,6 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
           then Generate — nothing heavy runs until you do.
         </Text>
       </Box>
-
-      {(isOwner || audience?.dominantAge) && (
-        <AudiencePanel
-          audience={audience}
-          isOwner={isOwner}
-          onRefresh={refreshAud}
-          busy={audBusy}
-        />
-      )}
 
       {leads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">

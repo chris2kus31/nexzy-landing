@@ -6,6 +6,7 @@ import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
 import InsightsPanel from "@/components/admin/InsightsPanel";
+import AudienceInsightsPanel from "@/components/admin/AudienceInsightsPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
 import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
@@ -22,13 +23,20 @@ import ListPanel from "@/components/admin/ListPanel";
  * ?tab=content|videos|guides bookmarks (mapped in the parent) land in the right
  * place.
  */
-type Sub = "leads" | "suggestions" | "library" | "performance" | "guides";
+type Sub =
+  | "leads"
+  | "suggestions"
+  | "library"
+  | "performance"
+  | "audience"
+  | "guides";
 
 const SUBS: { key: Sub; label: string }[] = [
   { key: "leads", label: "Leads" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
   { key: "performance", label: "Performance" },
+  { key: "audience", label: "Audience" },
   { key: "guides", label: "Guides & Walkthroughs" },
 ];
 
@@ -38,6 +46,7 @@ function isSub(v: string | null): v is Sub {
     v === "suggestions" ||
     v === "library" ||
     v === "performance" ||
+    v === "audience" ||
     v === "guides"
   );
 }
@@ -95,6 +104,8 @@ export default function ContentStudioPanel({
       {sub === "library" && <VideosPanel />}
 
       {sub === "performance" && <InsightsPanel />}
+
+      {sub === "audience" && <AudienceInsightsPanel isOwner={isOwner} />}
 
       {sub === "guides" && (
         <VStack align="stretch" gap={6}>

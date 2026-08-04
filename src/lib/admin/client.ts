@@ -2026,6 +2026,22 @@ export interface AudienceProfile {
     >;
     note?: string;
   };
+  cadence?: {
+    perPlatform?: Record<
+      string,
+      {
+        currentPerWeek: number;
+        recommendedPerWeek: number;
+        priorPerWeek: number;
+        trend: string;
+        rationale: string;
+        source: string;
+        sampleWeeks: number;
+        weeks: { week: string; posts: number; reach: number }[];
+      }
+    >;
+    computedAt?: string;
+  };
   sources?: string[];
   errors?: Record<string, string>;
   fetchedAt?: string | null;
