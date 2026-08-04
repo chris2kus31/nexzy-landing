@@ -93,7 +93,18 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
         <VStack align="stretch" gap={3}>
           {rows.map((r) => {
             const t = TREND_META[r.trend] ?? TREND_META.insufficient;
-            const isData = r.source === "data";
+            const srcLabel =
+              r.source === "data"
+                ? `● your data (${r.sampleWeeks} wks)`
+                : r.source === "current"
+                  ? "● your current rate"
+                  : "best-practice";
+            const srcColor =
+              r.source === "data"
+                ? "green.300"
+                : r.source === "current"
+                  ? "nexzy.lightBlue"
+                  : "whiteAlpha.500";
             return (
               <Box
                 key={r.p}
@@ -133,13 +144,11 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
                     <Text
                       fontSize="10px"
                       fontWeight="700"
-                      color={isData ? "green.300" : "whiteAlpha.500"}
+                      color={srcColor}
                       minW="92px"
                       textAlign="right"
                     >
-                      {isData
-                        ? `● your data (${r.sampleWeeks} wks)`
-                        : "best-practice"}
+                      {srcLabel}
                     </Text>
                   </Flex>
                 </Flex>
