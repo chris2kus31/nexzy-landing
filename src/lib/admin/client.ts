@@ -518,6 +518,34 @@ export async function regenerateScript(
   );
 }
 
+export interface QuickSocialResult {
+  x?: {
+    post: string;
+    thread?: string[];
+    poll?: { question: string; options: string[] };
+  };
+  threads?: { caption: string; topicTag?: string };
+}
+
+/** Turn a trending tweet/topic into an original growth-rule post in a writer's voice. */
+export async function quickSocial(input: {
+  text: string;
+  writer?: string;
+  platforms?: ("x" | "threads")[];
+  xFormat?: "hot_take" | "thread" | "poll";
+}): Promise<{
+  data: QuickSocialResult;
+  usage?: { inputTokens?: number; outputTokens?: number };
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/quick-social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function useContentSuggestion(
   id: string,
 ): Promise<ContentSuggestion> {

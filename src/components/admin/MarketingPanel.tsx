@@ -14,6 +14,7 @@ import {
   Spinner,
   Badge,
 } from "@chakra-ui/react";
+import QuickPostPanel from "@/components/admin/QuickPostPanel";
 import {
   getMarketingChannels,
   getMarketingRecommendations,
@@ -684,6 +685,8 @@ export default function MarketingPanel() {
           </Badge>
         </HStack>
       </Box>
+
+      <QuickPostPanel />
 
       {/* Recommendations */}
       <Box>
