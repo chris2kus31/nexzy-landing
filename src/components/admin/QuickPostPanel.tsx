@@ -24,6 +24,14 @@ const X_FORMATS = [
 ] as const;
 
 type XFmt = (typeof X_FORMATS)[number]["key"];
+
+const X_FMT_HINT: Record<XFmt, string> = {
+  hot_take:
+    "One punchy opinion — the default. Best for reacting to news; ends with a reply-bait angle.",
+  thread:
+    "A standalone hook tweet + 2–5 follow-up tweets, one point each. Best for roundups / breakdowns / tier lists.",
+  poll: "A question + 2–4 options — the poll itself is the engagement. Best for a genuine debate.",
+};
 type Plat = "x" | "threads";
 
 function CopyBtn({ text }: { text: string }) {
@@ -182,6 +190,15 @@ export default function QuickPostPanel() {
           Generate
         </Button>
       </Flex>
+
+      {platforms.includes("x") && (
+        <Text color="whiteAlpha.500" fontSize="11px" mb={3}>
+          <Text as="span" color="whiteAlpha.700" fontWeight="700">
+            {X_FORMATS.find((f) => f.key === xFormat)?.label}:
+          </Text>{" "}
+          {X_FMT_HINT[xFormat]}
+        </Text>
+      )}
 
       {err && (
         <Text color="red.300" fontSize="xs" mb={2}>

@@ -623,11 +623,19 @@ function Composer({ enabled }: { enabled: SocialChannel[] }) {
   );
 }
 
+const MKT_SUBS = [
+  { key: "quick", label: "⚡ Quick Post" },
+  { key: "recommended", label: "Recommended" },
+  { key: "composer", label: "Composer" },
+] as const;
+type MktSub = (typeof MKT_SUBS)[number]["key"];
+
 export default function MarketingPanel() {
   const [enabled, setEnabled] = useState<SocialChannel[]>([]);
   const [autoPost, setAutoPost] = useState(false);
   const [genChannels, setGenChannels] = useState<SocialChannel[]>([]);
   const [recs, setRecs] = useState<MarketingRecommendation[] | null>(null);
+  const [sub, setSub] = useState<MktSub>("quick");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [writers, setWriters] = useState<string[]>(AUTHORS);
@@ -686,9 +694,29 @@ export default function MarketingPanel() {
         </HStack>
       </Box>
 
-      <QuickPostPanel />
+      <HStack gap={2} wrap="wrap">
+        {MKT_SUBS.map((sb) => {
+          const active = sub === sb.key;
+          return (
+            <Button
+              key={sb.key}
+              size="sm"
+              variant={active ? "solid" : "outline"}
+              bg={active ? "nexzy.blue" : "transparent"}
+              color={active ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+              onClick={() => setSub(sb.key)}
+            >
+              {sb.label}
+            </Button>
+          );
+        })}
+      </HStack>
 
-      {/* Recommendations */}
+      {sub === "quick" && <QuickPostPanel />}
+
+      {sub === "recommended" && (
       <Box>
         <Flex align="center" justify="space-between" mb={2} gap={2} wrap="wrap">
           <Heading size="sm" color="nexzy.white">
@@ -761,9 +789,9 @@ export default function MarketingPanel() {
           </VStack>
         )}
       </Box>
+      )}
 
-      {/* Free composer */}
-      <Composer enabled={enabled} />
+      {sub === "composer" && <Composer enabled={enabled} />}
     </VStack>
   );
 }
