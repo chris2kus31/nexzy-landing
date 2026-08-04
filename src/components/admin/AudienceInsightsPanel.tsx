@@ -130,13 +130,13 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
                     <Text color="nexzy.gray.100" fontSize="xs">
                       now{" "}
                       <Text as="span" color="nexzy.white" fontWeight="700">
-                        {r.currentPerWeek}/wk
-                      </Text>
-                      {" → "}
-                      <Text as="span" color="nexzy.white" fontWeight="700">
-                        {r.recommendedPerWeek}/wk
+                        ~{(r.currentPerWeek / 7).toFixed(1)}/day
                       </Text>{" "}
-                      ({t.label})
+                      ({r.currentPerWeek}/wk){" → "}
+                      <Text as="span" color="nexzy.white" fontWeight="700">
+                        ~{(r.recommendedPerWeek / 7).toFixed(1)}/day
+                      </Text>{" "}
+                      ({r.recommendedPerWeek}/wk · {t.label})
                     </Text>
                   </Flex>
                   <Flex align="center" gap={3}>
