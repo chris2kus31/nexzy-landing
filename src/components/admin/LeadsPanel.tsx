@@ -479,6 +479,278 @@ function LeadCard({
   );
 }
 
+const PLATFORMS_SHOWN = [
+  "x",
+  "threads",
+  "instagram",
+  "facebook",
+  "youtube",
+  "tiktok",
+];
+
+function relTime(d: Date): string {
+  const sec = Math.round((Date.now() - d.getTime()) / 1000);
+  if (sec < 60) return "just now";
+  const m = Math.round(sec / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+/** Best posting time(s) for a SPECIFIC day — real data if we have it, else the
+ *  general growth-guide windows. Returns null when neither applies. */
+function slotForDay(
+  platform: string,
+  target: Date,
+  real?: Record<string, { hour: number; n: number; source: string }>,
+): { time: string; src: string; isReal: boolean } | null {
+  const dnUTC = DAY_NAMES[target.getUTCDay()];
+  if (real && real[dnUTC]) {
+    const rd = real[dnUTC];
+    const at = new Date(
+      Date.UTC(
+        target.getUTCFullYear(),
+        target.getUTCMonth(),
+        target.getUTCDate(),
+        rd.hour,
+        0,
+        0,
+      ),
+    );
+    return {
+      time: at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+      src: `your data (${rd.n})`,
+      isReal: true,
+    };
+  }
+  const windows = GUIDE_WINDOWS[platform];
+  if (!windows || !windows.length) return null;
+  const times = windows.map((h) => {
+    const c = new Date(target);
+    c.setHours(h, 0, 0, 0);
+    return c.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  });
+  return { time: times.join(", "), src: "general", isReal: false };
+}
+
+/** Rich, day-selectable audience + best-times stats hub for the Leads header. */
+function AudiencePanel({
+  audience,
+  isOwner,
+  onRefresh,
+  busy,
+}: {
+  audience: AudienceProfile | null;
+  isOwner: boolean;
+  onRefresh: () => void;
+  busy: boolean;
+}) {
+  const dayOptions = useMemo(() => {
+    const base = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base.getTime() + i * 86400000);
+      const label =
+        i === 0
+          ? "Today"
+          : i === 1
+            ? "Tomorrow"
+            : d.toLocaleDateString([], { weekday: "short" });
+      return { i, date: d, label };
+    });
+  }, []);
+  const [dayIdx, setDayIdx] = useState(0);
+  const sel = dayOptions[Math.min(dayIdx, dayOptions.length - 1)];
+
+  const has = !!audience?.dominantAge;
+  const byPlat = audience?.bestTimes?.byPlatformDay;
+  const anyReal = !!byPlat && Object.keys(byPlat).length > 0;
+  const ages = Object.entries(audience?.ageBrackets || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const gTop = topEntry(audience?.gender);
+  const countries = Object.entries(audience?.topCountries || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  const updated = audience?.fetchedAt ? relTime(new Date(audience.fetchedAt)) : "";
+  const rows = PLATFORMS_SHOWN.map((p) => {
+    const slot = slotForDay(p, sel.date, byPlat?.[p]);
+    return slot ? { p, label: PLATFORM_LABEL[p] ?? p, ...slot } : null;
+  }).filter(
+    (
+      x,
+    ): x is {
+      p: string;
+      label: string;
+      time: string;
+      src: string;
+      isReal: boolean;
+    } => x !== null,
+  );
+
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="lg"
+      px={4}
+      py={3}
+    >
+      <Flex justify="space-between" align="center" gap={2} wrap="wrap" mb={has ? 3 : 1}>
+        <Text color="nexzy.white" fontSize="sm" fontWeight="700">
+          👥 Audience &amp; best times
+          {has && updated ? (
+            <Text as="span" color="whiteAlpha.500" fontWeight="400">
+              {"  ·  updated " + updated}
+            </Text>
+          ) : has ? null : (
+            <Text as="span" color="whiteAlpha.500" fontWeight="400">
+              {"  — not pulled yet"}
+            </Text>
+          )}
+        </Text>
+        {isOwner && (
+          <Button
+            size="sm"
+            bg="nexzy.blue"
+            color="white"
+            fontWeight="700"
+            _hover={{ bg: "nexzy.lightBlue" }}
+            _active={{ bg: "nexzy.lightBlue" }}
+            onClick={onRefresh}
+            loading={busy}
+            loadingText="Pulling…"
+          >
+            ↻ Refresh
+          </Button>
+        )}
+      </Flex>
+
+      {has ? (
+        <>
+          <Flex gap={1} wrap="wrap" mb={2}>
+            {dayOptions.map((o) => (
+              <Button
+                key={o.i}
+                size="xs"
+                variant={o.i === dayIdx ? "solid" : "outline"}
+                bg={o.i === dayIdx ? "nexzy.blue" : "transparent"}
+                color={o.i === dayIdx ? "white" : "nexzy.gray.100"}
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: o.i === dayIdx ? "nexzy.blue" : "whiteAlpha.100" }}
+                onClick={() => setDayIdx(o.i)}
+              >
+                {o.label}
+              </Button>
+            ))}
+          </Flex>
+
+          <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
+            ⏰ BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
+          </Text>
+          <VStack align="stretch" gap={1} mb={3}>
+            {rows.map((r) => (
+              <Flex key={r.p} align="center" gap={2}>
+                <Text
+                  fontSize="xs"
+                  color="nexzy.white"
+                  fontWeight="600"
+                  w="72px"
+                  flexShrink={0}
+                >
+                  {r.label}
+                </Text>
+                <Text fontSize="xs" color="nexzy.gray.100" flex="1" minW={0}>
+                  {r.time}
+                </Text>
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  color={r.isReal ? "green.300" : "whiteAlpha.500"}
+                  flexShrink={0}
+                >
+                  {r.isReal ? "● " + r.src : r.src}
+                </Text>
+              </Flex>
+            ))}
+          </VStack>
+
+          <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
+            👥 WHO{audience?.sources?.length ? ` · from ${audience.sources.join(", ")}` : ""}
+          </Text>
+          <VStack align="stretch" gap={1} mb={2}>
+            {ages.map(([k, v]) => (
+              <Flex key={k} align="center" gap={2}>
+                <Text
+                  w="52px"
+                  fontSize="10px"
+                  color="nexzy.gray.100"
+                  flexShrink={0}
+                >
+                  {k}
+                </Text>
+                <Box
+                  flex="1"
+                  h="6px"
+                  bg="whiteAlpha.200"
+                  borderRadius="full"
+                  overflow="hidden"
+                >
+                  <Box
+                    h="100%"
+                    w={`${Math.min(100, Math.max(2, v))}%`}
+                    bg="nexzy.blue"
+                  />
+                </Box>
+                <Text
+                  w="34px"
+                  fontSize="10px"
+                  color="nexzy.white"
+                  textAlign="right"
+                  flexShrink={0}
+                >
+                  {v}%
+                </Text>
+              </Flex>
+            ))}
+          </VStack>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            {[
+              gTop ? `${gTop[1]}% ${gTop[0]}` : "",
+              countries.length
+                ? `top: ${countries.map(([c, p]) => `${c} ${p}%`).join(", ")}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join("  ·  ")}
+          </Text>
+
+          <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
+            {anyReal
+              ? "● = your real post data. Others are best-practice windows until that platform has post history."
+              : "Times are best-practice windows for now — publish + Refresh and they switch to your real numbers per platform."}
+          </Text>
+        </>
+      ) : (
+        <Text color="nexzy.gray.100" fontSize="xs">
+          Pull IG + YouTube demographics to tailor leads — audience age, gender,
+          countries, and best posting times. (IG online-hours need ~100
+          followers.)
+        </Text>
+      )}
+
+      {audience?.errors && Object.keys(audience.errors).length > 0 && (
+        <Text color="orange.300" fontSize="10px" mt={2}>
+          {Object.entries(audience.errors)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · ")}
+        </Text>
+      )}
+    </Box>
+  );
+}
+
 /**
  * Leads — every published article lands here as a zero-heavy-token video lead
  * with a suggested writer + format. Pick, then Generate → the real card is
@@ -567,68 +839,12 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
       </Box>
 
       {(isOwner || audience?.dominantAge) && (
-        <Box
-          bg="whiteAlpha.50"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-          borderRadius="lg"
-          px={4}
-          py={3}
-        >
-          <Flex justify="space-between" align="center" gap={2} wrap="wrap">
-            <Box minW={0}>
-              <Text color="nexzy.white" fontSize="sm" fontWeight="700">
-                👥 Audience{audience?.dominantAge ? "" : " — not pulled yet"}
-              </Text>
-              {audience?.dominantAge ? (
-                <Text color="nexzy.gray.100" fontSize="xs">
-                  {[
-                    `Age ${audience.dominantAge}`,
-                    topEntry(audience.gender)
-                      ? `${topEntry(audience.gender)![1]}% ${topEntry(audience.gender)![0]}`
-                      : "",
-                    topEntry(audience.topCountries)
-                      ? `top ${topEntry(audience.topCountries)![0]}`
-                      : "",
-                    peakHours(audience.bestTimes?.byHourUtc)
-                      ? `peak ${peakHours(audience.bestTimes?.byHourUtc)} UTC`
-                      : "",
-                    audience.sources?.length
-                      ? `from ${audience.sources.join(", ")}`
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Text>
-              ) : (
-                <Text color="nexzy.gray.100" fontSize="xs">
-                  Pull IG + YouTube demographics to tailor leads — audience age,
-                  best posting times, and tone delivery. (IG online-hours need
-                  ~100 followers.)
-                </Text>
-              )}
-            </Box>
-            {isOwner && (
-              <Button
-                size="xs"
-                variant="outline"
-                colorPalette="blue"
-                onClick={refreshAud}
-                loading={audBusy}
-                loadingText="Pulling…"
-              >
-                ↻ Refresh audience
-              </Button>
-            )}
-          </Flex>
-          {audience?.errors && Object.keys(audience.errors).length > 0 && (
-            <Text color="orange.300" fontSize="10px" mt={1}>
-              {Object.entries(audience.errors)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(" · ")}
-            </Text>
-          )}
-        </Box>
+        <AudiencePanel
+          audience={audience}
+          isOwner={isOwner}
+          onRefresh={refreshAud}
+          busy={audBusy}
+        />
       )}
 
       {leads.length === 0 ? (
