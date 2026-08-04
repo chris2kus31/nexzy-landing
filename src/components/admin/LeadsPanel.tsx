@@ -587,6 +587,35 @@ function AudiencePanel({
       isReal: boolean;
     } => x !== null,
   );
+  const realRows = rows.filter((r) => r.isReal);
+  const generalRows = rows.filter((r) => !r.isReal);
+  const renderRow = (r: {
+    p: string;
+    label: string;
+    time: string;
+    src: string;
+    isReal: boolean;
+  }) => (
+    <Flex key={r.p} align="center" gap={2}>
+      <Text
+        fontSize="xs"
+        color="nexzy.white"
+        fontWeight="600"
+        w="72px"
+        flexShrink={0}
+      >
+        {r.label}
+      </Text>
+      <Text fontSize="xs" color="nexzy.gray.100" flex="1" minW={0}>
+        {r.time}
+      </Text>
+      {r.isReal && (
+        <Text fontSize="10px" fontWeight="700" color="green.300" flexShrink={0}>
+          ● {r.src}
+        </Text>
+      )}
+    </Flex>
+  );
 
   return (
     <Box
@@ -649,32 +678,25 @@ function AudiencePanel({
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
             ⏰ BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
           </Text>
-          <VStack align="stretch" gap={1} mb={3}>
-            {rows.map((r) => (
-              <Flex key={r.p} align="center" gap={2}>
-                <Text
-                  fontSize="xs"
-                  color="nexzy.white"
-                  fontWeight="600"
-                  w="72px"
-                  flexShrink={0}
-                >
-                  {r.label}
-                </Text>
-                <Text fontSize="xs" color="nexzy.gray.100" flex="1" minW={0}>
-                  {r.time}
-                </Text>
-                <Text
-                  fontSize="10px"
-                  fontWeight="700"
-                  color={r.isReal ? "green.300" : "whiteAlpha.500"}
-                  flexShrink={0}
-                >
-                  {r.isReal ? "● " + r.src : r.src}
-                </Text>
-              </Flex>
-            ))}
-          </VStack>
+          {realRows.length > 0 && (
+            <Box mb={2}>
+              <Text color="green.300" fontSize="10px" fontWeight="700" mb={1}>
+                ✅ FROM YOUR REAL DATA
+              </Text>
+              <VStack align="stretch" gap={1}>
+                {realRows.map(renderRow)}
+              </VStack>
+            </Box>
+          )}
+          <Box mb={3}>
+            <Text color="whiteAlpha.500" fontSize="10px" fontWeight="700" mb={1}>
+              📊 GENERAL · BEST PRACTICE
+              {realRows.length === 0 ? " (no post history yet)" : ""}
+            </Text>
+            <VStack align="stretch" gap={1}>
+              {generalRows.map(renderRow)}
+            </VStack>
+          </Box>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
             👥 WHO{audience?.sources?.length ? ` · from ${audience.sources.join(", ")}` : ""}
