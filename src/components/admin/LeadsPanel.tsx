@@ -564,6 +564,7 @@ function AudiencePanel({
 
   const has = !!audience?.dominantAge;
   const byPlat = audience?.bestTimes?.byPlatformDay;
+  const pull = audience?.bestTimes?.pull;
   const anyReal = !!byPlat && Object.keys(byPlat).length > 0;
   const ages = Object.entries(audience?.ageBrackets || {})
     .sort((a, b) => b[1] - a[1])
@@ -753,6 +754,51 @@ function AudiencePanel({
               ? "● = your real post data. Others are best-practice windows until that platform has post history."
               : "Times are best-practice windows for now — publish + Refresh and they switch to your real numbers per platform."}
           </Text>
+
+          {pull && Object.keys(pull).length > 0 && (
+            <Box mt={3} pt={2} borderTop="1px solid" borderColor="whiteAlpha.100">
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mb={1}
+              >
+                🔌 DATA SOURCES — what Refresh actually pulled
+              </Text>
+              <VStack align="stretch" gap={0.5}>
+                {["instagram", "facebook", "threads", "youtube", "x"].map((p) => {
+                  const st = pull[p];
+                  if (!st) return null;
+                  const ok = st.withReach > 0;
+                  const color = st.error
+                    ? "orange.300"
+                    : ok
+                      ? "green.300"
+                      : "whiteAlpha.500";
+                  const txt = st.error
+                    ? st.error
+                    : `${st.listed} post${st.listed === 1 ? "" : "s"} pulled · ${st.withReach} with reach`;
+                  return (
+                    <Flex key={p} align="center" gap={2}>
+                      <Text
+                        fontSize="10px"
+                        color="nexzy.gray.100"
+                        fontWeight="600"
+                        w="72px"
+                        flexShrink={0}
+                      >
+                        {PLATFORM_LABEL[p] ?? p}
+                      </Text>
+                      <Text fontSize="10px" color={color} minW={0}>
+                        {ok ? "● " : st.error ? "⚠️ " : ""}
+                        {txt}
+                      </Text>
+                    </Flex>
+                  );
+                })}
+              </VStack>
+            </Box>
+          )}
         </>
       ) : (
         <Text color="nexzy.gray.100" fontSize="xs">

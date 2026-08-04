@@ -2020,6 +2020,10 @@ export interface AudienceProfile {
       string,
       Record<string, { hour: number; n: number; source: string }>
     >;
+    pull?: Record<
+      string,
+      { listed: number; withReach: number; error?: string }
+    >;
     note?: string;
   };
   sources?: string[];
