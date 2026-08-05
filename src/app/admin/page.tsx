@@ -21,7 +21,7 @@ import GrowthPanel from "@/components/admin/GrowthPanel";
 import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import GameHubPanel from "@/components/admin/GameHubPanel";
-import BroadcastPanel from "@/components/admin/BroadcastPanel";
+import NotifyPanel from "@/components/admin/NotifyPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import ContentStudioPanel from "@/components/admin/ContentStudioPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
@@ -436,7 +436,7 @@ function AdminContent() {
 
       {tab === "writers" && isOwner && <WritersPanel />}
 
-      {tab === "notify" && isOwner && <BroadcastPanel />}
+      {tab === "notify" && isOwner && <NotifyPanel />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>

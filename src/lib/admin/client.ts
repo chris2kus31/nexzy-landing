@@ -1535,6 +1535,58 @@ export async function getNotificationUsage(): Promise<{
   return handle(await fetch("/api/newsroom/admin/notifications/usage"));
 }
 
+/** A candidate notification surfaced from a published article (Notify → Leads). */
+export type NotifyLead = {
+  id: string;
+  source: string;
+  articleId: string | null;
+  slug: string | null;
+  gameId: string | null;
+  headline: string;
+  whyItMatters: string | null;
+  featured: boolean;
+  trendScore: number;
+  status: "lead" | "generated" | "skipped";
+  createdAt: string;
+};
+
+export async function getNotifyLeads(): Promise<NotifyLead[]> {
+  return handle(await fetch("/api/newsroom/admin/notify/leads"));
+}
+
+export async function skipNotifyLead(id: string): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/notify/leads/${id}/skip`, {
+      method: "POST",
+    }),
+  );
+}
+
+/** Quick Post → X / Threads generator (MarketingPanel ⚡ Quick Post). */
+export type QuickSocialResult = {
+  x?: {
+    post: string;
+    thread?: string[];
+    poll?: { question?: string; options?: string[] };
+  };
+  threads?: { caption: string; topicTag?: string };
+};
+
+export async function quickSocial(payload: {
+  text: string;
+  writer: string;
+  platforms: ("x" | "threads")[];
+  xFormat: "hot_take" | "thread" | "poll";
+}): Promise<{ data: QuickSocialResult }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/quick-social", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
 export async function sendNotificationTest(payload: {
   email: string;
   title: string;
@@ -1816,35 +1868,6 @@ export async function getWriterNames(): Promise<string[]> {
   } catch {
     return ["Chuy", "Eli"];
   }
-}
-
-/** Quick Post result — an original trending-reaction post per platform. */
-export interface QuickSocialResult {
-  x?: {
-    post: string;
-    thread?: string[];
-    poll?: { question: string; options: string[] };
-  };
-  threads?: { caption: string; topicTag?: string };
-}
-
-/** Turn a trending tweet/topic into an original growth-rule post in a writer's voice. */
-export async function quickSocial(input: {
-  text: string;
-  writer: string;
-  platforms: Array<"x" | "threads">;
-  xFormat?: "hot_take" | "thread" | "poll";
-}): Promise<{
-  data: QuickSocialResult;
-  usage: { inputTokens?: number; outputTokens?: number };
-}> {
-  return handle(
-    await fetch("/api/newsroom/admin/content/quick-social", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
-  );
 }
 
 // ---- AI Visibility (GEO scoreboard) ----
