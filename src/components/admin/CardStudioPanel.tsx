@@ -131,9 +131,13 @@ function cardHtml(
     Math.round(Math.max(min, base - (s || "").length * per) * k);
 
   // The source image as a framable <img>: object-position pans, scale zooms.
+  const scale = Math.max(1.12, frame.zoom / 100);
+  const maxOff = (1 - 1 / scale) * 50;
+  const tx = ((50 - frame.x) / 50) * maxOff;
+  const ty = ((50 - frame.y) / 50) * maxOff;
   const imgTag = (filter: string, blend: string, opacity: string) =>
     imgA
-      ? `<img src="${imgA}" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${frame.x}% ${frame.y}%;transform:scale(${frame.zoom / 100});transform-origin:${frame.x}% ${frame.y}%;filter:${filter};mix-blend-mode:${blend};opacity:${opacity}"/>`
+      ? `<img src="${imgA}" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:center;transform:scale(${scale}) translate(${tx}%, ${ty}%);filter:${filter};mix-blend-mode:${blend};opacity:${opacity}"/>`
       : `<div style="position:absolute;inset:0;background:#1b2140"></div>`;
 
   const shell = t.tint
