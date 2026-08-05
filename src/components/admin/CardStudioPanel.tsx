@@ -174,7 +174,7 @@ function cardHtml(
   const accent = t.accent;
   const fit = (s: string, base: number, min: number, per: number) =>
     Math.round(Math.max(min, base - (s || "").length * per) * k);
-  const scale = Math.max(1.12, frame.zoom / 100);
+  const scale = Math.max(1, frame.zoom / 100);
   const maxOff = (1 - 1 / scale) * 50;
   const tx = ((50 - frame.x) / 50) * maxOff;
   const ty = ((50 - frame.y) / 50) * maxOff;
@@ -669,7 +669,7 @@ export default function CardStudioPanel({
   const [hideBuiltins, setHideBuiltins] = useState(false);
   const layerFileRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<null | {
-    mode: "move" | "resize";
+    mode: "move" | "resize" | "bgpan";
     id: string;
     sx: number;
     sy: number;
@@ -878,6 +878,12 @@ export default function CardStudioPanel({
     const { x, y } = nativeXY(e.clientX, e.clientY);
     const dx = x - dr.sx;
     const dy = y - dr.sy;
+    if (dr.mode === "bgpan") {
+      // drag the background image directly (only pans when zoomed in)
+      setImgX(Math.min(100, Math.max(0, dr.ox - (dx / F.w) * 100)));
+      setImgY(Math.min(100, Math.max(0, dr.oy - (dy / F.h) * 100)));
+      return;
+    }
     if (dr.mode === "move") {
       updLayer(dr.id, { x: dr.ox + dx, y: dr.oy + dy });
       return;
@@ -903,6 +909,23 @@ export default function CardStudioPanel({
   };
   const onCanvasUp = () => {
     dragRef.current = null;
+  };
+  const onBgDown = (e: RPointerEvent) => {
+    setSelId(null);
+    if (!imgA) return;
+    const { x, y } = nativeXY(e.clientX, e.clientY);
+    dragRef.current = {
+      mode: "bgpan",
+      id: "",
+      sx: x,
+      sy: y,
+      ox: imgX,
+      oy: imgY,
+      ow: 0,
+      oh: 0,
+      osize: 0,
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   };
   const selLayer = layers.find((l) => l.id === selId) || null;
 
@@ -1250,7 +1273,7 @@ export default function CardStudioPanel({
                     <input
                       type="range"
                       min={100}
-                      max={220}
+                      max={300}
                       value={imgZoom}
                       onChange={(e) => setImgZoom(Number(e.target.value))}
                     />
@@ -1626,7 +1649,7 @@ export default function CardStudioPanel({
               onPointerMove={onCanvasMove}
               onPointerUp={onCanvasUp}
               onPointerLeave={onCanvasUp}
-              onPointerDown={() => setSelId(null)}
+              onPointerDown={onBgDown}
             >
               <div
                 style={{ position: "absolute", inset: 0 }}
