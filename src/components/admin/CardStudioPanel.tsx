@@ -61,6 +61,8 @@ type Layer = {
   align?: "left" | "center" | "right";
   upper?: boolean;
   font?: "head" | "label" | "body";
+  key?: string;
+  bg?: string;
 };
 // html-to-image drops editor chrome (selection outline + resize handles).
 const exportFilter = (node: HTMLElement) =>
@@ -611,7 +613,18 @@ function templateTextLayers(
     quote: 0.28,
     soon: 0.44,
   };
-  const rows = (rowsByTpl[tpl] || []).filter((r) => r.text && r.text.trim());
+  const keysByTpl: Record<string, (string | undefined)[]> = {
+    news: ["kicker", "headline", "source"],
+    review: ["kicker", "title", undefined, "cta"],
+    deal: ["kicker", "title", undefined, "pct", "cta"],
+    patch: ["kicker", undefined, "notes", "cta"],
+    quote: ["kicker", "quote", "attr", "source"],
+    soon: ["kicker", "title", "date", "cta"],
+  };
+  const keys = keysByTpl[tpl] || [];
+  const rows = (rowsByTpl[tpl] || [])
+    .map((r, i) => ({ ...r, key: keys[i], badge: i === 0 }))
+    .filter((r) => r.text && r.text.trim());
   let y = Math.round(F.h * (startY[tpl] ?? 0.2));
   const out: Layer[] = [];
   rows.forEach((r, i) => {
@@ -625,7 +638,9 @@ function templateTextLayers(
       h: size,
       text: r.text,
       size,
-      color: r.color,
+      color: r.badge ? "#0a1020" : r.color,
+      key: r.key,
+      bg: r.badge ? accent : undefined,
       weight: 700,
       italic: false,
       align: "left",
@@ -666,7 +681,7 @@ export default function CardStudioPanel({
   // ---- Phase 1: free layers (image cutouts + text) over the template ----
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
-  const [hideBuiltins, setHideBuiltins] = useState(false);
+  const [hideBuiltins, setHideBuiltins] = useState(true);
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const fullBleedRef = useRef(false);
   const layerFileRef = useRef<HTMLInputElement>(null);
@@ -774,10 +789,51 @@ export default function CardStudioPanel({
     prevF.current = { w: F.w, h: F.h };
   }, [F.w, F.h]);
 
+  // Templates ARE editable layers: picking one seeds the canvas with its
+  // elements as fully draggable / resizable / recolorable layers (no convert
+  // step). Blank = empty canvas. Re-seeds only when the template changes, so
+  // your edits persist until you switch templates.
+  useEffect(() => {
+    if (tpl === "blank") {
+      setLayers([]);
+      setSelId(null);
+      return;
+    }
+    const def = THEMES.find((x) => x.key === themeKey)!.theme;
+    const per = TEMPLATES.find((x) => x.key === tpl)!.accent;
+    const acc = def.tint ? def.accent : per;
+    setLayers(templateTextLayers(tpl, data[tpl], F, acc));
+    setSelId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tpl]);
+
   const addImageLayer = () => layerFileRef.current?.click();
   const addFullBleedPhoto = () => {
     fullBleedRef.current = true;
     layerFileRef.current?.click();
+  };
+  // Add an image directly as a full-bleed, movable/resizable layer (base of the
+  // stack, so text sits on top). Used by uploads + "start from article".
+  const addPhotoLayer = (src: string) => {
+    if (!src) return;
+    const id = newLayerId();
+    setLayers((ls) => [
+      {
+        id,
+        kind: "image",
+        x: 0,
+        y: 0,
+        w: F.w,
+        h: F.h,
+        src,
+        shape: "rect",
+        ring: false,
+        shadow: false,
+      },
+      ...ls,
+    ]);
+    setSelId(id);
+    setPanelTab("layers");
   };
   const onLayerFile = (e: RChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -989,11 +1045,16 @@ export default function CardStudioPanel({
 
   function set(key: string, value: string) {
     setData((prev) => ({ ...prev, [tpl]: { ...prev[tpl], [key]: value } }));
+    setLayers((ls) =>
+      ls.map((l) => (l.key === key ? { ...l, text: stripAcc(value) } : l)),
+    );
   }
   function loadFromPost(pst: BlogPost) {
-    if (pst.heroImageUrl)
-      setImgA("/api/admin/img?url=" + encodeURIComponent(pst.heroImageUrl));
     if (MAIN[tpl]) set(MAIN[tpl], pst.title || "");
+    if (pst.heroImageUrl)
+      addPhotoLayer(
+        "/api/admin/img?url=" + encodeURIComponent(pst.heroImageUrl),
+      );
   }
   async function download() {
     if (!cardRef.current) return;
@@ -1247,7 +1308,11 @@ export default function CardStudioPanel({
         {/* IMAGE */}
         {panelTab === "image" && (
           <VStack align="stretch" gap={4}>
-            <ImageDrop label="IMAGE" value={imgA} onChange={setImgA} />
+            <ImageDrop
+              label="IMAGE (adds a movable, resizable layer)"
+              value=""
+              onChange={addPhotoLayer}
+            />
             {(tpl === "news" || tpl === "quote") && (
               <ImageDrop
                 label={
@@ -1392,7 +1457,7 @@ export default function CardStudioPanel({
                 + Text
               </Button>
             </HStack>
-            {tpl !== "blank" && !hideBuiltins && (
+            {tpl !== "blank" && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1401,24 +1466,11 @@ export default function CardStudioPanel({
                   const def = THEMES.find((x) => x.key === themeKey)!.theme;
                   const per = TEMPLATES.find((x) => x.key === tpl)!.accent;
                   const acc = def.tint ? def.accent : per;
-                  setLayers((ls) => [
-                    ...ls,
-                    ...templateTextLayers(tpl, d, F, acc),
-                  ]);
-                  setHideBuiltins(true);
+                  setLayers(templateTextLayers(tpl, d, F, acc));
+                  setSelId(null);
                 }}
               >
-                ✎ Edit built-ins as layers
-              </Button>
-            )}
-            {hideBuiltins && (
-              <Button
-                size="sm"
-                variant="ghost"
-                colorPalette="blue"
-                onClick={() => setHideBuiltins(false)}
-              >
-                ↩ Restore template text
+                ↺ Reset to template layout
               </Button>
             )}
             {layers.length === 0 && (
@@ -1779,6 +1831,16 @@ export default function CardStudioPanel({
                           textShadow: "0 2px 12px rgba(0,0,0,.5)",
                           whiteSpace: "pre-wrap",
                           wordBreak: "break-word",
+                          ...(l.bg
+                            ? {
+                                background: l.bg,
+                                padding: `${Math.round((l.size || 24) * 0.28)}px ${Math.round((l.size || 24) * 0.6)}px`,
+                                borderRadius: `${Math.round((l.size || 24) * 0.32)}px`,
+                                width: "auto",
+                                display: "inline-block",
+                                textShadow: "none",
+                              }
+                            : {}),
                         }}
                       >
                         {l.text}
