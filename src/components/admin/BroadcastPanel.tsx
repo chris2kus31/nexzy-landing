@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import {
   getNotificationAudience,
+  getNotificationUsage,
   sendNotificationTest,
   sendNotificationBroadcast,
   getPublished,
@@ -108,6 +109,15 @@ export default function BroadcastPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // Weekly send cap: how many broadcasts have gone out this week vs. the cap.
+  const [usage, setUsage] = useState<{
+    count: number;
+    cap: number;
+    remaining: number;
+  } | null>(null);
+  // Owner override secret, only used when the weekly cap has been reached.
+  const [override, setOverride] = useState("");
+
   // Audience depends on the type (each gates on a different preference).
   useEffect(() => {
     let alive = true;
@@ -119,6 +129,17 @@ export default function BroadcastPanel() {
       alive = false;
     };
   }, [type]);
+
+  // Weekly send tracker — broadcasts counted against NEXZY_NOTIFY_WEEKLY_CAP.
+  useEffect(() => {
+    let alive = true;
+    getNotificationUsage()
+      .then((u) => alive && setUsage(u))
+      .catch(() => alive && setUsage(null));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Lazy-load published articles the first time the News-article dest is used.
   useEffect(() => {
@@ -171,6 +192,7 @@ export default function BroadcastPanel() {
       : null;
 
   const canSend = title.trim().length > 0 && body.trim().length > 0;
+  const atCap = !!usage && usage.remaining <= 0;
   const kindLabel = type === "system-announcement" ? "announcement" : "promotion";
   const prefLabel =
     type === "system-announcement" ? "System announcements" : "Promotions & offers";
@@ -268,8 +290,14 @@ export default function BroadcastPanel() {
         title: title.trim(),
         body: body.trim(),
         dest,
+        overrideSecret: override.trim() || undefined,
       });
       setMsg(`Queued — sending to ~${r.recipients} opted-in user(s).`);
+      setOverride("");
+      // Refresh the weekly counter after a successful send.
+      getNotificationUsage()
+        .then(setUsage)
+        .catch(() => {});
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -287,6 +315,25 @@ export default function BroadcastPanel() {
         into the app. Each only reaches users who have that category enabled and
         an active device. Always send a test to yourself first.
       </Text>
+
+      {usage && (
+        <Box
+          mb={4}
+          px={3}
+          py={2}
+          borderWidth="1px"
+          borderColor={atCap ? "orange.400" : "whiteAlpha.200"}
+          borderRadius="8px"
+          bg="whiteAlpha.50"
+        >
+          <Text fontSize="sm" color="nexzy.white">
+            Sent this week: {usage.count} / {usage.cap}
+            {usage.remaining > 0
+              ? ` · ${usage.remaining} left`
+              : " · weekly cap reached"}
+          </Text>
+        </Box>
+      )}
 
       <VStack align="stretch" gap={3}>
         {/* Type */}
@@ -684,12 +731,28 @@ export default function BroadcastPanel() {
           </HStack>
         </Box>
 
+        {atCap && (
+          <Box>
+            <Text fontSize="xs" color="orange.300" mb={1}>
+              Weekly cap reached. Enter the override secret to send this{" "}
+              {kindLabel} anyway.
+            </Text>
+            <Input
+              {...inputProps}
+              type="password"
+              value={override}
+              onChange={(e) => setOverride(e.target.value)}
+              placeholder="Override secret"
+            />
+          </Box>
+        )}
+
         <Button
           {...primaryBtn}
           onClick={sendAll}
           loading={busy === "all"}
           loadingText="Queuing"
-          disabled={!canSend}
+          disabled={!canSend || (atCap && !override.trim())}
         >
           Send {kindLabel} to all opted-in (~{audience ?? "?"})
         </Button>
