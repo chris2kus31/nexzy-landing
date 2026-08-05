@@ -22,6 +22,7 @@ import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewVerdictEditor from "./ReviewVerdictEditor";
+import CollageBuilder from "./CollageBuilder";
 
 /**
  * The shared right rail: byline, linked games, hero image + alt/credit, video,
@@ -119,6 +120,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
       <Box>
         <PostGamesEditor postId={id} />
       </Box>
+
+      <CollageBuilder ed={ed} />
 
       <Box>
         <Text {...labelProps}>Hero image</Text>
