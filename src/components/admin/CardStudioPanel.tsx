@@ -11,7 +11,14 @@
  * slider fine-tunes; headlines auto-fit so long titles never overflow.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as RPointerEvent,
+  type ChangeEvent as RChangeEvent,
+} from "react";
 import {
   Box,
   HStack,
@@ -26,11 +33,38 @@ import {
 import { toPng, toBlob } from "html-to-image";
 import { getPublished, type BlogPost } from "@/lib/admin/client";
 
-type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon";
+type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon" | "blank";
 type FmtKey = "universal" | "square" | "story" | "wide";
 type Theme = { accent: string; dark: string; light: string; tint: boolean };
 type Shape = "circle" | "square";
 type Pos = "BL" | "BR" | "TR" | "ML";
+type CutShape = "circle" | "rounded" | "rect";
+// Phase 1 free layer (image cutout or text) stacked over the template. Geometry
+// is in native card px; rescaled when the format changes.
+type Layer = {
+  id: string;
+  kind: "image" | "text";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  src?: string;
+  shape?: CutShape;
+  ring?: boolean;
+  ringColor?: string;
+  shadow?: boolean;
+  text?: string;
+  size?: number;
+  color?: string;
+  weight?: number;
+  italic?: boolean;
+  align?: "left" | "center" | "right";
+  upper?: boolean;
+  font?: "head" | "label" | "body";
+};
+// html-to-image drops editor chrome (selection outline + resize handles).
+const exportFilter = (node: HTMLElement) =>
+  !(node?.dataset && node.dataset.nocapture === "1");
 
 const TEMPLATES: { key: TplKey; label: string; accent: string }[] = [
   { key: "news", label: "News", accent: "#4DA3FF" },
@@ -39,6 +73,7 @@ const TEMPLATES: { key: TplKey; label: string; accent: string }[] = [
   { key: "patch", label: "Patch Notes", accent: "#007BFF" },
   { key: "quote", label: "Quote", accent: "#FFD700" },
   { key: "soon", label: "Coming Soon", accent: "#b56bff" },
+  { key: "blank", label: "Blank", accent: "#4DA3FF" },
 ];
 
 const FORMATS: Record<FmtKey, { label: string; w: number; h: number }> = {
@@ -167,7 +202,9 @@ function cardHtml(
 
   let inner: string;
 
-  if (tpl === "news") {
+  if (tpl === "blank") {
+    inner = "";
+  } else if (tpl === "news") {
     const size = (shape === "square" ? 360 : 340) * k;
     const rad = shape === "square" ? `${28 * k}px` : "50%";
     let where: Record<string, string> = {
@@ -234,6 +271,7 @@ function cardHtml(
 }
 
 const DEFAULTS: Record<TplKey, Data> = {
+  blank: {},
   news: {
     kicker: "NEWS",
     headline: "Dave Bautista in talks to play [[Kratos]]",
@@ -278,6 +316,7 @@ const DEFAULTS: Record<TplKey, Data> = {
 
 const FIELDS: Record<TplKey, { key: string; label: string; area?: boolean }[]> =
   {
+    blank: [],
     news: [
       { key: "kicker", label: "Label" },
       {
@@ -320,6 +359,7 @@ const FIELDS: Record<TplKey, { key: string; label: string; area?: boolean }[]> =
   };
 
 const MAIN: Record<TplKey, string> = {
+  blank: "",
   news: "headline",
   review: "title",
   deal: "title",
@@ -440,10 +480,46 @@ export default function CardStudioPanel({
   const [busy, setBusy] = useState(false);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [q, setQ] = useState("");
-  const [panelTab, setPanelTab] = useState<"content" | "design" | "image">(
-    "content",
-  );
+  const [panelTab, setPanelTab] = useState<
+    "content" | "design" | "image" | "layers"
+  >("content");
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // ---- Phase 1: free layers (image cutouts + text) over the template ----
+  const [layers, setLayers] = useState<Layer[]>([]);
+  const [selId, setSelId] = useState<string | null>(null);
+  const layerFileRef = useRef<HTMLInputElement>(null);
+  const dragRef = useRef<null | {
+    mode: "move" | "resize";
+    id: string;
+    sx: number;
+    sy: number;
+    ox: number;
+    oy: number;
+    ow: number;
+    oh: number;
+    osize: number;
+  }>(null);
+  const prevF = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  const newLayerId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `l${Date.now()}${Math.round(Math.abs(performance.now()))}`;
+  const updLayer = (id: string, patch: Partial<Layer>) =>
+    setLayers((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  const delLayer = (id: string) => {
+    setLayers((ls) => ls.filter((l) => l.id !== id));
+    setSelId((cur) => (cur === id ? null : cur));
+  };
+  const raise = (id: string) =>
+    setLayers((ls) => {
+      const i = ls.findIndex((l) => l.id === id);
+      if (i < 0 || i === ls.length - 1) return ls;
+      const c = ls.slice();
+      const [it] = c.splice(i, 1);
+      c.push(it);
+      return c;
+    });
 
   useEffect(() => {
     getPublished()
@@ -483,13 +559,167 @@ export default function CardStudioPanel({
   ]);
   const scale = Math.min(480 / F.w, 640 / F.h);
 
+  // rescale layers when the card format changes (keeps them where they were)
+  useEffect(() => {
+    const p = prevF.current;
+    if (p.w && (p.w !== F.w || p.h !== F.h)) {
+      const rx = F.w / p.w;
+      const ry = F.h / p.h;
+      setLayers((ls) =>
+        ls.map((l) => ({
+          ...l,
+          x: l.x * rx,
+          y: l.y * ry,
+          w: l.w * rx,
+          h: l.h * ry,
+          size: l.size ? l.size * ry : l.size,
+        })),
+      );
+    }
+    prevF.current = { w: F.w, h: F.h };
+  }, [F.w, F.h]);
+
+  const addImageLayer = () => layerFileRef.current?.click();
+  const onLayerFile = (e: RChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const src = String(r.result || "");
+      const size = Math.round(F.w * 0.28);
+      const id = newLayerId();
+      setLayers((ls) => [
+        ...ls,
+        {
+          id,
+          kind: "image",
+          x: Math.round(F.w * 0.36),
+          y: Math.round(F.h * 0.36),
+          w: size,
+          h: size,
+          src,
+          shape: "circle",
+          ring: true,
+          ringColor: "#4DA3FF",
+          shadow: true,
+        },
+      ]);
+      setSelId(id);
+      setPanelTab("layers");
+    };
+    r.readAsDataURL(file);
+  };
+  const addTextLayer = () => {
+    const id = newLayerId();
+    const size = Math.round(F.h * 0.06);
+    setLayers((ls) => [
+      ...ls,
+      {
+        id,
+        kind: "text",
+        x: Math.round(F.w * 0.1),
+        y: Math.round(F.h * 0.44),
+        w: Math.round(F.w * 0.8),
+        h: size,
+        text: "Your text",
+        size,
+        color: "#F5EFE0",
+        weight: 700,
+        italic: false,
+        align: "left",
+        upper: true,
+        font: "head",
+      },
+    ]);
+    setSelId(id);
+  };
+  const nativeXY = (clientX: number, clientY: number) => {
+    const rect = cardRef.current!.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / scale,
+      y: (clientY - rect.top) / scale,
+    };
+  };
+  const startMove = (e: RPointerEvent, id: string) => {
+    e.stopPropagation();
+    const l = layers.find((x) => x.id === id);
+    if (!l) return;
+    setSelId(id);
+    const { x, y } = nativeXY(e.clientX, e.clientY);
+    dragRef.current = {
+      mode: "move",
+      id,
+      sx: x,
+      sy: y,
+      ox: l.x,
+      oy: l.y,
+      ow: l.w,
+      oh: l.h,
+      osize: l.size || 0,
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const startResize = (e: RPointerEvent, id: string) => {
+    e.stopPropagation();
+    const l = layers.find((x) => x.id === id);
+    if (!l) return;
+    setSelId(id);
+    const { x, y } = nativeXY(e.clientX, e.clientY);
+    dragRef.current = {
+      mode: "resize",
+      id,
+      sx: x,
+      sy: y,
+      ox: l.x,
+      oy: l.y,
+      ow: l.w,
+      oh: l.h,
+      osize: l.size || 0,
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const onCanvasMove = (e: RPointerEvent) => {
+    const dr = dragRef.current;
+    if (!dr) return;
+    const { x, y } = nativeXY(e.clientX, e.clientY);
+    const dx = x - dr.sx;
+    const dy = y - dr.sy;
+    if (dr.mode === "move") {
+      updLayer(dr.id, { x: dr.ox + dx, y: dr.oy + dy });
+      return;
+    }
+    const l = layers.find((z) => z.id === dr.id);
+    if (!l) return;
+    if (l.kind === "image") {
+      let nw = Math.max(40, dr.ow + dx);
+      let nh = Math.max(40, dr.oh + dy);
+      if (l.shape !== "rect") {
+        const sq = Math.max(nw, nh);
+        nw = sq;
+        nh = sq;
+      }
+      updLayer(dr.id, { w: nw, h: nh });
+    } else {
+      const ratio = Math.max(0.2, (dr.ow + dx) / Math.max(1, dr.ow));
+      updLayer(dr.id, {
+        w: Math.max(60, dr.ow + dx),
+        size: Math.max(12, Math.round(dr.osize * ratio)),
+      });
+    }
+  };
+  const onCanvasUp = () => {
+    dragRef.current = null;
+  };
+  const selLayer = layers.find((l) => l.id === selId) || null;
+
   function set(key: string, value: string) {
     setData((prev) => ({ ...prev, [tpl]: { ...prev[tpl], [key]: value } }));
   }
   function loadFromPost(pst: BlogPost) {
     if (pst.heroImageUrl)
       setImgA("/api/admin/img?url=" + encodeURIComponent(pst.heroImageUrl));
-    set(MAIN[tpl], pst.title || "");
+    if (MAIN[tpl]) set(MAIN[tpl], pst.title || "");
   }
   async function download() {
     if (!cardRef.current) return;
@@ -500,6 +730,7 @@ export default function CardStudioPanel({
         height: F.h,
         pixelRatio: 2,
         cacheBust: true,
+        filter: exportFilter,
       });
       const a = document.createElement("a");
       a.download = `nexzy-${tpl}-${F.w}x${F.h}.png`;
@@ -520,6 +751,7 @@ export default function CardStudioPanel({
         height: F.h,
         pixelRatio: 2,
         cacheBust: true,
+        filter: exportFilter,
       });
       if (!blob) {
         alert("Copy failed — try Download instead.");
@@ -570,6 +802,7 @@ export default function CardStudioPanel({
               ["content", "Content"],
               ["design", "Design"],
               ["image", "Image"],
+              ["layers", "Layers"],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -848,6 +1081,273 @@ export default function CardStudioPanel({
           </VStack>
         )}
 
+        {/* LAYERS */}
+        {panelTab === "layers" && (
+          <VStack align="stretch" gap={4}>
+            <input
+              ref={layerFileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={onLayerFile}
+            />
+            <Text fontSize="xs" color="gray.400" letterSpacing="wider">
+              LAYERS — drag on the card to move · pull the corner to resize
+            </Text>
+            <HStack gap={2}>
+              <Button size="sm" colorPalette="blue" onClick={addImageLayer}>
+                + Image cutout
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="blue"
+                onClick={addTextLayer}
+              >
+                + Text
+              </Button>
+            </HStack>
+            {layers.length === 0 && (
+              <Text fontSize="xs" color="gray.500">
+                No layers yet. Add an image cutout (circle / rounded / rect) or
+                a text block, then drag it on the card. Works on any template —
+                or pick the Blank template for a free canvas.
+              </Text>
+            )}
+            {layers.length > 0 && (
+              <VStack align="stretch" gap={1}>
+                {layers.map((l) => (
+                  <HStack
+                    key={l.id}
+                    p={2}
+                    borderRadius="md"
+                    cursor="pointer"
+                    bg={selId === l.id ? "whiteAlpha.200" : "whiteAlpha.50"}
+                    onClick={() => setSelId(l.id)}
+                  >
+                    <Text
+                      fontSize="xs"
+                      color="whiteAlpha.900"
+                      flex="1"
+                      lineClamp={1}
+                    >
+                      {l.kind === "image"
+                        ? `Image · ${l.shape}`
+                        : `Text · ${l.text || ""}`}
+                    </Text>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        raise(l.id);
+                      }}
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="red"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        delLayer(l.id);
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </HStack>
+                ))}
+              </VStack>
+            )}
+            {selLayer && selLayer.kind === "image" && (
+              <Box
+                borderWidth="1px"
+                borderColor="whiteAlpha.200"
+                borderRadius="lg"
+                p={3}
+              >
+                <Text fontSize="xs" color="gray.400" mb={2}>
+                  SELECTED CUTOUT
+                </Text>
+                <HStack gap={2} mb={2}>
+                  {(["circle", "rounded", "rect"] as CutShape[]).map((sh) => (
+                    <Button
+                      key={sh}
+                      size="xs"
+                      variant={selLayer.shape === sh ? "solid" : "outline"}
+                      colorPalette="blue"
+                      onClick={() =>
+                        updLayer(selLayer.id, {
+                          shape: sh,
+                          ...(sh !== "rect" ? { h: selLayer.w } : {}),
+                        })
+                      }
+                    >
+                      {sh}
+                    </Button>
+                  ))}
+                </HStack>
+                <HStack gap={2} mb={2}>
+                  <Button
+                    size="xs"
+                    variant={selLayer.ring ? "solid" : "outline"}
+                    colorPalette="blue"
+                    onClick={() =>
+                      updLayer(selLayer.id, { ring: !selLayer.ring })
+                    }
+                  >
+                    Ring
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant={selLayer.shadow ? "solid" : "outline"}
+                    colorPalette="blue"
+                    onClick={() =>
+                      updLayer(selLayer.id, { shadow: !selLayer.shadow })
+                    }
+                  >
+                    Shadow
+                  </Button>
+                </HStack>
+                <Text fontSize="10px" color="gray.500" mb={1}>
+                  Ring color
+                </Text>
+                <HStack gap={1}>
+                  {["#4DA3FF", "#FFD100", "#3ad07a", "#b56bff", "#ffffff"].map(
+                    (c) => (
+                      <Box
+                        as="button"
+                        key={c}
+                        onClick={() => updLayer(selLayer.id, { ringColor: c })}
+                        w="20px"
+                        h="20px"
+                        borderRadius="full"
+                        style={{ background: c }}
+                        borderWidth="2px"
+                        borderColor={
+                          selLayer.ringColor === c ? "white" : "transparent"
+                        }
+                      />
+                    ),
+                  )}
+                </HStack>
+              </Box>
+            )}
+            {selLayer && selLayer.kind === "text" && (
+              <Box
+                borderWidth="1px"
+                borderColor="whiteAlpha.200"
+                borderRadius="lg"
+                p={3}
+              >
+                <Text fontSize="xs" color="gray.400" mb={2}>
+                  SELECTED TEXT
+                </Text>
+                <Textarea
+                  {...FIELD}
+                  rows={2}
+                  value={selLayer.text || ""}
+                  onChange={(e) =>
+                    updLayer(selLayer.id, { text: e.target.value })
+                  }
+                  mb={2}
+                />
+                <Text fontSize="10px" color="gray.500">
+                  Size · {selLayer.size}px
+                </Text>
+                <input
+                  type="range"
+                  min={Math.round(F.h * 0.02)}
+                  max={Math.round(F.h * 0.16)}
+                  value={selLayer.size || 24}
+                  onChange={(e) =>
+                    updLayer(selLayer.id, { size: Number(e.target.value) })
+                  }
+                  style={{ width: "100%" }}
+                />
+                <HStack gap={1} mt={2} mb={2}>
+                  {["#F5EFE0", "#FFFFFF", "#4DA3FF", "#FFD100", "#0a1020"].map(
+                    (c) => (
+                      <Box
+                        as="button"
+                        key={c}
+                        onClick={() => updLayer(selLayer.id, { color: c })}
+                        w="20px"
+                        h="20px"
+                        borderRadius="full"
+                        style={{ background: c }}
+                        borderWidth="2px"
+                        borderColor={
+                          selLayer.color === c ? "white" : "transparent"
+                        }
+                      />
+                    ),
+                  )}
+                </HStack>
+                <HStack gap={1} wrap="wrap">
+                  <Button
+                    size="xs"
+                    variant={selLayer.weight === 700 ? "solid" : "outline"}
+                    colorPalette="blue"
+                    onClick={() =>
+                      updLayer(selLayer.id, {
+                        weight: selLayer.weight === 700 ? 400 : 700,
+                      })
+                    }
+                  >
+                    Bold
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant={selLayer.italic ? "solid" : "outline"}
+                    colorPalette="blue"
+                    onClick={() =>
+                      updLayer(selLayer.id, { italic: !selLayer.italic })
+                    }
+                  >
+                    Italic
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant={selLayer.upper ? "solid" : "outline"}
+                    colorPalette="blue"
+                    onClick={() =>
+                      updLayer(selLayer.id, { upper: !selLayer.upper })
+                    }
+                  >
+                    UPPER
+                  </Button>
+                  {(["left", "center", "right"] as const).map((a) => (
+                    <Button
+                      key={a}
+                      size="xs"
+                      variant={selLayer.align === a ? "solid" : "outline"}
+                      colorPalette="blue"
+                      onClick={() => updLayer(selLayer.id, { align: a })}
+                    >
+                      {a[0].toUpperCase()}
+                    </Button>
+                  ))}
+                </HStack>
+                <HStack gap={1} mt={2}>
+                  {(["head", "label", "body"] as const).map((fk) => (
+                    <Button
+                      key={fk}
+                      size="xs"
+                      variant={selLayer.font === fk ? "solid" : "outline"}
+                      colorPalette="blue"
+                      onClick={() => updLayer(selLayer.id, { font: fk })}
+                    >
+                      {fk}
+                    </Button>
+                  ))}
+                </HStack>
+              </Box>
+            )}
+          </VStack>
+        )}
+
         {/* Export — always visible */}
         <VStack
           align="stretch"
@@ -895,7 +1395,115 @@ export default function CardStudioPanel({
               transformOrigin: "top left",
             }}
           >
-            <div ref={cardRef} dangerouslySetInnerHTML={{ __html: html }} />
+            <div
+              ref={cardRef}
+              style={{ position: "relative", width: F.w, height: F.h }}
+              onPointerMove={onCanvasMove}
+              onPointerUp={onCanvasUp}
+              onPointerLeave={onCanvasUp}
+              onPointerDown={() => setSelId(null)}
+            >
+              <div
+                style={{ position: "absolute", inset: 0 }}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+              {layers.map((l) => {
+                const selected = selId === l.id;
+                return (
+                  <div
+                    key={l.id}
+                    onPointerDown={(e) => startMove(e, l.id)}
+                    style={{
+                      position: "absolute",
+                      left: `${l.x}px`,
+                      top: `${l.y}px`,
+                      width: `${l.w}px`,
+                      height: l.kind === "image" ? `${l.h}px` : "auto",
+                      cursor: "grab",
+                      touchAction: "none",
+                    }}
+                  >
+                    {l.kind === "image" ? (
+                      <div
+                        style={{
+                          width: `${l.w}px`,
+                          height: `${l.h}px`,
+                          backgroundImage: `url('${l.src}')`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          borderRadius:
+                            l.shape === "circle"
+                              ? "50%"
+                              : l.shape === "rounded"
+                                ? `${Math.round(l.w * 0.12)}px`
+                                : "0px",
+                          border: l.ring
+                            ? `${Math.max(3, Math.round(l.w * 0.03))}px solid ${l.ringColor || "#4DA3FF"}`
+                            : "none",
+                          boxShadow: l.shadow
+                            ? "0 18px 50px rgba(0,0,0,.55)"
+                            : "none",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: `${l.w}px`,
+                          fontFamily:
+                            l.font === "body"
+                              ? "var(--font-inter), system-ui, sans-serif"
+                              : l.font === "label"
+                                ? "var(--font-space-grotesk), var(--font-inter), sans-serif"
+                                : "var(--font-chakra-petch), var(--font-inter), sans-serif",
+                          fontWeight: l.weight || 700,
+                          fontStyle: l.italic ? "italic" : "normal",
+                          fontSize: `${l.size || 24}px`,
+                          lineHeight: 1.05,
+                          color: l.color || "#F5EFE0",
+                          textAlign: l.align || "left",
+                          textTransform: l.upper ? "uppercase" : "none",
+                          textShadow: "0 2px 12px rgba(0,0,0,.5)",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {l.text}
+                      </div>
+                    )}
+                    {selected && (
+                      <>
+                        <div
+                          data-nocapture="1"
+                          style={{
+                            position: "absolute",
+                            inset: "-3px",
+                            border: "3px solid #4DA3FF",
+                            borderRadius: "6px",
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <div
+                          data-nocapture="1"
+                          onPointerDown={(e) => startResize(e, l.id)}
+                          style={{
+                            position: "absolute",
+                            right: "-9px",
+                            bottom: "-9px",
+                            width: "18px",
+                            height: "18px",
+                            background: "#4DA3FF",
+                            border: "2px solid #fff",
+                            borderRadius: "4px",
+                            cursor: "nwse-resize",
+                            touchAction: "none",
+                          }}
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </Box>
         </Box>
         <Text fontSize="xs" color="gray.500" mt={2}>
