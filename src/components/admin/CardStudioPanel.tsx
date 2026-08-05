@@ -667,6 +667,8 @@ export default function CardStudioPanel({
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
   const [hideBuiltins, setHideBuiltins] = useState(false);
+  const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
+  const fullBleedRef = useRef(false);
   const layerFileRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<null | {
     mode: "move" | "resize" | "bgpan";
@@ -773,31 +775,48 @@ export default function CardStudioPanel({
   }, [F.w, F.h]);
 
   const addImageLayer = () => layerFileRef.current?.click();
+  const addFullBleedPhoto = () => {
+    fullBleedRef.current = true;
+    layerFileRef.current?.click();
+  };
   const onLayerFile = (e: RChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    const fullBleed = fullBleedRef.current;
+    fullBleedRef.current = false;
     const r = new FileReader();
     r.onload = () => {
       const src = String(r.result || "");
-      const size = Math.round(F.w * 0.28);
       const id = newLayerId();
-      setLayers((ls) => [
-        ...ls,
-        {
-          id,
-          kind: "image",
-          x: Math.round(F.w * 0.36),
-          y: Math.round(F.h * 0.36),
-          w: size,
-          h: size,
-          src,
-          shape: "circle",
-          ring: true,
-          ringColor: "#4DA3FF",
-          shadow: true,
-        },
-      ]);
+      const layer: Layer = fullBleed
+        ? {
+            id,
+            kind: "image",
+            x: 0,
+            y: 0,
+            w: F.w,
+            h: F.h,
+            src,
+            shape: "rect",
+            ring: false,
+            shadow: false,
+          }
+        : {
+            id,
+            kind: "image",
+            x: Math.round(F.w * 0.36),
+            y: Math.round(F.h * 0.36),
+            w: Math.round(F.w * 0.28),
+            h: Math.round(F.w * 0.28),
+            src,
+            shape: "circle",
+            ring: true,
+            ringColor: "#4DA3FF",
+            shadow: true,
+          };
+      // full-bleed photo goes to the BOTTOM (base); cutouts stack on top
+      setLayers((ls) => (fullBleed ? [layer, ...ls] : [...ls, layer]));
       setSelId(id);
       setPanelTab("layers");
     };
@@ -885,7 +904,45 @@ export default function CardStudioPanel({
       return;
     }
     if (dr.mode === "move") {
-      updLayer(dr.id, { x: dr.ox + dx, y: dr.oy + dy });
+      const lay = layers.find((z) => z.id === dr.id);
+      let nx = dr.ox + dx;
+      let ny = dr.oy + dy;
+      const lw = lay ? lay.w : 0;
+      const lh = lay
+        ? lay.kind === "image"
+          ? lay.h
+          : (lay.size || 24) * 1.2
+        : 0;
+      const th = Math.max(8, F.w * 0.008);
+      const pad = Math.round(60 * (F.w / 1080));
+      const tX = [0, pad, F.w / 2, F.w - pad, F.w];
+      const tY = [0, pad, F.h / 2, F.h - pad, F.h];
+      let gx: number | undefined;
+      let gy: number | undefined;
+      const ax = [nx, nx + lw / 2, nx + lw];
+      for (const t of tX) {
+        for (let i = 0; i < ax.length; i++) {
+          if (Math.abs(ax[i] - t) <= th) {
+            nx += t - ax[i];
+            gx = t;
+            break;
+          }
+        }
+        if (gx !== undefined) break;
+      }
+      const ay = [ny, ny + lh / 2, ny + lh];
+      for (const t of tY) {
+        for (let i = 0; i < ay.length; i++) {
+          if (Math.abs(ay[i] - t) <= th) {
+            ny += t - ay[i];
+            gy = t;
+            break;
+          }
+        }
+        if (gy !== undefined) break;
+      }
+      setGuides({ x: gx, y: gy });
+      updLayer(dr.id, { x: nx, y: ny });
       return;
     }
     const l = layers.find((z) => z.id === dr.id);
@@ -909,6 +966,7 @@ export default function CardStudioPanel({
   };
   const onCanvasUp = () => {
     dragRef.current = null;
+    setGuides({});
   };
   const onBgDown = (e: RPointerEvent) => {
     setSelId(null);
@@ -1316,6 +1374,14 @@ export default function CardStudioPanel({
             <HStack gap={2}>
               <Button size="sm" colorPalette="blue" onClick={addImageLayer}>
                 + Image cutout
+              </Button>
+              <Button
+                size="sm"
+                colorPalette="blue"
+                variant="outline"
+                onClick={addFullBleedPhoto}
+              >
+                + Full-bleed photo
               </Button>
               <Button
                 size="sm"
@@ -1751,6 +1817,34 @@ export default function CardStudioPanel({
                   </div>
                 );
               })}
+              {guides.x !== undefined && (
+                <div
+                  data-nocapture="1"
+                  style={{
+                    position: "absolute",
+                    left: `${guides.x}px`,
+                    top: 0,
+                    width: "2px",
+                    height: "100%",
+                    background: "#4DA3FF",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+              {guides.y !== undefined && (
+                <div
+                  data-nocapture="1"
+                  style={{
+                    position: "absolute",
+                    top: `${guides.y}px`,
+                    left: 0,
+                    height: "2px",
+                    width: "100%",
+                    background: "#4DA3FF",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
             </div>
           </Box>
         </Box>
