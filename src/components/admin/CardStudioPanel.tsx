@@ -164,6 +164,7 @@ function cardHtml(
   shape: Shape,
   pos: Pos,
   frame: { x: number; y: number; zoom: number; header: number },
+  hideBuiltins: boolean,
 ): string {
   const k = w / 1080;
   const HEAD = "var(--font-chakra-petch), var(--font-inter), sans-serif";
@@ -202,7 +203,7 @@ function cardHtml(
 
   let inner: string;
 
-  if (tpl === "blank") {
+  if (tpl === "blank" || hideBuiltins) {
     inner = "";
   } else if (tpl === "news") {
     const size = (shape === "square" ? 360 : 340) * k;
@@ -459,6 +460,183 @@ const POSN: { key: Pos; label: string }[] = [
   { key: "ML", label: "Mid-L" },
 ];
 
+function stripAcc(s?: string): string {
+  return (s || "").replace(/\[\[(.+?)\]\]/g, "$1");
+}
+// Phase 2: turn a template's built-in text into editable/draggable layers, so
+// the whole card is editable using the same layer engine. Structured extras
+// (score bubble, deal badge) become plain text layers you can restyle.
+function templateTextLayers(
+  tpl: TplKey,
+  d: Data,
+  F: { w: number; h: number },
+  accent: string,
+): Layer[] {
+  const k = F.w / 1080;
+  const pad = Math.round(60 * k);
+  const W = F.w - pad * 2;
+  type Row = {
+    text: string;
+    base: number;
+    color: string;
+    font: "head" | "label" | "body";
+    upper?: boolean;
+  };
+  const L = (text: string): Row => ({
+    text,
+    base: 28,
+    color: accent,
+    font: "label",
+    upper: true,
+  });
+  const rowsByTpl: Record<string, Row[]> = {
+    news: [
+      L(d.kicker || "NEWS"),
+      {
+        text: stripAcc(d.headline),
+        base: 74,
+        color: "#F5EFE0",
+        font: "head",
+        upper: true,
+      },
+      {
+        text: d.source || "",
+        base: 24,
+        color: "#c9d4e5",
+        font: "body",
+        upper: true,
+      },
+    ],
+    review: [
+      L(d.kicker || "REVIEW"),
+      {
+        text: d.title || "",
+        base: 70,
+        color: "#F5EFE0",
+        font: "head",
+        upper: true,
+      },
+      {
+        text: `${d.score || "8"} / ${d.outof || "10"}`,
+        base: 90,
+        color: accent,
+        font: "head",
+      },
+      {
+        text: d.cta || "",
+        base: 26,
+        color: "#c9d4e5",
+        font: "body",
+        upper: true,
+      },
+    ],
+    deal: [
+      L(d.kicker || "DEAL ALERT"),
+      {
+        text: d.title || "",
+        base: 72,
+        color: "#F5EFE0",
+        font: "head",
+        upper: true,
+      },
+      {
+        text: `${d.oldPrice || ""}   ${d.newPrice || ""}`.trim(),
+        base: 56,
+        color: "#ffffff",
+        font: "head",
+      },
+      { text: d.pct || "", base: 80, color: accent, font: "head" },
+      {
+        text: d.cta || "",
+        base: 26,
+        color: "#c9d4e5",
+        font: "body",
+        upper: true,
+      },
+    ],
+    patch: [
+      L(d.kicker || "PATCH NOTES"),
+      {
+        text: `${d.title || ""} ${d.version || ""}`.trim(),
+        base: 60,
+        color: "#F5EFE0",
+        font: "head",
+        upper: true,
+      },
+      { text: d.notes || "", base: 32, color: "#eaf1fb", font: "body" },
+      { text: d.cta || "", base: 28, color: accent, font: "label" },
+    ],
+    quote: [
+      L(d.kicker || "HOT TAKE"),
+      { text: stripAcc(d.quote), base: 80, color: "#ffffff", font: "head" },
+      {
+        text: d.attr || "",
+        base: 44,
+        color: accent,
+        font: "head",
+        upper: true,
+      },
+      {
+        text: d.source || "",
+        base: 24,
+        color: "#c9d4e5",
+        font: "body",
+        upper: true,
+      },
+    ],
+    soon: [
+      L(d.kicker || "COMING SOON"),
+      {
+        text: d.title || "",
+        base: 72,
+        color: "#F5EFE0",
+        font: "head",
+        upper: true,
+      },
+      { text: d.date || "", base: 60, color: "#ffffff", font: "head" },
+      {
+        text: d.cta || "",
+        base: 26,
+        color: "#c9d4e5",
+        font: "body",
+        upper: true,
+      },
+    ],
+  };
+  const startY: Record<string, number> = {
+    news: 0.09,
+    review: 0.44,
+    deal: 0.4,
+    patch: 0.12,
+    quote: 0.28,
+    soon: 0.44,
+  };
+  const rows = (rowsByTpl[tpl] || []).filter((r) => r.text && r.text.trim());
+  let y = Math.round(F.h * (startY[tpl] ?? 0.2));
+  const out: Layer[] = [];
+  rows.forEach((r, i) => {
+    const size = Math.round(r.base * k);
+    out.push({
+      id: `tl${Date.now()}${i}${Math.round(Math.random() * 1000)}`,
+      kind: "text",
+      x: pad,
+      y,
+      w: W,
+      h: size,
+      text: r.text,
+      size,
+      color: r.color,
+      weight: 700,
+      italic: false,
+      align: "left",
+      upper: !!r.upper,
+      font: r.font,
+    });
+    y += Math.round(size * 1.5) + Math.round(16 * k);
+  });
+  return out;
+}
+
 export default function CardStudioPanel({
   isOwner: _isOwner,
 }: {
@@ -488,6 +666,7 @@ export default function CardStudioPanel({
   // ---- Phase 1: free layers (image cutouts + text) over the template ----
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
+  const [hideBuiltins, setHideBuiltins] = useState(false);
   const layerFileRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<null | {
     mode: "move" | "resize";
@@ -535,12 +714,25 @@ export default function CardStudioPanel({
     const theme: Theme = def.tint
       ? def
       : { accent: per, dark: "", light: "", tint: false };
-    return cardHtml(tpl, F.w, F.h, d, imgA, imgB, theme, darken, shape, pos, {
-      x: imgX,
-      y: imgY,
-      zoom: imgZoom,
-      header: headerPct,
-    });
+    return cardHtml(
+      tpl,
+      F.w,
+      F.h,
+      d,
+      imgA,
+      imgB,
+      theme,
+      darken,
+      shape,
+      pos,
+      {
+        x: imgX,
+        y: imgY,
+        zoom: imgZoom,
+        header: headerPct,
+      },
+      hideBuiltins,
+    );
   }, [
     tpl,
     F.w,
@@ -556,6 +748,7 @@ export default function CardStudioPanel({
     imgY,
     imgZoom,
     headerPct,
+    hideBuiltins,
   ]);
   const scale = Math.min(480 / F.w, 640 / F.h);
 
@@ -782,7 +975,10 @@ export default function CardStudioPanel({
                 size="sm"
                 variant={tpl === tt.key ? "solid" : "outline"}
                 colorPalette="blue"
-                onClick={() => setTpl(tt.key)}
+                onClick={() => {
+                  setTpl(tt.key);
+                  setHideBuiltins(false);
+                }}
               >
                 {tt.label}
               </Button>
@@ -1107,6 +1303,35 @@ export default function CardStudioPanel({
                 + Text
               </Button>
             </HStack>
+            {tpl !== "blank" && !hideBuiltins && (
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="purple"
+                onClick={() => {
+                  const def = THEMES.find((x) => x.key === themeKey)!.theme;
+                  const per = TEMPLATES.find((x) => x.key === tpl)!.accent;
+                  const acc = def.tint ? def.accent : per;
+                  setLayers((ls) => [
+                    ...ls,
+                    ...templateTextLayers(tpl, d, F, acc),
+                  ]);
+                  setHideBuiltins(true);
+                }}
+              >
+                ✎ Edit built-ins as layers
+              </Button>
+            )}
+            {hideBuiltins && (
+              <Button
+                size="sm"
+                variant="ghost"
+                colorPalette="blue"
+                onClick={() => setHideBuiltins(false)}
+              >
+                ↩ Restore template text
+              </Button>
+            )}
             {layers.length === 0 && (
               <Text fontSize="xs" color="gray.500">
                 No layers yet. Add an image cutout (circle / rounded / rect) or
