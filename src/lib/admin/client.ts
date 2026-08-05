@@ -372,6 +372,11 @@ export interface ContentSuggestion {
     // Deal IMAGE card (format === "image"): the generated graphic + overlay
     // lines (onScreenText carries the overlay text for this format).
     dealImageUrl?: string | null;
+    // Image CARD (DIY, format === "image_card"): the brief the editor uses
+    // to make the image themselves + the recommended aspect ratio. No image
+    // is generated; onScreenText carries the on-image overlay lines.
+    imageBrief?: string;
+    aspect?: string;
     // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
     groundedOn?: { title: string; views?: string }[];
     // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
@@ -385,6 +390,7 @@ export interface ContentSuggestion {
       | "short"
       | "long"
       | "image"
+      | "image_card"
       | "poll"
       | "pinned_comment"
       | "text_post"

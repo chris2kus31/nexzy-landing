@@ -14,6 +14,7 @@ import {
   Spinner,
   Textarea,
 } from "@chakra-ui/react";
+import { FiImage } from "react-icons/fi";
 import {
   getVideoLeads,
   generateFromLead,
@@ -180,7 +181,7 @@ function LeadCard({
     lead?.suggestedWriter || s.author || "Chuy",
   );
   const [format, setFormat] = useState(lead?.suggestedFormat || "short");
-  const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
+  const [busy, setBusy] = useState<"gen" | "skip" | "img" | null>(null);
   const [steer, setSteer] = useState("");
   const [xFormat, setXFormat] = useState(lead?.xFormat || "hot_take");
   const now = useMemo(() => new Date(), []);
@@ -220,6 +221,25 @@ function LeadCard({
         xFormat,
       );
       await reload(); // pick up the queued 'generating' state (or removal)
+    } catch {
+      /* leave the lead in place so you can retry */
+    } finally {
+      setBusy(null);
+    }
+  };
+  // Generate a DIY IMAGE CARD (copy-only, NO AI image) instead of a video card.
+  // Reuses the same generate-from-lead flow with the 'image_card' format.
+  const genImageCard = async () => {
+    setBusy("img");
+    try {
+      await generateFromLead(
+        s.id,
+        writer,
+        "image_card",
+        steer.trim() || undefined,
+        xFormat,
+      );
+      await reload();
     } catch {
       /* leave the lead in place so you can retry */
     } finally {
@@ -459,6 +479,19 @@ function LeadCard({
               disabled={generating}
             >
               {lastError ? "🎬 Retry" : "🎬 Generate"}
+            </Button>
+          )}
+          {isOwner && (
+            <Button
+              size="sm"
+              colorPalette="purple"
+              variant="outline"
+              onClick={genImageCard}
+              loading={busy === "img" || generating}
+              loadingText="Image card…"
+              disabled={generating}
+            >
+              <FiImage /> Image card
             </Button>
           )}
           <Button

@@ -1065,6 +1065,11 @@ function SuggestionCard({
   const isImage = fmt === "image";
   const dealImageUrl = view.payload?.dealImageUrl ?? null;
   const onScreen = view.payload?.onScreenText ?? [];
+  // IMAGE CARD (DIY, format === "image_card"): copy-only — shared image title +
+  // brief + per-platform captions. No image generated, no Produce/Publish/TTS.
+  const isImageCard = fmt === "image_card";
+  const imageBrief = view.payload?.imageBrief ?? "";
+  const aspect = view.payload?.aspect ?? "";
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
@@ -1213,7 +1218,11 @@ function SuggestionCard({
           >
             {collapsed ? "▸" : "▾"}
           </Button>
-          {s.kind === "video" && !produced && !isNonVideo && !isImage && (
+          {s.kind === "video" &&
+            !produced &&
+            !isNonVideo &&
+            !isImage &&
+            !isImageCard && (
             <Button
               size="xs"
               colorPalette="green"
@@ -1275,7 +1284,12 @@ function SuggestionCard({
         </Box>
       )}
 
-      {s.kind === "video" && showProduce && !produced && !isNonVideo && !isImage && (
+      {s.kind === "video" &&
+        showProduce &&
+        !produced &&
+        !isNonVideo &&
+        !isImage &&
+        !isImageCard && (
         <Box
           mb={3}
           p={3}
@@ -1537,6 +1551,69 @@ function SuggestionCard({
         </VStack>
       )}
 
+      {/* IMAGE CARD (DIY): image brief + on-image text + per-platform captions.
+          No image is generated — the brief is what you use to make it yourself. */}
+      {isImageCard && (
+        <VStack align="stretch" gap={3} mb={3}>
+          <Box
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="lg"
+            p={3}
+          >
+            <Flex justify="space-between" align="center" mb={1} gap={2}>
+              <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                📸 IMAGE BRIEF (make this image yourself)
+                {aspect ? ` · ${aspect}` : ""}
+              </Text>
+              {imageBrief && <CopyBtn text={imageBrief} label="Copy" />}
+            </Flex>
+            {imageBrief ? (
+              <Text color="nexzy.white" fontSize="sm" whiteSpace="pre-wrap">
+                {imageBrief}
+              </Text>
+            ) : (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                —
+              </Text>
+            )}
+          </Box>
+          {onScreen.length > 0 && (
+            <Box
+              bg="whiteAlpha.50"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+            >
+              <Flex justify="space-between" align="center" mb={1} gap={2}>
+                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                  ON-IMAGE TEXT (overlay on the image)
+                </Text>
+                <CopyBtn text={onScreen.join("\n")} label="Copy" />
+              </Flex>
+              <VStack align="stretch" gap={0.5}>
+                {onScreen.map((line, i) => (
+                  <Text key={i} color="nexzy.white" fontSize="sm">
+                    {line}
+                  </Text>
+                ))}
+              </VStack>
+            </Box>
+          )}
+          {platforms && (
+            <VStack align="stretch" gap={2}>
+              <KitBlock name="X (Twitter)" kit={platforms.x} />
+              <KitBlock name="Threads" kit={platforms.threads} />
+              <KitBlock name="Instagram" kit={platforms.reels} />
+              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+              <KitBlock name="Facebook" kit={platforms.facebook} />
+            </VStack>
+          )}
+        </VStack>
+      )}
+
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>
         {view.hook && (
@@ -1568,12 +1645,14 @@ function SuggestionCard({
       </VStack>
 
       {/* Publish this card straight to FB/IG Reels + a Threads text post */}
-      {s.kind === "video" && !isNonVideo && !isImage && isOwner && (
-        <PublishBox s={view} />
-      )}
+      {s.kind === "video" &&
+        !isNonVideo &&
+        !isImage &&
+        !isImageCard &&
+        isOwner && <PublishBox s={view} />}
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
-      {!isNonVideo && !isImage && (
+      {!isNonVideo && !isImage && !isImageCard && (
         <Button
           size="xs"
           variant="ghost"
@@ -1589,7 +1668,7 @@ function SuggestionCard({
         </Button>
       )}
 
-      {!isNonVideo && !isImage && showDetails && (
+      {!isNonVideo && !isImage && !isImageCard && showDetails && (
         <>
           {/* Per-platform posting kits */}
           {platforms && (
