@@ -14,7 +14,7 @@
  * Phase 2 will prefill this from a Leads article and save to S3.
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   HStack,
@@ -27,6 +27,7 @@ import {
   Image,
 } from "@chakra-ui/react";
 import { toPng } from "html-to-image";
+import { getPublished, type BlogPost } from "@/lib/admin/client";
 
 type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon";
 type FmtKey = "universal" | "square" | "story" | "wide";
@@ -49,6 +50,16 @@ const FORMATS: Record<FmtKey, { label: string; w: number; h: number }> = {
 
 const NAVY = "#12162b";
 const CREAM = "#F5EFE0";
+
+// which text field an article prefill drops the title into, per template
+const MAIN: Record<TplKey, string> = {
+  news: "headline",
+  review: "title",
+  deal: "title",
+  patch: "title",
+  quote: "quote",
+  soon: "title",
+};
 
 // shared field styling so text is readable on the dark admin panel
 const FIELD = {
@@ -352,6 +363,13 @@ export default function CardStudioPanel({
   const [imgB, setImgB] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    getPublished()
+      .then(setPosts)
+      .catch(() => {});
+  }, []);
 
   const accent = TEMPLATES.find((t) => t.key === tpl)!.accent;
   const F = FORMATS[fmt];
@@ -364,6 +382,11 @@ export default function CardStudioPanel({
 
   function set(key: string, value: string) {
     setData((prev) => ({ ...prev, [tpl]: { ...prev[tpl], [key]: value } }));
+  }
+  function loadFromPost(pst: BlogPost) {
+    if (pst.heroImageUrl)
+      setImgA("/api/admin/img?url=" + encodeURIComponent(pst.heroImageUrl));
+    set(MAIN[tpl], pst.title || "");
   }
   async function download() {
     if (!cardRef.current) return;
@@ -391,6 +414,59 @@ export default function CardStudioPanel({
     <HStack align="flex-start" gap={8} wrap="wrap">
       {/* Controls */}
       <VStack align="stretch" gap={4} w={{ base: "100%", lg: "380px" }}>
+        <Box
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          p={3}
+        >
+          <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
+            START FROM A PUBLISHED ARTICLE
+          </Text>
+          <Input
+            {...FIELD}
+            size="sm"
+            mb={2}
+            placeholder="Search your articles…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+            {posts
+              .filter((pst) =>
+                (pst.title || "").toLowerCase().includes(q.toLowerCase()),
+              )
+              .slice(0, 30)
+              .map((pst) => (
+                <HStack
+                  key={pst.id}
+                  p={2}
+                  borderRadius="md"
+                  cursor="pointer"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  onClick={() => loadFromPost(pst)}
+                >
+                  {pst.heroImageUrl && (
+                    <Image
+                      src={pst.heroImageUrl}
+                      alt=""
+                      boxSize="34px"
+                      objectFit="cover"
+                      borderRadius="sm"
+                    />
+                  )}
+                  <Text fontSize="sm" color="whiteAlpha.900" lineClamp={1}>
+                    {pst.title}
+                  </Text>
+                </HStack>
+              ))}
+            {posts.length === 0 && (
+              <Text fontSize="xs" color="gray.500">
+                No published articles loaded.
+              </Text>
+            )}
+          </VStack>
+        </Box>
         <Box>
           <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
             TEMPLATE
