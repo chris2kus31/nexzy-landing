@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
 import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
+import CardStudioPanel from "@/components/admin/CardStudioPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
 import InsightsPanel from "@/components/admin/InsightsPanel";
 import AudienceInsightsPanel from "@/components/admin/AudienceInsightsPanel";
@@ -29,9 +30,11 @@ type Sub =
   | "library"
   | "performance"
   | "audience"
-  | "guides";
+  | "guides"
+  | "cards";
 
 const SUBS: { key: Sub; label: string }[] = [
+  { key: "cards", label: "Cards" },
   { key: "leads", label: "Leads" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
@@ -47,7 +50,8 @@ function isSub(v: string | null): v is Sub {
     v === "library" ||
     v === "performance" ||
     v === "audience" ||
-    v === "guides"
+    v === "guides" ||
+    v === "cards"
   );
 }
 
@@ -97,6 +101,7 @@ export default function ContentStudioPanel({
         })}
       </HStack>
 
+      {sub === "cards" && <CardStudioPanel isOwner={isOwner} />}
       {sub === "leads" && <LeadsPanel isOwner={isOwner} />}
 
       {sub === "suggestions" && <ContentPanel isOwner={isOwner} />}
