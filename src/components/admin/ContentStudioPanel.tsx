@@ -34,8 +34,8 @@ type Sub =
   | "cards";
 
 const SUBS: { key: Sub; label: string }[] = [
-  { key: "cards", label: "Cards" },
   { key: "leads", label: "Leads" },
+  { key: "cards", label: "Cards" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
   { key: "performance", label: "Performance" },

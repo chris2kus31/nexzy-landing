@@ -102,11 +102,20 @@ function esc(s: string): string {
 function hl(s: string, accent: string): string {
   return esc(s).replace(
     /\[\[(.+?)\]\]/g,
-    `<span style="color:${accent}">$1</span>`,
+    `<span style="${st({ color: accent })}">$1</span>`,
   );
 }
 
 type Data = Record<string, string>;
+
+function st(o: Record<string, string | number>): string {
+  return Object.entries(o)
+    .map(
+      ([key, val]) =>
+        `${key.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${val}`,
+    )
+    .join(";");
+}
 
 function cardHtml(
   tpl: TplKey,
@@ -129,70 +138,66 @@ function cardHtml(
   const accent = t.accent;
   const fit = (s: string, base: number, min: number, per: number) =>
     Math.round(Math.max(min, base - (s || "").length * per) * k);
-
-  // The source image as a framable <img>: object-position pans, scale zooms.
   const scale = Math.max(1.12, frame.zoom / 100);
   const maxOff = (1 - 1 / scale) * 50;
   const tx = ((50 - frame.x) / 50) * maxOff;
   const ty = ((50 - frame.y) / 50) * maxOff;
+
   const imgTag = (filter: string, blend: string, opacity: string) =>
     imgA
-      ? `<img src="${imgA}" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:center;transform:scale(${scale}) translate(${tx}%, ${ty}%);filter:${filter};mix-blend-mode:${blend};opacity:${opacity}"/>`
-      : `<div style="position:absolute;inset:0;background:#1b2140"></div>`;
+      ? `<img src="${imgA}" alt="" style="${st({ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transformOrigin: "center", transform: `scale(${scale}) translate(${tx}%, ${ty}%)`, filter, mixBlendMode: blend, opacity })}"/>`
+      : `<div style="${st({ position: "absolute", inset: 0, background: "#1b2140" })}"></div>`;
 
   const shell = t.tint
-    ? `
-    <div style="position:absolute;inset:0;background:${t.dark}"></div>
+    ? `<div style="${st({ position: "absolute", inset: 0, background: t.dark })}"></div>
     ${imgTag("grayscale(1) contrast(1.2) brightness(1.05)", "screen", "1")}
-    <div style="position:absolute;inset:0;background:${t.light};mix-blend-mode:multiply"></div>
+    <div style="${st({ position: "absolute", inset: 0, background: t.light, mixBlendMode: "multiply" })}"></div>
     ${imgTag("grayscale(1) contrast(1.1)", "soft-light", ".35")}
-    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,6,12,.35),transparent 32%,rgba(4,6,12,.9))"></div>
-    <div style="position:absolute;inset:0;background:rgba(6,8,16,${darken})"></div>`
-    : `
-    ${imgTag("none", "normal", "1")}
-    <div style="position:absolute;inset:0;mix-blend-mode:screen;background:radial-gradient(circle at 80% 12%,rgba(77,163,255,.32),rgba(18,22,43,0) 46%),radial-gradient(circle at 6% 98%,rgba(255,183,77,.2),rgba(18,22,43,0) 46%)"></div>
-    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,22,43,.78),rgba(18,22,43,.1) 32%,rgba(18,22,43,.12) 58%,rgba(18,22,43,.84))"></div>
-    <div style="position:absolute;inset:0;background:rgba(10,13,24,${darken})"></div>`;
+    <div style="${st({ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(4,6,12,.35),transparent 32%,rgba(4,6,12,.9))" })}"></div>
+    <div style="${st({ position: "absolute", inset: 0, background: `rgba(6,8,16,${darken})` })}"></div>`
+    : `${imgTag("none", "normal", "1")}
+    <div style="${st({ position: "absolute", inset: 0, mixBlendMode: "screen", background: "radial-gradient(circle at 80% 12%,rgba(77,163,255,.32),rgba(18,22,43,0) 46%),radial-gradient(circle at 6% 98%,rgba(255,183,77,.2),rgba(18,22,43,0) 46%)" })}"></div>
+    <div style="${st({ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(18,22,43,.78),rgba(18,22,43,.1) 32%,rgba(18,22,43,.12) 58%,rgba(18,22,43,.84))" })}"></div>
+    <div style="${st({ position: "absolute", inset: 0, background: `rgba(10,13,24,${darken})` })}"></div>`;
 
   const chip = (text: string) =>
-    `<span style="font-family:${LABEL};font-weight:700;font-size:${28 * k}px;letter-spacing:${4 * k}px;padding:${9 * k}px ${20 * k}px;border-radius:${10 * k}px;background:${accent};color:#0a1020">${esc(text)}</span>`;
+    `<span style="${st({ fontFamily: LABEL, fontWeight: 700, fontSize: `${28 * k}px`, letterSpacing: `${4 * k}px`, padding: `${9 * k}px ${20 * k}px`, borderRadius: `${10 * k}px`, background: accent, color: "#0a1020" })}">${esc(text)}</span>`;
 
-  const mark = `<img src="/NexzyLogo.png" crossorigin="anonymous" style="position:absolute;bottom:${36 * k}px;right:${44 * k}px;height:${58 * k}px;filter:drop-shadow(0 3px 10px rgba(0,0,0,.6))"/>`;
+  const mark = `<img src="/NexzyLogo.png" alt="" style="${st({ position: "absolute", bottom: `${36 * k}px`, right: `${44 * k}px`, height: `${58 * k}px`, filter: "drop-shadow(0 3px 10px rgba(0,0,0,.6))" })}"/>`;
 
-  let inner = "";
+  let inner: string;
 
   if (tpl === "news") {
     const size = (shape === "square" ? 360 : 340) * k;
     const rad = shape === "square" ? `${28 * k}px` : "50%";
-    let where = `left:${pad}px;bottom:${150 * k}px`;
-    if (pos === "BR") where = `right:${pad}px;bottom:${150 * k}px`;
-    else if (pos === "TR") where = `right:${pad}px;top:${h * 0.42}px`;
-    else if (pos === "ML") where = `left:${pad}px;top:${h * 0.42}px`;
+    let where: Record<string, string> = {
+      left: `${pad}px`,
+      bottom: `${150 * k}px`,
+    };
+    if (pos === "BR") where = { right: `${pad}px`, bottom: `${150 * k}px` };
+    else if (pos === "TR") where = { right: `${pad}px`, top: `${h * 0.42}px` };
+    else if (pos === "ML") where = { left: `${pad}px`, top: `${h * 0.42}px` };
     const circle = imgB
-      ? `<div style="position:absolute;${where};width:${size}px;height:${size}px;border-radius:${rad};border:${6 * k}px solid ${accent};background:#0b1020 url('${imgB}') center/cover;box-shadow:0 ${14 * k}px ${44 * k}px rgba(0,0,0,.55)"></div>`
+      ? `<div style="${st({ position: "absolute", ...where, width: `${size}px`, height: `${size}px`, borderRadius: rad, border: `${6 * k}px solid ${accent}`, background: `#0b1020 url('${imgB}') center/cover`, boxShadow: `0 ${14 * k}px ${44 * k}px rgba(0,0,0,.55)` })}"></div>`
       : "";
-    inner = `
-      <div style="position:absolute;top:${66 * k}px;left:${pad}px;right:${pad}px">
-        ${chip(d.kicker || "NEWS")}<span style="color:${accent};font-size:${34 * k}px;position:relative;top:${2 * k}px;left:${8 * k}px">✦</span>
-        <div style="font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.headline, 80, 46, 0.55)}px;line-height:1.02;text-transform:uppercase;margin-top:${22 * k}px;text-shadow:0 3px 16px rgba(0,0,0,.5)">${hl(d.headline || "", accent)}</div>
-        <div style="font-family:${BODY};color:#c9d4e5;font-size:${24 * k}px;letter-spacing:${2 * k}px;margin-top:${16 * k}px;text-transform:uppercase">${esc(d.source || "")}</div>
+    inner = `<div style="${st({ position: "absolute", top: `${66 * k}px`, left: `${pad}px`, right: `${pad}px` })}">${chip(d.kicker || "NEWS")}<span style="${st({ color: accent, fontSize: `${34 * k}px`, position: "relative", top: `${2 * k}px`, left: `${8 * k}px` })}">✦</span>
+        <div style="${st({ fontFamily: HEAD, fontWeight: 700, color: CREAM, fontSize: `${fit(d.headline, 80, 46, 0.55)}px`, lineHeight: 1.02, textTransform: "uppercase", marginTop: `${22 * k}px`, textShadow: "0 3px 16px rgba(0,0,0,.5)" })}">${hl(d.headline || "", accent)}</div>
+        <div style="${st({ fontFamily: BODY, color: "#c9d4e5", fontSize: `${24 * k}px`, letterSpacing: `${2 * k}px`, marginTop: `${16 * k}px`, textTransform: "uppercase" })}">${esc(d.source || "")}</div>
       </div>${circle}`;
   } else if (tpl === "review") {
-    inner = `
-      <div style="position:absolute;top:${64 * k}px;left:${pad}px">${chip(d.kicker || "REVIEW")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${180 * k}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 74, 40, 0.9)}px;line-height:.98;text-transform:uppercase;max-width:${600 * k}px">${esc(d.title || "")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${125 * k}px;font-family:${BODY};color:#c9d4e5;font-size:${26 * k}px;letter-spacing:${2 * k}px;text-transform:uppercase">${esc(d.cta || "Read the full review →")}</div>
-      <div style="position:absolute;right:${56 * k}px;bottom:${150 * k}px;width:${270 * k}px;height:${270 * k}px;border-radius:50%;background:rgba(6,8,16,.6);border:${6 * k}px solid ${accent};display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 ${12 * k}px ${40 * k}px rgba(0,0,0,.5)">
-        <div style="font-family:${HEAD};font-weight:700;color:${accent};font-size:${150 * k}px;line-height:.8">${esc(d.score || "8")}</div>
-        <div style="font-family:${HEAD};font-weight:700;color:#fff;font-size:${38 * k}px">/ ${esc(d.outof || "10")}</div>
+    inner = `<div style="${st({ position: "absolute", top: `${64 * k}px`, left: `${pad}px` })}">${chip(d.kicker || "REVIEW")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${180 * k}px`, fontFamily: HEAD, fontWeight: 700, color: CREAM, fontSize: `${fit(d.title, 74, 40, 0.9)}px`, lineHeight: 0.98, textTransform: "uppercase", maxWidth: `${600 * k}px` })}">${esc(d.title || "")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${125 * k}px`, fontFamily: BODY, color: "#c9d4e5", fontSize: `${26 * k}px`, letterSpacing: `${2 * k}px`, textTransform: "uppercase" })}">${esc(d.cta || "Read the full review →")}</div>
+      <div style="${st({ position: "absolute", right: `${56 * k}px`, bottom: `${150 * k}px`, width: `${270 * k}px`, height: `${270 * k}px`, borderRadius: "50%", background: "rgba(6,8,16,.6)", border: `${6 * k}px solid ${accent}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 ${12 * k}px ${40 * k}px rgba(0,0,0,.5)` })}">
+        <div style="${st({ fontFamily: HEAD, fontWeight: 700, color: accent, fontSize: `${150 * k}px`, lineHeight: 0.8 })}">${esc(d.score || "8")}</div>
+        <div style="${st({ fontFamily: HEAD, fontWeight: 700, color: "#fff", fontSize: `${38 * k}px` })}">/ ${esc(d.outof || "10")}</div>
       </div>`;
   } else if (tpl === "deal") {
-    inner = `
-      <div style="position:absolute;top:${150 * k}px;right:${56 * k}px;transform:rotate(6deg);background:${accent};color:#0a1020;font-family:${HEAD};font-weight:700;font-size:${84 * k}px;padding:${6 * k}px ${24 * k}px;border-radius:${16 * k}px;box-shadow:0 ${12 * k}px ${34 * k}px rgba(0,0,0,.4)">${esc(d.pct || "-67%")}</div>
-      <div style="position:absolute;top:${64 * k}px;left:${pad}px">${chip(d.kicker || "DEAL ALERT")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${290 * k}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 78, 42, 0.8)}px;text-transform:uppercase">${esc(d.title || "")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${215 * k}px;font-family:${HEAD};font-size:${60 * k}px;color:#fff"><span style="text-decoration:line-through;color:#8b98b5;font-size:${44 * k}px">${esc(d.oldPrice || "")}</span> &nbsp;<b style="color:${accent}">${esc(d.newPrice || "")}</b></div>
-      <div style="position:absolute;left:${pad}px;bottom:${125 * k}px"><span style="font-family:${LABEL};font-weight:700;font-size:${26 * k}px;letter-spacing:${2 * k}px;padding:${12 * k}px ${24 * k}px;border-radius:${12 * k}px;background:${accent};color:#0a1020">⚡ ${esc(d.cta || "Grab the deal →")}</span></div>`;
+    inner = `<div style="${st({ position: "absolute", top: `${150 * k}px`, right: `${56 * k}px`, transform: "rotate(6deg)", background: accent, color: "#0a1020", fontFamily: HEAD, fontWeight: 700, fontSize: `${84 * k}px`, padding: `${6 * k}px ${24 * k}px`, borderRadius: `${16 * k}px`, boxShadow: `0 ${12 * k}px ${34 * k}px rgba(0,0,0,.4)` })}">${esc(d.pct || "-67%")}</div>
+      <div style="${st({ position: "absolute", top: `${64 * k}px`, left: `${pad}px` })}">${chip(d.kicker || "DEAL ALERT")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${290 * k}px`, fontFamily: HEAD, fontWeight: 700, color: CREAM, fontSize: `${fit(d.title, 78, 42, 0.8)}px`, textTransform: "uppercase" })}">${esc(d.title || "")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${215 * k}px`, fontFamily: HEAD, fontSize: `${60 * k}px`, color: "#fff" })}"><span style="${st({ textDecoration: "line-through", color: "#8b98b5", fontSize: `${44 * k}px` })}">${esc(d.oldPrice || "")}</span> &nbsp;<b style="${st({ color: accent })}">${esc(d.newPrice || "")}</b></div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${125 * k}px` })}"><span style="${st({ fontFamily: LABEL, fontWeight: 700, fontSize: `${26 * k}px`, letterSpacing: `${2 * k}px`, padding: `${12 * k}px ${24 * k}px`, borderRadius: `${12 * k}px`, background: accent, color: "#0a1020" })}">⚡ ${esc(d.cta || "Grab the deal →")}</span></div>`;
   } else if (tpl === "patch") {
     const notes = (d.notes || "")
       .split("\n")
@@ -202,33 +207,30 @@ function cardHtml(
     const list = notes
       .map(
         (n) =>
-          `<div style="display:flex;gap:${20 * k}px;margin-bottom:${26 * k}px;align-items:flex-start"><div style="flex:0 0 ${16 * k}px;width:${16 * k}px;height:${16 * k}px;background:${accent};transform:rotate(45deg);margin-top:${12 * k}px"></div><div style="font-family:${BODY};color:#eaf1fb;font-size:${34 * k}px;line-height:1.35">${esc(n)}</div></div>`,
+          `<div style="${st({ display: "flex", gap: `${20 * k}px`, marginBottom: `${26 * k}px`, alignItems: "flex-start" })}"><div style="${st({ flex: `0 0 ${16 * k}px`, width: `${16 * k}px`, height: `${16 * k}px`, background: accent, transform: "rotate(45deg)", marginTop: `${12 * k}px` })}"></div><div style="${st({ fontFamily: BODY, color: "#eaf1fb", fontSize: `${34 * k}px`, lineHeight: 1.35 })}">${esc(n)}</div></div>`,
       )
       .join("");
-    inner = `
-      <div style="position:absolute;left:0;right:0;top:${frame.header}%;bottom:0;background:linear-gradient(180deg,transparent,${NAVY} 12%,${NAVY})"></div>
-      <div style="position:absolute;top:${56 * k}px;left:${pad}px">${chip(d.kicker || "PATCH NOTES")}</div>
-      <div style="position:absolute;top:${frame.header + 4}%;left:${pad}px;right:${pad}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 64, 40, 0.5)}px;text-transform:uppercase;line-height:1.02">${esc(d.title || "")} <span style="color:${accent}">· ${esc(d.version || "v1.0")}</span></div>
-      <div style="position:absolute;top:${frame.header + 20}%;left:${pad}px;right:${pad}px">${list}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${70 * k}px;font-family:${LABEL};font-weight:700;color:${accent};font-size:${30 * k}px;letter-spacing:${2 * k}px">${esc(d.cta || "+ Read the full patch notes on Nexzy →")}</div>`;
+    inner = `<div style="${st({ position: "absolute", left: 0, right: 0, top: `${frame.header}%`, bottom: 0, background: `linear-gradient(180deg,transparent,${NAVY} 12%,${NAVY})` })}"></div>
+      <div style="${st({ position: "absolute", top: `${56 * k}px`, left: `${pad}px` })}">${chip(d.kicker || "PATCH NOTES")}</div>
+      <div style="${st({ position: "absolute", top: `${frame.header + 4}%`, left: `${pad}px`, right: `${pad}px`, fontFamily: HEAD, fontWeight: 700, color: CREAM, fontSize: `${fit(d.title, 64, 40, 0.5)}px`, textTransform: "uppercase", lineHeight: 1.02 })}">${esc(d.title || "")} <span style="${st({ color: accent })}">· ${esc(d.version || "v1.0")}</span></div>
+      <div style="${st({ position: "absolute", top: `${frame.header + 20}%`, left: `${pad}px`, right: `${pad}px` })}">${list}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${70 * k}px`, fontFamily: LABEL, fontWeight: 700, color: accent, fontSize: `${30 * k}px`, letterSpacing: `${2 * k}px` })}">${esc(d.cta || "+ Read the full patch notes on Nexzy →")}</div>`;
   } else if (tpl === "quote") {
-    inner = `
-      <div style="position:absolute;left:${pad}px;top:${140 * k}px;font-family:${HEAD};font-weight:700;font-size:${300 * k}px;color:${accent};opacity:.9;line-height:.6">“</div>
-      <div style="position:absolute;top:${120 * k}px;right:${56 * k}px;transform:rotate(-4deg);background:#0a0d18;border:${3 * k}px solid ${accent};padding:${8 * k}px ${20 * k}px"><span style="font-family:${LABEL};font-weight:700;font-size:${28 * k}px;letter-spacing:${6 * k}px;color:${accent}">${esc(d.kicker || "HOT TAKE")}</span></div>
-      <div style="position:absolute;left:${pad}px;right:${70 * k}px;top:${360 * k}px;font-family:${HEAD};font-weight:700;color:#fff;font-size:${fit(d.quote, 92, 44, 0.55)}px;line-height:1.04">${hl(d.quote || "", accent)}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${150 * k}px;display:flex;align-items:center;gap:${26 * k}px">
-        ${imgB ? `<div style="width:${130 * k}px;height:${130 * k}px;border-radius:50%;border:${4 * k}px solid ${accent};background:#1b2140 url('${imgB}') center/cover"></div>` : ""}
-        <div><div style="font-family:${HEAD};font-weight:700;color:${accent};font-size:${44 * k}px;text-transform:uppercase">${esc(d.attr || "")}</div><div style="font-family:${BODY};color:#c9d4e5;font-size:${24 * k}px;letter-spacing:${2 * k}px;text-transform:uppercase">${esc(d.source || "")}</div></div>
+    inner = `<div style="${st({ position: "absolute", left: `${pad}px`, top: `${140 * k}px`, fontFamily: HEAD, fontWeight: 700, fontSize: `${300 * k}px`, color: accent, opacity: 0.9, lineHeight: 0.6 })}">“</div>
+      <div style="${st({ position: "absolute", top: `${120 * k}px`, right: `${56 * k}px`, transform: "rotate(-4deg)", background: "#0a0d18", border: `${3 * k}px solid ${accent}`, padding: `${8 * k}px ${20 * k}px` })}"><span style="${st({ fontFamily: LABEL, fontWeight: 700, fontSize: `${28 * k}px`, letterSpacing: `${6 * k}px`, color: accent })}">${esc(d.kicker || "HOT TAKE")}</span></div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, right: `${70 * k}px`, top: `${360 * k}px`, fontFamily: HEAD, fontWeight: 700, color: "#fff", fontSize: `${fit(d.quote, 92, 44, 0.55)}px`, lineHeight: 1.04 })}">${hl(d.quote || "", accent)}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${150 * k}px`, display: "flex", alignItems: "center", gap: `${26 * k}px` })}">
+        ${imgB ? `<div style="${st({ width: `${130 * k}px`, height: `${130 * k}px`, borderRadius: "50%", border: `${4 * k}px solid ${accent}`, background: `#1b2140 url('${imgB}') center/cover` })}"></div>` : ""}
+        <div><div style="${st({ fontFamily: HEAD, fontWeight: 700, color: accent, fontSize: `${44 * k}px`, textTransform: "uppercase" })}">${esc(d.attr || "")}</div><div style="${st({ fontFamily: BODY, color: "#c9d4e5", fontSize: `${24 * k}px`, letterSpacing: `${2 * k}px`, textTransform: "uppercase" })}">${esc(d.source || "")}</div></div>
       </div>`;
   } else {
-    inner = `
-      <div style="position:absolute;top:${64 * k}px;left:${pad}px">${chip(d.kicker || "COMING SOON")}</div>
-      <div style="position:absolute;left:${pad}px;right:${pad}px;bottom:${300 * k}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 76, 42, 0.8)}px;text-transform:uppercase;line-height:1">${esc(d.title || "")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${215 * k}px;font-family:${HEAD};font-weight:700;color:#fff;font-size:${64 * k}px">📅 ${esc(d.date || "")}</div>
-      <div style="position:absolute;left:${pad}px;bottom:${125 * k}px"><span style="font-family:${LABEL};font-weight:700;font-size:${26 * k}px;letter-spacing:${2 * k}px;padding:${12 * k}px ${24 * k}px;border-radius:${12 * k}px;background:${accent};color:#0a1020">${esc(d.cta || "Wishlist it now →")}</span></div>`;
+    inner = `<div style="${st({ position: "absolute", top: `${64 * k}px`, left: `${pad}px` })}">${chip(d.kicker || "COMING SOON")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, right: `${pad}px`, bottom: `${300 * k}px`, fontFamily: HEAD, fontWeight: 700, color: CREAM, fontSize: `${fit(d.title, 76, 42, 0.8)}px`, textTransform: "uppercase", lineHeight: 1 })}">${esc(d.title || "")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${215 * k}px`, fontFamily: HEAD, fontWeight: 700, color: "#fff", fontSize: `${64 * k}px` })}">📅 ${esc(d.date || "")}</div>
+      <div style="${st({ position: "absolute", left: `${pad}px`, bottom: `${125 * k}px` })}"><span style="${st({ fontFamily: LABEL, fontWeight: 700, fontSize: `${26 * k}px`, letterSpacing: `${2 * k}px`, padding: `${12 * k}px ${24 * k}px`, borderRadius: `${12 * k}px`, background: accent, color: "#0a1020" })}">${esc(d.cta || "Wishlist it now →")}</span></div>`;
   }
 
-  return `<div style="position:relative;width:${w}px;height:${h}px;overflow:hidden;background:${NAVY};font-family:${BODY}">${shell}${inner}${mark}</div>`;
+  return `<div style="${st({ position: "relative", width: `${w}px`, height: `${h}px`, overflow: "hidden", background: NAVY, fontFamily: BODY })}">${shell}${inner}${mark}</div>`;
 }
 
 const DEFAULTS: Record<TplKey, Data> = {
@@ -516,7 +518,10 @@ export default function CardStudioPanel({
         pixelRatio: 2,
         cacheBust: true,
       });
-      if (!blob) throw new Error("no blob");
+      if (!blob) {
+        alert("Copy failed — try Download instead.");
+        return;
+      }
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
       ]);
