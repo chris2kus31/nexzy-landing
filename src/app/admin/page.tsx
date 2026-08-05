@@ -22,6 +22,7 @@ import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import GameHubPanel from "@/components/admin/GameHubPanel";
 import NotifyPanel from "@/components/admin/NotifyPanel";
+import TrendingPanel from "@/components/admin/TrendingPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
 import ContentStudioPanel from "@/components/admin/ContentStudioPanel";
 import BackfillAuthorsButton from "@/components/admin/BackfillAuthorsButton";
@@ -54,7 +55,8 @@ type Tab =
   | "gamehub"
   | "writers"
   | "tools"
-  | "notify";
+  | "notify"
+  | "trending";
 
 function StatCard({
   label,
@@ -330,6 +332,13 @@ function AdminContent() {
           )}
           {isOwner && (
             <TabButton
+              label="Trending"
+              active={tab === "trending"}
+              onClick={() => setTab("trending")}
+            />
+          )}
+          {isOwner && (
+            <TabButton
               label="Notify"
               active={tab === "notify"}
               onClick={() => setTab("notify")}
@@ -435,6 +444,8 @@ function AdminContent() {
       {tab === "gamehub" && <GameHubPanel />}
 
       {tab === "writers" && isOwner && <WritersPanel />}
+
+      {tab === "trending" && isOwner && <TrendingPanel />}
 
       {tab === "notify" && isOwner && <NotifyPanel />}
 

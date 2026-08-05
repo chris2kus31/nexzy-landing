@@ -1520,6 +1520,49 @@ export type AdminNotifDest = {
   url?: string;
 };
 
+/** One live trending gaming search topic (Trending tab radar). */
+export type TrendingTopic = {
+  query: string;
+  searchVolume: number;
+  increasePct: number;
+  active: boolean;
+  related: string[];
+  categories: string[];
+};
+
+export async function getTrendingNow(opts?: {
+  hours?: number;
+  geo?: string;
+  force?: boolean;
+}): Promise<{ topics: TrendingTopic[]; enabled: boolean }> {
+  const p = new URLSearchParams();
+  if (opts?.hours) p.set("hours", String(opts.hours));
+  if (opts?.geo) p.set("geo", opts.geo);
+  if (opts?.force) p.set("force", "1");
+  const qs = p.toString();
+  return handle(
+    await fetch(`/api/newsroom/admin/trending${qs ? `?${qs}` : ""}`),
+  );
+}
+
+export async function makeLeadFromTrend(payload: {
+  term: string;
+  beat?: string;
+  angle?: string;
+  notes?: string;
+  sourceUrl?: string;
+  context?: string;
+  writeNow?: boolean;
+}): Promise<{ leadId?: string; queued?: boolean }> {
+  return handle(
+    await fetch("/api/newsroom/admin/trending/make-lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
 export async function getNotificationAudience(
   type: AdminNotifType = "engagement",
 ): Promise<{ count: number }> {
