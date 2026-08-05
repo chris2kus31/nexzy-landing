@@ -440,6 +440,9 @@ export default function CardStudioPanel({
   const [busy, setBusy] = useState(false);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [q, setQ] = useState("");
+  const [panelTab, setPanelTab] = useState<"content" | "design" | "image">(
+    "content",
+  );
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -534,61 +537,8 @@ export default function CardStudioPanel({
 
   return (
     <HStack align="flex-start" gap={8} wrap="wrap">
-      <VStack align="stretch" gap={4} w={{ base: "100%", lg: "380px" }}>
-        <Box
-          borderWidth="1px"
-          borderColor="whiteAlpha.200"
-          borderRadius="lg"
-          p={3}
-        >
-          <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
-            START FROM A PUBLISHED ARTICLE
-          </Text>
-          <Input
-            {...FIELD}
-            size="sm"
-            mb={2}
-            placeholder="Search your articles…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
-            {posts
-              .filter((pst) =>
-                (pst.title || "").toLowerCase().includes(q.toLowerCase()),
-              )
-              .slice(0, 30)
-              .map((pst) => (
-                <HStack
-                  key={pst.id}
-                  p={2}
-                  borderRadius="md"
-                  cursor="pointer"
-                  _hover={{ bg: "whiteAlpha.100" }}
-                  onClick={() => loadFromPost(pst)}
-                >
-                  {pst.heroImageUrl && (
-                    <Image
-                      src={pst.heroImageUrl}
-                      alt=""
-                      boxSize="34px"
-                      objectFit="cover"
-                      borderRadius="sm"
-                    />
-                  )}
-                  <Text fontSize="sm" color="whiteAlpha.900" lineClamp={1}>
-                    {pst.title}
-                  </Text>
-                </HStack>
-              ))}
-            {posts.length === 0 && (
-              <Text fontSize="xs" color="gray.500">
-                No published articles loaded.
-              </Text>
-            )}
-          </VStack>
-        </Box>
-
+      <VStack align="stretch" gap={4} w={{ base: "100%", lg: "400px" }}>
+        {/* Template — always visible */}
         <Box>
           <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
             TEMPLATE
@@ -608,209 +558,324 @@ export default function CardStudioPanel({
           </HStack>
         </Box>
 
-        <Box>
-          <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
-            COLOR — grades the image into a Nexzy tone
-          </Text>
-          <HStack wrap="wrap" gap={3}>
-            {THEMES.map((th) => (
-              <VStack
-                key={th.key}
-                gap={1}
-                onClick={() => setThemeKey(th.key)}
-                cursor="pointer"
-              >
-                <Box
-                  boxSize="32px"
-                  borderRadius="full"
-                  style={{ background: th.sw }}
-                  borderWidth="2px"
-                  borderColor={themeKey === th.key ? "white" : "transparent"}
-                />
-                <Text fontSize="10px" color="gray.400">
-                  {th.label}
-                </Text>
-              </VStack>
-            ))}
-          </HStack>
-        </Box>
+        {/* Group switcher */}
+        <HStack
+          gap={2}
+          borderBottomWidth="1px"
+          borderColor="whiteAlpha.200"
+          pb={3}
+        >
+          {(
+            [
+              ["content", "Content"],
+              ["design", "Design"],
+              ["image", "Image"],
+            ] as const
+          ).map(([key, label]) => (
+            <Button
+              key={key}
+              flex="1"
+              size="sm"
+              variant={panelTab === key ? "solid" : "ghost"}
+              colorPalette="blue"
+              onClick={() => setPanelTab(key)}
+            >
+              {label}
+            </Button>
+          ))}
+        </HStack>
 
-        <Box>
-          <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
-            FORMAT
-          </Text>
-          <HStack wrap="wrap" gap={2}>
-            {(Object.keys(FORMATS) as FmtKey[]).map((f) => (
-              <Button
-                key={f}
-                size="sm"
-                variant={fmt === f ? "solid" : "outline"}
-                colorPalette={f === "universal" ? "purple" : "blue"}
-                onClick={() => setFmt(f)}
-              >
-                {FORMATS[f].label}
-              </Button>
-            ))}
-          </HStack>
-        </Box>
-
-        <ImageDrop label="IMAGE" value={imgA} onChange={setImgA} />
-        {(tpl === "news" || tpl === "quote") && (
-          <ImageDrop
-            label={
-              tpl === "news"
-                ? "Second image (circle/square inset)"
-                : "Headshot (optional)"
-            }
-            value={imgB}
-            onChange={setImgB}
-          />
-        )}
-
-        {tpl === "news" && imgB && (
-          <Box>
-            <Text fontSize="xs" color="gray.400" mb={1}>
-              Inset shape &amp; position
-            </Text>
-            <HStack gap={2} mb={2}>
-              {(["circle", "square"] as Shape[]).map((sh) => (
-                <Button
-                  key={sh}
-                  size="xs"
-                  variant={shape === sh ? "solid" : "outline"}
-                  colorPalette="blue"
-                  onClick={() => setShape(sh)}
-                >
-                  {sh}
-                </Button>
-              ))}
-            </HStack>
-            <HStack gap={2} wrap="wrap">
-              {POSN.map((pp) => (
-                <Button
-                  key={pp.key}
-                  size="xs"
-                  variant={pos === pp.key ? "solid" : "outline"}
-                  colorPalette="blue"
-                  onClick={() => setPos(pp.key)}
-                >
-                  {pp.label}
-                </Button>
-              ))}
-            </HStack>
-          </Box>
-        )}
-
-        <Box>
-          <Text fontSize="xs" color="gray.400" mb={1}>
-            Darken image · {Math.round(darken * 100)}% (raise for busy images)
-          </Text>
-          <input
-            type="range"
-            min={0}
-            max={85}
-            value={Math.round(darken * 100)}
-            onChange={(e) => setDarken(Number(e.target.value) / 100)}
-            style={{ width: "100%" }}
-          />
-        </Box>
-
-        {imgA && (
-          <Box>
-            <Text fontSize="xs" color="gray.400" mb={1}>
-              Image framing (position the game so it shows)
-            </Text>
-            <HStack gap={3}>
-              <VStack gap={0} flex="1" align="stretch">
-                <Text fontSize="10px" color="gray.500">
-                  Up / Down
-                </Text>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={imgY}
-                  onChange={(e) => setImgY(Number(e.target.value))}
-                />
-              </VStack>
-              <VStack gap={0} flex="1" align="stretch">
-                <Text fontSize="10px" color="gray.500">
-                  Left / Right
-                </Text>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={imgX}
-                  onChange={(e) => setImgX(Number(e.target.value))}
-                />
-              </VStack>
-              <VStack gap={0} flex="1" align="stretch">
-                <Text fontSize="10px" color="gray.500">
-                  Zoom
-                </Text>
-                <input
-                  type="range"
-                  min={100}
-                  max={220}
-                  value={imgZoom}
-                  onChange={(e) => setImgZoom(Number(e.target.value))}
-                />
-              </VStack>
-            </HStack>
-          </Box>
-        )}
-        {tpl === "patch" && (
-          <Box>
-            <Text fontSize="xs" color="gray.400" mb={1}>
-              Header image height · {headerPct}%
-            </Text>
-            <input
-              type="range"
-              min={28}
-              max={55}
-              value={headerPct}
-              onChange={(e) => setHeaderPct(Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
-          </Box>
-        )}
-
-        {FIELDS[tpl].map((f) => (
-          <Box key={f.key}>
-            <Text fontSize="xs" color="gray.400" mb={1}>
-              {f.label}
-            </Text>
-            {f.area ? (
-              <Textarea
-                {...FIELD}
-                value={d[f.key] || ""}
-                rows={3}
-                onChange={(e) => set(f.key, e.target.value)}
-              />
-            ) : (
+        {/* CONTENT */}
+        {panelTab === "content" && (
+          <VStack align="stretch" gap={4}>
+            <Box
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={3}
+            >
+              <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
+                START FROM A PUBLISHED ARTICLE
+              </Text>
               <Input
                 {...FIELD}
-                value={d[f.key] || ""}
-                onChange={(e) => set(f.key, e.target.value)}
+                size="sm"
+                mb={2}
+                placeholder="Search your articles…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+                {posts
+                  .filter((pst) =>
+                    (pst.title || "").toLowerCase().includes(q.toLowerCase()),
+                  )
+                  .slice(0, 30)
+                  .map((pst) => (
+                    <HStack
+                      key={pst.id}
+                      p={2}
+                      borderRadius="md"
+                      cursor="pointer"
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() => loadFromPost(pst)}
+                    >
+                      {pst.heroImageUrl && (
+                        <Image
+                          src={pst.heroImageUrl}
+                          alt=""
+                          boxSize="34px"
+                          objectFit="cover"
+                          borderRadius="sm"
+                        />
+                      )}
+                      <Text fontSize="sm" color="whiteAlpha.900" lineClamp={1}>
+                        {pst.title}
+                      </Text>
+                    </HStack>
+                  ))}
+                {posts.length === 0 && (
+                  <Text fontSize="xs" color="gray.500">
+                    No published articles loaded.
+                  </Text>
+                )}
+              </VStack>
+            </Box>
+
+            {FIELDS[tpl].map((f) => (
+              <Box key={f.key}>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  {f.label}
+                </Text>
+                {f.area ? (
+                  <Textarea
+                    {...FIELD}
+                    value={d[f.key] || ""}
+                    rows={3}
+                    onChange={(e) => set(f.key, e.target.value)}
+                  />
+                ) : (
+                  <Input
+                    {...FIELD}
+                    value={d[f.key] || ""}
+                    onChange={(e) => set(f.key, e.target.value)}
+                  />
+                )}
+              </Box>
+            ))}
+          </VStack>
+        )}
+
+        {/* DESIGN */}
+        {panelTab === "design" && (
+          <VStack align="stretch" gap={4}>
+            <Box>
+              <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
+                COLOR — grades the image into a Nexzy tone
+              </Text>
+              <HStack wrap="wrap" gap={3}>
+                {THEMES.map((th) => (
+                  <VStack
+                    key={th.key}
+                    gap={1}
+                    onClick={() => setThemeKey(th.key)}
+                    cursor="pointer"
+                  >
+                    <Box
+                      boxSize="32px"
+                      borderRadius="full"
+                      style={{ background: th.sw }}
+                      borderWidth="2px"
+                      borderColor={
+                        themeKey === th.key ? "white" : "transparent"
+                      }
+                    />
+                    <Text fontSize="10px" color="gray.400">
+                      {th.label}
+                    </Text>
+                  </VStack>
+                ))}
+              </HStack>
+            </Box>
+
+            <Box>
+              <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
+                FORMAT
+              </Text>
+              <HStack wrap="wrap" gap={2}>
+                {(Object.keys(FORMATS) as FmtKey[]).map((f) => (
+                  <Button
+                    key={f}
+                    size="sm"
+                    variant={fmt === f ? "solid" : "outline"}
+                    colorPalette={f === "universal" ? "purple" : "blue"}
+                    onClick={() => setFmt(f)}
+                  >
+                    {FORMATS[f].label}
+                  </Button>
+                ))}
+              </HStack>
+            </Box>
+
+            <Box>
+              <Text fontSize="xs" color="gray.400" mb={1}>
+                Darken image · {Math.round(darken * 100)}% (raise for busy
+                images)
+              </Text>
+              <input
+                type="range"
+                min={0}
+                max={85}
+                value={Math.round(darken * 100)}
+                onChange={(e) => setDarken(Number(e.target.value) / 100)}
+                style={{ width: "100%" }}
+              />
+            </Box>
+          </VStack>
+        )}
+
+        {/* IMAGE */}
+        {panelTab === "image" && (
+          <VStack align="stretch" gap={4}>
+            <ImageDrop label="IMAGE" value={imgA} onChange={setImgA} />
+            {(tpl === "news" || tpl === "quote") && (
+              <ImageDrop
+                label={
+                  tpl === "news"
+                    ? "Second image (circle/square inset)"
+                    : "Headshot (optional)"
+                }
+                value={imgB}
+                onChange={setImgB}
               />
             )}
-          </Box>
-        ))}
 
-        <Button colorPalette="blue" onClick={download} loading={busy} size="lg">
-          ⬇ Download PNG · {FORMATS[fmt].label}
-        </Button>
-        <Button
-          variant="outline"
-          colorPalette="blue"
-          onClick={copyToClipboard}
-          size="sm"
+            {tpl === "news" && imgB && (
+              <Box>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  Inset shape &amp; position
+                </Text>
+                <HStack gap={2} mb={2}>
+                  {(["circle", "square"] as Shape[]).map((sh) => (
+                    <Button
+                      key={sh}
+                      size="xs"
+                      variant={shape === sh ? "solid" : "outline"}
+                      colorPalette="blue"
+                      onClick={() => setShape(sh)}
+                    >
+                      {sh}
+                    </Button>
+                  ))}
+                </HStack>
+                <HStack gap={2} wrap="wrap">
+                  {POSN.map((pp) => (
+                    <Button
+                      key={pp.key}
+                      size="xs"
+                      variant={pos === pp.key ? "solid" : "outline"}
+                      colorPalette="blue"
+                      onClick={() => setPos(pp.key)}
+                    >
+                      {pp.label}
+                    </Button>
+                  ))}
+                </HStack>
+              </Box>
+            )}
+
+            {imgA && (
+              <Box>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  Image framing (position the game so it shows)
+                </Text>
+                <HStack gap={3}>
+                  <VStack gap={0} flex="1" align="stretch">
+                    <Text fontSize="10px" color="gray.500">
+                      Up / Down
+                    </Text>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={imgY}
+                      onChange={(e) => setImgY(Number(e.target.value))}
+                    />
+                  </VStack>
+                  <VStack gap={0} flex="1" align="stretch">
+                    <Text fontSize="10px" color="gray.500">
+                      Left / Right
+                    </Text>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={imgX}
+                      onChange={(e) => setImgX(Number(e.target.value))}
+                    />
+                  </VStack>
+                  <VStack gap={0} flex="1" align="stretch">
+                    <Text fontSize="10px" color="gray.500">
+                      Zoom
+                    </Text>
+                    <input
+                      type="range"
+                      min={100}
+                      max={220}
+                      value={imgZoom}
+                      onChange={(e) => setImgZoom(Number(e.target.value))}
+                    />
+                  </VStack>
+                </HStack>
+              </Box>
+            )}
+
+            {tpl === "patch" && (
+              <Box>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  Header image height · {headerPct}%
+                </Text>
+                <input
+                  type="range"
+                  min={28}
+                  max={55}
+                  value={headerPct}
+                  onChange={(e) => setHeaderPct(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </Box>
+            )}
+          </VStack>
+        )}
+
+        {/* Export — always visible */}
+        <VStack
+          align="stretch"
+          gap={2}
+          pt={3}
+          borderTopWidth="1px"
+          borderColor="whiteAlpha.200"
         >
-          ⧉ Copy to clipboard
-        </Button>
+          <Button
+            colorPalette="blue"
+            onClick={download}
+            loading={busy}
+            size="lg"
+          >
+            ⬇ Download PNG · {FORMATS[fmt].label}
+          </Button>
+          <Button
+            variant="outline"
+            colorPalette="blue"
+            onClick={copyToClipboard}
+            size="sm"
+          >
+            ⧉ Copy to clipboard
+          </Button>
+        </VStack>
       </VStack>
 
+      {/* Preview */}
       <VStack align="center" flex="1" minW="320px" position="sticky" top="16px">
         <Heading size="sm" color="gray.400" mb={2}>
           Preview
