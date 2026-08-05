@@ -23,7 +23,7 @@ import {
   Textarea,
   Image,
 } from "@chakra-ui/react";
-import { toPng } from "html-to-image";
+import { toPng, toBlob } from "html-to-image";
 import { getPublished, type BlogPost } from "@/lib/admin/client";
 
 type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon";
@@ -119,6 +119,7 @@ function cardHtml(
   darken: number,
   shape: Shape,
   pos: Pos,
+  frame: { x: number; y: number; zoom: number; header: number },
 ): string {
   const k = w / 1080;
   const HEAD = "var(--font-chakra-petch), var(--font-inter), sans-serif";
@@ -126,22 +127,25 @@ function cardHtml(
   const BODY = "var(--font-inter), system-ui, sans-serif";
   const pad = Math.round(60 * k);
   const accent = t.accent;
-  const bg = imgA ? `url('${imgA}')` : "#1b2140";
   const fit = (s: string, base: number, min: number, per: number) =>
     Math.round(Math.max(min, base - (s || "").length * per) * k);
 
-  // Background treatment: duotone (tint) grades the image into the palette but
-  // keeps its detail; "original" keeps the photo's own colors with the glow.
+  // The source image as a framable <img>: object-position pans, scale zooms.
+  const imgTag = (filter: string, blend: string, opacity: string) =>
+    imgA
+      ? `<img src="${imgA}" crossorigin="anonymous" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${frame.x}% ${frame.y}%;transform:scale(${frame.zoom / 100});transform-origin:${frame.x}% ${frame.y}%;filter:${filter};mix-blend-mode:${blend};opacity:${opacity}"/>`
+      : `<div style="position:absolute;inset:0;background:#1b2140"></div>`;
+
   const shell = t.tint
     ? `
     <div style="position:absolute;inset:0;background:${t.dark}"></div>
-    <div style="position:absolute;inset:0;background:${bg} center/cover;filter:grayscale(1) contrast(1.2) brightness(1.05);mix-blend-mode:screen"></div>
+    ${imgTag("grayscale(1) contrast(1.2) brightness(1.05)", "screen", "1")}
     <div style="position:absolute;inset:0;background:${t.light};mix-blend-mode:multiply"></div>
-    <div style="position:absolute;inset:0;background:${bg} center/cover;filter:grayscale(1) contrast(1.1);mix-blend-mode:soft-light;opacity:.35"></div>
+    ${imgTag("grayscale(1) contrast(1.1)", "soft-light", ".35")}
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,6,12,.35),transparent 32%,rgba(4,6,12,.9))"></div>
     <div style="position:absolute;inset:0;background:rgba(6,8,16,${darken})"></div>`
     : `
-    <div style="position:absolute;inset:0;background:${bg} center/cover"></div>
+    ${imgTag("none", "normal", "1")}
     <div style="position:absolute;inset:0;mix-blend-mode:screen;background:radial-gradient(circle at 80% 12%,rgba(77,163,255,.32),rgba(18,22,43,0) 46%),radial-gradient(circle at 6% 98%,rgba(255,183,77,.2),rgba(18,22,43,0) 46%)"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,22,43,.78),rgba(18,22,43,.1) 32%,rgba(18,22,43,.12) 58%,rgba(18,22,43,.84))"></div>
     <div style="position:absolute;inset:0;background:rgba(10,13,24,${darken})"></div>`;
@@ -198,10 +202,10 @@ function cardHtml(
       )
       .join("");
     inner = `
-      <div style="position:absolute;left:0;right:0;top:36%;bottom:0;background:linear-gradient(180deg,transparent,${NAVY} 12%,${NAVY})"></div>
+      <div style="position:absolute;left:0;right:0;top:${frame.header}%;bottom:0;background:linear-gradient(180deg,transparent,${NAVY} 12%,${NAVY})"></div>
       <div style="position:absolute;top:${56 * k}px;left:${pad}px">${chip(d.kicker || "PATCH NOTES")}</div>
-      <div style="position:absolute;top:${h * 0.4}px;left:${pad}px;right:${pad}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 64, 40, 0.5)}px;text-transform:uppercase;line-height:1.02">${esc(d.title || "")} <span style="color:${accent}">· ${esc(d.version || "v1.0")}</span></div>
-      <div style="position:absolute;top:${h * 0.6}px;left:${pad}px;right:${pad}px">${list}</div>
+      <div style="position:absolute;top:${frame.header + 4}%;left:${pad}px;right:${pad}px;font-family:${HEAD};font-weight:700;color:${CREAM};font-size:${fit(d.title, 64, 40, 0.5)}px;text-transform:uppercase;line-height:1.02">${esc(d.title || "")} <span style="color:${accent}">· ${esc(d.version || "v1.0")}</span></div>
+      <div style="position:absolute;top:${frame.header + 20}%;left:${pad}px;right:${pad}px">${list}</div>
       <div style="position:absolute;left:${pad}px;bottom:${70 * k}px;font-family:${LABEL};font-weight:700;color:${accent};font-size:${30 * k}px;letter-spacing:${2 * k}px">${esc(d.cta || "+ Read the full patch notes on Nexzy →")}</div>`;
   } else if (tpl === "quote") {
     inner = `
@@ -420,6 +424,10 @@ export default function CardStudioPanel({
   const [shape, setShape] = useState<Shape>("circle");
   const [pos, setPos] = useState<Pos>("BL");
   const [darken, setDarken] = useState(0.4);
+  const [imgX, setImgX] = useState(50);
+  const [imgY, setImgY] = useState(50);
+  const [imgZoom, setImgZoom] = useState(100);
+  const [headerPct, setHeaderPct] = useState(38);
   const [data, setData] = useState<Record<TplKey, Data>>(DEFAULTS);
   const [imgA, setImgA] = useState<string>("");
   const [imgB, setImgB] = useState<string>("");
@@ -442,8 +450,28 @@ export default function CardStudioPanel({
     const theme: Theme = def.tint
       ? def
       : { accent: per, dark: "", light: "", tint: false };
-    return cardHtml(tpl, F.w, F.h, d, imgA, imgB, theme, darken, shape, pos);
-  }, [tpl, F.w, F.h, d, imgA, imgB, themeKey, darken, shape, pos]);
+    return cardHtml(tpl, F.w, F.h, d, imgA, imgB, theme, darken, shape, pos, {
+      x: imgX,
+      y: imgY,
+      zoom: imgZoom,
+      header: headerPct,
+    });
+  }, [
+    tpl,
+    F.w,
+    F.h,
+    d,
+    imgA,
+    imgB,
+    themeKey,
+    darken,
+    shape,
+    pos,
+    imgX,
+    imgY,
+    imgZoom,
+    headerPct,
+  ]);
   const scale = Math.min(480 / F.w, 640 / F.h);
 
   function set(key: string, value: string) {
@@ -473,6 +501,25 @@ export default function CardStudioPanel({
       alert("Export failed — see console.");
     } finally {
       setBusy(false);
+    }
+  }
+  async function copyToClipboard() {
+    if (!cardRef.current) return;
+    try {
+      const blob = await toBlob(cardRef.current, {
+        width: F.w,
+        height: F.h,
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      if (!blob) throw new Error("no blob");
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      alert("Copied — paste into your post.");
+    } catch (err) {
+      console.error("[CardStudio] copy failed", err);
+      alert("Copy not supported in this browser — use Download.");
     }
   }
 
@@ -659,6 +706,67 @@ export default function CardStudioPanel({
           />
         </Box>
 
+        {imgA && (
+          <Box>
+            <Text fontSize="xs" color="gray.400" mb={1}>
+              Image framing (position the game so it shows)
+            </Text>
+            <HStack gap={3}>
+              <VStack gap={0} flex="1" align="stretch">
+                <Text fontSize="10px" color="gray.500">
+                  Up / Down
+                </Text>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={imgY}
+                  onChange={(e) => setImgY(Number(e.target.value))}
+                />
+              </VStack>
+              <VStack gap={0} flex="1" align="stretch">
+                <Text fontSize="10px" color="gray.500">
+                  Left / Right
+                </Text>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={imgX}
+                  onChange={(e) => setImgX(Number(e.target.value))}
+                />
+              </VStack>
+              <VStack gap={0} flex="1" align="stretch">
+                <Text fontSize="10px" color="gray.500">
+                  Zoom
+                </Text>
+                <input
+                  type="range"
+                  min={100}
+                  max={220}
+                  value={imgZoom}
+                  onChange={(e) => setImgZoom(Number(e.target.value))}
+                />
+              </VStack>
+            </HStack>
+          </Box>
+        )}
+        {tpl === "patch" && (
+          <Box>
+            <Text fontSize="xs" color="gray.400" mb={1}>
+              Header image height · {headerPct}%
+            </Text>
+            <input
+              type="range"
+              min={28}
+              max={55}
+              value={headerPct}
+              onChange={(e) => setHeaderPct(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </Box>
+        )}
+
         {FIELDS[tpl].map((f) => (
           <Box key={f.key}>
             <Text fontSize="xs" color="gray.400" mb={1}>
@@ -683,6 +791,14 @@ export default function CardStudioPanel({
 
         <Button colorPalette="blue" onClick={download} loading={busy} size="lg">
           ⬇ Download PNG · {FORMATS[fmt].label}
+        </Button>
+        <Button
+          variant="outline"
+          colorPalette="blue"
+          onClick={copyToClipboard}
+          size="sm"
+        >
+          ⧉ Copy to clipboard
         </Button>
       </VStack>
 
