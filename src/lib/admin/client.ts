@@ -1653,6 +1653,51 @@ export async function quickSocial(payload: {
   );
 }
 
+/** Reply engine (Phase 6) — a persisted target-account watchlist + reply drafts. */
+export type ReplyTarget = {
+  platform: "x" | "threads";
+  handle: string;
+  note?: string;
+};
+
+/** Draft a value-add reply to a bigger account's post (X edge / Threads warm). */
+export async function draftReply(payload: {
+  targetPost: string;
+  targetHandle?: string;
+  writer: string;
+  platform: "x" | "threads";
+  angle?: string;
+}): Promise<{
+  reply: string;
+  usage?: { inputTokens?: number; outputTokens?: number };
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/draft-reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+/** Read the persisted reply-target watchlist. */
+export async function getReplyTargets(): Promise<ReplyTarget[]> {
+  return handle(await fetch("/api/newsroom/admin/marketing/reply-targets"));
+}
+
+/** Replace the reply-target watchlist; returns the cleaned, saved list. */
+export async function setReplyTargets(
+  targets: ReplyTarget[],
+): Promise<ReplyTarget[]> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/reply-targets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targets }),
+    }),
+  );
+}
+
 export async function sendNotificationTest(payload: {
   email: string;
   title: string;

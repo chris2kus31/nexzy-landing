@@ -8,6 +8,7 @@ import CardStudioPanel, {
   type CardSeed,
 } from "@/components/admin/CardStudioPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
+import RepliesPanel from "@/components/admin/RepliesPanel";
 import InsightsPanel from "@/components/admin/InsightsPanel";
 import AudienceInsightsPanel from "@/components/admin/AudienceInsightsPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
@@ -30,6 +31,7 @@ type Sub =
   | "leads"
   | "suggestions"
   | "library"
+  | "replies"
   | "performance"
   | "audience"
   | "guides"
@@ -40,6 +42,7 @@ const SUBS: { key: Sub; label: string }[] = [
   { key: "cards", label: "Cards" },
   { key: "suggestions", label: "Suggestions" },
   { key: "library", label: "Video Library" },
+  { key: "replies", label: "Replies" },
   { key: "performance", label: "Performance" },
   { key: "audience", label: "Audience" },
   { key: "guides", label: "Guides & Walkthroughs" },
@@ -50,6 +53,7 @@ function isSub(v: string | null): v is Sub {
     v === "leads" ||
     v === "suggestions" ||
     v === "library" ||
+    v === "replies" ||
     v === "performance" ||
     v === "audience" ||
     v === "guides" ||
@@ -121,6 +125,8 @@ export default function ContentStudioPanel({
       )}
 
       {sub === "library" && <VideosPanel />}
+
+      {sub === "replies" && <RepliesPanel isOwner={isOwner} />}
 
       {sub === "performance" && <InsightsPanel />}
 
