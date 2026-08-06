@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   Box,
   Flex,
@@ -96,6 +96,66 @@ function FieldLabel({ text, copy }: { text: string; copy: string }) {
  *   • Description + hashtags (+ CTA) — one copy button for the whole caption
  *   • Tags — its own copy button (only the platforms that use keyword tags)
  */
+/** A collapsible titled section — the Suggestions card is grouped into these
+ *  (Review / Content / Kits / Voiceover / Publish) so it scans instead of walls. */
+function Section({
+  title,
+  tag,
+  tagColor = "gray",
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  tag?: string;
+  tagColor?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Box
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      borderRadius="lg"
+      mb={3}
+      overflow="hidden"
+    >
+      <Flex
+        align="center"
+        gap={2}
+        px={3}
+        py={2}
+        cursor="pointer"
+        bg="whiteAlpha.50"
+        _hover={{ bg: "whiteAlpha.100" }}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Text
+          color="nexzy.gray.100"
+          fontSize="xs"
+          transform={open ? "rotate(90deg)" : "none"}
+          transition="transform .15s"
+        >
+          ▶
+        </Text>
+        <Text color="nexzy.white" fontWeight="700" fontSize="sm" flex={1}>
+          {title}
+        </Text>
+        {tag && (
+          <Badge colorPalette={tagColor} variant="subtle" fontSize="10px">
+            {tag}
+          </Badge>
+        )}
+      </Flex>
+      {open && (
+        <Box p={3} pt={2}>
+          {children}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
@@ -1100,12 +1160,8 @@ function SuggestionCard({
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showPublish, setShowPublish] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [scriptSteer, setScriptSteer] = useState("");
-  const credits = view.charCount ?? view.ttsScript?.length ?? 0;
-  const secs = Math.max(1, Math.round(credits / 15)); // ~15 chars/sec speech
   // Keep the editable draft in sync when the script is (re)generated.
   useEffect(() => {
     setDraft(view.ttsScript ?? "");
@@ -1401,6 +1457,12 @@ function SuggestionCard({
         </Box>
       )}
 
+      <Section
+        title="Review & flags"
+        tag={editorFlags.length ? `${editorFlags.length} to verify` : undefined}
+        tagColor={editorFlags.length ? "yellow" : "green"}
+        defaultOpen
+      >
       {/* ✎ What the Editor changed (Tier-1 completeness/structure guards) */}
       {editorReport.length > 0 && (
         <Box
@@ -1490,7 +1552,9 @@ function SuggestionCard({
           </Text>
         </Box>
       )}
+      </Section>
 
+      <Section title="Content" defaultOpen>
       {/* Non-video formats: ready-to-post copy with a Copy button */}
       {isNonVideo && fmt !== "none" && view.payload?.copy && (
         <Box
@@ -1806,48 +1870,11 @@ function SuggestionCard({
           </Link>
         )}
       </VStack>
+      </Section>
 
-      {/* Publish this card straight to FB/IG Reels + a Threads text post —
-          collapsible (it's the biggest block) to keep the card scannable. */}
-      {s.kind === "video" &&
-        !isNonVideo &&
-        !isImage &&
-        !isBriefCard &&
-        isOwner && (
-          <>
-            <Button
-              size="xs"
-              variant="ghost"
-              color="nexzy.gray.100"
-              _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
-              onClick={() => setShowPublish((v) => !v)}
-              mb={2}
-            >
-              {showPublish ? "▾ Hide" : "▸ Show"} publish to social
-            </Button>
-            {showPublish && <PublishBox s={view} />}
-          </>
-        )}
-
-      {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
       {!isNonVideo && !isImage && !isBriefCard && (
-        <Button
-          size="xs"
-          variant="ghost"
-          color="nexzy.gray.100"
-          _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
-          onClick={() => setShowDetails((v) => !v)}
-          mb={2}
-        >
-          {showDetails ? "▾ Hide" : "▸ Show"} kits &amp; ElevenLabs script
-          {view.ttsScript
-            ? ` · ~${secs}s · ${credits.toLocaleString()} credits`
-            : ""}
-        </Button>
-      )}
-
-      {!isNonVideo && !isImage && !isBriefCard && showDetails && (
         <>
+          <Section title="Per-platform kits">
           {/* Per-platform posting kits */}
           {platforms && (
             <VStack align="stretch" gap={2}>
@@ -1931,8 +1958,10 @@ function SuggestionCard({
             </Box>
           )}
 
+          </Section>
+          <Section title="Voiceover &amp; production">
           {/* ElevenLabs shorts script + production notes */}
-          <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Box>
             {isOwner && (
               <Flex gap={2} align="center" wrap="wrap">
                 {writers.length > 1 && (
@@ -2156,8 +2185,20 @@ function SuggestionCard({
               </VStack>
             )}
           </Box>
+          </Section>
         </>
       )}
+
+      {/* Publish this card straight to FB/IG Reels + a Threads text post */}
+      {s.kind === "video" &&
+        !isNonVideo &&
+        !isImage &&
+        !isBriefCard &&
+        isOwner && (
+          <Section title="Publish to social">
+            <PublishBox s={view} />
+          </Section>
+        )}
         </>
       )}
     </Box>
