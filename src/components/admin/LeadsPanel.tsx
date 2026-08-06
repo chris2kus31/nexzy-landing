@@ -338,25 +338,25 @@ function LeadCard({
       )}
 
       {lead?.platformFormats &&
-        PLATFORM_PLAN_ORDER.some((k) => lead.platformFormats[k]) && (
+        PLATFORM_PLAN_ORDER.some((k) => lead?.platformFormats?.[k]) && (
           <HStack gap={2} wrap="wrap" mb={2}>
             <Text color="nexzy.gray.100" fontSize="xs" fontWeight="600">
               Per-platform plan:
             </Text>
-            {PLATFORM_PLAN_ORDER.filter((k) => lead.platformFormats[k]).map(
-              (k) => (
+            {PLATFORM_PLAN_ORDER.map((k) => {
+              const fmt = lead?.platformFormats?.[k];
+              if (!fmt) return null;
+              return (
                 <Badge
                   key={k}
                   colorPalette="teal"
                   variant="subtle"
                   fontSize="xs"
                 >
-                  {PLATFORM_LABEL[k] ?? k}:{" "}
-                  {PLATFORM_FORMAT_LABEL[lead.platformFormats[k]] ??
-                    lead.platformFormats[k]}
+                  {PLATFORM_LABEL[k] ?? k}: {PLATFORM_FORMAT_LABEL[fmt] ?? fmt}
                 </Badge>
-              ),
-            )}
+              );
+            })}
             {lead?.xFormat && (
               <Badge colorPalette="teal" variant="subtle" fontSize="xs">
                 X: {lead.xFormat.replace(/_/g, " ")}

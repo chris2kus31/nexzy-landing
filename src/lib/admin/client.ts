@@ -421,6 +421,9 @@ export interface ContentSuggestion {
       suggestedWriter?: string;
       /** Recommended X (Twitter) format for this story. */
       xFormat?: string;
+      /** Phase 1 — recommended format per platform (youtube/instagram/tiktok/
+       * facebook/threads). Additive; drives generation from Phase 3. */
+      platformFormats?: Record<string, string>;
       platforms?: string[];
       reason?: string;
       when?: "now" | "schedule" | "pre_event";
