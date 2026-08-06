@@ -1068,6 +1068,12 @@ function SuggestionCard({
   // IMAGE CARD (DIY, format === "image_card"): copy-only — shared image title +
   // brief + per-platform captions. No image generated, no Produce/Publish/TTS.
   const isImageCard = fmt === "image_card";
+  // CAROUSEL (Phase 3): copy-only slide deck + captions. Same "brief card" family
+  // as image_card — no video / TTS / Produce / Publish.
+  const isCarousel = fmt === "carousel";
+  const isBriefCard = isImageCard || isCarousel;
+  const slides = view.payload?.slides ?? [];
+  const saveCta = view.payload?.saveCta ?? "";
   const imageBrief = view.payload?.imageBrief ?? "";
   const aspect = view.payload?.aspect ?? "";
   const [persona, setPersona] = useState(s.author);
@@ -1222,7 +1228,7 @@ function SuggestionCard({
             !produced &&
             !isNonVideo &&
             !isImage &&
-            !isImageCard && (
+            !isBriefCard && (
             <Button
               size="xs"
               colorPalette="green"
@@ -1289,7 +1295,7 @@ function SuggestionCard({
         !produced &&
         !isNonVideo &&
         !isImage &&
-        !isImageCard && (
+        !isBriefCard && (
         <Box
           mb={3}
           p={3}
@@ -1614,6 +1620,67 @@ function SuggestionCard({
         </VStack>
       )}
 
+      {isCarousel && (
+        <VStack align="stretch" gap={3} mb={3}>
+          <Box
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="lg"
+            p={3}
+          >
+            <Flex justify="space-between" align="center" mb={1} gap={2}>
+              <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                CAROUSEL SLIDES ({slides.length} · {aspect || "4:5"}) — design
+                these in the Cards tab
+              </Text>
+              <CopyBtn
+                text={slides
+                  .map(
+                    (sl, i) =>
+                      `${i + 1}. ${sl.headline ?? ""}${
+                        sl.body ? " — " + sl.body : ""
+                      }`,
+                  )
+                  .join("\n")}
+                label="Copy all"
+              />
+            </Flex>
+            <VStack align="stretch" gap={2}>
+              {slides.map((sl, i) => (
+                <Box
+                  key={i}
+                  borderLeft="2px solid"
+                  borderColor="nexzy.lightBlue"
+                  pl={2}
+                >
+                  <Text color="nexzy.white" fontSize="sm" fontWeight="600">
+                    {i + 1}. {sl.headline}
+                  </Text>
+                  {sl.body && (
+                    <Text color="nexzy.gray.100" fontSize="xs">
+                      {sl.body}
+                    </Text>
+                  )}
+                </Box>
+              ))}
+            </VStack>
+          </Box>
+          {saveCta && (
+            <Text color="nexzy.lightBlue" fontSize="xs">
+              Final slide (Save-CTA): {saveCta}
+            </Text>
+          )}
+          {platforms && (
+            <VStack align="stretch" gap={2}>
+              <KitBlock name="Instagram" kit={platforms.reels} />
+              <KitBlock name="Threads" kit={platforms.threads} />
+              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+            </VStack>
+          )}
+        </VStack>
+      )}
+
       {/* The script */}
       <VStack align="stretch" gap={1} mb={3}>
         {view.hook && (
@@ -1648,11 +1715,11 @@ function SuggestionCard({
       {s.kind === "video" &&
         !isNonVideo &&
         !isImage &&
-        !isImageCard &&
+        !isBriefCard &&
         isOwner && <PublishBox s={view} />}
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
-      {!isNonVideo && !isImage && !isImageCard && (
+      {!isNonVideo && !isImage && !isBriefCard && (
         <Button
           size="xs"
           variant="ghost"
@@ -1668,7 +1735,7 @@ function SuggestionCard({
         </Button>
       )}
 
-      {!isNonVideo && !isImage && !isImageCard && showDetails && (
+      {!isNonVideo && !isImage && !isBriefCard && showDetails && (
         <>
           {/* Per-platform posting kits */}
           {platforms && (

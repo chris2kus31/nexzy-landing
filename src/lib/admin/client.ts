@@ -377,6 +377,9 @@ export interface ContentSuggestion {
     // is generated; onScreenText carries the on-image overlay lines.
     imageBrief?: string;
     aspect?: string;
+    // Carousel (format === "carousel"): the slide deck + the final Save-CTA line.
+    slides?: { n?: number; headline?: string; body?: string }[];
+    saveCta?: string;
     // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
     groundedOn?: { title: string; views?: string }[];
     // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
@@ -391,6 +394,7 @@ export interface ContentSuggestion {
       | "long"
       | "image"
       | "image_card"
+      | "carousel"
       | "poll"
       | "pinned_comment"
       | "text_post"
