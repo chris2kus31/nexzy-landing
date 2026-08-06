@@ -69,6 +69,28 @@ const PLATFORM_LABEL: Record<string, string> = {
   tiktok: "TikTok",
 };
 
+// Phase 1 — the analyst's recommended format PER platform (display only for now;
+// generation of the new formats lands in Phase 3).
+const PLATFORM_FORMAT_LABEL: Record<string, string> = {
+  short: "Short",
+  long: "Long-form",
+  reel: "Reel",
+  carousel: "Carousel",
+  photo: "Photo mode",
+  album: "Album",
+  video: "Video",
+  image: "Image",
+  text: "Text",
+  none: "Skip",
+};
+const PLATFORM_PLAN_ORDER = [
+  "youtube",
+  "instagram",
+  "tiktok",
+  "facebook",
+  "threads",
+];
+
 function fmtSlot(at: Date, now: Date): string {
   const a = new Date(at);
   a.setHours(0, 0, 0, 0);
@@ -314,6 +336,34 @@ function LeadCard({
           🕒 {lead.timing}
         </Text>
       )}
+
+      {lead?.platformFormats &&
+        PLATFORM_PLAN_ORDER.some((k) => lead.platformFormats[k]) && (
+          <HStack gap={2} wrap="wrap" mb={2}>
+            <Text color="nexzy.gray.100" fontSize="xs" fontWeight="600">
+              Per-platform plan:
+            </Text>
+            {PLATFORM_PLAN_ORDER.filter((k) => lead.platformFormats[k]).map(
+              (k) => (
+                <Badge
+                  key={k}
+                  colorPalette="teal"
+                  variant="subtle"
+                  fontSize="xs"
+                >
+                  {PLATFORM_LABEL[k] ?? k}:{" "}
+                  {PLATFORM_FORMAT_LABEL[lead.platformFormats[k]] ??
+                    lead.platformFormats[k]}
+                </Badge>
+              ),
+            )}
+            {lead?.xFormat && (
+              <Badge colorPalette="teal" variant="subtle" fontSize="xs">
+                X: {lead.xFormat.replace(/_/g, " ")}
+              </Badge>
+            )}
+          </HStack>
+        )}
 
       {postSlots.length > 0 && (
         <Box mb={2}>
