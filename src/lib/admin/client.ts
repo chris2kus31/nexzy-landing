@@ -341,6 +341,8 @@ export interface ContentSuggestion {
   charCount?: number;
   rationale: string | null;
   sourceType: string | null;
+  /** Source article/post id — assets generated from the same story share it. */
+  refId?: string | null;
   url: string | null;
   imageUrl: string | null;
   author: string;

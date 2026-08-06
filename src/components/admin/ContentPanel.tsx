@@ -1185,6 +1185,13 @@ function SuggestionCard({
         : "CAROUSEL SLIDES";
   const imageBrief = view.payload?.imageBrief ?? "";
   const aspect = view.payload?.aspect ?? "";
+  // The plan's platforms for THIS asset (stamped at generation). When present,
+  // only those platforms' kits render — a photo deck planned for TikTok must
+  // not show an X kit the plan never picked. Legacy cards (no forPlatforms)
+  // keep showing every kit.
+  const planPlats = view.payload?.forPlatforms ?? [];
+  const inPlan = (p: string): boolean =>
+    planPlats.length === 0 || planPlats.includes(p);
   const [persona, setPersona] = useState(s.author);
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
@@ -1745,11 +1752,19 @@ function SuggestionCard({
           )}
           {platforms && (
             <VStack align="stretch" gap={2}>
-              <KitBlock name="X (Twitter)" kit={platforms.x} />
-              <KitBlock name="Threads" kit={platforms.threads} />
-              <KitBlock name="Instagram" kit={platforms.reels} />
-              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
-              <KitBlock name="Facebook" kit={platforms.facebook} />
+              {inPlan("x") && <KitBlock name="X (Twitter)" kit={platforms.x} />}
+              {inPlan("threads") && (
+                <KitBlock name="Threads" kit={platforms.threads} />
+              )}
+              {inPlan("instagram") && (
+                <KitBlock name="Instagram" kit={platforms.reels} />
+              )}
+              {inPlan("tiktok") && (
+                <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+              )}
+              {inPlan("facebook") && (
+                <KitBlock name="Facebook" kit={platforms.facebook} />
+              )}
             </VStack>
           )}
         </VStack>
@@ -1828,16 +1843,16 @@ function SuggestionCard({
           )}
           {platforms && (
             <VStack align="stretch" gap={2}>
-              {platforms.reels && (
+              {inPlan("instagram") && platforms.reels && (
                 <KitBlock name="Instagram" kit={platforms.reels} />
               )}
-              {platforms.threads && (
+              {inPlan("threads") && platforms.threads && (
                 <KitBlock name="Threads" kit={platforms.threads} />
               )}
-              {platforms.tiktok && (
+              {inPlan("tiktok") && platforms.tiktok && (
                 <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
               )}
-              {platforms.facebook && (
+              {inPlan("facebook") && platforms.facebook && (
                 <KitBlock name="Facebook" kit={platforms.facebook} />
               )}
             </VStack>
@@ -1909,24 +1924,34 @@ function SuggestionCard({
           {/* Per-platform posting kits */}
           {platforms && (
             <VStack align="stretch" gap={2}>
-              <KitBlock
-                name={isLong ? "YouTube (Long-form)" : "YouTube Shorts"}
-                kit={platforms.youtube}
-              />
-              <KitBlock
-                name={isLong ? "TikTok (teaser)" : "TikTok"}
-                kit={platforms.tiktok}
-              />
-              <KitBlock
-                name={isLong ? "Instagram Reels (teaser)" : "Instagram Reels"}
-                kit={platforms.reels}
-              />
-              <KitBlock
-                name={isLong ? "Facebook Reels (teaser)" : "Facebook Reels"}
-                kit={platforms.facebook}
-              />
-              <KitBlock name="Threads (text take)" kit={platforms.threads} />
-              <KitBlock name="X (Twitter)" kit={platforms.x} />
+              {inPlan("youtube") && (
+                <KitBlock
+                  name={isLong ? "YouTube (Long-form)" : "YouTube Shorts"}
+                  kit={platforms.youtube}
+                />
+              )}
+              {inPlan("tiktok") && (
+                <KitBlock
+                  name={isLong ? "TikTok (teaser)" : "TikTok"}
+                  kit={platforms.tiktok}
+                />
+              )}
+              {inPlan("instagram") && (
+                <KitBlock
+                  name={isLong ? "Instagram Reels (teaser)" : "Instagram Reels"}
+                  kit={platforms.reels}
+                />
+              )}
+              {inPlan("facebook") && (
+                <KitBlock
+                  name={isLong ? "Facebook Reels (teaser)" : "Facebook Reels"}
+                  kit={platforms.facebook}
+                />
+              )}
+              {inPlan("threads") && (
+                <KitBlock name="Threads (text take)" kit={platforms.threads} />
+              )}
+              {inPlan("x") && <KitBlock name="X (Twitter)" kit={platforms.x} />}
             </VStack>
           )}
 
@@ -2265,6 +2290,95 @@ function SuggestionCard({
   );
 }
 
+/** Tab label for an asset card inside a story group, from its format. */
+function assetLabel(s: ContentSuggestion): string {
+  const f = s.payload?.format;
+  if (f === "long") return "Long video";
+  if (f === "carousel") return "Carousel";
+  if (f === "photo") return "Photo (TikTok)";
+  if (f === "album") return "Album (FB)";
+  if (f === "image_card" || f === "image") return "Image";
+  return "Short video";
+}
+
+/**
+ * ONE card per story: every asset generated from the same article renders as
+ * a tab inside a single group (short video / carousel / photo / album / image)
+ * instead of N sibling cards. Underneath, each asset keeps its own suggestion
+ * row — its own publish, skip, regenerate, and cadence status — the grouping
+ * is presentation only.
+ */
+function StoryGroup({
+  group,
+  onDone,
+  isOwner,
+  onBudget,
+  writers,
+  onSendToCards,
+}: {
+  group: ContentSuggestion[];
+  onDone: (id: string) => void;
+  isOwner: boolean;
+  onBudget: () => void;
+  writers: string[];
+  onSendToCards?: (s: {
+    format?: string;
+    template?: string;
+    title?: string;
+    slides: string[][];
+  }) => void;
+}) {
+  const [activeId, setActiveId] = useState(group[0]?.id ?? "");
+  // If the active asset was published/skipped away, fall back to the first.
+  const active = group.find((g) => g.id === activeId) ?? group[0];
+  if (!active) return null;
+  return (
+    <Box
+      border="1px solid"
+      borderColor="whiteAlpha.300"
+      borderRadius="xl"
+      overflow="hidden"
+    >
+      <Box px={4} py={3} bg="whiteAlpha.100">
+        <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={0.5}>
+          {group[0].title}
+        </Text>
+        <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+          {group.length} asset{group.length === 1 ? "" : "s"} from this story —
+          each publishes on its own
+        </Text>
+        <HStack gap={1} wrap="wrap">
+          {group.map((g) => (
+            <Button
+              key={g.id}
+              size="xs"
+              onClick={() => setActiveId(g.id)}
+              bg={active.id === g.id ? "nexzy.blue" : "whiteAlpha.200"}
+              color="white"
+              _hover={{
+                bg: active.id === g.id ? "nexzy.blue" : "whiteAlpha.300",
+              }}
+            >
+              {assetLabel(g)}
+            </Button>
+          ))}
+        </HStack>
+      </Box>
+      <Box p={2}>
+        <SuggestionCard
+          key={active.id}
+          s={active}
+          onDone={onDone}
+          isOwner={isOwner}
+          onBudget={onBudget}
+          writers={writers}
+          onSendToCards={onSendToCards}
+        />
+      </Box>
+    </Box>
+  );
+}
+
 export default function ContentPanel({
   isOwner = false,
   onSendToCards,
@@ -2373,17 +2487,41 @@ export default function ContentPanel({
         </Text>
       ) : (
         <VStack align="stretch" gap={4}>
-          {cards.map((s) => (
-            <SuggestionCard
-              key={s.id}
-              s={s}
-              onDone={remove}
-              isOwner={isOwner}
-              onBudget={loadBudget}
-              writers={writers}
-              onSendToCards={onSendToCards}
-            />
-          ))}
+          {(() => {
+            // Group the assets by the article they came from (refId) so one
+            // story = one card with a tab per asset. Cards without a refId
+            // (or alone in their group) render exactly as before.
+            const byStory = new Map<string, ContentSuggestion[]>();
+            for (const s of cards) {
+              const key = s.refId ? `story:${s.refId}` : `solo:${s.id}`;
+              const arr = byStory.get(key) ?? [];
+              arr.push(s);
+              byStory.set(key, arr);
+            }
+            return [...byStory.entries()].map(([key, group]) =>
+              group.length === 1 ? (
+                <SuggestionCard
+                  key={group[0].id}
+                  s={group[0]}
+                  onDone={remove}
+                  isOwner={isOwner}
+                  onBudget={loadBudget}
+                  writers={writers}
+                  onSendToCards={onSendToCards}
+                />
+              ) : (
+                <StoryGroup
+                  key={key}
+                  group={group}
+                  onDone={remove}
+                  isOwner={isOwner}
+                  onBudget={loadBudget}
+                  writers={writers}
+                  onSendToCards={onSendToCards}
+                />
+              ),
+            );
+          })()}
         </VStack>
       )}
     </VStack>
