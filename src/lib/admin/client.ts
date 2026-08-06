@@ -448,15 +448,18 @@ export interface ContentSuggestion {
       reason?: string;
       when?: "now" | "schedule" | "pre_event";
       timing?: string;
-      /** Cadence pacing hint per platform (used/target this window + at-quota). */
+      /** Cadence pacing per platform: the recommended format, the platform total
+       * for its window, and per-format usage (so the hint updates on switch). */
       cadence?: Record<
         string,
         {
-          used: number;
-          target: number;
-          window: "daily" | "weekly";
           recommended: string;
-          full: boolean;
+          window: "daily" | "weekly";
+          total: { used: number; target: number };
+          formats: Record<
+            string,
+            { used: number; target: number; window: "daily" | "weekly" }
+          >;
         }
       >;
     };

@@ -528,11 +528,21 @@ function LeadCard({
               const v = plan[pf];
               const isSkip = v === "skip";
               const isMod = v !== rec[pf];
+              // Hint follows the SELECTED format (v) so it updates on switch:
+              // "<Format> <used>/<target> <window> · <Platform> <total> <window>".
               const cad = lead?.cadence?.[pf];
-              const cadHint =
-                cad && cad.target
-                  ? `${cad.full ? "at quota · " : ""}${cad.used}/${cad.target} ${cad.window === "daily" ? "today" : "this wk"}`
-                  : "";
+              const ff = cad?.formats?.[v];
+              const atQuota = !!ff && ff.target > 0 && ff.used >= ff.target;
+              let cadHint = "";
+              if (!isSkip && ff && ff.target > 0) {
+                const fw = ff.window === "daily" ? "today" : "this wk";
+                cadHint = `${planOptLabel(pf, v)} ${ff.used}/${ff.target} ${fw}`;
+                // Platform total (skip YouTube — its short/long mix has no single total).
+                if (cad && cad.total.target > 0 && pf !== "youtube") {
+                  const tw = cad.window === "daily" ? "today" : "this wk";
+                  cadHint += ` · ${PLATFORM_LABEL[pf] ?? pf} ${cad.total.used}/${cad.total.target} ${tw}`;
+                }
+              }
               return (
                 <Flex
                   key={pf}
@@ -555,9 +565,10 @@ function LeadCard({
                     )}
                     {cadHint && (
                       <Text
-                        color={cad?.full ? "orange.300" : "whiteAlpha.500"}
+                        color={atQuota ? "orange.300" : "whiteAlpha.500"}
                         fontSize="10px"
                       >
+                        {atQuota ? "at quota · " : ""}
                         {cadHint}
                       </Text>
                     )}
