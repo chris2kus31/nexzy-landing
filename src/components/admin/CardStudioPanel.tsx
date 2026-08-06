@@ -25,14 +25,6 @@ import {
 } from "@chakra-ui/react";
 import type { Canvas as FCanvas, FabricObject } from "fabric";
 import { getPublished, type BlogPost } from "@/lib/admin/client";
-import {
-  FiDownload,
-  FiCopy,
-  FiTrash2,
-  FiImage,
-  FiZap,
-  FiDroplet,
-} from "react-icons/fi";
 
 type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon" | "blank";
 type FmtKey = "universal" | "square" | "story" | "wide";
@@ -458,12 +450,44 @@ function installPaddedBg(o: FabricObject) {
   };
 }
 
+/**
+ * A seed handed over from Content Studio (Suggestions): the AI-written copy for
+ * an image card or a slide deck. When present, Card Studio switches to the
+ * platform's aspect + template and drops the copy onto the branded canvas. When
+ * absent, the editor behaves exactly as before (non-breaking).
+ */
+export type CardSeed = {
+  token: number;
+  format?: string;
+  template?: string;
+  title?: string;
+  slides: string[][];
+};
+
+const FMT_KEYS: FmtKey[] = ["universal", "square", "story", "wide"];
+const TPL_KEYS: TplKey[] = [
+  "news",
+  "review",
+  "deal",
+  "patch",
+  "quote",
+  "soon",
+  "blank",
+];
+const isFmtKey = (v?: string): v is FmtKey =>
+  !!v && (FMT_KEYS as string[]).includes(v);
+const isTplKey = (v?: string): v is TplKey =>
+  !!v && (TPL_KEYS as string[]).includes(v);
+
 export default function CardStudioPanel({
   isOwner: _isOwner,
+  seed,
 }: {
   isOwner: boolean;
+  seed?: CardSeed | null;
 }) {
   const [tpl, setTpl] = useState<TplKey>("news");
+  const [slideIdx, setSlideIdx] = useState(0);
   const [fmt, setFmt] = useState<FmtKey>("universal");
   const [panelTab, setPanelTab] = useState<
     "content" | "design" | "image" | "layers"
@@ -742,6 +766,96 @@ export default function CardStudioPanel({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Seed the canvas from ONE Content Studio slide (its text lines). Reuses the
+  // same "clear text but keep photos + scrim" rule as seedTemplate, lays out a
+  // headline + body in brand fonts, and re-adds the logo. Everything stays
+  // editable like any other text object.
+  const seedFromSlide = useCallback(
+    (
+      lines: string[],
+      canvas?: FCanvas | null,
+      fabric?: typeof import("fabric") | null,
+    ) => {
+      const c = canvas ?? fcRef.current;
+      const fab = fabric ?? fabricRef.current;
+      if (!c || !fab) return;
+      c.getObjects()
+        .filter((o) => {
+          const t = o as Tagged & PhotoProps;
+          return !t.isPhoto && t.role !== "scrim";
+        })
+        .forEach((o) => c.remove(o));
+      const clean = (lines || []).map((l) => (l ?? "").trim()).filter(Boolean);
+      const head = clean[0] ?? "";
+      const body = clean.slice(1);
+      if (head) {
+        const t = new fab.Textbox(head, {
+          left: Math.round(0.06 * F.w),
+          top: Math.round(0.1 * F.h),
+          width: Math.round(0.88 * F.w),
+          fontSize: Math.round(0.085 * F.h),
+          fill: "#ffffff",
+          fontFamily: fontFamily("head"),
+          fontWeight: 800,
+          lineHeight: 1.02,
+          originX: "left" as const,
+          originY: "top" as const,
+          editable: true,
+        });
+        (t as Tagged).role = "head";
+        (t as Tagged).oid = nextOid();
+        c.add(t);
+      }
+      body.forEach((line, i) => {
+        const t = new fab.Textbox(line, {
+          left: Math.round(0.06 * F.w),
+          top: Math.round((0.42 + i * 0.11) * F.h),
+          width: Math.round(0.88 * F.w),
+          fontSize: Math.round(0.045 * F.h),
+          fill: "#e6edf6",
+          fontFamily: fontFamily("body"),
+          fontWeight: 600,
+          lineHeight: 1.12,
+          originX: "left" as const,
+          originY: "top" as const,
+          editable: true,
+        });
+        (t as Tagged).role = "body";
+        (t as Tagged).oid = nextOid();
+        c.add(t);
+      });
+      addBrandLogo(c, fab);
+      c.requestRenderAll();
+      setTick((n) => n + 1);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [F.w, F.h],
+  );
+
+  const goSlide = useCallback(
+    (delta: number) => {
+      if (!seed?.slides?.length) return;
+      const next = Math.min(
+        Math.max(0, slideIdx + delta),
+        seed.slides.length - 1,
+      );
+      setSlideIdx(next);
+      seedFromSlide(seed.slides[next] ?? []);
+    },
+    [seed, slideIdx, seedFromSlide],
+  );
+
+  // When a seed arrives from Content Studio, switch aspect/template and drop the
+  // first slide's copy onto the canvas (runs once the canvas is ready).
+  useEffect(() => {
+    if (!seed?.token || !ready) return;
+    if (isFmtKey(seed.format)) setFmt(seed.format);
+    if (isTplKey(seed.template)) setTpl(seed.template);
+    setSlideIdx(0);
+    seedFromSlide(seed.slides?.[0] ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.token, ready]);
 
   const onTemplate = (key: TplKey) => {
     setTpl(key);
@@ -1301,6 +1415,52 @@ export default function CardStudioPanel({
   return (
     <HStack align="flex-start" gap={8} wrap="wrap">
       <VStack align="stretch" gap={4} w={{ base: "100%", lg: "400px" }}>
+        {seed && seed.slides && seed.slides.length > 0 && (
+          <Box
+            bg="whiteAlpha.100"
+            border="1px solid"
+            borderColor="whiteAlpha.300"
+            borderRadius="lg"
+            p={3}
+          >
+            <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
+              FROM CONTENT STUDIO{seed.title ? ` · ${seed.title}` : ""}
+            </Text>
+            <HStack justify="space-between" align="center">
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="blue"
+                disabled={slideIdx <= 0}
+                onClick={() => goSlide(-1)}
+              >
+                Prev
+              </Button>
+              <Text color="white" fontSize="sm" fontWeight="700">
+                {seed.slides.length > 1 ? "Slide " : ""}
+                {slideIdx + 1} / {seed.slides.length}
+              </Text>
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="blue"
+                disabled={slideIdx >= seed.slides.length - 1}
+                onClick={() => goSlide(1)}
+              >
+                Next
+              </Button>
+            </HStack>
+            <Button
+              size="xs"
+              variant="ghost"
+              colorPalette="blue"
+              mt={2}
+              onClick={() => seedFromSlide(seed.slides[slideIdx] ?? [])}
+            >
+              Re-seed this slide&apos;s text
+            </Button>
+          </Box>
+        )}
         <Box>
           <Text fontSize="xs" color="gray.400" mb={2} letterSpacing="wider">
             TEMPLATE
@@ -1312,7 +1472,6 @@ export default function CardStudioPanel({
                 size="sm"
                 variant={tpl === t.key ? "solid" : "outline"}
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={() => onTemplate(t.key)}
               >
                 {t.label}
@@ -1341,7 +1500,6 @@ export default function CardStudioPanel({
               size="sm"
               variant={panelTab === key ? "solid" : "ghost"}
               colorPalette="blue"
-              color="whiteAlpha.900"
               onClick={() => setPanelTab(key)}
             >
               {label}
@@ -1405,7 +1563,6 @@ export default function CardStudioPanel({
                     size="xs"
                     variant={sel.bold ? "solid" : "outline"}
                     colorPalette="blue"
-                    color="whiteAlpha.900"
                     onClick={() =>
                       applyActive({ fontWeight: sel.bold ? 400 : 700 })
                     }
@@ -1416,7 +1573,6 @@ export default function CardStudioPanel({
                     size="xs"
                     variant={sel.italic ? "solid" : "outline"}
                     colorPalette="blue"
-                    color="whiteAlpha.900"
                     onClick={() =>
                       applyActive({
                         fontStyle: sel.italic ? "normal" : "italic",
@@ -1431,7 +1587,6 @@ export default function CardStudioPanel({
                       size="xs"
                       variant={sel.textAlign === a ? "solid" : "outline"}
                       colorPalette="blue"
-                      color="whiteAlpha.900"
                       onClick={() => applyActive({ textAlign: a })}
                     >
                       {a[0].toUpperCase()}
@@ -1457,7 +1612,6 @@ export default function CardStudioPanel({
                     size="xs"
                     variant={!sel.bg ? "solid" : "outline"}
                     colorPalette="gray"
-                    color="whiteAlpha.900"
                     onClick={() => setTextBg("")}
                   >
                     None
@@ -1501,7 +1655,6 @@ export default function CardStudioPanel({
                           (sel.shape || "original") === sh ? "solid" : "outline"
                         }
                         colorPalette="blue"
-                        color="whiteAlpha.900"
                         onClick={() => applyImageShape(sh)}
                       >
                         {sh}
@@ -1521,7 +1674,6 @@ export default function CardStudioPanel({
                     size="xs"
                     variant={!sel.strokeWidth ? "solid" : "outline"}
                     colorPalette="gray"
-                    color="whiteAlpha.900"
                     onClick={() => applyActive({ stroke: "", strokeWidth: 0 })}
                   >
                     None
@@ -1585,7 +1737,6 @@ export default function CardStudioPanel({
                 size="xs"
                 variant="outline"
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={() => orderActive("front")}
               >
                 Front
@@ -1594,7 +1745,6 @@ export default function CardStudioPanel({
                 size="xs"
                 variant="outline"
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={() => orderActive("back")}
               >
                 Back
@@ -1603,7 +1753,6 @@ export default function CardStudioPanel({
                 size="xs"
                 variant="outline"
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={duplicateActive}
               >
                 Duplicate
@@ -1613,7 +1762,6 @@ export default function CardStudioPanel({
                   size="xs"
                   variant="outline"
                   colorPalette="purple"
-                  color="whiteAlpha.900"
                   onClick={setSelectedAsBackground}
                 >
                   Set as BG
@@ -1623,10 +1771,9 @@ export default function CardStudioPanel({
                 size="xs"
                 variant="solid"
                 colorPalette="red"
-                color="whiteAlpha.900"
                 onClick={deleteActive}
               >
-                <FiTrash2 /> Delete
+                🗑 Delete
               </Button>
             </HStack>
           </Box>
@@ -1701,7 +1848,6 @@ export default function CardStudioPanel({
                     size="sm"
                     variant={fmt === f ? "solid" : "outline"}
                     colorPalette={f === "universal" ? "purple" : "blue"}
-                    color="whiteAlpha.900"
                     onClick={() => setFmt(f)}
                   >
                     {FORMATS[f].label}
@@ -1771,28 +1917,25 @@ export default function CardStudioPanel({
                   size="sm"
                   variant="outline"
                   colorPalette="blue"
-                  color="whiteAlpha.900"
                   onClick={() => bgFileRef.current?.click()}
                 >
-                  <FiImage /> Set background image
+                  🖼 Set background image
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   colorPalette="gray"
-                  color="whiteAlpha.900"
                   onClick={addScrim}
                 >
-                  <FiDroplet /> Add readability scrim
+                  🌗 Add readability scrim
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   colorPalette="blue"
-                  color="whiteAlpha.900"
                   onClick={() => addBrandLogo()}
                 >
-                  <FiZap /> Add Nexzy logo
+                  ⚡ Add Nexzy logo
                 </Button>
               </VStack>
             </Box>
@@ -1804,7 +1947,6 @@ export default function CardStudioPanel({
             <Button
               size="sm"
               colorPalette="blue"
-              color="whiteAlpha.900"
               onClick={() => fileRef.current?.click()}
             >
               + Add photo (movable layer)
@@ -1813,7 +1955,6 @@ export default function CardStudioPanel({
               size="sm"
               variant="outline"
               colorPalette="blue"
-              color="whiteAlpha.900"
               onClick={addTextObject}
             >
               + Add text
@@ -1822,10 +1963,9 @@ export default function CardStudioPanel({
               size="sm"
               variant="outline"
               colorPalette="blue"
-              color="whiteAlpha.900"
               onClick={() => addBrandLogo()}
             >
-              <FiZap /> Add Nexzy logo
+              ⚡ Add Nexzy logo
             </Button>
             <Text fontSize="11px" color="gray.500">
               Photos import at true size (nothing cropped). Drag to move, pull a
@@ -1841,7 +1981,6 @@ export default function CardStudioPanel({
               <Button
                 size="sm"
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={() => fileRef.current?.click()}
               >
                 + Photo
@@ -1850,7 +1989,6 @@ export default function CardStudioPanel({
                 size="sm"
                 variant="outline"
                 colorPalette="blue"
-                color="whiteAlpha.900"
                 onClick={addTextObject}
               >
                 + Text
@@ -1901,23 +2039,16 @@ export default function CardStudioPanel({
           borderTopWidth="1px"
           borderColor="whiteAlpha.200"
         >
-          <Button
-            colorPalette="blue"
-            color="white"
-            size="lg"
-            gap={2}
-            onClick={download}
-          >
-            <FiDownload /> Download PNG · {FORMATS[fmt].label}
+          <Button colorPalette="blue" size="lg" onClick={download}>
+            ⬇ Download PNG · {FORMATS[fmt].label}
           </Button>
           <Button
             variant="outline"
             colorPalette="blue"
-            color="whiteAlpha.900"
             size="sm"
             onClick={copyToClipboard}
           >
-            <FiCopy /> Copy to clipboard
+            ⧉ Copy to clipboard
           </Button>
         </VStack>
       </VStack>

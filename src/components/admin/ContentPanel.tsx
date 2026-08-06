@@ -1008,18 +1008,32 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   );
 }
 
+function aspectToFmt(aspect?: string): string {
+  if (aspect === "1:1") return "square";
+  if (aspect === "9:16") return "story";
+  if (aspect === "16:9") return "wide";
+  return "universal";
+}
+
 function SuggestionCard({
   s,
   onDone,
   isOwner,
   onBudget,
   writers,
+  onSendToCards,
 }: {
   s: ContentSuggestion;
   onDone: (id: string) => void;
   isOwner: boolean;
   onBudget: () => void;
   writers: string[];
+  onSendToCards?: (s: {
+    format?: string;
+    template?: string;
+    title?: string;
+    slides: string[][];
+  }) => void;
 }) {
   const [busy, setBusy] = useState<
     "skip" | "use" | "script" | "produce" | "rescript" | null
@@ -1568,6 +1582,24 @@ function SuggestionCard({
           No image is generated — the brief is what you use to make it yourself. */}
       {isImageCard && (
         <VStack align="stretch" gap={3} mb={3}>
+          {onSendToCards && (
+            <Button
+              size="xs"
+              variant="outline"
+              colorPalette="blue"
+              alignSelf="flex-start"
+              onClick={() =>
+                onSendToCards({
+                  format: aspectToFmt(aspect),
+                  template: "news",
+                  title: view.title,
+                  slides: [onScreen.filter(Boolean)],
+                })
+              }
+            >
+              Open in Card Studio
+            </Button>
+          )}
           <Box
             bg="whiteAlpha.50"
             border="1px solid"
@@ -1629,6 +1661,26 @@ function SuggestionCard({
 
       {isSlideCard && (
         <VStack align="stretch" gap={3} mb={3}>
+          {onSendToCards && (
+            <Button
+              size="xs"
+              variant="outline"
+              colorPalette="blue"
+              alignSelf="flex-start"
+              onClick={() =>
+                onSendToCards({
+                  format: aspectToFmt(aspect),
+                  template: "news",
+                  title: view.title,
+                  slides: slides.map((sl) =>
+                    [sl.headline ?? "", sl.body ?? ""].filter(Boolean),
+                  ),
+                })
+              }
+            >
+              Open all slides in Card Studio
+            </Button>
+          )}
           <Box
             bg="whiteAlpha.50"
             border="1px solid"
@@ -2026,8 +2078,15 @@ function SuggestionCard({
 
 export default function ContentPanel({
   isOwner = false,
+  onSendToCards,
 }: {
   isOwner?: boolean;
+  onSendToCards?: (s: {
+    format?: string;
+    template?: string;
+    title?: string;
+    slides: string[][];
+  }) => void;
 }) {
   const [items, setItems] = useState<ContentSuggestion[] | null>(null);
   const [budget, setBudget] = useState<TtsBudget | null>(null);
@@ -2133,6 +2192,7 @@ export default function ContentPanel({
               isOwner={isOwner}
               onBudget={loadBudget}
               writers={writers}
+              onSendToCards={onSendToCards}
             />
           ))}
         </VStack>

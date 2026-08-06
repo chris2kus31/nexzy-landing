@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
 import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
-import CardStudioPanel from "@/components/admin/CardStudioPanel";
+import CardStudioPanel, {
+  type CardSeed,
+} from "@/components/admin/CardStudioPanel";
 import VideosPanel from "@/components/admin/VideosPanel";
 import InsightsPanel from "@/components/admin/InsightsPanel";
 import AudienceInsightsPanel from "@/components/admin/AudienceInsightsPanel";
@@ -63,6 +65,7 @@ export default function ContentStudioPanel({
   onRefresh?: () => void;
 }) {
   const [sub, _setSub] = useState<Sub>("suggestions");
+  const [cardSeed, setCardSeed] = useState<CardSeed | null>(null);
 
   const setSub = useCallback((s: Sub) => {
     _setSub(s);
@@ -73,6 +76,15 @@ export default function ContentStudioPanel({
       window.history.replaceState(null, "", `/admin?${p.toString()}`);
     }
   }, []);
+
+  // Hand a Content Studio card's copy to the Cards editor and jump there.
+  const sendToCards = useCallback(
+    (s: Omit<CardSeed, "token">) => {
+      setCardSeed({ ...s, token: Date.now() });
+      setSub("cards");
+    },
+    [setSub],
+  );
 
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get("sub");
@@ -101,10 +113,12 @@ export default function ContentStudioPanel({
         })}
       </HStack>
 
-      {sub === "cards" && <CardStudioPanel isOwner={isOwner} />}
+      {sub === "cards" && <CardStudioPanel isOwner={isOwner} seed={cardSeed} />}
       {sub === "leads" && <LeadsPanel isOwner={isOwner} />}
 
-      {sub === "suggestions" && <ContentPanel isOwner={isOwner} />}
+      {sub === "suggestions" && (
+        <ContentPanel isOwner={isOwner} onSendToCards={sendToCards} />
+      )}
 
       {sub === "library" && <VideosPanel />}
 
