@@ -2044,8 +2044,11 @@ function SuggestionCard({
                       fontSize="xs"
                       fontWeight="700"
                     >
-                      ElevenLabs · Core cut · Instagram ·{" "}
-                      {draft.length.toLocaleString()} credits · ~
+                      ElevenLabs · Core cut ·{" "}
+                      {view.payload?.ttsScripts?.extended
+                        ? "TikTok · Shorts · X"
+                        : "all video platforms"}{" "}
+                      · {draft.length.toLocaleString()} credits · ~
                       {Math.max(1, Math.round(draft.length / 15))}s
                     </Text>
                     <HStack gap={1}>
@@ -2084,9 +2087,11 @@ function SuggestionCard({
                     </Text>
                   )}
                 </Box>
-                {/* Length-band cuts of the same spine — trim to each platform. */}
+                {/* Optional longer cut — only when the article supported it.
+                    (tight/long are legacy fields kept for older cards.) */}
                 {(
                   [
+                    ["extended", "Extended cut", "Instagram · Facebook"],
                     ["tight", "Tight cut", "TikTok / Shorts"],
                     ["long", "Long cut", "Facebook"],
                   ] as const
@@ -2179,6 +2184,30 @@ function SuggestionCard({
                         💬 <b>On-screen text</b> (captions to overlay):{" "}
                         {(view.payload?.onScreenText ?? []).join(" · ")}
                       </Text>
+                    )}
+                    {(view.payload?.postingTips?.length ?? 0) > 0 && (
+                      <Box
+                        mt={1}
+                        pt={1.5}
+                        borderTop="1px solid"
+                        borderColor="whiteAlpha.100"
+                      >
+                        <Text
+                          color="nexzy.lightBlue"
+                          fontSize="10px"
+                          fontWeight="700"
+                          mb={0.5}
+                        >
+                          WHEN YOU POST
+                        </Text>
+                        <VStack align="stretch" gap={0.5}>
+                          {(view.payload?.postingTips ?? []).map((t, i) => (
+                            <Text key={i} color="nexzy.gray.100" fontSize="xs">
+                              • {t}
+                            </Text>
+                          ))}
+                        </VStack>
+                      </Box>
                     )}
                   </VStack>
                 </Box>
