@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -415,6 +415,34 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       .then((c) => setCfg(c))
       .catch(() => setCfg(null));
   }, []);
+
+  // Re-sync the editable publish fields when the card's GENERATED copy changes
+  // (Regenerate swaps `view` for a fresh card). These are `useState` initializers,
+  // which only run on mount — without this the box kept the pre-regenerate
+  // captions and "Publish now" silently shipped stale copy. Compared against a
+  // ref so ordinary re-renders never clobber the operator's manual edits.
+  const srcKey = JSON.stringify([
+    p?.facebook?.caption,
+    p?.reels?.caption,
+    p?.threads?.caption,
+    p?.x?.post,
+    p?.x?.firstReply,
+  ]);
+  const lastSrc = useRef(srcKey);
+  useEffect(() => {
+    if (lastSrc.current === srcKey) return;
+    lastSrc.current = srcKey;
+    setFbCaption(assembleCaption(p?.facebook));
+    setIgCaption(assembleCaption(p?.reels));
+    setThreadsText(assembleThreadsText(p?.threads));
+    setThreadsTopicTag(firstTopicTag(p?.threads));
+    setFbPinned(p?.facebook?.pinnedComment ?? "");
+    setIgPinned(p?.reels?.pinnedComment ?? "");
+    setThreadsPinned(p?.threads?.pinnedComment ?? "");
+    setXPost(p?.x?.post ?? "");
+    setXReply(p?.x?.firstReply ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [srcKey]);
 
   const upload = async (file: File) => {
     setUploading(true);
@@ -1340,7 +1368,10 @@ function SuggestionCard({
         </HStack>
       </Flex>
 
-      {!collapsed && (
+      {/* HIDDEN, not unmounted — collapsing used to destroy PublishBox, taking
+          the uploaded video URL, every caption edit and the publish receipt
+          with it (forcing a re-upload of the finished file). */}
+      <Box display={collapsed ? "none" : "block"}>
         <>
       {produced && (
         <Box
@@ -2229,7 +2260,7 @@ function SuggestionCard({
           </Section>
         )}
         </>
-      )}
+      </Box>
     </Box>
   );
 }
