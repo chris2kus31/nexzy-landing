@@ -438,13 +438,24 @@ export interface ContentSuggestion {
       suggestedWriter?: string;
       /** Recommended X (Twitter) format for this story. */
       xFormat?: string;
-      /** Phase 1 — recommended format per platform (youtube/instagram/tiktok/
-       * facebook/threads). Additive; drives generation from Phase 3. */
+      /** Recommended format per platform (youtube/instagram/tiktok/facebook/
+       * threads AND x) — cadence-adjusted; drives the plan pre-fill. */
       platformFormats?: Record<string, string>;
       platforms?: string[];
       reason?: string;
       when?: "now" | "schedule" | "pre_event";
       timing?: string;
+      /** Cadence pacing hint per platform (used/target this window + at-quota). */
+      cadence?: Record<
+        string,
+        {
+          used: number;
+          target: number;
+          window: "daily" | "weekly";
+          recommended: string;
+          full: boolean;
+        }
+      >;
     };
     // Suggested posting time carried from the lead onto the generated card.
     postTiming?: { when?: string; timing?: string };

@@ -257,7 +257,7 @@ function LeadCard({
       tiktok: normFmt("tiktok", lead?.platformFormats?.tiktok),
       facebook: normFmt("facebook", lead?.platformFormats?.facebook),
       threads: normFmt("threads", lead?.platformFormats?.threads),
-      x: normFmt("x", lead?.xFormat),
+      x: normFmt("x", lead?.platformFormats?.x ?? lead?.xFormat),
     }),
     [lead],
   );
@@ -528,6 +528,11 @@ function LeadCard({
               const v = plan[pf];
               const isSkip = v === "skip";
               const isMod = v !== rec[pf];
+              const cad = lead?.cadence?.[pf];
+              const cadHint =
+                cad && cad.target
+                  ? `${cad.full ? "at quota · " : ""}${cad.used}/${cad.target} ${cad.window === "daily" ? "today" : "this wk"}`
+                  : "";
               return (
                 <Flex
                   key={pf}
@@ -546,6 +551,14 @@ function LeadCard({
                     {sub && (
                       <Text color="nexzy.gray.100" fontSize="10px">
                         {sub}
+                      </Text>
+                    )}
+                    {cadHint && (
+                      <Text
+                        color={cad?.full ? "orange.300" : "whiteAlpha.500"}
+                        fontSize="10px"
+                      >
+                        {cadHint}
                       </Text>
                     )}
                   </Box>
