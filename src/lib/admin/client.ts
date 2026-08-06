@@ -393,6 +393,9 @@ export interface ContentSuggestion {
     // Which platforms this generated card serves (the per-platform plan grouped
     // this asset for these surfaces). Set when a lead generates via the plan.
     forPlatforms?: string[];
+    // Length-band ElevenLabs cuts of the same spine — tight (TikTok/Shorts) and
+    // long (Facebook); the core (~30s, Instagram) is the editable `ttsScript`.
+    ttsScripts?: { tight?: string; long?: string };
     // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
     // real performance pulled back for those posts.
     publishResults?: PublishResult[];

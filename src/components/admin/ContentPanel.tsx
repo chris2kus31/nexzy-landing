@@ -1101,6 +1101,7 @@ function SuggestionCard({
   const [draft, setDraft] = useState(view.ttsScript ?? "");
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [scriptSteer, setScriptSteer] = useState("");
   const credits = view.charCount ?? view.ttsScript?.length ?? 0;
@@ -1806,12 +1807,27 @@ function SuggestionCard({
         )}
       </VStack>
 
-      {/* Publish this card straight to FB/IG Reels + a Threads text post */}
+      {/* Publish this card straight to FB/IG Reels + a Threads text post —
+          collapsible (it's the biggest block) to keep the card scannable. */}
       {s.kind === "video" &&
         !isNonVideo &&
         !isImage &&
         !isBriefCard &&
-        isOwner && <PublishBox s={view} />}
+        isOwner && (
+          <>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              _hover={{ bg: "whiteAlpha.100", color: "nexzy.white" }}
+              onClick={() => setShowPublish((v) => !v)}
+              mb={2}
+            >
+              {showPublish ? "▾ Hide" : "▸ Show"} publish to social
+            </Button>
+            {showPublish && <PublishBox s={view} />}
+          </>
+        )}
 
       {/* Collapsible: kits + ElevenLabs production block (fast board scanning) */}
       {!isNonVideo && !isImage && !isBriefCard && (
@@ -1999,8 +2015,9 @@ function SuggestionCard({
                       fontSize="xs"
                       fontWeight="700"
                     >
-                      ElevenLabs script · {draft.length.toLocaleString()}{" "}
-                      credits · ~{Math.max(1, Math.round(draft.length / 15))}s
+                      ElevenLabs · Core cut · Instagram ·{" "}
+                      {draft.length.toLocaleString()} credits · ~
+                      {Math.max(1, Math.round(draft.length / 15))}s
                     </Text>
                     <HStack gap={1}>
                       {isOwner && dirty && (
@@ -2038,6 +2055,50 @@ function SuggestionCard({
                     </Text>
                   )}
                 </Box>
+                {/* Length-band cuts of the same spine — trim to each platform. */}
+                {(
+                  [
+                    ["tight", "Tight cut", "TikTok / Shorts"],
+                    ["long", "Long cut", "Facebook"],
+                  ] as const
+                ).map(([key, label, plat]) => {
+                  const txt = view.payload?.ttsScripts?.[key];
+                  if (!txt) return null;
+                  return (
+                    <Box
+                      key={key}
+                      bg="whiteAlpha.50"
+                      border="1px solid"
+                      borderColor="whiteAlpha.200"
+                      borderRadius="lg"
+                      p={3}
+                    >
+                      <Flex
+                        justify="space-between"
+                        align="center"
+                        mb={1}
+                        gap={2}
+                      >
+                        <Text
+                          color="nexzy.lightBlue"
+                          fontSize="xs"
+                          fontWeight="700"
+                        >
+                          {label} · {plat} · ~
+                          {Math.max(1, Math.round(txt.length / 15))}s
+                        </Text>
+                        <CopyBtn text={txt} label="Copy" />
+                      </Flex>
+                      <Text
+                        color="nexzy.gray.100"
+                        fontSize="sm"
+                        whiteSpace="pre-wrap"
+                      >
+                        {txt}
+                      </Text>
+                    </Box>
+                  );
+                })}
                 {/* One production block: everything you hand the editor to
                     actually cut the video — delivery, music, footage, captions. */}
                 <Box
