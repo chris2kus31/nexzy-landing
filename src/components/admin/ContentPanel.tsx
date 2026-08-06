@@ -1761,6 +1761,25 @@ function SuggestionCard({
             {view.script}
           </Text>
         )}
+        {view.payload?.forPlatforms &&
+          view.payload.forPlatforms.length > 0 && (
+            <Text color="nexzy.gray.100" fontSize="xs">
+              <b>For:</b>{" "}
+              {view.payload.forPlatforms
+                .map(
+                  (p) =>
+                    ({
+                      youtube: "YouTube",
+                      instagram: "Instagram",
+                      tiktok: "TikTok",
+                      facebook: "Facebook",
+                      threads: "Threads",
+                      x: "X",
+                    })[p] ?? p,
+                )
+                .join(" · ")}
+            </Text>
+          )}
         {view.payload?.lengths && !isBriefCard && !isLong && (
           <Text color="nexzy.gray.100" fontSize="xs">
             <b>Cut lengths:</b> TikTok {view.payload.lengths.tiktok} · Reels{" "}

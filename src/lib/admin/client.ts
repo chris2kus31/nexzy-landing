@@ -390,6 +390,9 @@ export interface ContentSuggestion {
       facebook?: string;
       youtube?: string;
     };
+    // Which platforms this generated card serves (the per-platform plan grouped
+    // this asset for these surfaces). Set when a lead generates via the plan.
+    forPlatforms?: string[];
     // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
     // real performance pulled back for those posts.
     publishResults?: PublishResult[];
@@ -2240,6 +2243,7 @@ export async function generateFromLead(
   format?: string,
   steer?: string,
   xFormat?: string,
+  plan?: Record<string, string>,
 ): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
@@ -2250,6 +2254,7 @@ export async function generateFromLead(
         ...(format ? { format } : {}),
         ...(steer ? { steer } : {}),
         ...(xFormat ? { xFormat } : {}),
+        ...(plan ? { plan } : {}),
       }),
     }),
   );

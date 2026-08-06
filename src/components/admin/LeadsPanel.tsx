@@ -14,7 +14,6 @@ import {
   Spinner,
   Textarea,
 } from "@chakra-ui/react";
-import { FiImage } from "react-icons/fi";
 import {
   getVideoLeads,
   generateFromLead,
@@ -31,24 +30,96 @@ const LANE_COLOR: Record<string, string> = {
   guide: "cyan",
 };
 
-const FORMATS: { key: string; label: string }[] = [
-  { key: "short", label: "Short" },
-  { key: "long", label: "Long-form" },
-  { key: "carousel", label: "Carousel" },
-  { key: "photo", label: "Photo (TikTok)" },
-  { key: "album", label: "Album (FB)" },
-  { key: "image", label: "Image" },
-  { key: "text_post", label: "Text post" },
-  { key: "none", label: "No video" },
+// Per-platform format options: [value, label, asset-bucket]. The BUCKET is what
+// actually gets built — platforms that share a bucket ship as ONE card, so the
+// plan below turns directly into "you'll generate N cards".
+const PLAT_OPTS: Record<string, [string, string, string][]> = {
+  youtube: [
+    ["short", "Short", "video"],
+    ["long", "Long-form", "long"],
+    ["skip", "Skip", "skip"],
+  ],
+  instagram: [
+    ["reel", "Reel", "video"],
+    ["carousel", "Carousel", "carousel"],
+    ["image", "Image", "image"],
+    ["skip", "Skip", "skip"],
+  ],
+  tiktok: [
+    ["video", "Video", "video"],
+    ["photo", "Photo (TikTok)", "photo"],
+    ["skip", "Skip", "skip"],
+  ],
+  facebook: [
+    ["reel", "Reel", "video"],
+    ["album", "Album (FB)", "album"],
+    ["image", "Image", "image"],
+    ["skip", "Skip", "skip"],
+  ],
+  threads: [
+    ["text", "Text take", "video"],
+    ["image", "Image", "image"],
+    ["carousel", "Carousel", "carousel"],
+    ["skip", "Skip", "skip"],
+  ],
+  x: [
+    ["hot_take", "Hot take", "video"],
+    ["thread", "Thread", "video"],
+    ["poll", "Poll", "video"],
+    ["clip", "Clip", "video"],
+    ["image", "Image", "image"],
+    ["skip", "Skip", "skip"],
+  ],
+};
+const PLAN_ROWS: [string, string, string][] = [
+  ["youtube", "YouTube", ""],
+  ["instagram", "Instagram", ""],
+  ["tiktok", "TikTok", ""],
+  ["facebook", "Facebook", ""],
+  ["threads", "Threads", ""],
+  ["x", "X", "post shape"],
 ];
+const BUCKET_ORDER = ["video", "long", "carousel", "photo", "album", "image"];
 
-const X_FORMATS: { key: string; label: string }[] = [
-  { key: "hot_take", label: "Hot take" },
-  { key: "thread", label: "Thread" },
-  { key: "poll", label: "Poll" },
-  { key: "image", label: "Image" },
-  { key: "clip", label: "Clip" },
-];
+function planBucket(pf: string, v: string): string {
+  const o = PLAT_OPTS[pf]?.find((x) => x[0] === v);
+  return o ? o[2] : "skip";
+}
+function planOptLabel(pf: string, v: string): string {
+  const o = PLAT_OPTS[pf]?.find((x) => x[0] === v);
+  return o ? o[1] : v;
+}
+// The analyst's per-platform recommendation → a valid option for that surface.
+function normFmt(pf: string, v?: string): string {
+  if (v === "none") return "skip";
+  if (v && PLAT_OPTS[pf].some((o) => o[0] === v)) return v;
+  return PLAT_OPTS[pf][0][0];
+}
+function bucketLabel(b: string, lane?: string): string {
+  if (b === "image") return lane === "deal" ? "Deal image" : "Image post";
+  return (
+    {
+      video: "Short video",
+      long: "Long-form video",
+      carousel: "Carousel",
+      photo: "Photo deck",
+      album: "Album",
+    }[b] ?? b
+  );
+}
+
+const SELECT_STYLE: React.CSSProperties = {
+  appearance: "none",
+  background: "#0f1626",
+  color: "#eef2f8",
+  border: "1px solid rgba(255,255,255,0.22)",
+  borderRadius: "8px",
+  padding: "7px 12px",
+  font: "inherit",
+  fontWeight: 600,
+  cursor: "pointer",
+  minWidth: "210px",
+};
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // General best posting windows per platform (grounded in our growth guides),
@@ -71,28 +142,6 @@ const PLATFORM_LABEL: Record<string, string> = {
   youtube: "YouTube",
   tiktok: "TikTok",
 };
-
-// Phase 1 — the analyst's recommended format PER platform (display only for now;
-// generation of the new formats lands in Phase 3).
-const PLATFORM_FORMAT_LABEL: Record<string, string> = {
-  short: "Short",
-  long: "Long-form",
-  reel: "Reel",
-  carousel: "Carousel",
-  photo: "Photo mode",
-  album: "Album",
-  video: "Video",
-  image: "Image",
-  text: "Text",
-  none: "Skip",
-};
-const PLATFORM_PLAN_ORDER = [
-  "youtube",
-  "instagram",
-  "tiktok",
-  "facebook",
-  "threads",
-];
 
 function fmtSlot(at: Date, now: Date): string {
   const a = new Date(at);
@@ -166,25 +215,14 @@ function topEntry(m?: Record<string, number>): [string, number] | null {
   const e = Object.entries(m || {}).sort((a, b) => b[1] - a[1]);
   return e.length ? e[0] : null;
 }
-function peakHours(hours?: number[]): string {
-  if (!Array.isArray(hours) || !hours.some((n) => n > 0)) return "";
-  return hours
-    .map((n, h) => ({ n, h }))
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 2)
-    .map((x) => `${String(x.h).padStart(2, "0")}:00`)
-    .join(", ");
-}
 
-function fmtLabel(key?: string): string {
-  return FORMATS.find((f) => f.key === key)?.label ?? key ?? "Short";
-}
-
-/** One video lead: pick writer + format, then Generate (spends tokens). */
+/** One video lead: collapsible; set the per-platform plan, then Generate. */
 function LeadCard({
   s,
   writers,
   isOwner,
+  open,
+  onToggle,
   onDone,
   reload,
   audienceByDay,
@@ -193,6 +231,8 @@ function LeadCard({
   s: ContentSuggestion;
   writers: string[];
   isOwner: boolean;
+  open: boolean;
+  onToggle: () => void;
   onDone: (id: string) => void;
   reload: () => void | Promise<void>;
   audienceByDay?: Record<string, string>;
@@ -205,10 +245,26 @@ function LeadCard({
   const [writer, setWriter] = useState(
     lead?.suggestedWriter || s.author || "Chuy",
   );
-  const [format, setFormat] = useState(lead?.suggestedFormat || "short");
-  const [busy, setBusy] = useState<"gen" | "skip" | "img" | null>(null);
+  const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
   const [steer, setSteer] = useState("");
-  const [xFormat, setXFormat] = useState(lead?.xFormat || "hot_take");
+
+  // The analyst's recommended plan (platformFormats + xFormat), normalized to
+  // valid per-surface options — this pre-fills the pickers and marks "changed".
+  const rec = useMemo<Record<string, string>>(
+    () => ({
+      youtube: normFmt("youtube", lead?.platformFormats?.youtube),
+      instagram: normFmt("instagram", lead?.platformFormats?.instagram),
+      tiktok: normFmt("tiktok", lead?.platformFormats?.tiktok),
+      facebook: normFmt("facebook", lead?.platformFormats?.facebook),
+      threads: normFmt("threads", lead?.platformFormats?.threads),
+      x: normFmt("x", lead?.xFormat),
+    }),
+    [lead],
+  );
+  const [plan, setPlan] = useState<Record<string, string>>(rec);
+  const setP = (pf: string, v: string) =>
+    setPlan((p) => ({ ...p, [pf]: v }));
+
   const now = useMemo(() => new Date(), []);
   const postSlots = useMemo(() => {
     const plats = lead?.platforms ?? [];
@@ -221,13 +277,15 @@ function LeadCard({
           : null;
       })
       .filter(
-        (x): x is { platform: string; label: string; text: string; src: string } =>
+        (
+          x,
+        ): x is { platform: string; label: string; text: string; src: string } =>
           x !== null,
       );
   }, [lead?.platforms, audienceByPlatformDay, now]);
+
   const generating = !!s.payload?.generating;
   const lastError = s.payload?.lastError;
-
   const writerOptions =
     writers.length > 0
       ? Array.from(new Set([writer, ...writers]))
@@ -235,34 +293,31 @@ function LeadCard({
           (v, i, a) => a.indexOf(v) === i,
         );
 
+  // Group the six picks into the assets they build (platforms sharing a format
+  // share a card) — this drives the live "You'll generate" preview.
+  const groups = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    PLAN_ROWS.forEach(([pf]) => {
+      const b = planBucket(pf, plan[pf]);
+      if (b === "skip") return;
+      (m[b] = m[b] || []).push(pf);
+    });
+    return m;
+  }, [plan]);
+  const activeBuckets = BUCKET_ORDER.filter((b) => groups[b]);
+  const cardCount = activeBuckets.length;
+  const lane = s.lane ?? "news";
+
   const generate = async () => {
     setBusy("gen");
     try {
       await generateFromLead(
         s.id,
         writer,
-        format,
+        undefined,
         steer.trim() || undefined,
-        xFormat,
-      );
-      await reload(); // pick up the queued 'generating' state (or removal)
-    } catch {
-      /* leave the lead in place so you can retry */
-    } finally {
-      setBusy(null);
-    }
-  };
-  // Generate a DIY IMAGE CARD (copy-only, NO AI image) instead of a video card.
-  // Reuses the same generate-from-lead flow with the 'image_card' format.
-  const genImageCard = async () => {
-    setBusy("img");
-    try {
-      await generateFromLead(
-        s.id,
-        writer,
-        "image_card",
-        steer.trim() || undefined,
-        xFormat,
+        undefined,
+        plan,
       );
       await reload();
     } catch {
@@ -281,285 +336,397 @@ function LeadCard({
     }
   };
 
+  const whenBadge = lead?.when;
+  const summaryChip = cardCount
+    ? `${writer} · ${cardCount} card${cardCount > 1 ? "s" : ""} · ${activeBuckets
+        .map((b) => bucketLabel(b, lane))
+        .join(", ")}`
+    : `${writer} · nothing selected`;
+
   return (
     <Box
       bg="whiteAlpha.50"
       border="1px solid"
       borderColor="whiteAlpha.200"
       borderRadius="xl"
-      p={4}
+      overflow="hidden"
     >
-      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
-        <HStack gap={2} wrap="wrap" flex={1} minW={0}>
+      {/* Header — always visible; click to expand/collapse */}
+      <Flex
+        align="center"
+        gap={3}
+        p={4}
+        cursor="pointer"
+        onClick={onToggle}
+        _hover={{ bg: "whiteAlpha.50" }}
+      >
+        <Text
+          color="nexzy.gray.100"
+          fontSize="sm"
+          transform={open ? "rotate(90deg)" : "none"}
+          transition="transform .15s"
+        >
+          ▶
+        </Text>
+        <Badge colorPalette={LANE_COLOR[lane] || "gray"} variant="solid">
+          {lane.toUpperCase()}
+        </Badge>
+        {whenBadge && (
           <Badge
-            colorPalette={LANE_COLOR[s.lane ?? ""] || "gray"}
-            variant="solid"
+            colorPalette={
+              whenBadge === "now"
+                ? "green"
+                : whenBadge === "pre_event"
+                  ? "orange"
+                  : "blue"
+            }
+            variant="subtle"
           >
-            {(s.lane ?? "news").toUpperCase()}
+            {whenBadge === "now"
+              ? "POST NOW"
+              : whenBadge === "pre_event"
+                ? "PRE-EVENT"
+                : "SCHEDULE"}
           </Badge>
-          <Badge colorPalette="purple" variant="subtle">
-            suggests: {fmtLabel(lead?.suggestedFormat)}
-          </Badge>
-          {lead?.xFormat && (
-            <Badge colorPalette="cyan" variant="subtle">
-              X: {lead.xFormat.replace(/_/g, " ")}
-            </Badge>
-          )}
-          {lead?.when && (
-            <Badge
-              colorPalette={
-                lead.when === "now"
-                  ? "green"
-                  : lead.when === "pre_event"
-                    ? "orange"
-                    : "blue"
-              }
-              variant="subtle"
-            >
-              {lead.when === "now"
-                ? "POST NOW"
-                : lead.when === "pre_event"
-                  ? "PRE-EVENT"
-                  : "SCHEDULE"}
-            </Badge>
-          )}
-          <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-            {s.title}
-          </Text>
-        </HStack>
+        )}
+        <Text
+          color="nexzy.white"
+          fontWeight="700"
+          lineClamp={1}
+          flex={1}
+          minW={0}
+        >
+          {s.title}
+        </Text>
+        {generating && <Spinner size="xs" color="nexzy.blue" />}
+        <Text
+          color="nexzy.gray.100"
+          fontSize="xs"
+          whiteSpace="nowrap"
+          display={{ base: "none", md: "block" }}
+        >
+          {summaryChip}
+        </Text>
       </Flex>
 
-      {lead?.summary && (
-        <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
-          {lead.summary}
-        </Text>
-      )}
-      {lead?.timing && (
-        <Text color="nexzy.lightBlue" fontSize="xs" mb={2}>
-          🕒 {lead.timing}
-        </Text>
-      )}
-
-      {lead?.platformFormats &&
-        PLATFORM_PLAN_ORDER.some((k) => lead?.platformFormats?.[k]) && (
-          <HStack gap={2} wrap="wrap" mb={2}>
-            <Text color="nexzy.gray.100" fontSize="xs" fontWeight="600">
-              Per-platform plan:
+      {open && (
+        <Box px={4} pb={4}>
+          {lead?.summary && (
+            <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
+              {lead.summary}
             </Text>
-            {PLATFORM_PLAN_ORDER.map((k) => {
-              const fmt = lead?.platformFormats?.[k];
-              if (!fmt) return null;
+          )}
+          {lead?.timing && (
+            <Text color="nexzy.lightBlue" fontSize="xs" mb={3}>
+              {lead.timing}
+            </Text>
+          )}
+
+          {postSlots.length > 0 && (
+            <Box mb={2}>
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mb={0.5}
+              >
+                WHEN TO POST (your local time)
+              </Text>
+              <Flex direction="column" gap={0.5}>
+                {postSlots.map((ps) => (
+                  <Text key={ps.platform} color="nexzy.gray.100" fontSize="xs">
+                    <Text as="span" color="nexzy.white" fontWeight="700">
+                      {ps.label}
+                    </Text>{" "}
+                    {ps.text}{" "}
+                    <Text as="span" color="whiteAlpha.500">
+                      · {ps.src}
+                    </Text>
+                  </Text>
+                ))}
+              </Flex>
+            </Box>
+          )}
+
+          {audienceByDay && Object.keys(audienceByDay).length > 0 && (
+            <Box mb={2}>
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mb={0.5}
+              >
+                BEST TIMES TO POST (by day)
+              </Text>
+              <Flex gap={3} wrap="wrap">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                  .filter((d) => audienceByDay[d])
+                  .map((d) => (
+                    <Text key={d} color="nexzy.gray.100" fontSize="xs">
+                      <Text as="span" color="nexzy.white" fontWeight="700">
+                        {d}
+                      </Text>{" "}
+                      {audienceByDay[d]}
+                    </Text>
+                  ))}
+              </Flex>
+            </Box>
+          )}
+          {lead?.reason && (
+            <Text
+              color="nexzy.gray.100"
+              fontSize="xs"
+              mb={3}
+              fontStyle="italic"
+            >
+              Why: {lead.reason}
+            </Text>
+          )}
+
+          {lastError && (
+            <Text color="red.300" fontSize="xs" mb={3}>
+              Last generation failed: {lastError}. Adjust and retry.
+            </Text>
+          )}
+
+          {/* Writer picker */}
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            Writer / voice
+          </Text>
+          <HStack gap={1} wrap="wrap" mb={3}>
+            {writerOptions.map((w) => (
+              <Button
+                key={w}
+                size="xs"
+                variant={writer === w ? "solid" : "outline"}
+                bg={writer === w ? "nexzy.blue" : "transparent"}
+                color={writer === w ? "white" : "nexzy.gray.100"}
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: writer === w ? "nexzy.blue" : "whiteAlpha.100" }}
+                onClick={() => setWriter(w)}
+              >
+                {w}
+              </Button>
+            ))}
+          </HStack>
+
+          {/* Per-platform plan */}
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            Per-platform plan{" "}
+            <Text as="span" color="whiteAlpha.500">
+              — the format each surface gets. Pre-filled by the analyst; change
+              any of them.
+            </Text>
+          </Text>
+          <Box
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="lg"
+            overflow="hidden"
+          >
+            {PLAN_ROWS.map(([pf, label, sub], i) => {
+              const v = plan[pf];
+              const isSkip = v === "skip";
+              const isMod = v !== rec[pf];
               return (
-                <Badge
-                  key={k}
-                  colorPalette="teal"
-                  variant="subtle"
-                  fontSize="xs"
+                <Flex
+                  key={pf}
+                  align="center"
+                  gap={3}
+                  px={3}
+                  py={2}
+                  borderTop={i === 0 ? "none" : "1px solid"}
+                  borderColor="whiteAlpha.100"
+                  opacity={isSkip ? 0.55 : 1}
                 >
-                  {PLATFORM_LABEL[k] ?? k}: {PLATFORM_FORMAT_LABEL[fmt] ?? fmt}
-                </Badge>
+                  <Box w="120px" flexShrink={0}>
+                    <Text color="nexzy.white" fontWeight="700" fontSize="sm">
+                      {label}
+                    </Text>
+                    {sub && (
+                      <Text color="nexzy.gray.100" fontSize="10px">
+                        {sub}
+                      </Text>
+                    )}
+                  </Box>
+                  <Box flex={1} minW={0}>
+                    <select
+                      value={v}
+                      onChange={(e) => setP(pf, e.target.value)}
+                      style={{
+                        ...SELECT_STYLE,
+                        borderColor: isMod
+                          ? "#2f6bff"
+                          : "rgba(255,255,255,0.22)",
+                      }}
+                    >
+                      {PLAT_OPTS[pf].map((o) => (
+                        <option key={o[0]} value={o[0]}>
+                          {o[1]}
+                          {o[0] === rec[pf] ? " — recommended" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </Box>
+                  <Badge
+                    colorPalette={isSkip ? "gray" : isMod ? "yellow" : "green"}
+                    variant="subtle"
+                    fontSize="10px"
+                    flexShrink={0}
+                  >
+                    {isSkip ? "skipped" : isMod ? "changed" : "recommended"}
+                  </Badge>
+                </Flex>
               );
             })}
-            {lead?.xFormat && (
-              <Badge colorPalette="teal" variant="subtle" fontSize="xs">
-                X: {lead.xFormat.replace(/_/g, " ")}
-              </Badge>
-            )}
-          </HStack>
-        )}
+          </Box>
+          <Flex justify="space-between" align="center" mt={2} mb={4} gap={2} wrap="wrap">
+            <Text color="nexzy.gray.100" fontSize="11px" flex={1} minW="240px">
+              Same format across platforms = one card. A different format (e.g. a
+              carousel) = its own card. “Image” = a deal graphic on deal leads,
+              an image post you design otherwise.
+            </Text>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.lightBlue"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={() => setPlan(rec)}
+            >
+              Reset to recommended
+            </Button>
+          </Flex>
 
-      {postSlots.length > 0 && (
-        <Box mb={2}>
-          <Text
-            color="whiteAlpha.600"
-            fontSize="10px"
-            fontWeight="700"
-            mb={0.5}
-          >
-            📅 WHEN TO POST (your local time)
+          {/* Steer */}
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            Notes / steer (optional — factored into every asset generated)
           </Text>
-          <Flex direction="column" gap={0.5}>
-            {postSlots.map((ps) => (
-              <Text key={ps.platform} color="nexzy.gray.100" fontSize="xs">
-                <Text as="span" color="nexzy.white" fontWeight="700">
-                  {ps.label}
-                </Text>{" "}
-                {ps.text}{" "}
-                <Text as="span" color="whiteAlpha.500">
-                  · {ps.src}
-                </Text>
+          <Textarea
+            value={steer}
+            onChange={(e) => setSteer(e.target.value)}
+            rows={2}
+            mb={4}
+            bg="whiteAlpha.50"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            fontSize="sm"
+            placeholder="e.g. sound excited; note it's a sequel; keep it tight"
+          />
+
+          {/* You'll generate */}
+          <Box
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="lg"
+            p={3}
+            mb={4}
+          >
+            <Flex justify="space-between" align="baseline" mb={1}>
+              <Text
+                color="whiteAlpha.700"
+                fontSize="10px"
+                fontWeight="700"
+                letterSpacing="wide"
+              >
+                YOU&apos;LL GENERATE
               </Text>
-            ))}
-          </Flex>
-        </Box>
-      )}
-
-      {audienceByDay && Object.keys(audienceByDay).length > 0 && (
-        <Box mb={2}>
-          <Text
-            color="whiteAlpha.600"
-            fontSize="10px"
-            fontWeight="700"
-            mb={0.5}
-          >
-            📅 BEST TIMES TO POST (by day)
-          </Text>
-          <Flex gap={3} wrap="wrap">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-              .filter((d) => audienceByDay[d])
-              .map((d) => (
-                <Text key={d} color="nexzy.gray.100" fontSize="xs">
-                  <Text as="span" color="nexzy.white" fontWeight="700">
-                    {d}
-                  </Text>{" "}
-                  {audienceByDay[d]}
+              {cardCount > 0 && (
+                <Text color="green.300" fontSize="10px" fontWeight="700">
+                  {cardCount} card{cardCount > 1 ? "s" : ""}
                 </Text>
-              ))}
+              )}
+            </Flex>
+            <Text color="whiteAlpha.600" fontSize="11px" mb={2}>
+              Exactly what&apos;s selected above. Reel, Video, Text take &amp;
+              Short are the same short-video asset under each platform&apos;s
+              name — they ship together as one card.
+            </Text>
+            {cardCount === 0 ? (
+              <Text color="nexzy.gray.100" fontSize="xs">
+                Every platform is skipped — nothing to generate.
+              </Text>
+            ) : (
+              activeBuckets.map((b) => (
+                <Flex
+                  key={b}
+                  gap={3}
+                  py={1}
+                  align="baseline"
+                  borderTop="1px dashed"
+                  borderColor="whiteAlpha.100"
+                  _first={{ borderTop: "none" }}
+                >
+                  <Text
+                    color="nexzy.white"
+                    fontWeight="700"
+                    fontSize="sm"
+                    minW="120px"
+                    flexShrink={0}
+                  >
+                    {bucketLabel(b, lane)}
+                  </Text>
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    {groups[b]
+                      .map(
+                        (pf) =>
+                          `${PLATFORM_LABEL[pf] ?? pf} (${planOptLabel(
+                            pf,
+                            plan[pf],
+                          )})`,
+                      )
+                      .join(" · ")}
+                  </Text>
+                </Flex>
+              ))
+            )}
+          </Box>
+
+          {/* Actions */}
+          <Flex justify="space-between" align="center" gap={2}>
+            {s.url ? (
+              <Link
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="nexzy.lightBlue"
+                fontSize="xs"
+              >
+                Article ↗
+              </Link>
+            ) : (
+              <Box />
+            )}
+            <HStack gap={2}>
+              {isOwner && (
+                <Button
+                  size="sm"
+                  colorPalette="green"
+                  onClick={generate}
+                  loading={busy === "gen" || generating}
+                  loadingText="Generating…"
+                  disabled={generating || cardCount === 0}
+                >
+                  {lastError
+                    ? "Retry"
+                    : `Generate ${cardCount} card${cardCount > 1 ? "s" : ""}`}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                color="nexzy.gray.100"
+                _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+                onClick={skip}
+                loading={busy === "skip"}
+                loadingText="…"
+              >
+                Skip
+              </Button>
+            </HStack>
           </Flex>
         </Box>
       )}
-      {lead?.reason && (
-        <Text color="nexzy.gray.100" fontSize="xs" mb={3} fontStyle="italic">
-          Why: {lead.reason}
-        </Text>
-      )}
-
-      {lastError && (
-        <Text color="red.300" fontSize="xs" mb={3}>
-          ⚠ Last generation failed: {lastError}. Adjust and retry.
-        </Text>
-      )}
-
-      {/* Writer picker */}
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        Writer / voice
-      </Text>
-      <HStack gap={1} wrap="wrap" mb={3}>
-        {writerOptions.map((w) => (
-          <Button
-            key={w}
-            size="xs"
-            variant={writer === w ? "solid" : "outline"}
-            bg={writer === w ? "nexzy.blue" : "transparent"}
-            color={writer === w ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{ bg: writer === w ? "nexzy.blue" : "whiteAlpha.100" }}
-            onClick={() => setWriter(w)}
-          >
-            {w}
-          </Button>
-        ))}
-      </HStack>
-
-      {/* Format picker */}
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        Format
-      </Text>
-      <HStack gap={1} wrap="wrap" mb={4}>
-        {FORMATS.map((f) => (
-          <Button
-            key={f.key}
-            size="xs"
-            variant={format === f.key ? "solid" : "outline"}
-            bg={format === f.key ? "nexzy.blue" : "transparent"}
-            color={format === f.key ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{ bg: format === f.key ? "nexzy.blue" : "whiteAlpha.100" }}
-            onClick={() => setFormat(f.key)}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </HStack>
-
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        X format{lead?.xFormat ? ` · suggested: ${lead.xFormat.replace(/_/g, " ")}` : ""}
-      </Text>
-      <HStack gap={1} wrap="wrap" mb={4}>
-        {X_FORMATS.map((f) => (
-          <Button
-            key={f.key}
-            size="xs"
-            variant={xFormat === f.key ? "solid" : "outline"}
-            bg={xFormat === f.key ? "nexzy.blue" : "transparent"}
-            color={xFormat === f.key ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{ bg: xFormat === f.key ? "nexzy.blue" : "whiteAlpha.100" }}
-            onClick={() => setXFormat(f.key)}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </HStack>
-
-      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-        Notes / steer (optional — factored into the generated video)
-      </Text>
-      <Textarea
-        value={steer}
-        onChange={(e) => setSteer(e.target.value)}
-        rows={2}
-        mb={4}
-        bg="whiteAlpha.50"
-        color="nexzy.white"
-        borderColor="whiteAlpha.300"
-        fontSize="sm"
-        placeholder="e.g. sound excited; note it's a sequel; keep it tight"
-      />
-
-      <Flex justify="space-between" align="center" gap={2}>
-        {s.url ? (
-          <Link
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            color="nexzy.lightBlue"
-            fontSize="xs"
-          >
-            Article ↗
-          </Link>
-        ) : (
-          <Box />
-        )}
-        <HStack gap={2}>
-          {isOwner && (
-            <Button
-              size="sm"
-              colorPalette="green"
-              onClick={generate}
-              loading={busy === "gen" || generating}
-              loadingText="Generating…"
-              disabled={generating}
-            >
-              {lastError ? "🎬 Retry" : "🎬 Generate"}
-            </Button>
-          )}
-          {isOwner && (
-            <Button
-              size="sm"
-              colorPalette="purple"
-              variant="outline"
-              onClick={genImageCard}
-              loading={busy === "img" || generating}
-              loadingText="Image card…"
-              disabled={generating}
-            >
-              <FiImage /> Image card
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            color="nexzy.gray.100"
-            _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
-            onClick={skip}
-            loading={busy === "skip"}
-            loadingText="…"
-          >
-            Skip
-          </Button>
-        </HStack>
-      </Flex>
     </Box>
   );
 }
@@ -714,7 +881,7 @@ export function AudiencePanel({
     >
       <Flex justify="space-between" align="center" gap={2} wrap="wrap" mb={has ? 3 : 1}>
         <Text color="nexzy.white" fontSize="sm" fontWeight="700">
-          👥 Audience &amp; best times
+          Audience &amp; best times
           {has && updated ? (
             <Text as="span" color="whiteAlpha.500" fontWeight="400">
               {"  ·  updated " + updated}
@@ -762,12 +929,12 @@ export function AudiencePanel({
           </Flex>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
-            ⏰ BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
+            BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
           </Text>
           {realRows.length > 0 && (
             <Box mb={2}>
               <Text color="green.300" fontSize="10px" fontWeight="700" mb={1}>
-                ✅ FROM YOUR REAL DATA
+                FROM YOUR REAL DATA
               </Text>
               <VStack align="stretch" gap={1}>
                 {realRows.map(renderRow)}
@@ -776,7 +943,7 @@ export function AudiencePanel({
           )}
           <Box mb={3}>
             <Text color="whiteAlpha.500" fontSize="10px" fontWeight="700" mb={1}>
-              📊 GENERAL · BEST PRACTICE
+              GENERAL · BEST PRACTICE
               {realRows.length === 0 ? " (no post history yet)" : ""}
             </Text>
             <VStack align="stretch" gap={1}>
@@ -785,7 +952,7 @@ export function AudiencePanel({
           </Box>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
-            👥 WHO{audience?.sources?.length ? ` · from ${audience.sources.join(", ")}` : ""}
+            WHO{audience?.sources?.length ? ` · from ${audience.sources.join(", ")}` : ""}
           </Text>
           <VStack align="stretch" gap={1} mb={2}>
             {ages.map(([k, v]) => (
@@ -848,7 +1015,7 @@ export function AudiencePanel({
                 fontWeight="700"
                 mb={1}
               >
-                🔌 DATA SOURCES — what Refresh actually pulled
+                DATA SOURCES — what Refresh actually pulled
               </Text>
               <VStack align="stretch" gap={0.5}>
                 {["instagram", "facebook", "threads", "youtube", "x"].map((p) => {
@@ -875,7 +1042,7 @@ export function AudiencePanel({
                         {PLATFORM_LABEL[p] ?? p}
                       </Text>
                       <Text fontSize="10px" color={color} minW={0}>
-                        {ok ? "● " : st.error ? "⚠️ " : ""}
+                        {ok ? "● " : st.error ? "! " : ""}
                         {txt}
                       </Text>
                     </Flex>
@@ -906,14 +1073,16 @@ export function AudiencePanel({
 
 /**
  * Leads — every published article lands here as a zero-heavy-token video lead
- * with a suggested writer + format. Pick, then Generate → the real card is
- * written (in that voice) and appears under Suggestions.
+ * with a per-platform plan. Set the plan, then Generate → the real card(s) are
+ * written (in that voice) and appear under Suggestions. Cards are collapsible so
+ * you can scan the whole board.
  */
 export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const [leads, setLeads] = useState<ContentSuggestion[] | null>(null);
   const [writers, setWriters] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [audience, setAudience] = useState<AudienceProfile | null>(null);
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -952,6 +1121,16 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const remove = (id: string) =>
     setLeads((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
 
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const expandAll = () => setOpenIds(new Set((leads ?? []).map((l) => l.id)));
+  const collapseAll = () => setOpenIds(new Set());
+
   if (error) {
     return (
       <Text color="red.300" fontSize="sm">
@@ -969,15 +1148,39 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
 
   return (
     <VStack align="stretch" gap={4}>
-      <Box>
-        <Heading size="md" color="nexzy.white" mb={1}>
-          Video leads
-        </Heading>
-        <Text color="nexzy.gray.100" fontSize="sm">
-          Each published article lands here first. Pick the writer and format,
-          then Generate — nothing heavy runs until you do.
-        </Text>
-      </Box>
+      <Flex justify="space-between" align="flex-start" gap={2} wrap="wrap">
+        <Box>
+          <Heading size="md" color="nexzy.white" mb={1}>
+            Video leads
+          </Heading>
+          <Text color="nexzy.gray.100" fontSize="sm">
+            Each published article lands here first. Set the plan per platform,
+            then Generate — nothing heavy runs until you do.
+          </Text>
+        </Box>
+        {leads.length > 0 && (
+          <HStack gap={2} flexShrink={0}>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.lightBlue"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={expandAll}
+            >
+              Expand all
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={collapseAll}
+            >
+              Collapse all
+            </Button>
+          </HStack>
+        )}
+      </Flex>
 
       {leads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
@@ -990,6 +1193,8 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
             s={s}
             writers={writers}
             isOwner={isOwner}
+            open={openIds.has(s.id)}
+            onToggle={() => toggle(s.id)}
             onDone={remove}
             reload={load}
             audienceByDay={audience?.bestTimes?.byDay}
