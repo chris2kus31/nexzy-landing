@@ -1761,6 +1761,14 @@ function SuggestionCard({
             {view.script}
           </Text>
         )}
+        {view.payload?.lengths && !isBriefCard && !isLong && (
+          <Text color="nexzy.gray.100" fontSize="xs">
+            <b>Cut lengths:</b> TikTok {view.payload.lengths.tiktok} · Reels{" "}
+            {view.payload.lengths.reels} · Facebook{" "}
+            {view.payload.lengths.facebook} · Shorts{" "}
+            {view.payload.lengths.youtube}
+          </Text>
+        )}
         {view.payload?.cta && (
           <Text color="nexzy.gray.100" fontSize="xs">
             📣 CTA: {view.payload.cta}

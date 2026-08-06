@@ -382,6 +382,14 @@ export interface ContentSuggestion {
     saveCta?: string;
     // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
     groundedOn?: { title: string; views?: string }[];
+    // Per-platform target cut lengths (Phase 4) — the band to trim each
+    // platform's cut to (one front-loaded spoken spine serves them all).
+    lengths?: {
+      tiktok?: string;
+      reels?: string;
+      facebook?: string;
+      youtube?: string;
+    };
     // Publish hub: results of publishing to FB/IG/Threads (post ids), and the
     // real performance pulled back for those posts.
     publishResults?: PublishResult[];
