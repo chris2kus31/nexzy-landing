@@ -35,6 +35,8 @@ const FORMATS: { key: string; label: string }[] = [
   { key: "short", label: "Short" },
   { key: "long", label: "Long-form" },
   { key: "carousel", label: "Carousel" },
+  { key: "photo", label: "Photo (TikTok)" },
+  { key: "album", label: "Album (FB)" },
   { key: "image", label: "Image" },
   { key: "text_post", label: "Text post" },
   { key: "none", label: "No video" },

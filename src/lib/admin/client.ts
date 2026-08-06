@@ -395,6 +395,8 @@ export interface ContentSuggestion {
       | "image"
       | "image_card"
       | "carousel"
+      | "photo"
+      | "album"
       | "poll"
       | "pinned_comment"
       | "text_post"

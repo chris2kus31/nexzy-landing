@@ -1068,12 +1068,19 @@ function SuggestionCard({
   // IMAGE CARD (DIY, format === "image_card"): copy-only — shared image title +
   // brief + per-platform captions. No image generated, no Produce/Publish/TTS.
   const isImageCard = fmt === "image_card";
-  // CAROUSEL (Phase 3): copy-only slide deck + captions. Same "brief card" family
-  // as image_card — no video / TTS / Produce / Publish.
-  const isCarousel = fmt === "carousel";
-  const isBriefCard = isImageCard || isCarousel;
+  // SLIDE decks (Phase 3): carousel / photo / album — copy-only slide deck +
+  // captions. Same "brief card" family as image_card — no video/TTS/Produce/Publish.
+  const isSlideCard =
+    fmt === "carousel" || fmt === "photo" || fmt === "album";
+  const isBriefCard = isImageCard || isSlideCard;
   const slides = view.payload?.slides ?? [];
   const saveCta = view.payload?.saveCta ?? "";
+  const slideLabel =
+    fmt === "album"
+      ? "ALBUM IMAGES"
+      : fmt === "photo"
+        ? "PHOTO SLIDES"
+        : "CAROUSEL SLIDES";
   const imageBrief = view.payload?.imageBrief ?? "";
   const aspect = view.payload?.aspect ?? "";
   const [persona, setPersona] = useState(s.author);
@@ -1620,7 +1627,7 @@ function SuggestionCard({
         </VStack>
       )}
 
-      {isCarousel && (
+      {isSlideCard && (
         <VStack align="stretch" gap={3} mb={3}>
           <Box
             bg="whiteAlpha.50"
@@ -1631,8 +1638,8 @@ function SuggestionCard({
           >
             <Flex justify="space-between" align="center" mb={1} gap={2}>
               <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                CAROUSEL SLIDES ({slides.length} · {aspect || "4:5"}) — design
-                these in the Cards tab
+                {slideLabel} ({slides.length} · {aspect || "4:5"}) — design these
+                in the Cards tab
               </Text>
               <CopyBtn
                 text={slides
@@ -1673,9 +1680,18 @@ function SuggestionCard({
           )}
           {platforms && (
             <VStack align="stretch" gap={2}>
-              <KitBlock name="Instagram" kit={platforms.reels} />
-              <KitBlock name="Threads" kit={platforms.threads} />
-              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+              {platforms.reels && (
+                <KitBlock name="Instagram" kit={platforms.reels} />
+              )}
+              {platforms.threads && (
+                <KitBlock name="Threads" kit={platforms.threads} />
+              )}
+              {platforms.tiktok && (
+                <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+              )}
+              {platforms.facebook && (
+                <KitBlock name="Facebook" kit={platforms.facebook} />
+              )}
             </VStack>
           )}
         </VStack>
