@@ -457,8 +457,16 @@ export interface ContentSuggestion {
         string,
         {
           recommended: string;
+          reason?:
+            | "ok"
+            | "rotated"
+            | "daily-cap"
+            | "quota-full"
+            | "analyst-skip";
           window: "daily" | "weekly";
           total: { used: number; target: number };
+          dayTotal?: number;
+          dailyCap?: number;
           formats: Record<
             string,
             { used: number; target: number; window: "daily" | "weekly" }

@@ -534,7 +534,18 @@ function LeadCard({
               const ff = cad?.formats?.[v];
               const atQuota = !!ff && ff.target > 0 && ff.used >= ff.target;
               let cadHint = "";
-              if (!isSkip && ff && ff.target > 0) {
+              if (isSkip && cad) {
+                // A skipped row MUST say why — a bare "Skip — recommended" with
+                // no counter reads as broken rather than deliberate.
+                if (cad.reason === "daily-cap") {
+                  cadHint = `at daily cap · ${cad.dayTotal ?? 0}/${cad.dailyCap} today — resets tomorrow`;
+                } else if (cad.reason === "quota-full") {
+                  const tw = cad.window === "daily" ? "today" : "this wk";
+                  cadHint = `quota full · ${cad.total.used}/${cad.total.target} ${tw}`;
+                } else if (cad.reason === "analyst-skip") {
+                  cadHint = "analyst says this story doesn't fit here";
+                }
+              } else if (ff && ff.target > 0) {
                 const fw = ff.window === "daily" ? "today" : "this wk";
                 cadHint = `${planOptLabel(pf, v)} ${ff.used}/${ff.target} ${fw}`;
                 // Platform total (skip YouTube — its short/long mix has no single total).
@@ -542,6 +553,11 @@ function LeadCard({
                   const tw = cad.window === "daily" ? "today" : "this wk";
                   cadHint += ` · ${PLATFORM_LABEL[pf] ?? pf} ${cad.total.used}/${cad.total.target} ${tw}`;
                 }
+              } else if (cad && cad.total.target > 0 && pf !== "youtube") {
+                // Untracked format still shows the platform total, so the
+                // at-quota warning can't vanish on a format switch.
+                const tw = cad.window === "daily" ? "today" : "this wk";
+                cadHint = `${PLATFORM_LABEL[pf] ?? pf} ${cad.total.used}/${cad.total.target} ${tw}`;
               }
               return (
                 <Flex
@@ -565,10 +581,12 @@ function LeadCard({
                     )}
                     {cadHint && (
                       <Text
-                        color={atQuota ? "orange.300" : "whiteAlpha.500"}
+                        color={
+                          atQuota || isSkip ? "orange.300" : "whiteAlpha.500"
+                        }
                         fontSize="10px"
                       >
-                        {atQuota ? "at quota · " : ""}
+                        {atQuota && !isSkip ? "at quota · " : ""}
                         {cadHint}
                       </Text>
                     )}
