@@ -6,6 +6,19 @@ import type { TagInfo } from "./tags";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
+/** One embedded video in an article's media gallery (multi-video support). */
+export interface ArticleMedia {
+  type: "youtube";
+  url: string;
+  videoId: string;
+  title?: string | null;
+  thumbnailUrl?: string | null;
+  caption?: string | null;
+  featured?: boolean;
+  source?: "manual" | "auto-finder";
+  order?: number;
+}
+
 export interface PublicPost {
   slug: string;
   title: string;
@@ -18,6 +31,8 @@ export interface PublicPost {
   imageAlt: string | null;
   imageCredit: string | null;
   youtubeUrl: string | null;
+  // Full video list (detail views); falls back to a single youtubeUrl item.
+  media?: ArticleMedia[];
   beat: string;
   type?: string;
   tags: string[];

@@ -3,6 +3,19 @@
 // admin JWT is in an httpOnly cookie, so these calls carry no token directly.
 "use client";
 
+/** One embedded video in an article's media gallery (multi-video support). */
+export interface ArticleMedia {
+  type: "youtube";
+  url: string;
+  videoId: string;
+  title?: string | null;
+  thumbnailUrl?: string | null;
+  caption?: string | null;
+  featured?: boolean;
+  source?: "manual" | "auto-finder";
+  order?: number;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -17,6 +30,7 @@ export interface BlogPost {
   imageAlt: string | null;
   imageCredit: string | null;
   youtubeUrl: string | null;
+  media?: ArticleMedia[] | null;
   beat: string;
   type?: string;
   parentId?: string | null;

@@ -8,8 +8,33 @@ import {
   uploadArticleImage,
   getWriterNames,
   type BlogPost,
+  type ArticleMedia,
 } from "@/lib/admin/client";
+import { youtubeId } from "@/lib/blog/youtube";
 import { BYLINES, type FormState, toForm } from "./shared";
+
+/**
+ * The article's video list for the editor, with backward-compat: if `media` is
+ * empty but the legacy `youtubeUrl` is set, show it as a single starred item so
+ * older articles seed the gallery. Mirrors the API's resolve fallback.
+ */
+export function mediaFromPost(p: BlogPost): ArticleMedia[] {
+  if (Array.isArray(p.media) && p.media.length) return p.media;
+  const id = youtubeId(p.youtubeUrl || "");
+  if (p.youtubeUrl && id) {
+    return [
+      {
+        type: "youtube",
+        url: p.youtubeUrl,
+        videoId: id,
+        thumbnailUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        featured: true,
+        source: "auto-finder",
+      },
+    ];
+  }
+  return [];
+}
 
 /**
  * The shared editor "engine": all post-editing state and the actions both the
@@ -20,6 +45,7 @@ import { BYLINES, type FormState, toForm } from "./shared";
 export function usePostEditor(id: string) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const [media, setMedia] = useState<ArticleMedia[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
@@ -39,6 +65,7 @@ export function usePostEditor(id: string) {
       .then((p) => {
         setPost(p);
         setForm(toForm(p));
+        setMedia(mediaFromPost(p));
         setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
@@ -59,6 +86,7 @@ export function usePostEditor(id: string) {
       const updated = await fn();
       setPost(updated);
       setForm(toForm(updated));
+      setMedia(mediaFromPost(updated));
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
@@ -93,7 +121,9 @@ export function usePostEditor(id: string) {
     bodyMarkdown,
     imageAlt: form!.imageAlt,
     imageCredit: form!.imageCredit,
-    youtubeUrl: form!.youtubeUrl.trim(),
+    // The media gallery is the source of truth; the API re-syncs youtubeUrl to
+    // the starred item. Send order by current position.
+    media: media.map((m, i) => ({ ...m, order: i })),
     tags: form!.tags
       .split(",")
       .map((t) => t.trim())
@@ -144,6 +174,8 @@ export function usePostEditor(id: string) {
     id,
     post,
     form,
+    media,
+    setMedia,
     error,
     busy,
     notice,

@@ -21,13 +21,15 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
 import { getAuthorByName } from "@/lib/blog/authors";
-import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
+import { youtubeId } from "@/lib/blog/youtube";
+import type { ArticleMedia } from "@/lib/blog/api";
 import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
+import MediaGallery from "@/components/blog/MediaGallery";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
@@ -88,11 +90,7 @@ export default async function BlogArticlePage({
   // Guides (/guides/[slug], HowTo schema) and lists (/lists/[slug], ItemList
   // schema) have their own homes — keep the canonical URL single by 404-ing
   // those slugs here.
-  if (
-    post.type === "guide" ||
-    post.type === "list" ||
-    post.type === "review"
-  )
+  if (post.type === "guide" || post.type === "list" || post.type === "review")
     notFound();
 
   // Related: tag-aware (shared topic first, then same beat), excluding self.
@@ -106,8 +104,23 @@ export default async function BlogArticlePage({
 
   const shareUrl = `${SITE_URL}/blog/${post.slug}`;
   const minutes = readingMinutes(post.bodyMarkdown);
-  const videoEmbed = youtubeEmbedUrl(post.youtubeUrl);
-  const videoIsShort = isYoutubeShort(post.youtubeUrl);
+  // Multi-video gallery with backward-compat fallback: use the media list when
+  // present, else synthesize a single item from the legacy youtubeUrl.
+  const legacyVid = youtubeId(post.youtubeUrl);
+  const media: ArticleMedia[] =
+    post.media && post.media.length
+      ? post.media
+      : post.youtubeUrl && legacyVid
+        ? [
+            {
+              type: "youtube",
+              url: post.youtubeUrl,
+              videoId: legacyVid,
+              thumbnailUrl: `https://i.ytimg.com/vi/${legacyVid}/hqdefault.jpg`,
+              featured: true,
+            },
+          ]
+        : [];
   // Normalize any older credit like "AI-generated (Gemini …)" to a clean label.
   const imageCredit = post.imageCredit
     ? post.imageCredit
@@ -155,6 +168,21 @@ export default async function BlogArticlePage({
         height: 512,
       },
     },
+    ...(media.length
+      ? {
+          video: media.map((m) => ({
+            "@type": "VideoObject",
+            name: m.title || post.title,
+            description: post.seoDescription || post.excerpt || post.title,
+            thumbnailUrl:
+              m.thumbnailUrl ||
+              `https://i.ytimg.com/vi/${m.videoId}/hqdefault.jpg`,
+            uploadDate: post.publishedAt || undefined,
+            embedUrl: `https://www.youtube.com/embed/${m.videoId}`,
+            contentUrl: m.url,
+          })),
+        }
+      : {}),
   };
 
   const breadcrumbLd = {
@@ -286,38 +314,7 @@ export default async function BlogArticlePage({
           <ArticleBody body={post.bodyMarkdown} location="blog" />
         )}
 
-        {videoEmbed && (
-          <Box mt={10}>
-            <Heading as="h2" size="sm" color="gray.300" mb={3}>
-              Watch
-            </Heading>
-            <Box
-              position="relative"
-              // Shorts are vertical (9:16) and capped in width so they don't
-              // tower over the article; regular videos fill the column at 16:9.
-              w={videoIsShort ? { base: "full", sm: "340px" } : "full"}
-              aspectRatio={videoIsShort ? 9 / 16 : 16 / 9}
-              borderRadius="2xl"
-              overflow="hidden"
-              bg="black"
-            >
-              <iframe
-                src={videoEmbed}
-                title={`${post.title} — video`}
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  border: 0,
-                }}
-              />
-            </Box>
-          </Box>
-        )}
+        {media.length > 0 && <MediaGallery media={media} title={post.title} />}
 
         {post.sources && post.sources.length > 0 && (
           <Box mt={10}>

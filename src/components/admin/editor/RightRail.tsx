@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Box,
   HStack,
@@ -35,6 +36,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
   const {
     post,
     form,
+    media,
+    setMedia,
     set,
     run,
     busy,
@@ -47,7 +50,44 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     isPublished,
     id,
   } = ed;
+  const [vidInput, setVidInput] = useState("");
   if (!post || !form) return null;
+
+  const addVideo = (url: string) => {
+    const vid = youtubeId(url);
+    if (!vid || media.some((m) => m.videoId === vid)) return;
+    setMedia([
+      ...media,
+      {
+        type: "youtube",
+        url,
+        videoId: vid,
+        thumbnailUrl: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`,
+        featured: media.length === 0,
+        source: "manual",
+      },
+    ]);
+  };
+  const addFromInput = () => {
+    addVideo(vidInput.trim());
+    setVidInput("");
+  };
+  const removeVideo = (idx: number) => {
+    let next = media.filter((_, i) => i !== idx);
+    if (next.length && !next.some((m) => m.featured)) {
+      next = next.map((m, i) => ({ ...m, featured: i === 0 }));
+    }
+    setMedia(next);
+  };
+  const starVideo = (idx: number) =>
+    setMedia(media.map((m, i) => ({ ...m, featured: i === idx })));
+  const moveVideo = (idx: number, dir: number) => {
+    const j = idx + dir;
+    if (j < 0 || j >= media.length) return;
+    const next = [...media];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setMedia(next);
+  };
 
   return (
     <VStack align="stretch" gap={4}>
@@ -228,66 +268,124 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
       </Box>
 
       <Box>
-        <Text {...labelProps}>YouTube video (optional)</Text>
-        <Input
-          value={form.youtubeUrl}
-          onChange={(e) => set("youtubeUrl", e.target.value)}
-          placeholder="Paste a YouTube link — watch, share, or Shorts"
-          {...inputProps}
-        />
+        <Text {...labelProps}>Videos</Text>
+        <HStack gap={2}>
+          <Input
+            value={vidInput}
+            onChange={(e) => setVidInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addFromInput();
+              }
+            }}
+            placeholder="Paste a YouTube link — watch, share, or Shorts"
+            {...inputProps}
+          />
+          <Button
+            size="sm"
+            onClick={addFromInput}
+            disabled={!vidInput.trim()}
+            flexShrink={0}
+          >
+            Add
+          </Button>
+        </HStack>
         {!isPublished && (
           <YoutubeSearch
             defaultQuery={post?.title ?? undefined}
-            onAttach={(url) => set("youtubeUrl", url)}
+            onAttach={(url) => addVideo(url)}
           />
         )}
-        {(() => {
-          const vid = youtubeId(form.youtubeUrl);
-          if (!vid) return null;
-          const short = isYoutubeShort(form.youtubeUrl);
-          return (
-            <a
-              href={
-                form.youtubeUrl.includes("/shorts/")
-                  ? `https://www.youtube.com/shorts/${vid}`
-                  : `https://www.youtube.com/watch?v=${vid}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                marginTop: 8,
-              }}
-            >
-              <Box
-                position="relative"
-                w={short ? "48px" : "120px"}
-                h="68px"
-                flexShrink={0}
-                borderRadius="md"
-                overflow="hidden"
-                bg="black"
-              >
-                <img
-                  src={`https://i.ytimg.com/vi/${vid}/mqdefault.jpg`}
-                  alt="Matched video"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
-              </Box>
-              <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="600">
-                🎬 {short ? "Short — portrait player" : "Preview video"}
-              </Text>
-            </a>
-          );
-        })()}
+        {media.length > 0 && (
+          <VStack align="stretch" gap={2} mt={2}>
+            {media.map((m, i) => {
+              const short = isYoutubeShort(m.url);
+              return (
+                <HStack
+                  key={m.videoId}
+                  gap={2}
+                  p={2}
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor={m.featured ? "yellow.400" : "whiteAlpha.200"}
+                  borderRadius="md"
+                >
+                  <Box
+                    position="relative"
+                    w={short ? "40px" : "72px"}
+                    h="40px"
+                    flexShrink={0}
+                    borderRadius="sm"
+                    overflow="hidden"
+                    bg="black"
+                  >
+                    <img
+                      src={
+                        m.thumbnailUrl ||
+                        `https://i.ytimg.com/vi/${m.videoId}/mqdefault.jpg`
+                      }
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </Box>
+                  <Box flex="1" minW={0}>
+                    <Text fontSize="xs" color="nexzy.white" lineClamp={1}>
+                      {m.title || m.url}
+                    </Text>
+                    <Text fontSize="10px" color="nexzy.gray.100">
+                      {m.featured ? "★ Lead video" : short ? "Short" : "Video"}
+                      {m.source === "auto-finder" ? " · auto-found" : ""}
+                    </Text>
+                  </Box>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    title="Make the lead (big) video"
+                    onClick={() => starVideo(i)}
+                    color={m.featured ? "yellow.400" : "nexzy.gray.100"}
+                  >
+                    ★
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    title="Move up"
+                    onClick={() => moveVideo(i, -1)}
+                    disabled={i === 0}
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    title="Move down"
+                    onClick={() => moveVideo(i, 1)}
+                    disabled={i === media.length - 1}
+                  >
+                    ↓
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    title="Remove"
+                    color="red.300"
+                    onClick={() => removeVideo(i)}
+                  >
+                    ✕
+                  </Button>
+                </HStack>
+              );
+            })}
+          </VStack>
+        )}
         <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
-          Embeds a player under the article. Leave blank for none.
+          Add multiple videos and star one as the lead (plays big on the
+          article); the rest show as thumbnails. Save to apply.
         </Text>
       </Box>
 
