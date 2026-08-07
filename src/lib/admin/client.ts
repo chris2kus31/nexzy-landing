@@ -1471,8 +1471,15 @@ export interface GameLite {
   released: string | null;
 }
 
-export async function getUnresolvedGames(): Promise<UnresolvedGameRef[]> {
-  return handle(await fetch("/api/newsroom/admin/games/unresolved"));
+export async function getUnresolvedGames(
+  limit = 25,
+  offset = 0,
+): Promise<{ items: UnresolvedGameRef[]; total: number }> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/games/unresolved?limit=${limit}&offset=${offset}`,
+    ),
+  );
 }
 
 export async function searchGamesForLink(q: string): Promise<GameLite[]> {
@@ -1514,9 +1521,16 @@ export interface ImportDiagnostic {
   createdAt: string;
 }
 
-/** Open import diagnostics (gaps + failed imports), newest first. */
-export async function getImportDiagnostics(): Promise<ImportDiagnostic[]> {
-  return handle(await fetch("/api/newsroom/admin/games/import-diagnostics"));
+/** Open import diagnostics (gaps + failed imports), newest first. Paginated. */
+export async function getImportDiagnostics(
+  limit = 25,
+  offset = 0,
+): Promise<{ items: ImportDiagnostic[]; total: number }> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/games/import-diagnostics?limit=${limit}&offset=${offset}`,
+    ),
+  );
 }
 
 export async function dismissImportDiagnostic(

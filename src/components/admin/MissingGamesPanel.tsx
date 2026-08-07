@@ -351,9 +351,7 @@ function ManualGameForm({
                   minW="20px"
                   h="20px"
                   p={0}
-                  onClick={() =>
-                    setShots((p) => p.filter((_, j) => j !== i))
-                  }
+                  onClick={() => setShots((p) => p.filter((_, j) => j !== i))}
                 >
                   ×
                 </Button>
@@ -619,12 +617,7 @@ function MissingGameCard({
       )}
 
       {manual && (
-        <Box
-          mt={3}
-          pt={3}
-          borderTopWidth="1px"
-          borderColor="whiteAlpha.200"
-        >
+        <Box mt={3} pt={3} borderTopWidth="1px" borderColor="whiteAlpha.200">
           <ManualGameForm
             refId={item.id}
             initialName={item.rawName}
@@ -714,6 +707,54 @@ function DiagnosticCard({
   );
 }
 
+/** Prev/Next pager for a paginated admin list. Hidden when a single page. */
+function Pager({
+  page,
+  pageSize,
+  total,
+  loading,
+  onPage,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  loading: boolean;
+  onPage: (p: number) => void;
+}) {
+  if (total <= pageSize) return null;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+  return (
+    <Flex justify="space-between" align="center" mt={4} gap={3} wrap="wrap">
+      <Text fontSize="xs" color="whiteAlpha.600">
+        {from}–{to} of {total}
+      </Text>
+      <HStack gap={2}>
+        <Button
+          size="xs"
+          {...outlineBtn}
+          disabled={page <= 0 || loading}
+          onClick={() => onPage(page - 1)}
+        >
+          Prev
+        </Button>
+        <Text fontSize="xs" color="whiteAlpha.600">
+          {page + 1} / {pages}
+        </Text>
+        <Button
+          size="xs"
+          {...outlineBtn}
+          disabled={page + 1 >= pages || loading}
+          onClick={() => onPage(page + 1)}
+        >
+          Next
+        </Button>
+      </HStack>
+    </Flex>
+  );
+}
+
 /**
  * "Missing games" queue — games referenced by content (guides/articles/picks)
  * the resolver couldn't match to a DB game. Map to an existing game (learns an
@@ -730,6 +771,11 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [diags, setDiags] = useState<ImportDiagnostic[]>([]);
   const [diagsLoading, setDiagsLoading] = useState(false);
   const [addingManual, setAddingManual] = useState(false);
+  const PAGE_SIZE = 25;
+  const [queuePage, setQueuePage] = useState(0);
+  const [queueTotal, setQueueTotal] = useState(0);
+  const [diagsPage, setDiagsPage] = useState(0);
+  const [diagsTotal, setDiagsTotal] = useState(0);
 
   async function doImportAll() {
     setWorking("import");
@@ -809,11 +855,17 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     }
   }
 
-  async function load() {
+  async function load(page = queuePage) {
     setLoading(true);
     setError(null);
     try {
-      setRows(await getUnresolvedGames());
+      const { items, total } = await getUnresolvedGames(
+        PAGE_SIZE,
+        page * PAGE_SIZE,
+      );
+      setRows(items);
+      setQueueTotal(total);
+      setQueuePage(page);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -821,10 +873,16 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     }
   }
 
-  async function loadDiags() {
+  async function loadDiags(page = diagsPage) {
     setDiagsLoading(true);
     try {
-      setDiags(await getImportDiagnostics());
+      const { items, total } = await getImportDiagnostics(
+        PAGE_SIZE,
+        page * PAGE_SIZE,
+      );
+      setDiags(items);
+      setDiagsTotal(total);
+      setDiagsPage(page);
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -837,6 +895,8 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     try {
       await dismissAllImportDiagnostics();
       setDiags([]);
+      setDiagsTotal(0);
+      setDiagsPage(0);
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -849,11 +909,16 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     loadDiags();
   }, []);
 
-  const remove = (id: string) => setRows((r) => r.filter((x) => x.id !== id));
-  const removeDiag = (id: string) =>
+  const remove = (id: string) => {
+    setRows((r) => r.filter((x) => x.id !== id));
+    setQueueTotal((t) => Math.max(0, t - 1));
+  };
+  const removeDiag = (id: string) => {
     setDiags((d) => d.filter((x) => x.id !== id));
+    setDiagsTotal((t) => Math.max(0, t - 1));
+  };
 
-  // Aggregate the most-dropped slugs across all open diagnostics — the list of
+  // Aggregate the most-dropped slugs across the diagnostics on THIS page — the
   // candidates worth seeding (informs the later create-or-link decision).
   const dropCounts = new Map<string, number>();
   for (const d of diags)
@@ -1065,6 +1130,13 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
               ))}
             </VStack>
           )}
+          <Pager
+            page={queuePage}
+            pageSize={PAGE_SIZE}
+            total={queueTotal}
+            loading={loading}
+            onPage={(p) => load(p)}
+          />
         </>
       ) : (
         <>
@@ -1104,6 +1176,13 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
               ))}
             </VStack>
           )}
+          <Pager
+            page={diagsPage}
+            pageSize={PAGE_SIZE}
+            total={diagsTotal}
+            loading={diagsLoading}
+            onPage={(p) => loadDiags(p)}
+          />
         </>
       )}
     </Box>
