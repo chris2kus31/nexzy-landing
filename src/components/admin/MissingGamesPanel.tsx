@@ -33,6 +33,8 @@ import {
   type GameLite,
   createManualGame,
   type ManualGamePayload,
+  getGameTaxonomy,
+  type GameTaxonomy,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -93,9 +95,11 @@ function fileToDataUrl(file: File): Promise<string> {
 
 /**
  * Manual game-creation form for the Missing-Games section — for games not in
- * RAWG (e.g. a Steam-owned title). Mirrors the RAWG import: core fields, a cover
- * image + screenshots (uploaded to S3), and comma-separated taxonomy slugs.
- * When `refId` is set, creating the game closes that Missing-Games row.
+ * RAWG (e.g. a Steam-owned title). Mirrors the RAWG import shape: core fields, a
+ * cover image + screenshots (uploaded to S3), and taxonomy picked from the DB
+ * (genres / platforms-as-consoles / stores as chips; tags free-text for now).
+ * Platforms submit CONSOLE-level slugs so the game maps to the same relations a
+ * RAWG import would. When `refId` is set, creating the game closes the row.
  */
 function ManualGameForm({
   refId,
@@ -115,10 +119,13 @@ function ManualGameForm({
   const [released, setReleased] = useState("");
   const [website, setWebsite] = useState("");
   const [isMature, setIsMature] = useState(false);
-  const [genreSlugs, setGenreSlugs] = useState("");
-  const [platformSlugs, setPlatformSlugs] = useState("");
-  const [storeSlugs, setStoreSlugs] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
+  // Taxonomy pickers (Phase 2): loaded once from the DB, selected by slug.
+  const [tax, setTax] = useState<GameTaxonomy | null>(null);
+  const [taxErr, setTaxErr] = useState<string | null>(null);
+  const [genreSel, setGenreSel] = useState<Set<string>>(new Set());
+  const [consoleSel, setConsoleSel] = useState<Set<string>>(new Set());
+  const [storeSel, setStoreSel] = useState<Set<string>>(new Set());
   const [cover, setCover] = useState<string>(initialCover ?? "");
   const [shots, setShots] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -129,6 +136,32 @@ function ManualGameForm({
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean);
+
+  useEffect(() => {
+    getGameTaxonomy()
+      .then(setTax)
+      .catch((e) => setTaxErr((e as Error).message));
+  }, []);
+
+  const toggleSel = (
+    setter: (fn: (prev: Set<string>) => Set<string>) => void,
+    slug: string,
+  ) =>
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+
+  const chip = (selected: boolean) => ({
+    size: "xs" as const,
+    borderWidth: "1px",
+    bg: selected ? "nexzy.blue" : "transparent",
+    color: selected ? "white" : "nexzy.gray.100",
+    borderColor: selected ? "nexzy.blue" : "whiteAlpha.300",
+    _hover: { bg: selected ? "nexzy.blue" : "whiteAlpha.100" },
+  });
 
   async function onCoverPick(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -166,9 +199,9 @@ function ManualGameForm({
         isMature,
         coverImage: cover || undefined,
         screenshots: shots,
-        genreSlugs: csv(genreSlugs),
-        platformSlugs: csv(platformSlugs),
-        storeSlugs: csv(storeSlugs),
+        genreSlugs: [...genreSel],
+        platformSlugs: [...consoleSel],
+        storeSlugs: [...storeSel],
         tagSlugs: csv(tagSlugs),
       };
       const r = await createManualGame(payload);
@@ -196,9 +229,9 @@ function ManualGameForm({
         Add a game manually
       </Text>
       <Text fontSize="xs" color="whiteAlpha.600">
-        For games not in RAWG. Name is required; fill the rest as you can.
-        Genres, platforms, stores and tags are comma-separated slugs — existing
-        ones get linked, unknown ones are skipped.
+        For games not in RAWG. Name is required; fill the rest as you can. Pick
+        genres, consoles and stores from your database so the game maps to the
+        same relationships a RAWG import would.
       </Text>
 
       <Box>
@@ -224,13 +257,17 @@ function ManualGameForm({
 
       <HStack gap={3} align="flex-start">
         <Box flex="1">
-          {label("Released (YYYY-MM-DD)")}
+          {label("Released")}
           <Input
             {...inputProps}
+            type="date"
             value={released}
             onChange={(e) => setReleased(e.target.value)}
-            placeholder="2021-09-18"
           />
+          <Text fontSize="10px" color="whiteAlpha.500" mt={1}>
+            No date → shows only in What&rsquo;s New &amp; Search, not the main
+            feeds.
+          </Text>
         </Box>
         <Box flex="1">
           {label("Website")}
@@ -243,47 +280,98 @@ function ManualGameForm({
         </Box>
       </HStack>
 
-      <HStack gap={3} align="flex-start">
-        <Box flex="1">
-          {label("Genres (slugs)")}
-          <Input
-            {...inputProps}
-            value={genreSlugs}
-            onChange={(e) => setGenreSlugs(e.target.value)}
-            placeholder="action, indie"
-          />
-        </Box>
-        <Box flex="1">
-          {label("Platforms (slugs)")}
-          <Input
-            {...inputProps}
-            value={platformSlugs}
-            onChange={(e) => setPlatformSlugs(e.target.value)}
-            placeholder="pc, playstation5"
-          />
-        </Box>
-      </HStack>
+      {taxErr && (
+        <Text fontSize="xs" color="orange.300">
+          Couldn&rsquo;t load taxonomy: {taxErr}
+        </Text>
+      )}
 
-      <HStack gap={3} align="flex-start">
-        <Box flex="1">
-          {label("Stores (slugs)")}
-          <Input
-            {...inputProps}
-            value={storeSlugs}
-            onChange={(e) => setStoreSlugs(e.target.value)}
-            placeholder="steam"
-          />
-        </Box>
-        <Box flex="1">
-          {label("Tags (slugs)")}
-          <Input
-            {...inputProps}
-            value={tagSlugs}
-            onChange={(e) => setTagSlugs(e.target.value)}
-            placeholder="co-op, multiplayer"
-          />
-        </Box>
-      </HStack>
+      <Box>
+        {label(`Genres${genreSel.size ? ` (${genreSel.size})` : ""}`)}
+        {tax ? (
+          <HStack gap={2} wrap="wrap">
+            {tax.genres.map((g) => (
+              <Button
+                key={g.slug}
+                {...chip(genreSel.has(g.slug))}
+                onClick={() => toggleSel(setGenreSel, g.slug)}
+              >
+                {g.name}
+              </Button>
+            ))}
+          </HStack>
+        ) : (
+          <Text fontSize="xs" color="whiteAlpha.500">
+            {taxErr ? "—" : "Loading…"}
+          </Text>
+        )}
+      </Box>
+
+      <Box>
+        {label(
+          `Platforms / consoles${consoleSel.size ? ` (${consoleSel.size})` : ""}`,
+        )}
+        {tax ? (
+          <VStack align="stretch" gap={2}>
+            {tax.platforms.map((grp) => (
+              <Box key={grp.parent.slug}>
+                <Text fontSize="10px" color="whiteAlpha.600" mb={1}>
+                  {grp.parent.name}
+                </Text>
+                <HStack gap={2} wrap="wrap">
+                  {grp.consoles.map((csl) => (
+                    <Button
+                      key={csl.slug}
+                      {...chip(consoleSel.has(csl.slug))}
+                      onClick={() => toggleSel(setConsoleSel, csl.slug)}
+                    >
+                      {csl.name}
+                    </Button>
+                  ))}
+                </HStack>
+              </Box>
+            ))}
+          </VStack>
+        ) : (
+          <Text fontSize="xs" color="whiteAlpha.500">
+            {taxErr ? "—" : "Loading…"}
+          </Text>
+        )}
+      </Box>
+
+      <Box>
+        {label(`Stores${storeSel.size ? ` (${storeSel.size})` : ""}`)}
+        {tax ? (
+          <HStack gap={2} wrap="wrap">
+            {tax.stores.map((st) => (
+              <Button
+                key={st.slug}
+                {...chip(storeSel.has(st.slug))}
+                onClick={() => toggleSel(setStoreSel, st.slug)}
+              >
+                {st.name}
+              </Button>
+            ))}
+          </HStack>
+        ) : (
+          <Text fontSize="xs" color="whiteAlpha.500">
+            {taxErr ? "—" : "Loading…"}
+          </Text>
+        )}
+      </Box>
+
+      <Box>
+        {label("Tags (comma-separated slugs)")}
+        <Input
+          {...inputProps}
+          value={tagSlugs}
+          onChange={(e) => setTagSlugs(e.target.value)}
+          placeholder="co-op, multiplayer"
+        />
+        <Text fontSize="10px" color="whiteAlpha.500" mt={1}>
+          Optional. Searchable picker coming soon.
+        </Text>
+      </Box>
 
       <Button
         size="xs"

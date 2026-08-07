@@ -1488,6 +1488,26 @@ export async function searchGamesForLink(q: string): Promise<GameLite[]> {
   );
 }
 
+export interface TaxonomyOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+export interface PlatformGroup {
+  parent: TaxonomyOption;
+  consoles: TaxonomyOption[];
+}
+export interface GameTaxonomy {
+  genres: TaxonomyOption[];
+  stores: TaxonomyOption[];
+  platforms: PlatformGroup[];
+}
+
+/** Genres, stores, and the platform→console tree for the manual-game form. */
+export async function getGameTaxonomy(): Promise<GameTaxonomy> {
+  return handle(await fetch("/api/newsroom/admin/games/taxonomy"));
+}
+
 export async function mapUnresolvedGame(
   id: string,
   gameId: string,
