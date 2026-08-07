@@ -35,6 +35,7 @@ import {
   type ManualGamePayload,
   getGameTaxonomy,
   type GameTaxonomy,
+  searchTags,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -214,12 +215,129 @@ function TaxPicker({
 }
 
 /**
+ * Type-to-search tag picker for the 9k+ tag catalog. Selected tags show as
+ * removable chips; typing queries the server (empty query = most-used tags).
+ */
+function TagPicker({
+  selected,
+  onChange,
+}: {
+  selected: { slug: string; name: string }[];
+  onChange: (v: { slug: string; name: string }[]) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<
+    { slug: string; name: string; gamesCount: number }[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const selSlugs = new Set(selected.map((t) => t.slug));
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const h = setTimeout(() => {
+      searchTags(q)
+        .then((r) => {
+          if (!cancelled) setResults(r);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(h);
+    };
+  }, [q]);
+  const add = (t: { slug: string; name: string }) => {
+    if (!selSlugs.has(t.slug))
+      onChange([...selected, { slug: t.slug, name: t.name }]);
+  };
+  const remove = (slug: string) =>
+    onChange(selected.filter((t) => t.slug !== slug));
+  const shown = results.filter((r) => !selSlugs.has(r.slug));
+  return (
+    <Box>
+      <Text fontSize="xs" color="whiteAlpha.700" mb={1}>
+        Tags{selected.length ? ` · ${selected.length} selected` : ""}
+      </Text>
+      <Box
+        borderWidth="1px"
+        borderColor="whiteAlpha.200"
+        borderRadius="md"
+        bg="whiteAlpha.50"
+        p={2}
+      >
+        {selected.length > 0 && (
+          <Flex gap={2} wrap="wrap" mb={2}>
+            {selected.map((t) => (
+              <Button
+                key={t.slug}
+                size="xs"
+                bg="nexzy.blue"
+                color="white"
+                borderRadius="full"
+                _hover={{ bg: "nexzy.blue", opacity: 0.85 }}
+                onClick={() => remove(t.slug)}
+              >
+                {t.name} ×
+              </Button>
+            ))}
+          </Flex>
+        )}
+        <Input
+          {...inputProps}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search tags…"
+        />
+        <Box maxH="180px" overflowY="auto" mt={2}>
+          {loading ? (
+            <Text fontSize="xs" color="whiteAlpha.500">
+              Searching…
+            </Text>
+          ) : shown.length === 0 ? (
+            <Text fontSize="xs" color="whiteAlpha.500">
+              {q ? "No matching tags." : "Type to search 9,000+ tags."}
+            </Text>
+          ) : (
+            <HStack gap={2} wrap="wrap">
+              {shown.map((r) => (
+                <Button
+                  key={r.slug}
+                  size="xs"
+                  borderWidth="1px"
+                  bg="transparent"
+                  color="nexzy.gray.100"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  onClick={() => add(r)}
+                >
+                  {r.name}
+                </Button>
+              ))}
+            </HStack>
+          )}
+        </Box>
+        {!q && (
+          <Text fontSize="10px" color="whiteAlpha.500" mt={1}>
+            Optional. Showing most-used tags; type to search all.
+          </Text>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+/**
  * Manual game-creation form for the Missing-Games section — for games not in
  * RAWG (e.g. a Steam-owned title). Mirrors the RAWG import shape: core fields, a
  * cover image + screenshots (uploaded to S3), and taxonomy picked from the DB
- * (genres / platforms-as-consoles / stores as chips; tags free-text for now).
- * Platforms submit CONSOLE-level slugs so the game maps to the same relations a
- * RAWG import would. When `refId` is set, creating the game closes the row.
+ * (genres, platforms-as-consoles, stores, and type-to-search tags). Platforms
+ * submit CONSOLE-level slugs so the game maps to the same relations a RAWG
+ * import would. When `refId` is set, creating the game closes the row.
  */
 function ManualGameForm({
   refId,
@@ -239,7 +357,7 @@ function ManualGameForm({
   const [released, setReleased] = useState("");
   const [website, setWebsite] = useState("");
   const [isMature, setIsMature] = useState(false);
-  const [tagSlugs, setTagSlugs] = useState("");
+  const [tagSel, setTagSel] = useState<{ slug: string; name: string }[]>([]);
   // Taxonomy pickers (Phase 2): loaded once from the DB, selected by slug.
   const [tax, setTax] = useState<GameTaxonomy | null>(null);
   const [taxErr, setTaxErr] = useState<string | null>(null);
@@ -250,12 +368,6 @@ function ManualGameForm({
   const [shots, setShots] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-
-  const csv = (s: string) =>
-    s
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
 
   useEffect(() => {
     getGameTaxonomy()
@@ -313,7 +425,7 @@ function ManualGameForm({
         genreSlugs: [...genreSel],
         platformSlugs: [...consoleSel],
         storeSlugs: [...storeSel],
-        tagSlugs: csv(tagSlugs),
+        tagSlugs: tagSel.map((t) => t.slug),
       };
       const r = await createManualGame(payload);
       if (r.ok) {
@@ -419,6 +531,10 @@ function ManualGameForm({
             selected={consoleSel}
             onToggle={(s) => toggleSel(setConsoleSel, s)}
           />
+          <Text fontSize="10px" color="whiteAlpha.500" mt={-1}>
+            Pick the specific consoles the game runs on — the platform family
+            (e.g. PlayStation) is added automatically.
+          </Text>
           <TaxPicker
             label="Stores"
             groups={[{ group: null, options: tax.stores }]}
@@ -428,18 +544,7 @@ function ManualGameForm({
         </>
       )}
 
-      <Box>
-        {label("Tags (comma-separated slugs)")}
-        <Input
-          {...inputProps}
-          value={tagSlugs}
-          onChange={(e) => setTagSlugs(e.target.value)}
-          placeholder="co-op, multiplayer"
-        />
-        <Text fontSize="10px" color="whiteAlpha.500" mt={1}>
-          Optional. Searchable picker coming soon.
-        </Text>
-      </Box>
+      <TagPicker selected={tagSel} onChange={setTagSel} />
 
       <Button
         size="xs"

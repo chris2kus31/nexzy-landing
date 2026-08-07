@@ -1508,6 +1508,21 @@ export async function getGameTaxonomy(): Promise<GameTaxonomy> {
   return handle(await fetch("/api/newsroom/admin/games/taxonomy"));
 }
 
+export interface TagOption {
+  slug: string;
+  name: string;
+  gamesCount: number;
+}
+
+/** Type-to-search the tag catalog (empty query = most-used tags). */
+export async function searchTags(q: string): Promise<TagOption[]> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/games/tags/search?q=${encodeURIComponent(q)}`,
+    ),
+  );
+}
+
 export async function mapUnresolvedGame(
   id: string,
   gameId: string,
