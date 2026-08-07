@@ -93,6 +93,126 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+type TaxGroup = {
+  group: string | null;
+  options: { slug: string; name: string }[];
+};
+
+/**
+ * Compact multi-select: shows the selected items as removable chips plus an
+ * "Add / edit" toggle that reveals a filterable, grouped option list. Keeps the
+ * form short instead of dumping every option as a wall of chips. Click a
+ * selected chip to remove it; click an option to toggle it.
+ */
+function TaxPicker({
+  label,
+  groups,
+  selected,
+  onToggle,
+}: {
+  label: string;
+  groups: TaxGroup[];
+  selected: Set<string>;
+  onToggle: (slug: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const nameBySlug = new Map<string, string>();
+  groups.forEach((g) =>
+    g.options.forEach((o) => nameBySlug.set(o.slug, o.name)),
+  );
+  const f = filter.trim().toLowerCase();
+  const chosen = [...selected];
+  return (
+    <Box>
+      <Text fontSize="xs" color="whiteAlpha.700" mb={1}>
+        {label}
+        {selected.size ? ` · ${selected.size} selected` : ""}
+      </Text>
+      <Box
+        borderWidth="1px"
+        borderColor="whiteAlpha.200"
+        borderRadius="md"
+        bg="whiteAlpha.50"
+        p={2}
+      >
+        <Flex gap={2} wrap="wrap" align="center">
+          {chosen.length === 0 && (
+            <Text fontSize="xs" color="whiteAlpha.400">
+              None selected
+            </Text>
+          )}
+          {chosen.map((slug) => (
+            <Button
+              key={slug}
+              size="xs"
+              bg="nexzy.blue"
+              color="white"
+              borderRadius="full"
+              _hover={{ bg: "nexzy.blue", opacity: 0.85 }}
+              onClick={() => onToggle(slug)}
+            >
+              {nameBySlug.get(slug) ?? slug} ×
+            </Button>
+          ))}
+          <Button size="xs" {...outlineBtn} onClick={() => setOpen((o) => !o)}>
+            {open ? "Done" : "+ Add / edit"}
+          </Button>
+        </Flex>
+        {open && (
+          <Box mt={2}>
+            <Input
+              {...inputProps}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter…"
+              mb={2}
+            />
+            <Box maxH="220px" overflowY="auto">
+              {groups.map((g, gi) => {
+                const opts = g.options.filter(
+                  (o) => !f || o.name.toLowerCase().includes(f),
+                );
+                if (opts.length === 0) return null;
+                return (
+                  <Box key={gi} mb={2}>
+                    {g.group && (
+                      <Text fontSize="10px" color="whiteAlpha.600" mb={1}>
+                        {g.group}
+                      </Text>
+                    )}
+                    <HStack gap={2} wrap="wrap">
+                      {opts.map((o) => {
+                        const sel = selected.has(o.slug);
+                        return (
+                          <Button
+                            key={o.slug}
+                            size="xs"
+                            borderWidth="1px"
+                            bg={sel ? "nexzy.blue" : "transparent"}
+                            color={sel ? "white" : "nexzy.gray.100"}
+                            borderColor={sel ? "nexzy.blue" : "whiteAlpha.300"}
+                            _hover={{
+                              bg: sel ? "nexzy.blue" : "whiteAlpha.100",
+                            }}
+                            onClick={() => onToggle(o.slug)}
+                          >
+                            {o.name}
+                          </Button>
+                        );
+                      })}
+                    </HStack>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
 /**
  * Manual game-creation form for the Missing-Games section — for games not in
  * RAWG (e.g. a Steam-owned title). Mirrors the RAWG import shape: core fields, a
@@ -153,15 +273,6 @@ function ManualGameForm({
       else next.add(slug);
       return next;
     });
-
-  const chip = (selected: boolean) => ({
-    size: "xs" as const,
-    borderWidth: "1px",
-    bg: selected ? "nexzy.blue" : "transparent",
-    color: selected ? "white" : "nexzy.gray.100",
-    borderColor: selected ? "nexzy.blue" : "whiteAlpha.300",
-    _hover: { bg: selected ? "nexzy.blue" : "whiteAlpha.100" },
-  });
 
   async function onCoverPick(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -286,79 +397,36 @@ function ManualGameForm({
         </Text>
       )}
 
-      <Box>
-        {label(`Genres${genreSel.size ? ` (${genreSel.size})` : ""}`)}
-        {tax ? (
-          <HStack gap={2} wrap="wrap">
-            {tax.genres.map((g) => (
-              <Button
-                key={g.slug}
-                {...chip(genreSel.has(g.slug))}
-                onClick={() => toggleSel(setGenreSel, g.slug)}
-              >
-                {g.name}
-              </Button>
-            ))}
-          </HStack>
-        ) : (
-          <Text fontSize="xs" color="whiteAlpha.500">
-            {taxErr ? "—" : "Loading…"}
-          </Text>
-        )}
-      </Box>
-
-      <Box>
-        {label(
-          `Platforms / consoles${consoleSel.size ? ` (${consoleSel.size})` : ""}`,
-        )}
-        {tax ? (
-          <VStack align="stretch" gap={2}>
-            {tax.platforms.map((grp) => (
-              <Box key={grp.parent.slug}>
-                <Text fontSize="10px" color="whiteAlpha.600" mb={1}>
-                  {grp.parent.name}
-                </Text>
-                <HStack gap={2} wrap="wrap">
-                  {grp.consoles.map((csl) => (
-                    <Button
-                      key={csl.slug}
-                      {...chip(consoleSel.has(csl.slug))}
-                      onClick={() => toggleSel(setConsoleSel, csl.slug)}
-                    >
-                      {csl.name}
-                    </Button>
-                  ))}
-                </HStack>
-              </Box>
-            ))}
-          </VStack>
-        ) : (
-          <Text fontSize="xs" color="whiteAlpha.500">
-            {taxErr ? "—" : "Loading…"}
-          </Text>
-        )}
-      </Box>
-
-      <Box>
-        {label(`Stores${storeSel.size ? ` (${storeSel.size})` : ""}`)}
-        {tax ? (
-          <HStack gap={2} wrap="wrap">
-            {tax.stores.map((st) => (
-              <Button
-                key={st.slug}
-                {...chip(storeSel.has(st.slug))}
-                onClick={() => toggleSel(setStoreSel, st.slug)}
-              >
-                {st.name}
-              </Button>
-            ))}
-          </HStack>
-        ) : (
-          <Text fontSize="xs" color="whiteAlpha.500">
-            {taxErr ? "—" : "Loading…"}
-          </Text>
-        )}
-      </Box>
+      {!tax && !taxErr && (
+        <Text fontSize="xs" color="whiteAlpha.500">
+          Loading taxonomy…
+        </Text>
+      )}
+      {tax && (
+        <>
+          <TaxPicker
+            label="Genres"
+            groups={[{ group: null, options: tax.genres }]}
+            selected={genreSel}
+            onToggle={(s) => toggleSel(setGenreSel, s)}
+          />
+          <TaxPicker
+            label="Platforms / consoles"
+            groups={tax.platforms.map((grp) => ({
+              group: grp.parent.name,
+              options: grp.consoles,
+            }))}
+            selected={consoleSel}
+            onToggle={(s) => toggleSel(setConsoleSel, s)}
+          />
+          <TaxPicker
+            label="Stores"
+            groups={[{ group: null, options: tax.stores }]}
+            selected={storeSel}
+            onToggle={(s) => toggleSel(setStoreSel, s)}
+          />
+        </>
+      )}
 
       <Box>
         {label("Tags (comma-separated slugs)")}
@@ -931,7 +999,7 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
         remaining = r.remaining;
         rows.push(...(r.details ?? []).map(mapRow));
         setResult({
-          title: `Backfill: linked ${linked} of ${scanned} scanned${remaining ? ` \u00b7 ${remaining} to go\u2026` : ""}${errCount ? ` \u00b7 ${errCount} error${errCount === 1 ? "" : "s"}` : ""}`,
+          title: `Backfill: linked ${linked} of ${scanned} scanned${remaining ? ` · ${remaining} to go…` : ""}${errCount ? ` · ${errCount} error${errCount === 1 ? "" : "s"}` : ""}`,
           rows,
         });
         if (r.scanned === 0 || remaining === 0) break;
