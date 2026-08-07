@@ -1182,6 +1182,26 @@ export async function regeneratePost(
   );
 }
 
+/**
+ * Re-run the Editor stage on a queued article, with an optional steer note.
+ * Blank note = a grounded re-check (temporal + missing date). A note (e.g.
+ * "why aren't the dates included?") is applied grounded. Returns the updated post.
+ */
+export async function rerunEditorPost(
+  id: string,
+  steer?: string,
+): Promise<BlogPost> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/rerun-editor`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        steer && steer.trim() ? { steer: steer.trim() } : {},
+      ),
+    }),
+  );
+}
+
 /** Pin/unpin an article as the front-page hero (single-featured). */
 export async function setFeatured(
   id: string,

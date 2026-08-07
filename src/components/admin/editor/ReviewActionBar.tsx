@@ -9,6 +9,7 @@ import {
   sendBackPost,
   unpublishPost,
   setFeatured,
+  rerunEditorPost,
 } from "@/lib/admin/client";
 import type { PostEditor } from "./usePostEditor";
 
@@ -88,6 +89,27 @@ export default function ReviewActionBar({ ed }: { ed: PostEditor }) {
             _hover={{ bg: "whiteAlpha.100" }}
           >
             Unpublish
+          </Button>
+        )}
+        {!isPublished && (
+          <Button
+            size="sm"
+            onClick={() => {
+              const steer = window.prompt(
+                'Optional note to steer the editor (e.g. "why aren\'t the dates included?", "add verified facts about X"). Leave blank for a plain grounded re-check.',
+              );
+              if (steer === null) return; // cancelled
+              run("Re-running editor", () =>
+                rerunEditorPost(id, steer || undefined),
+              );
+            }}
+            loading={busy === "Re-running editor"}
+            variant="outline"
+            color="blue.300"
+            borderColor="blue.400/40"
+            _hover={{ bg: "whiteAlpha.100" }}
+          >
+            Re-run editor
           </Button>
         )}
         {!isPublished && (
