@@ -20,6 +20,7 @@ import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
+import FromTheVault from "@/components/rewind/FromTheVault";
 import {
   eraForYear,
   yearsAgo,
@@ -146,10 +147,12 @@ export default async function RewindEpisodePage({
     <Box bg="nexzy.navy" minH="100vh">
       <Navigation />
 
-      {/* HERO — era-adaptive time-machine header */}
+      {/* HERO — era-adaptive time-machine header. pt clears the fixed 64px nav
+          so the era badge never tucks under the header. */}
       <Box
         textAlign="center"
-        py={{ base: 10, md: 14 }}
+        pt={{ base: 24, md: 28 }}
+        pb={{ base: 10, md: 14 }}
         px={4}
         borderBottom="1px solid"
         borderColor="whiteAlpha.100"
@@ -247,8 +250,43 @@ export default async function RewindEpisodePage({
           />
         )}
 
+        {/* Body on "retro paper" — the signature Rewind reading panel: aged
+            cream stock, a red drop-cap, a "set the clock" dateline. */}
         {ep.bodyMarkdown && (
-          <ArticleBody body={ep.bodyMarkdown} location="rewind" />
+          <Box
+            bg="#efe7d3"
+            borderRadius="xl"
+            p={{ base: 5, md: 8 }}
+            boxShadow="0 20px 40px rgba(0,0,0,.35)"
+            css={{
+              "& p:first-of-type::first-letter": {
+                float: "left",
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                fontSize: "3.4rem",
+                lineHeight: "0.82",
+                fontWeight: 700,
+                color: "#b23a1e",
+                paddingRight: "10px",
+                paddingTop: "4px",
+              },
+            }}
+          >
+            <Text
+              as="div"
+              fontFamily="mono"
+              fontSize="xs"
+              letterSpacing="0.2em"
+              color="#8a6d3b"
+              mb={4}
+            >
+              SET THE CLOCK TO {year ?? "—"} ▸
+            </Text>
+            <ArticleBody
+              body={ep.bodyMarkdown}
+              location="rewind"
+              tone="paper"
+            />
+          </Box>
         )}
 
         {/* THEN vs NOW — physical-media contrast (conditional) */}
@@ -297,7 +335,36 @@ export default async function RewindEpisodePage({
                 </VStack>
               </Box>
             </Flex>
+
+            <Text
+              textAlign="center"
+              mt={5}
+              fontFamily="var(--font-voice, Georgia, serif)"
+              fontStyle="italic"
+              color="nexzy.white"
+              fontSize={{ base: "md", md: "lg" }}
+            >
+              You used to{" "}
+              <Box as="span" fontWeight="700">
+                own
+              </Box>{" "}
+              it. Now you just{" "}
+              <Box as="span" fontWeight="700">
+                access
+              </Box>{" "}
+              it.
+            </Text>
           </Box>
+        )}
+
+        {/* From the Vault — the era's web, pulled from the Wayback Machine */}
+        {ep.event && (
+          <FromTheVault
+            month={ep.event.month}
+            day={ep.event.day}
+            year={year}
+            accent={era.accent}
+          />
         )}
 
         {/* Video — era-adaptive vault (CRT for old eras, panel for modern) */}
@@ -365,6 +432,26 @@ export default async function RewindEpisodePage({
             </NextLink>
           </Box>
         )}
+
+        {/* Time-machine sign-off strip */}
+        <Flex
+          align="center"
+          gap={3}
+          mt={12}
+          pt={6}
+          borderTop="1px solid"
+          borderColor="whiteAlpha.100"
+        >
+          <Box w="28px" h="3px" bg="nexzy.gold" borderRadius="full" />
+          <Text
+            fontFamily="mono"
+            fontSize="xs"
+            letterSpacing="0.12em"
+            color="nexzy.gray.100"
+          >
+            NEXZY REWIND — A NEW TIME-MACHINE DROP EVERY DAY
+          </Text>
+        </Flex>
       </Container>
 
       <Footer />

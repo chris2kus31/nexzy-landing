@@ -14,15 +14,17 @@ import { eraForYear, monthName, dateSlug } from "@/lib/rewind/era";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 /**
- * The day-hub — an evergreen "This Day in Gaming" page. Today's featured episode
- * on top, then a timeline of every event on the date (published episodes link
- * out; the rest are faded scaffold that fills in over time). Emits ItemList +
+ * The day-hub — an evergreen "This Day in Gaming" page. Shows ONLY the episodes
+ * we've written + published for the date: the top one as the featured hero, the
+ * rest below. Raw candidate/stub events are never shown. Emits ItemList +
  * BreadcrumbList JSON-LD; episode links fire content_click.
  */
 export default function DayHubView({ hub }: { hub: RewindDayHub }) {
   const hero = hub.episodes[0] ?? null;
   const heroEra = eraForYear(hero?.event?.year);
   const dslug = dateSlug(hub.month, hub.day);
+  // Everything published for this date except the hero (avoid showing it twice).
+  const rest = hub.timeline.filter((t) => t.slug && t.slug !== hero?.slug);
 
   const itemListLd = {
     "@context": "https://schema.org",
@@ -71,8 +73,8 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
           {monthName(hub.month)} {hub.day}
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
-          {hub.timeline.length} moments · one permanent page, refreshed every
-          year
+          {hub.timeline.length} episode{hub.timeline.length === 1 ? "" : "s"} ·
+          a permanent page we add to over time
         </Text>
       </Box>
 
@@ -122,85 +124,79 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
         </TrackedLink>
       )}
 
-      <Text
-        fontFamily="mono"
-        fontSize="xs"
-        letterSpacing="0.15em"
-        color="nexzy.gray.100"
-        mb={3}
-      >
-        EVERYTHING THAT HAPPENED ON THIS DATE
-      </Text>
+      {rest.length > 0 && (
+        <>
+          <Text
+            fontFamily="mono"
+            fontSize="xs"
+            letterSpacing="0.15em"
+            color="nexzy.gray.100"
+            mb={3}
+          >
+            MORE EPISODES ON THIS DATE
+          </Text>
 
-      <VStack align="stretch" gap={2}>
-        {hub.timeline.map((t, i) => {
-          const accent = eraForYear(t.year).accent;
-          const row = (
-            <Flex
-              align="center"
-              gap={3}
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              borderRadius="lg"
-              p={3}
-              opacity={t.slug ? 1 : 0.75}
-              _hover={t.slug ? { borderColor: accent } : undefined}
-            >
-              <Text
-                fontFamily="mono"
-                fontWeight="800"
-                color="nexzy.gold"
-                minW="12"
-              >
-                {t.year ?? "—"}
-              </Text>
-              <Box flex="1">
-                <Text color="nexzy.white" fontWeight="600">
-                  {t.title}
-                </Text>
-                <HStack gap={2}>
-                  <Text
-                    fontSize="10px"
-                    fontFamily="mono"
-                    color="nexzy.gray.100"
-                    textTransform="uppercase"
+          <VStack align="stretch" gap={2}>
+            {rest.map((t, i) => {
+              const accent = eraForYear(t.year).accent;
+              return (
+                <TrackedLink
+                  key={`${t.slug ?? t.title}-${i}`}
+                  href={`/rewind/${t.slug}`}
+                  event="content_click"
+                  params={{
+                    content_type: "rewind",
+                    slug: t.slug ?? "",
+                    from: "rewind_dayhub",
+                  }}
+                >
+                  <Flex
+                    align="center"
+                    gap={3}
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="lg"
+                    p={3}
+                    _hover={{ borderColor: accent }}
                   >
-                    {t.category.replace(/_/g, " ")}
-                  </Text>
-                  {t.verified && (
-                    <Text fontSize="10px" color="green.300">
-                      ✓ verified
+                    <Text
+                      fontFamily="mono"
+                      fontWeight="800"
+                      color="nexzy.gold"
+                      minW="12"
+                    >
+                      {t.year ?? "—"}
                     </Text>
-                  )}
-                </HStack>
-              </Box>
-              <Text
-                fontSize="xs"
-                color={t.slug ? accent : "nexzy.gray.100"}
-                whiteSpace="nowrap"
-              >
-                {t.slug ? "Full episode ▸" : "stub"}
-              </Text>
-            </Flex>
-          );
-          return t.slug ? (
-            <TrackedLink
-              key={`${t.title}-${i}`}
-              href={`/rewind/${t.slug}`}
-              event="content_click"
-              params={{
-                content_type: "rewind",
-                slug: t.slug,
-                from: "rewind_dayhub",
-              }}
-            >
-              {row}
-            </TrackedLink>
-          ) : (
-            <Box key={`${t.title}-${i}`}>{row}</Box>
-          );
-        })}
-      </VStack>
+                    <Box flex="1">
+                      <Text color="nexzy.white" fontWeight="600">
+                        {t.title}
+                      </Text>
+                      <HStack gap={2}>
+                        <Text
+                          fontSize="10px"
+                          fontFamily="mono"
+                          color="nexzy.gray.100"
+                          textTransform="uppercase"
+                        >
+                          {t.category.replace(/_/g, " ")}
+                        </Text>
+                        {t.verified && (
+                          <Text fontSize="10px" color="green.300">
+                            ✓ verified
+                          </Text>
+                        )}
+                      </HStack>
+                    </Box>
+                    <Text fontSize="xs" color={accent} whiteSpace="nowrap">
+                      Full episode ▸
+                    </Text>
+                  </Flex>
+                </TrackedLink>
+              );
+            })}
+          </VStack>
+        </>
+      )}
 
       <script
         type="application/ld+json"

@@ -14,19 +14,21 @@ import { splitAfterFirstParagraph } from "@/lib/blog/format";
 export default function ArticleBody({
   body,
   location,
+  tone = "dark",
 }: {
   body: string;
   location: string;
+  tone?: "dark" | "paper";
 }) {
   const { intro, rest } = splitAfterFirstParagraph(body);
-  if (!rest) return <Markdown>{body}</Markdown>;
+  if (!rest) return <Markdown tone={tone}>{body}</Markdown>;
   return (
     <>
-      <Markdown>{intro}</Markdown>
+      <Markdown tone={tone}>{intro}</Markdown>
       <Box my={8}>
         <AppCta variant="inline" location={location} />
       </Box>
-      <Markdown>{rest}</Markdown>
+      <Markdown tone={tone}>{rest}</Markdown>
     </>
   );
 }
