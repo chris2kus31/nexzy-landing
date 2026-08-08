@@ -21,6 +21,16 @@ export function yearsAgo(year: number | null | undefined): number | null {
   return new Date().getFullYear() - year;
 }
 
+/** The "vault" display device for the era — evolves from wood CRT to a panel. */
+export type EraDevice = "crt-wood" | "crt-flat" | "modern";
+
+export function deviceForYear(year: number | null | undefined): EraDevice {
+  if (!year) return "crt-flat";
+  if (year <= 1995) return "crt-wood"; // cartridge era — wood-grain tube TV
+  if (year <= 2007) return "crt-flat"; // disc era — dark plastic CRT
+  return "modern"; // download era — sleek panel
+}
+
 /** THEN vs NOW — a physical-media contrast, only for pre-2013 launches. */
 export function thenNow(
   year: number | null | undefined,
@@ -34,13 +44,24 @@ export function thenNow(
   ) {
     return null;
   }
+  const then =
+    year <= 1995
+      ? [
+          "A printed manual + lore",
+          "A fold-out map or poster",
+          "Cheat codes on paper",
+          "Blowing on the cartridge",
+          "It was yours — forever",
+        ]
+      : [
+          "A printed manual",
+          "Cover art you framed",
+          "A jewel-case disc",
+          "No day-one patch",
+          "It was yours — forever",
+        ];
   return {
-    then: [
-      "Printed manual + lore",
-      "Cover art you framed",
-      "It was yours — forever",
-      "No day-one patch",
-    ],
+    then,
     now: [
       "A big download",
       "A day-one patch",

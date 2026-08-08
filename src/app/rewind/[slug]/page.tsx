@@ -19,6 +19,7 @@ import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import TrackedLink from "@/components/TrackedLink";
+import RewindVault from "@/components/rewind/RewindVault";
 import {
   eraForYear,
   yearsAgo,
@@ -299,42 +300,8 @@ export default async function RewindEpisodePage({
           </Box>
         )}
 
-        {/* Video (YouTube-forward) */}
-        {vid && (
-          <Box mt={10}>
-            <Text
-              fontFamily="mono"
-              fontSize="xs"
-              letterSpacing="0.15em"
-              color="nexzy.gray.100"
-              mb={3}
-            >
-              FROM THE VAULT
-            </Text>
-            <Box
-              position="relative"
-              w="100%"
-              css={{ aspectRatio: "16 / 9" }}
-              borderRadius="lg"
-              overflow="hidden"
-            >
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${vid}`}
-                title={ep.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  border: 0,
-                }}
-              />
-            </Box>
-          </Box>
-        )}
+        {/* Video — era-adaptive vault (CRT for old eras, panel for modern) */}
+        {vid && <RewindVault vid={vid} title={ep.title} year={year} />}
 
         {/* More from the vault */}
         {more.length > 0 && ep.event && (
