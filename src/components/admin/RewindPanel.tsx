@@ -43,7 +43,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [day, setDay] = useState(today.getDate());
-  const [verifiedOnly, setVerifiedOnly] = useState(true);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [leads, setLeads] = useState<RewindLead[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
