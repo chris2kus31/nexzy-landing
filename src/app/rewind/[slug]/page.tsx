@@ -1,25 +1,17 @@
 import type { Metadata } from "next";
 import NextLink from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Box,
-  Container,
-  Flex,
-  HStack,
-  Heading,
-  Image,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import type { ReactNode } from "react";
+import { Box, Container, Flex, Heading, Image, Text } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
 import Footer from "@/components/landing/Footer";
-import ArticleBody from "@/components/blog/ArticleBody";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
+import RewindScrubber from "@/components/rewind/RewindScrubber";
 import {
   eraForYear,
   yearsAgo,
@@ -31,6 +23,7 @@ import {
 export const revalidate = 300;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+const SERIF = 'Georgia, "Times New Roman", serif';
 
 function youTubeId(url?: string | null): string | null {
   if (!url) return null;
@@ -52,6 +45,18 @@ function regionName(r?: string | null): string {
 }
 function categoryLabel(c?: string | null): string {
   return (c ?? "").replace(/_/g, " ").replace(/^./, (s) => s.toUpperCase());
+}
+
+/** Strip inline markdown so split paragraphs never render raw *asterisks* etc. */
+function stripMd(s: string): string {
+  return (s || "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
 }
 
 export async function generateMetadata({
@@ -99,20 +104,49 @@ export default async function RewindEpisodePage({
   const era = eraForYear(year);
   const ya = yearsAgo(year);
   const tn = thenNow(year, ep.event?.category);
-  const digits = year ? String(year).split("") : [];
   const vid = youTubeId(ep.youtubeUrl || ep.videoUrls?.[0]);
 
   const hub = ep.event
     ? await fetchRewindDay(ep.event.month, ep.event.day)
     : null;
-  const more = (hub?.timeline || [])
-    .filter((t) => t.slug && t.slug !== slug)
-    .slice(0, 3);
+  const timeline = hub?.timeline || [];
+  const stops = timeline
+    .filter((t) => t.slug)
+    .map((t) => ({ year: t.year ?? 0, slug: t.slug as string }));
+  const more = timeline.filter((t) => t.slug && t.slug !== slug).slice(0, 3);
 
   const spec = ep.spec ?? null;
-  const released = ep.event
-    ? `${monthName(ep.event.month)} ${ep.event.day}${year ? `, ${year}` : ""}`
-    : null;
+  const platform = spec?.platforms?.[0] ?? null;
+
+  // Split the body into paragraphs so we can flow them into magazine columns and
+  // interleave the pull-quote + Tale-of-the-tape (like the mock). The pull-quote
+  // is the shortest punchy sentence from the body (skipping the opening line).
+  const bodyParas = (ep.bodyMarkdown || "")
+    .split(/\n\n+/)
+    .map((p) => stripMd(p.trim()))
+    .filter(Boolean);
+  const pullQuote = (() => {
+    const src = (bodyParas.slice(1).join(" ") || bodyParas.join(" "))
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 45 && s.length <= 130);
+    return src.sort((a, b) => a.length - b.length)[0] || null;
+  })();
+
+  const specRows: { k: string; v: string }[] = [];
+  if (ep.event)
+    specRows.push({
+      k: "Released",
+      v: `${monthName(ep.event.month)} ${ep.event.day}${year ? `, ${year}` : ""}`,
+    });
+  if (spec?.platforms?.length)
+    specRows.push({ k: "Platform", v: spec.platforms.join(", ") });
+  if (ep.event) specRows.push({ k: "Region", v: regionName(ep.event.region) });
+  if (spec?.genres?.length)
+    specRows.push({ k: "Genre", v: spec.genres.join(", ") });
+  if (spec?.esrb) specRows.push({ k: "Rating", v: spec.esrb });
+  if (ep.event)
+    specRows.push({ k: "Moment", v: categoryLabel(ep.event.category) });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -159,479 +193,526 @@ export default async function RewindEpisodePage({
     ],
   };
 
-  const specRows: { k: string; v: string }[] = [];
-  if (released) specRows.push({ k: "Released", v: released });
-  if (spec?.platforms?.length)
-    specRows.push({ k: "Platform", v: spec.platforms.join(", ") });
-  if (ep.event) specRows.push({ k: "Region", v: regionName(ep.event.region) });
-  if (spec?.genres?.length)
-    specRows.push({ k: "Genre", v: spec.genres.join(", ") });
-  if (spec?.esrb) specRows.push({ k: "Rating", v: spec.esrb });
-  if (ep.event)
-    specRows.push({ k: "Moment", v: categoryLabel(ep.event.category) });
-
   return (
     <Box bg="nexzy.navy" minH="100vh">
       <Navigation />
 
-      {/* HERO — compact, horizontal, era-adaptive. pt clears the fixed 64px nav. */}
       <Box
         position="relative"
-        pt={{ base: 24, md: 28 }}
-        pb={{ base: 8, md: 10 }}
-        borderBottom="1px solid"
-        borderColor="whiteAlpha.100"
+        pt={{ base: 20, md: 24 }}
+        pb={16}
         overflow="hidden"
       >
+        {/* Halftone dot texture — the "print" feel over the navy page */}
         <Box
           position="absolute"
           inset="0"
           pointerEvents="none"
+          opacity={0.05}
           css={{
-            background:
-              "repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0 1px, transparent 1px 4px)",
+            backgroundImage: "radial-gradient(#cfe0ff 1px, transparent 1.4px)",
+            backgroundSize: "5px 5px",
           }}
         />
-        <Container maxW="6xl" position="relative">
-          <Flex
-            direction={{ base: "column", md: "row" }}
-            align={{ base: "center", md: "flex-start" }}
-            gap={{ base: 5, md: 8 }}
-            textAlign={{ base: "center", md: "left" }}
-          >
-            <Box flexShrink={0}>
-              {digits.length > 0 && (
-                <HStack justify="center" gap={1.5}>
-                  {digits.map((d, i) => (
-                    <Box
-                      key={i}
-                      position="relative"
-                      w={{ base: "38px", md: "44px" }}
-                      h={{ base: "50px", md: "58px" }}
-                      display="grid"
-                      placeItems="center"
-                      bg="#060b16"
-                      border="1px solid"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="md"
-                      fontFamily="mono"
-                      fontWeight="800"
-                      fontSize={{ base: "3xl", md: "4xl" }}
-                      color="nexzy.gold"
-                      css={{
-                        "&::after": {
-                          content: '""',
-                          position: "absolute",
-                          left: 0,
-                          right: 0,
-                          top: "50%",
-                          height: "1px",
-                          background: "rgba(0,0,0,.55)",
-                        },
-                      }}
-                    >
-                      {d}
-                    </Box>
-                  ))}
-                </HStack>
-              )}
-              <Box
-                display="inline-block"
-                mt={3}
-                border="1px solid"
-                borderColor={era.accent}
-                color={era.accent}
-                fontFamily="mono"
-                fontSize="10px"
-                letterSpacing="0.18em"
-                px={2.5}
-                py={1}
-                borderRadius="full"
-              >
-                ● {era.label}
-              </Box>
-            </Box>
 
-            <Box flex="1">
+        <Container maxW="6xl" position="relative">
+          {/* MASTHEAD */}
+          <Flex
+            justify="space-between"
+            align="flex-end"
+            borderBottom="3px solid"
+            borderColor="nexzy.blue"
+            pb={2}
+          >
+            <Box>
+              <Heading
+                fontFamily="title"
+                fontSize={{ base: "3xl", md: "5xl" }}
+                lineHeight="0.85"
+                color="nexzy.white"
+                letterSpacing="0.06em"
+              >
+                REWIND
+              </Heading>
               <Text
                 fontFamily="mono"
-                letterSpacing="0.32em"
-                fontSize="11px"
-                color="nexzy.gray.100"
-                mb={2}
+                fontSize="sm"
+                letterSpacing="0.16em"
+                color="nexzy.lightBlue"
+              >
+                THIS DAY IN GAMING
+              </Text>
+            </Box>
+            <Text
+              fontFamily="mono"
+              fontSize="sm"
+              color="nexzy.gray.100"
+              textAlign="right"
+              lineHeight="1.3"
+            >
+              {ep.event
+                ? `${monthName(ep.event.month).toUpperCase()} ${ep.event.day} · `
+                : ""}
+              <Box as="span" color="nexzy.gold">
+                {year ?? "—"}
+              </Box>
+              <br />
+              {era.label}
+            </Text>
+          </Flex>
+
+          {/* REWIND SCRUBBER — interactive year travel */}
+          <RewindScrubber
+            stops={stops}
+            currentSlug={slug}
+            accent={era.accent}
+          />
+
+          {/* FEATURE OPENER — sized title beside the cover */}
+          <Box
+            display="grid"
+            gridTemplateColumns={{ base: "1fr", md: "1.3fr 0.7fr" }}
+            gap={{ base: 6, md: 10 }}
+            alignItems="center"
+            mt={{ base: 6, md: 10 }}
+          >
+            <Box>
+              <Text
+                fontFamily="mono"
+                fontSize="sm"
+                letterSpacing="0.14em"
+                color={era.accent}
+                mb={1}
               >
                 ON THIS DAY
                 {ep.event
                   ? ` · ${monthName(ep.event.month).toUpperCase()} ${ep.event.day}`
                   : ""}
+                {ya ? ` · ${ya} YEARS AGO` : ""}
               </Text>
               <Heading
                 as="h1"
                 fontFamily="title"
-                size={{ base: "lg", md: "2xl" }}
+                fontSize={{ base: "4xl", md: "5xl" }}
+                lineHeight="1.0"
                 color="nexzy.white"
-                lineHeight="1.15"
+                textTransform="uppercase"
+                mb={3}
               >
                 {ep.title}
               </Heading>
-              <Text color="nexzy.gray.100" fontSize="sm" mt={3}>
-                {ya ? `${ya} years ago today · ` : ""}By{" "}
-                <Box as="span" color="nexzy.white">
-                  {ep.author || "Nexzy Rewind"}
-                </Box>{" "}
-                · Nexzy Rewind
+              {ep.excerpt && (
+                <Text
+                  fontFamily={SERIF}
+                  fontSize="md"
+                  color="gray.300"
+                  lineHeight="1.6"
+                  maxW="46ch"
+                >
+                  {ep.excerpt}
+                </Text>
+              )}
+              <Text
+                fontFamily="mono"
+                fontSize="xs"
+                color="nexzy.gray.100"
+                mt={4}
+                letterSpacing="0.08em"
+                textTransform="uppercase"
+              >
+                By {ep.author || "Nexzy Rewind"} · Nexzy Rewind
+                {platform ? ` · ${platform}` : ""}
+                {ep.event ? ` · ${regionName(ep.event.region)}` : ""}
               </Text>
             </Box>
-          </Flex>
-        </Container>
-      </Box>
 
-      <Container maxW="6xl" py={{ base: 8, md: 12 }}>
-        {/* READING — a SET-HEIGHT cream paper that scrolls internally, beside the
-            box art + Spec Plate. Fixed window: the page stays put no matter how
-            long the article runs (only the paper body scrolls). */}
-        <Flex direction={{ base: "column", md: "row" }} gap={6} align="start">
-          {ep.bodyMarkdown && (
+            <Box>
+              {ep.heroImageUrl && (
+                <Box
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  bg="whiteAlpha.50"
+                  borderRadius="lg"
+                  p={2}
+                >
+                  <Image
+                    src={ep.heroImageUrl}
+                    alt={ep.imageAlt || ep.title}
+                    w="100%"
+                    borderRadius="md"
+                  />
+                  <Text
+                    fontFamily="mono"
+                    fontSize="xs"
+                    color="nexzy.gray.100"
+                    mt={2}
+                  >
+                    ▲ {platform || "The box that started it"}
+                    {ep.event ? ` · ${monthName(ep.event.month)} ${year}` : ""}
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* RULE — divider between the opener and the article */}
+          <Box h="1px" bg="whiteAlpha.300" my={{ base: 7, md: 9 }} />
+
+          {/* ARTICLE — dark editorial: paragraphs flow into two magazine columns
+              with the pull-quote + Tale-of-the-tape interleaved as breakouts. */}
+          {bodyParas.length > 0 && (
             <Box
-              flex="1"
-              minW={0}
-              bg="#efe7d3"
+              fontFamily={SERIF}
+              css={{
+                columnGap: "40px",
+                "& > p:first-of-type::first-letter": {
+                  float: "left",
+                  fontFamily: SERIF,
+                  fontSize: "62px",
+                  lineHeight: "0.6",
+                  fontWeight: 700,
+                  color: era.accent,
+                  paddingRight: "10px",
+                  paddingTop: "6px",
+                },
+                "@media (min-width: 768px)": { columnCount: 2 },
+              }}
+            >
+              {(() => {
+                const flow: ReactNode[] = [];
+                bodyParas.forEach((p, i) => {
+                  flow.push(
+                    <Text
+                      as="p"
+                      key={`p${i}`}
+                      fontSize="md"
+                      lineHeight="1.75"
+                      color="gray.300"
+                      mb={4}
+                      textAlign="justify"
+                    >
+                      {p}
+                    </Text>,
+                  );
+                  if (i === 1 && pullQuote) {
+                    flow.push(
+                      <Box
+                        key="pull"
+                        my={4}
+                        py={3}
+                        borderTop="2px solid"
+                        borderBottom="2px solid"
+                        borderColor="nexzy.blue"
+                        css={{ breakInside: "avoid" }}
+                      >
+                        <Text
+                          fontFamily="title"
+                          fontWeight="700"
+                          fontSize="lg"
+                          lineHeight="1.2"
+                          color="nexzy.gold"
+                        >
+                          &ldquo;{pullQuote}&rdquo;
+                        </Text>
+                      </Box>,
+                    );
+                  }
+                  if (i === 1 && specRows.length > 0) {
+                    flow.push(
+                      <Box
+                        key="tale"
+                        mb={4}
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        bg="whiteAlpha.50"
+                        borderRadius="lg"
+                        p={4}
+                        css={{ breakInside: "avoid" }}
+                      >
+                        <Text
+                          fontFamily="mono"
+                          fontSize="11px"
+                          letterSpacing="0.16em"
+                          color="nexzy.lightBlue"
+                          borderBottom="1px solid"
+                          borderColor="whiteAlpha.200"
+                          pb={2}
+                          mb={2}
+                        >
+                          TALE OF THE TAPE
+                        </Text>
+                        {specRows.map((row, j) => (
+                          <Flex
+                            key={row.k}
+                            justify="space-between"
+                            gap={3}
+                            py={1.5}
+                            borderBottom={
+                              j < specRows.length - 1 ? "1px solid" : "none"
+                            }
+                            borderColor="whiteAlpha.100"
+                          >
+                            <Text
+                              fontFamily="mono"
+                              fontSize="11px"
+                              letterSpacing="0.06em"
+                              color="nexzy.gray.100"
+                              textTransform="uppercase"
+                              pt={0.5}
+                            >
+                              {row.k}
+                            </Text>
+                            <Text
+                              fontSize="13px"
+                              color="nexzy.white"
+                              fontWeight="600"
+                              textAlign="right"
+                            >
+                              {row.v}
+                            </Text>
+                          </Flex>
+                        ))}
+                      </Box>,
+                    );
+                  }
+                });
+                return flow;
+              })()}
+            </Box>
+          )}
+
+          {/* THE REEL — era video (follows the article, as in the mock) */}
+          {vid && (
+            <Box mt={12}>
+              <Text
+                fontFamily="title"
+                fontWeight="700"
+                textTransform="uppercase"
+                letterSpacing="0.14em"
+                fontSize="sm"
+                color="nexzy.lightBlue"
+                borderBottom="1px solid"
+                borderColor="whiteAlpha.200"
+                pb={2}
+                mb={3}
+              >
+                Roll the tape ▸ the game in motion
+              </Text>
+              <RewindVault vid={vid} title={ep.title} year={year} />
+            </Box>
+          )}
+
+          {/* THEN vs NOW */}
+          {tn && (
+            <Box
+              mt={12}
+              bg="whiteAlpha.50"
+              border="1px solid"
+              borderColor="whiteAlpha.200"
               borderRadius="xl"
-              boxShadow="0 20px 44px rgba(0,0,0,.4)"
-              display="flex"
-              flexDirection="column"
-              h={{ base: "auto", md: "480px" }}
               overflow="hidden"
             >
               <Text
-                as="div"
-                fontFamily="mono"
-                fontSize="xs"
-                letterSpacing="0.2em"
-                color="#8a6d3b"
-                px={{ base: 5, md: 8 }}
-                pt={{ base: 5, md: 7 }}
-                pb={3}
-                borderBottom="1px solid rgba(138,109,59,.25)"
+                textAlign="center"
+                fontFamily="title"
+                fontWeight="700"
+                textTransform="uppercase"
+                letterSpacing="0.18em"
+                fontSize="sm"
+                bg="nexzy.blue"
+                color="#001133"
+                py={2}
               >
-                SET THE CLOCK TO {year ?? "—"} ▸
+                Then &amp; Now
               </Text>
               <Box
-                overflowY="auto"
-                px={{ base: 5, md: 8 }}
-                py={{ base: 5, md: 6 }}
-                css={{
-                  "& p:first-of-type::first-letter": {
-                    float: "left",
-                    fontFamily: "Georgia, 'Times New Roman', serif",
-                    fontSize: "3.5rem",
-                    lineHeight: "0.8",
-                    fontWeight: 700,
-                    color: era.accent,
-                    paddingRight: "10px",
-                    paddingTop: "4px",
-                  },
-                  "&::-webkit-scrollbar": { width: "8px" },
-                  "&::-webkit-scrollbar-thumb": {
-                    background: "rgba(90,75,54,.35)",
-                    borderRadius: "4px",
-                  },
-                }}
+                display="grid"
+                gridTemplateColumns={{ base: "1fr", md: "1fr auto 1fr" }}
+                gap={{ base: 5, md: 8 }}
+                alignItems="start"
+                p={{ base: 4, md: 6 }}
               >
-                <ArticleBody
-                  body={ep.bodyMarkdown}
-                  location="rewind"
-                  tone="paper"
-                  cta={false}
-                />
+                <Box>
+                  <Text
+                    fontFamily="mono"
+                    fontSize="sm"
+                    color="green.300"
+                    mb={3}
+                  >
+                    {year} — IN THE BOX
+                  </Text>
+                  <Flex wrap="wrap" gap={2}>
+                    {tn.then.map((t) => (
+                      <Text
+                        key={t}
+                        fontSize="12px"
+                        color="nexzy.gray.100"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        bg="whiteAlpha.50"
+                        px={2.5}
+                        py={1}
+                        borderRadius="full"
+                      >
+                        {t}
+                      </Text>
+                    ))}
+                  </Flex>
+                </Box>
+                <Box
+                  justifySelf="center"
+                  alignSelf={{ md: "center" }}
+                  color={era.accent}
+                  fontSize="2xl"
+                  fontWeight="800"
+                  lineHeight="1"
+                  transform={{ base: "rotate(90deg)", md: "none" }}
+                >
+                  →
+                </Box>
+                <Box>
+                  <Text
+                    fontFamily="mono"
+                    fontSize="sm"
+                    color="orange.300"
+                    mb={3}
+                  >
+                    {new Date().getFullYear()} — IN THE CLOUD
+                  </Text>
+                  <Flex wrap="wrap" gap={2}>
+                    {tn.now.map((t) => (
+                      <Text
+                        key={t}
+                        fontSize="12px"
+                        color="nexzy.gray.100"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        bg="whiteAlpha.50"
+                        px={2.5}
+                        py={1}
+                        borderRadius="full"
+                      >
+                        {t}
+                      </Text>
+                    ))}
+                  </Flex>
+                </Box>
+              </Box>
+              <Text
+                textAlign="center"
+                pb={5}
+                fontFamily={SERIF}
+                fontStyle="italic"
+                color="nexzy.white"
+                fontSize={{ base: "md", md: "lg" }}
+              >
+                You used to{" "}
+                <Box as="span" fontWeight="700" color="nexzy.gold">
+                  own
+                </Box>{" "}
+                it. Now you just{" "}
+                <Box as="span" fontWeight="700" color="nexzy.gold">
+                  access
+                </Box>{" "}
+                it.
+              </Text>
+            </Box>
+          )}
+
+          {/* MORE ON THIS DAY */}
+          {more.length > 0 && ep.event && (
+            <Box mt={12}>
+              <Text
+                fontFamily="mono"
+                fontSize="xs"
+                letterSpacing="0.15em"
+                color="nexzy.gray.100"
+                mb={3}
+              >
+                MORE ON {monthName(ep.event.month).toUpperCase()} {ep.event.day}
+              </Text>
+              <Box
+                display="grid"
+                gridTemplateColumns={{
+                  base: "1fr",
+                  sm: "repeat(2, 1fr)",
+                  md: "repeat(3, 1fr)",
+                }}
+                gap={3}
+              >
+                {more.map((m) => (
+                  <TrackedLink
+                    key={m.slug ?? m.title}
+                    href={`/rewind/${m.slug}`}
+                    event="content_click"
+                    params={{
+                      content_type: "rewind",
+                      slug: m.slug ?? "",
+                      from: "rewind_more",
+                    }}
+                  >
+                    <Box
+                      h="100%"
+                      border="1px solid"
+                      borderColor="whiteAlpha.200"
+                      borderRadius="lg"
+                      p={4}
+                      _hover={{ borderColor: era.accent }}
+                    >
+                      <Text
+                        fontFamily="mono"
+                        fontSize="10px"
+                        color={era.accent}
+                        mb={1}
+                      >
+                        {m.year ?? "—"}
+                      </Text>
+                      <Text color="nexzy.white" fontWeight="600">
+                        {m.title}
+                      </Text>
+                    </Box>
+                  </TrackedLink>
+                ))}
               </Box>
             </Box>
           )}
 
-          {/* Box art + Spec Plate — the hero-image + stat-card cascade tiers.
-              Fills the paper's height so the two columns bottom-align. */}
-          <Box
-            w={{ base: "100%", md: "320px" }}
-            flexShrink={0}
-            h={{ base: "auto", md: "480px" }}
-          >
-            <VStack align="stretch" gap={4} h="100%">
-              {ep.heroImageUrl && (
-                <Image
-                  src={ep.heroImageUrl}
-                  alt={ep.imageAlt || ep.title}
-                  w="100%"
-                  flex={{ md: "1" }}
-                  minH={{ base: "200px", md: "0" }}
-                  objectFit="contain"
-                  bg="#0b1120"
-                  p={3}
-                  borderRadius="lg"
-                  border="1px solid"
-                  borderColor="whiteAlpha.200"
-                />
-              )}
-              {specRows.length > 0 && (
-                <Box
-                  flexShrink={0}
-                  bg="whiteAlpha.50"
-                  border="1px solid"
-                  borderColor="whiteAlpha.200"
-                  borderRadius="xl"
-                  p={4}
-                >
-                  <Text
-                    fontFamily="mono"
-                    fontSize="10px"
-                    letterSpacing="0.18em"
-                    color="nexzy.gray.100"
-                    mb={3}
-                  >
-                    SPEC PLATE
-                  </Text>
-                  <VStack align="stretch" gap={0}>
-                    {specRows.map((row, i) => (
-                      <Flex
-                        key={row.k}
-                        justify="space-between"
-                        gap={3}
-                        py={2}
-                        borderBottom={
-                          i < specRows.length - 1 ? "1px solid" : "none"
-                        }
-                        borderColor="whiteAlpha.100"
-                      >
-                        <Text fontSize="13px" color="nexzy.gray.100">
-                          {row.k}
-                        </Text>
-                        <Text
-                          fontSize="13px"
-                          color="nexzy.white"
-                          fontWeight="600"
-                          textAlign="right"
-                        >
-                          {row.v}
-                        </Text>
-                      </Flex>
-                    ))}
-                  </VStack>
-                  {spec?.gameSlug && (
-                    <NextLink href={`/games/${spec.gameSlug}`}>
-                      <Text
-                        mt={3}
-                        fontSize="xs"
-                        color={era.accent}
-                        fontWeight="600"
-                      >
-                        Open the game hub ▸
-                      </Text>
-                    </NextLink>
-                  )}
-                </Box>
-              )}
-            </VStack>
-          </Box>
-        </Flex>
-
-        {/* FEATURE SLOT top tier — THEN vs NOW (physical-media eras only) */}
-        {tn && (
-          <Box
-            mt={10}
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="xl"
-            p={{ base: 4, md: 6 }}
-          >
-            <Text
-              textAlign="center"
-              fontFamily="mono"
-              letterSpacing="0.24em"
-              fontSize="sm"
-              color="nexzy.gold"
-              mb={4}
-            >
-              THEN vs NOW
-            </Text>
-            <Box
-              display="grid"
-              gridTemplateColumns={{ base: "1fr", md: "1fr auto 1fr" }}
-              gap={{ base: 5, md: 8 }}
-              alignItems="start"
-            >
-              <Box>
-                <Text fontFamily="mono" fontSize="xs" color="green.300" mb={3}>
-                  {year} — IN THE BOX
-                </Text>
-                <Flex wrap="wrap" gap={2}>
-                  {tn.then.map((t) => (
-                    <Text
-                      key={t}
-                      fontSize="12px"
-                      color="nexzy.gray.100"
-                      border="1px solid"
-                      borderColor="whiteAlpha.200"
-                      bg="whiteAlpha.50"
-                      px={2.5}
-                      py={1}
-                      borderRadius="full"
-                    >
-                      {t}
-                    </Text>
-                  ))}
-                </Flex>
-              </Box>
-
-              <Box
-                justifySelf="center"
-                alignSelf={{ md: "center" }}
-                color={era.accent}
-                fontSize="2xl"
-                fontWeight="800"
-                lineHeight="1"
-                transform={{ base: "rotate(90deg)", md: "none" }}
+          {ep.event && (
+            <Box mt={8}>
+              <NextLink
+                href={`/rewind/day/${dateSlug(ep.event.month, ep.event.day)}`}
               >
-                →
-              </Box>
-
-              <Box>
-                <Text fontFamily="mono" fontSize="xs" color="orange.300" mb={3}>
-                  {new Date().getFullYear()} — IN THE CLOUD
+                <Text color="nexzy.lightBlue" fontSize="sm">
+                  ← Everything that happened on {monthName(ep.event.month)}{" "}
+                  {ep.event.day}
                 </Text>
-                <Flex wrap="wrap" gap={2}>
-                  {tn.now.map((t) => (
-                    <Text
-                      key={t}
-                      fontSize="12px"
-                      color="nexzy.gray.100"
-                      border="1px solid"
-                      borderColor="whiteAlpha.200"
-                      bg="whiteAlpha.50"
-                      px={2.5}
-                      py={1}
-                      borderRadius="full"
-                    >
-                      {t}
-                    </Text>
-                  ))}
-                </Flex>
-              </Box>
+              </NextLink>
             </Box>
-            <Text
-              textAlign="center"
-              mt={5}
-              fontFamily="var(--font-voice, Georgia, serif)"
-              fontStyle="italic"
-              color="nexzy.white"
-              fontSize={{ base: "md", md: "lg" }}
-            >
-              You used to{" "}
-              <Box as="span" fontWeight="700">
-                own
-              </Box>{" "}
-              it. Now you just{" "}
-              <Box as="span" fontWeight="700">
-                access
-              </Box>{" "}
-              it.
-            </Text>
-          </Box>
-        )}
+          )}
 
-        {/* MEDIA SLOT — era CRT video vault (no Wayback) */}
-        {vid && <RewindVault vid={vid} title={ep.title} year={year} />}
-
-        {/* MORE ON THIS DAY — slim chips */}
-        {more.length > 0 && ep.event && (
-          <Box mt={12}>
-            <Text
-              fontFamily="mono"
-              fontSize="xs"
-              letterSpacing="0.15em"
-              color="nexzy.gray.100"
-              mb={3}
-            >
-              MORE ON {monthName(ep.event.month).toUpperCase()} {ep.event.day}
-            </Text>
-            <Box
-              display="grid"
-              gridTemplateColumns={{
-                base: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(3, 1fr)",
-              }}
-              gap={3}
-            >
-              {more.map((m) => (
-                <TrackedLink
-                  key={m.slug ?? m.title}
-                  href={`/rewind/${m.slug}`}
-                  event="content_click"
-                  params={{
-                    content_type: "rewind",
-                    slug: m.slug ?? "",
-                    from: "rewind_more",
-                  }}
-                >
-                  <Box
-                    h="100%"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    borderRadius="lg"
-                    p={4}
-                    _hover={{ borderColor: era.accent }}
-                  >
-                    <Text
-                      fontFamily="mono"
-                      fontSize="10px"
-                      color={era.accent}
-                      mb={1}
-                    >
-                      {m.year ?? "—"}
-                    </Text>
-                    <Text color="nexzy.white" fontWeight="600">
-                      {m.title}
-                    </Text>
-                  </Box>
-                </TrackedLink>
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {ep.event && (
-          <Box mt={8}>
-            <NextLink
-              href={`/rewind/day/${dateSlug(ep.event.month, ep.event.day)}`}
-            >
-              <Text color="nexzy.lightBlue" fontSize="sm">
-                ← Everything that happened on {monthName(ep.event.month)}{" "}
-                {ep.event.day}
-              </Text>
-            </NextLink>
-          </Box>
-        )}
-
-        {/* Time-machine sign-off strip */}
-        <Flex
-          align="center"
-          gap={3}
-          mt={12}
-          pt={6}
-          borderTop="1px solid"
-          borderColor="whiteAlpha.100"
-        >
-          <Box w="28px" h="3px" bg="nexzy.gold" borderRadius="full" />
-          <Text
+          {/* MASTHEAD FOOTER */}
+          <Flex
+            justify="space-between"
+            align="center"
+            mt={12}
+            pt={4}
+            borderTop="3px solid"
+            borderColor="nexzy.blue"
             fontFamily="mono"
             fontSize="xs"
             letterSpacing="0.12em"
             color="nexzy.gray.100"
           >
-            NEXZY REWIND — A NEW TIME-MACHINE DROP EVERY DAY
-          </Text>
-        </Flex>
-      </Container>
+            <Text>
+              NEXZY{" "}
+              <Box as="span" color="nexzy.gold">
+                REWIND
+              </Box>
+            </Text>
+            <Text>A NEW TIME-MACHINE DROP EVERY DAY</Text>
+          </Flex>
+        </Container>
+      </Box>
 
       <Footer />
 
