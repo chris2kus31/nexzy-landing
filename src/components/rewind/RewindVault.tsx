@@ -82,7 +82,7 @@ export default function RewindVault({
 
       <Box
         maxW={isCrt ? "640px" : "100%"}
-        mx={isCrt ? "auto" : "0"}
+        mx="0"
         p={isCrt ? { base: 3, md: 4 } : "0"}
         borderRadius={isCrt ? "2xl" : "lg"}
         css={{
@@ -111,7 +111,7 @@ export default function RewindVault({
       </Box>
 
       {isCrt && (
-        <Text fontSize="xs" color="nexzy.gray.100" textAlign="center" mt={2}>
+        <Text fontSize="xs" color="nexzy.gray.100" textAlign="left" mt={2}>
           {wood
             ? "Straight from the vault — the era's tube TV."
             : "Pulled from the archives."}
