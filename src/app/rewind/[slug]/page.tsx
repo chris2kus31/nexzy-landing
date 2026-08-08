@@ -453,14 +453,14 @@ export default async function RewindEpisodePage({
             >
               THEN vs NOW
             </Text>
-            <Flex
-              gap={{ base: 4, md: 10 }}
-              direction={{ base: "column", md: "row" }}
-              align={{ md: "flex-start" }}
-              justify="center"
+            <Box
+              display="grid"
+              gridTemplateColumns={{ base: "1fr", md: "1fr auto 1fr" }}
+              gap={{ base: 5, md: 8 }}
+              alignItems="start"
             >
-              <Box flex="1">
-                <Text fontFamily="mono" fontSize="xs" color="green.300" mb={2}>
+              <Box>
+                <Text fontFamily="mono" fontSize="xs" color="green.300" mb={3}>
                   {year} — IN THE BOX
                 </Text>
                 <Flex wrap="wrap" gap={2}>
@@ -481,16 +481,21 @@ export default async function RewindEpisodePage({
                   ))}
                 </Flex>
               </Box>
-              <Text
+
+              <Box
+                justifySelf="center"
+                alignSelf={{ md: "center" }}
                 color={era.accent}
                 fontSize="2xl"
                 fontWeight="800"
-                textAlign="center"
+                lineHeight="1"
+                transform={{ base: "rotate(90deg)", md: "none" }}
               >
                 →
-              </Text>
-              <Box flex="1">
-                <Text fontFamily="mono" fontSize="xs" color="orange.300" mb={2}>
+              </Box>
+
+              <Box>
+                <Text fontFamily="mono" fontSize="xs" color="orange.300" mb={3}>
                   {new Date().getFullYear()} — IN THE CLOUD
                 </Text>
                 <Flex wrap="wrap" gap={2}>
@@ -511,7 +516,7 @@ export default async function RewindEpisodePage({
                   ))}
                 </Flex>
               </Box>
-            </Flex>
+            </Box>
             <Text
               textAlign="center"
               mt={5}
