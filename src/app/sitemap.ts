@@ -13,6 +13,7 @@ import {
   fetchGamesWithContent,
   fetchVideosForSitemap,
   fetchTags,
+  fetchRewindSlugs,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
@@ -45,6 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/walkthroughs",
     "/lists",
     "/reviews",
+    "/rewind",
     "/videos",
     "/games",
     "/app",
@@ -56,6 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/walkthroughs",
     "/lists",
     "/reviews",
+    "/rewind",
     "/videos",
     "/games",
   ]);
@@ -163,6 +166,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
+  // Rewind episodes (/rewind/<slug>) — evergreen, best-effort.
+  const rewindEntries: MetadataRoute.Sitemap = [];
+  try {
+    const eps = await fetchRewindSlugs();
+    for (const e of eps) {
+      rewindEntries.push({
+        url: `${SITE_URL}/rewind/${e.slug}`,
+        lastModified: e.updatedAt ? new Date(e.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.6,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Game hubs (/games/<slug>) — one per game that has linked content, best-
   // effort so an API hiccup never breaks the sitemap.
   const gameHubEntries: MetadataRoute.Sitemap = [];
@@ -216,6 +235,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...evergreenEntries,
     ...chapterEntries,
     ...videoEntries,
+    ...rewindEntries,
     ...gameHubEntries,
     ...authorEntries,
     ...topicEntries,

@@ -16,6 +16,8 @@ export function publicPathForType(type?: string | null): string {
       return "/walkthroughs";
     case "review":
       return "/reviews";
+    case "rewind":
+      return "/rewind";
     default:
       return "/blog";
   }

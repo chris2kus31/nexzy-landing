@@ -284,6 +284,96 @@ export async function fetchPost(slug: string): Promise<PublicPost | null> {
   return res.json();
 }
 
+// ---------- Rewind ("on this day" series) ----------
+
+export interface RewindEpisode {
+  slug: string;
+  title: string;
+  seoTitle: string | null;
+  excerpt: string | null;
+  seoDescription: string | null;
+  bodyMarkdown?: string;
+  heroImageUrl: string | null;
+  imageAlt: string | null;
+  imageCredit: string | null;
+  author: string | null;
+  publishedAt: string | null;
+  updatedAt: string | null;
+  tags: string[];
+  youtubeUrl: string | null;
+  videoUrls: string[];
+  event: {
+    year: number | null;
+    month: number;
+    day: number;
+    category: string;
+    region: string;
+    canonicalTitle: string;
+  } | null;
+}
+
+export interface RewindTimelineItem {
+  title: string;
+  year: number | null;
+  category: string;
+  weight: number;
+  verified: boolean;
+  region: string;
+  slug: string | null;
+}
+
+export interface RewindDayHub {
+  month: number;
+  day: number;
+  episodes: RewindEpisode[];
+  timeline: RewindTimelineItem[];
+}
+
+export async function fetchRewindEpisode(
+  slug: string,
+): Promise<RewindEpisode | null> {
+  const res = await fetch(
+    `${API}/rewind/public/episode/${encodeURIComponent(slug)}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text ? (JSON.parse(text) as RewindEpisode) : null;
+}
+
+export async function fetchRewindDay(
+  month: number,
+  day: number,
+): Promise<RewindDayHub | null> {
+  const res = await fetch(`${API}/rewind/public/day/${month}/${day}`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text ? (JSON.parse(text) as RewindDayHub) : null;
+}
+
+export async function fetchRewindToday(): Promise<RewindEpisode | null> {
+  const res = await fetch(`${API}/rewind/public/today`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return null;
+  const text = await res.text();
+  return text ? (JSON.parse(text) as RewindEpisode) : null;
+}
+
+export async function fetchRewindSlugs(): Promise<
+  { slug: string; updatedAt: string | null }[]
+> {
+  const res = await fetch(`${API}/rewind/public/slugs`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
 // ---- Walkthroughs (Phase 7b) ----
 export interface WalkthroughChapterRef {
   slug: string;
