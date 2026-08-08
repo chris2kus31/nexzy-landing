@@ -28,7 +28,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       body?.type === "guide" ||
       body?.type === "list" ||
       body?.type === "walkthrough" ||
-      body?.type === "review"
+      body?.type === "review" ||
+      body?.type === "rewind"
     )
       type = body.type;
   } catch {

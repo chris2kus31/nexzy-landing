@@ -1,4 +1,4 @@
-import NextLink from "next/link";
+import TrackedLink from "@/components/TrackedLink";
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import type { RewindEpisode } from "@/lib/blog/api";
 import { eraForYear } from "@/lib/rewind/era";
@@ -20,7 +20,15 @@ export default function HomeRewind({
 
   return (
     <Box maxW="7xl" mx="auto" px={{ base: 4, md: 8 }} py={4}>
-      <NextLink href={`/rewind/${episode.slug}`}>
+      <TrackedLink
+        href={`/rewind/${episode.slug}`}
+        event="content_click"
+        params={{
+          content_type: "rewind",
+          slug: episode.slug,
+          from: "home_band",
+        }}
+      >
         <Flex
           align="center"
           gap={{ base: 4, md: 6 }}
@@ -86,7 +94,7 @@ export default function HomeRewind({
             Step in ▸
           </Text>
         </Flex>
-      </NextLink>
+      </TrackedLink>
     </Box>
   );
 }

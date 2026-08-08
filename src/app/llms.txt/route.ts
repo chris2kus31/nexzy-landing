@@ -20,6 +20,9 @@ export function GET(): Response {
 ## Reviews
 - [Reviews](${SITE_URL}/reviews): Reviews of game adaptations — movies and TV based on games — each with a spoiler-free verdict and a score out of 10.
 
+## Rewind
+- [Rewind — This Day in Gaming](${SITE_URL}/rewind): A daily look back at the launches, consoles, and moments that shaped gaming — on this day in history.
+
 ## About
 - [Editorial standards](${SITE_URL}/editorial-standards): How stories are
   written, researched, fact-checked, and human-reviewed before publishing.

@@ -17,6 +17,8 @@ import ArticleBody from "@/components/blog/ArticleBody";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
+import { imageObjectLd } from "@/lib/blog/imageLd";
+import TrackedLink from "@/components/TrackedLink";
 import {
   eraForYear,
   yearsAgo,
@@ -53,9 +55,17 @@ export async function generateMetadata({
       title,
       description,
       type: "article",
-      images: ep.heroImageUrl ? [{ url: ep.heroImageUrl }] : undefined,
+      publishedTime: ep.publishedAt || undefined,
+      images: ep.heroImageUrl
+        ? [{ url: ep.heroImageUrl, alt: ep.imageAlt || ep.title }]
+        : undefined,
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ep.heroImageUrl ? [ep.heroImageUrl] : undefined,
+    },
   };
 }
 
@@ -88,13 +98,28 @@ export default async function RewindEpisodePage({
     headline: ep.title,
     datePublished: ep.publishedAt || undefined,
     dateModified: ep.updatedAt || ep.publishedAt || undefined,
-    image: ep.heroImageUrl ? [ep.heroImageUrl] : undefined,
+    image: imageObjectLd(ep),
     author: { "@type": "Person", name: ep.author || "Nexzy Rewind" },
     publisher: {
       "@type": "Organization",
       name: "Nexzy",
       url: SITE_URL,
     },
+    ...(vid
+      ? {
+          video: [
+            {
+              "@type": "VideoObject",
+              name: ep.title,
+              description: ep.excerpt || ep.title,
+              thumbnailUrl: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`,
+              uploadDate: ep.publishedAt || undefined,
+              embedUrl: `https://www.youtube-nocookie.com/embed/${vid}`,
+              contentUrl: `https://www.youtube.com/watch?v=${vid}`,
+            },
+          ],
+        }
+      : {}),
     mainEntityOfPage: `${SITE_URL}/rewind/${slug}`,
   };
   const breadcrumbLd = {
@@ -326,7 +351,16 @@ export default async function RewindEpisodePage({
             </Text>
             <VStack align="stretch" gap={2}>
               {more.map((m) => (
-                <NextLink key={m.slug} href={`/rewind/${m.slug}`}>
+                <TrackedLink
+                  key={m.slug ?? m.title}
+                  href={`/rewind/${m.slug}`}
+                  event="content_click"
+                  params={{
+                    content_type: "rewind",
+                    slug: m.slug ?? "",
+                    from: "rewind_more",
+                  }}
+                >
                   <Box
                     border="1px solid"
                     borderColor="whiteAlpha.200"
@@ -346,7 +380,7 @@ export default async function RewindEpisodePage({
                       {m.title}
                     </Text>
                   </Box>
-                </NextLink>
+                </TrackedLink>
               ))}
             </VStack>
           </Box>

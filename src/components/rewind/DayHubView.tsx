@@ -1,4 +1,3 @@
-import NextLink from "next/link";
 import {
   Box,
   Container,
@@ -8,17 +7,54 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
+import TrackedLink from "@/components/TrackedLink";
 import type { RewindDayHub } from "@/lib/blog/api";
-import { eraForYear, monthName } from "@/lib/rewind/era";
+import { eraForYear, monthName, dateSlug } from "@/lib/rewind/era";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 /**
  * The day-hub — an evergreen "This Day in Gaming" page. Today's featured episode
  * on top, then a timeline of every event on the date (published episodes link
- * out; the rest are faded scaffold that fills in over time).
+ * out; the rest are faded scaffold that fills in over time). Emits ItemList +
+ * BreadcrumbList JSON-LD; episode links fire content_click.
  */
 export default function DayHubView({ hub }: { hub: RewindDayHub }) {
   const hero = hub.episodes[0] ?? null;
   const heroEra = eraForYear(hero?.event?.year);
+  const dslug = dateSlug(hub.month, hub.day);
+
+  const itemListLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `This Day in Gaming: ${monthName(hub.month)} ${hub.day}`,
+    itemListElement: hub.timeline
+      .filter((t) => t.slug)
+      .map((t, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: t.title,
+        url: `${SITE_URL}/rewind/${t.slug}`,
+      })),
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Rewind",
+        item: `${SITE_URL}/rewind`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: `${monthName(hub.month)} ${hub.day}`,
+        item: `${SITE_URL}/rewind/day/${dslug}`,
+      },
+    ],
+  };
 
   return (
     <Container maxW="3xl" py={{ base: 8, md: 12 }}>
@@ -41,7 +77,15 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
       </Box>
 
       {hero && (
-        <NextLink href={`/rewind/${hero.slug}`}>
+        <TrackedLink
+          href={`/rewind/${hero.slug}`}
+          event="content_click"
+          params={{
+            content_type: "rewind",
+            slug: hero.slug,
+            from: "rewind_dayhub_hero",
+          }}
+        >
           <Flex
             align="center"
             gap={4}
@@ -75,7 +119,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
               Step in ▸
             </Text>
           </Flex>
-        </NextLink>
+        </TrackedLink>
       )}
 
       <Text
@@ -140,14 +184,32 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
             </Flex>
           );
           return t.slug ? (
-            <NextLink key={`${t.title}-${i}`} href={`/rewind/${t.slug}`}>
+            <TrackedLink
+              key={`${t.title}-${i}`}
+              href={`/rewind/${t.slug}`}
+              event="content_click"
+              params={{
+                content_type: "rewind",
+                slug: t.slug,
+                from: "rewind_dayhub",
+              }}
+            >
               {row}
-            </NextLink>
+            </TrackedLink>
           ) : (
             <Box key={`${t.title}-${i}`}>{row}</Box>
           );
         })}
       </VStack>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
     </Container>
   );
 }

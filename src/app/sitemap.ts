@@ -14,9 +14,11 @@ import {
   fetchVideosForSitemap,
   fetchTags,
   fetchRewindSlugs,
+  fetchRewindDays,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
+import { dateSlug } from "@/lib/rewind/era";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -182,6 +184,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
+  // Rewind day-hubs (/rewind/day/<date>) — one per date with a published
+  // episode, best-effort.
+  const rewindDayEntries: MetadataRoute.Sitemap = [];
+  try {
+    const days = await fetchRewindDays();
+    for (const d of days) {
+      rewindDayEntries.push({
+        url: `${SITE_URL}/rewind/day/${dateSlug(d.month, d.day)}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.5,
+      });
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Game hubs (/games/<slug>) — one per game that has linked content, best-
   // effort so an API hiccup never breaks the sitemap.
   const gameHubEntries: MetadataRoute.Sitemap = [];
@@ -236,6 +255,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...chapterEntries,
     ...videoEntries,
     ...rewindEntries,
+    ...rewindDayEntries,
     ...gameHubEntries,
     ...authorEntries,
     ...topicEntries,

@@ -374,6 +374,17 @@ export async function fetchRewindSlugs(): Promise<
   return text ? JSON.parse(text) : [];
 }
 
+export async function fetchRewindDays(): Promise<
+  { month: number; day: number }[]
+> {
+  const res = await fetch(`${API}/rewind/public/days`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
 // ---- Walkthroughs (Phase 7b) ----
 export interface WalkthroughChapterRef {
   slug: string;
