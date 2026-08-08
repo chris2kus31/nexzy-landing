@@ -1756,10 +1756,15 @@ export type NotifyDraft = {
  * Turn a lead into a push draft (server marks it 'generated' so it leaves the
  * board). Returns the draft to prefill the composer — does NOT send.
  */
-export async function generateNotifyLead(id: string): Promise<NotifyDraft> {
+export async function generateNotifyLead(
+  id: string,
+  persona?: string,
+): Promise<NotifyDraft> {
   return handle(
     await fetch(`/api/newsroom/admin/notify/leads/${id}/generate`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona }),
     }),
   );
 }
