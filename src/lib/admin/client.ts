@@ -2183,6 +2183,24 @@ export async function autopilotRewind(): Promise<{
   );
 }
 
+export async function backfillRewind(
+  month: number,
+  day: number,
+): Promise<{
+  seen: number;
+  newEvents: number;
+  verified: number;
+  aiSeen: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/rewind/backfill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month, day }),
+    }),
+  );
+}
+
 export async function pasteRewind(input: {
   text: string;
   month: number;

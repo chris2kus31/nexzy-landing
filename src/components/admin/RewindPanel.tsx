@@ -17,6 +17,7 @@ import {
   getRewindLeads,
   commissionRewind,
   autopilotRewind,
+  backfillRewind,
   pasteRewind,
   getWriterNames,
   AuthError,
@@ -51,17 +52,27 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
 
   const [pasteText, setPasteText] = useState("");
   const [pasting, setPasting] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setLeads(await getRewindLeads({ month, day, verifiedOnly }));
-    } catch (e) {
-      if (e instanceof AuthError) return;
-      setError((e as Error).message);
-      setLeads([]);
-    }
-  }, [month, day, verifiedOnly]);
+  const load = useCallback(
+    async (verifiedOverride?: boolean) => {
+      setError(null);
+      try {
+        setLeads(
+          await getRewindLeads({
+            month,
+            day,
+            verifiedOnly: verifiedOverride ?? verifiedOnly,
+          }),
+        );
+      } catch (e) {
+        if (e instanceof AuthError) return;
+        setError((e as Error).message);
+        setLeads([]);
+      }
+    },
+    [month, day, verifiedOnly],
+  );
 
   useEffect(() => {
     void load();
@@ -102,17 +113,44 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
     }
   }, [load]);
 
+  const doBackfill = useCallback(async () => {
+    setBackfilling(true);
+    setMsg(null);
+    try {
+      const r = await backfillRewind(month, day);
+      setMsg(
+        `Backfill done: ${r.seen} events seen, ${r.newEvents} new, ${r.verified} verified` +
+          (r.aiSeen ? `, ${r.aiSeen} from AI` : "") +
+          ".",
+      );
+      await load();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBackfilling(false);
+    }
+  }, [month, day, load]);
+
   const doPaste = useCallback(async () => {
     if (!pasteText.trim()) return;
     setPasting(true);
     setMsg(null);
     try {
       const r = await pasteRewind({ text: pasteText, month, day });
-      setMsg(`Parsed ${r.seen} rows (${r.newEvents} new).`);
-      setPasteText("");
-      await load();
+      if (!r || r.seen === 0) {
+        setMsg(
+          "Parsed 0 events — the paste did not match the expected MobyGames 'On This Day' format.",
+        );
+      } else {
+        setPasteText("");
+        setVerifiedOnly(false);
+        setMsg(
+          `Added ${r.seen} events to ${month}/${day} (${r.newEvents} new). Most are unverified until a source confirms them — showing all now.`,
+        );
+        await load(false);
+      }
     } catch (e) {
-      setMsg((e as Error).message);
+      setMsg(`Paste failed: ${(e as Error).message}`);
     } finally {
       setPasting(false);
     }
@@ -176,6 +214,18 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
         {isOwner && (
           <Button
             size="sm"
+            bg="green.500"
+            color="white"
+            onClick={doBackfill}
+            loading={backfilling}
+            loadingText="Fetching…"
+          >
+            ⟳ Run backfill
+          </Button>
+        )}
+        {isOwner && (
+          <Button
+            size="sm"
             bg="nexzy.gold"
             color="#0d1526"
             onClick={doAutopilot}
@@ -184,6 +234,12 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
           </Button>
         )}
       </HStack>
+
+      <Text color="nexzy.gray.100" fontSize="xs">
+        Verified only hides single-source candidates. Run backfill to pull this
+        day from Wikidata; paste a block below to add more. Events show verified
+        once a trusted source (Wikidata) confirms them.
+      </Text>
 
       {isOwner && (
         <Box
@@ -222,9 +278,18 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       )}
 
       {msg && (
-        <Text color="nexzy.gray.100" fontSize="sm">
-          {msg}
-        </Text>
+        <Box
+          bg="whiteAlpha.100"
+          border="1px solid"
+          borderColor="nexzy.gold"
+          borderRadius="md"
+          px={3}
+          py={2}
+        >
+          <Text color="nexzy.white" fontSize="sm">
+            {msg}
+          </Text>
+        </Box>
       )}
       {error && (
         <Text color="red.300" fontSize="sm">
@@ -238,8 +303,9 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
         </Flex>
       ) : leads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          No leads for {month}/{day}. Paste a block above, or run the Wikidata
-          backfill.
+          No leads for {month}/{day} yet. Click ⟳ Run backfill to pull from
+          Wikidata, uncheck Verified only to see unverified candidates, or paste
+          a block above.
         </Text>
       ) : (
         <VStack align="stretch" gap={2}>
