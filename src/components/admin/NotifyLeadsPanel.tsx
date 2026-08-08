@@ -5,7 +5,9 @@ import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
 import {
   getNotifyLeads,
   skipNotifyLead,
+  generateNotifyLead,
   type NotifyLead,
+  type NotifyDraft,
 } from "@/lib/admin/client";
 
 /**
@@ -13,7 +15,11 @@ import {
  * (best practice: curate here — not every publish should become a push).
  * Generate → send lands in a later phase; for now you can review + skip.
  */
-export default function NotifyLeadsPanel() {
+export default function NotifyLeadsPanel({
+  onGenerated,
+}: {
+  onGenerated?: (draft: NotifyDraft) => void;
+}) {
   const [leads, setLeads] = useState<NotifyLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -34,6 +40,19 @@ export default function NotifyLeadsPanel() {
     try {
       await skipNotifyLead(id);
       setLeads((prev) => prev.filter((l) => l.id !== id));
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const generate = async (id: string) => {
+    setBusy(id);
+    try {
+      const draft = await generateNotifyLead(id);
+      setLeads((prev) => prev.filter((l) => l.id !== id));
+      onGenerated?.(draft);
     } catch {
       /* ignore */
     } finally {
@@ -110,11 +129,12 @@ export default function NotifyLeadsPanel() {
                 <VStack gap={2}>
                   <Button
                     size="xs"
-                    disabled
-                    title="Generate → send lands in the next build"
+                    title="Draft a push from this lead and open the composer"
                     bg="nexzy.blue"
                     color="white"
-                    opacity={0.5}
+                    _hover={{ bg: "nexzy.blue", opacity: 0.9 }}
+                    onClick={() => generate(l.id)}
+                    loading={busy === l.id}
                   >
                     Generate
                   </Button>

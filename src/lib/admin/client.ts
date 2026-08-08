@@ -1744,6 +1744,26 @@ export async function skipNotifyLead(id: string): Promise<{ ok: boolean }> {
   );
 }
 
+/** A ready-to-send push draft produced by Generate-ing a lead. */
+export type NotifyDraft = {
+  type: AdminNotifType;
+  title: string;
+  body: string;
+  dest?: AdminNotifDest;
+};
+
+/**
+ * Turn a lead into a push draft (server marks it 'generated' so it leaves the
+ * board). Returns the draft to prefill the composer — does NOT send.
+ */
+export async function generateNotifyLead(id: string): Promise<NotifyDraft> {
+  return handle(
+    await fetch(`/api/newsroom/admin/notify/leads/${id}/generate`, {
+      method: "POST",
+    }),
+  );
+}
+
 /** Quick Post → X / Threads generator (MarketingPanel ⚡ Quick Post). */
 export type QuickSocialResult = {
   x?: {

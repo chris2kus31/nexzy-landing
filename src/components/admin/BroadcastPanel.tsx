@@ -23,6 +23,7 @@ import {
   type AdminNotifType,
   type AdminNotifDest,
   type AdminNotifDestKind,
+  type NotifyDraft,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -78,7 +79,11 @@ const DEST_OPTIONS: { value: DestKind; label: string }[] = [
  * offers") — each able to deep-link into the app (article / game / coin store /
  * library / wishlist / forum / tab / url). Always test to yourself first.
  */
-export default function BroadcastPanel() {
+export default function BroadcastPanel({
+  initialDraft,
+}: {
+  initialDraft?: NotifyDraft | null;
+}) {
   const [type, setType] = useState<AdminNotifType>("system-announcement");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -117,6 +122,22 @@ export default function BroadcastPanel() {
   } | null>(null);
   // Owner override secret, only used when the weekly cap has been reached.
   const [override, setOverride] = useState("");
+
+  // Prefill from a "Generate"d lead: hydrate the composer once, then let the
+  // owner edit and send through the normal cap-gated path.
+  useEffect(() => {
+    if (!initialDraft) return;
+    setType(initialDraft.type ?? "system-announcement");
+    setTitle(initialDraft.title ?? "");
+    setBody(initialDraft.body ?? "");
+    const d = initialDraft.dest;
+    if (d?.kind === "newsArticle" && d.slug) {
+      setDestKind("newsArticle");
+      setSlug(d.slug);
+      setManualSlug(true);
+    }
+    setMsg("Loaded from a lead — review, then Send.");
+  }, [initialDraft]);
 
   // Audience depends on the type (each gates on a different preference).
   useEffect(() => {
@@ -193,9 +214,12 @@ export default function BroadcastPanel() {
 
   const canSend = title.trim().length > 0 && body.trim().length > 0;
   const atCap = !!usage && usage.remaining <= 0;
-  const kindLabel = type === "system-announcement" ? "announcement" : "promotion";
+  const kindLabel =
+    type === "system-announcement" ? "announcement" : "promotion";
   const prefLabel =
-    type === "system-announcement" ? "System announcements" : "Promotions & offers";
+    type === "system-announcement"
+      ? "System announcements"
+      : "Promotions & offers";
 
   /** Build the destination object, or null if a required field is missing. */
   function buildDest(): { dest?: AdminNotifDest; error?: string } {

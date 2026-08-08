@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Box, HStack, Button } from "@chakra-ui/react";
 import NotifyLeadsPanel from "./NotifyLeadsPanel";
 import BroadcastPanel from "./BroadcastPanel";
+import type { NotifyDraft } from "@/lib/admin/client";
 
 type Sub = "leads" | "compose";
 
@@ -15,6 +16,13 @@ type Sub = "leads" | "compose";
  */
 export default function NotifyPanel() {
   const [sub, setSub] = useState<Sub>("leads");
+  const [draft, setDraft] = useState<NotifyDraft | null>(null);
+
+  // Generate on a lead → prefill the composer and jump to it.
+  const onGenerated = (d: NotifyDraft) => {
+    setDraft(d);
+    setSub("compose");
+  };
 
   const tabBtn = (active: boolean) => ({
     size: "sm" as const,
@@ -38,7 +46,11 @@ export default function NotifyPanel() {
           Notify at will
         </Button>
       </HStack>
-      {sub === "leads" ? <NotifyLeadsPanel /> : <BroadcastPanel />}
+      {sub === "leads" ? (
+        <NotifyLeadsPanel onGenerated={onGenerated} />
+      ) : (
+        <BroadcastPanel initialDraft={draft} />
+      )}
     </Box>
   );
 }
