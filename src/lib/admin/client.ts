@@ -2169,6 +2169,20 @@ export async function commissionRewind(input: {
   );
 }
 
+export async function autopilotRewind(): Promise<{
+  queued: boolean;
+  eventId?: string;
+  title?: string;
+  reason?: string;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/rewind/autopilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
 export async function pasteRewind(input: {
   text: string;
   month: number;

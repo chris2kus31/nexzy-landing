@@ -16,6 +16,7 @@ import {
 import {
   getRewindLeads,
   commissionRewind,
+  autopilotRewind,
   pasteRewind,
   getWriterNames,
   AuthError,
@@ -85,6 +86,21 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       setBusyId(null);
     }
   }, []);
+
+  const doAutopilot = useCallback(async () => {
+    setMsg(null);
+    try {
+      const r = await autopilotRewind();
+      setMsg(
+        r.queued
+          ? `Auto-picked “${r.title}” — the draft will land in the Review queue.`
+          : "No eligible verified event for today to auto-pick.",
+      );
+      await load();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }, [load]);
 
   const doPaste = useCallback(async () => {
     if (!pasteText.trim()) return;
@@ -157,6 +173,16 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
         >
           Refresh
         </Button>
+        {isOwner && (
+          <Button
+            size="sm"
+            bg="nexzy.gold"
+            color="#0d1526"
+            onClick={doAutopilot}
+          >
+            ⚡ Auto-pick today
+          </Button>
+        )}
       </HStack>
 
       {isOwner && (
