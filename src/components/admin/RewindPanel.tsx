@@ -53,18 +53,20 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const [pasteText, setPasteText] = useState("");
   const [pasting, setPasting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [visible, setVisible] = useState(25);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(
     async (verifiedOverride?: boolean) => {
       setError(null);
       try {
-        setLeads(
-          await getRewindLeads({
-            month,
-            day,
-            verifiedOnly: verifiedOverride ?? verifiedOnly,
-          }),
-        );
+        const rows = await getRewindLeads({
+          month,
+          day,
+          verifiedOnly: verifiedOverride ?? verifiedOnly,
+        });
+        setLeads(rows);
+        setVisible(25);
       } catch (e) {
         if (e instanceof AuthError) return;
         setError((e as Error).message);
@@ -155,6 +157,13 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       setPasting(false);
     }
   }, [pasteText, month, day, load]);
+
+  const filtered = (leads ?? []).filter((l) =>
+    search.trim()
+      ? l.canonicalTitle.toLowerCase().includes(search.trim().toLowerCase())
+      : true,
+  );
+  const shown = filtered.slice(0, visible);
 
   return (
     <VStack align="stretch" gap={5}>
@@ -309,7 +318,25 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
         </Text>
       ) : (
         <VStack align="stretch" gap={2}>
-          {leads.map((l) => (
+          <HStack justify="space-between" flexWrap="wrap" gap={2}>
+            <Input
+              size="sm"
+              maxW="sm"
+              placeholder="Filter by title…"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setVisible(25);
+              }}
+            />
+            <Text color="nexzy.gray.100" fontSize="xs">
+              Showing {shown.length} of {filtered.length}
+            </Text>
+          </HStack>
+
+          {shown.map((l) => (
             <RewindLeadCard
               key={l.id}
               lead={l}
@@ -319,6 +346,24 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
               onWrite={commission}
             />
           ))}
+
+          {filtered.length === 0 && (
+            <Text color="nexzy.gray.100" fontSize="sm">
+              No leads match your filter.
+            </Text>
+          )}
+
+          {filtered.length > visible && (
+            <Button
+              size="sm"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              onClick={() => setVisible((v) => v + 25)}
+            >
+              Show 25 more ({filtered.length - visible} left)
+            </Button>
+          )}
         </VStack>
       )}
     </VStack>
