@@ -31,6 +31,7 @@ import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
 import WritersPanel from "@/components/admin/WritersPanel";
+import RewindPanel from "@/components/admin/RewindPanel";
 import {
   getQueue,
   getPublished,
@@ -56,7 +57,8 @@ type Tab =
   | "writers"
   | "tools"
   | "notify"
-  | "trending";
+  | "trending"
+  | "rewind";
 
 function StatCard({
   label,
@@ -260,6 +262,11 @@ function AdminContent() {
             onClick={() => setTab("leads")}
           />
           <TabButton
+            label="Rewind"
+            active={tab === "rewind"}
+            onClick={() => setTab("rewind")}
+          />
+          <TabButton
             label="Review queue"
             count={queue.length}
             active={tab === "queue"}
@@ -362,6 +369,8 @@ function AdminContent() {
       </Flex>
 
       {tab === "leads" && <LeadsBoard isOwner={isOwner} />}
+
+      {tab === "rewind" && <RewindPanel isOwner={isOwner} />}
 
       {tab === "queue" && (
         <Box>

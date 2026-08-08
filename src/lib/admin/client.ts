@@ -2122,6 +2122,73 @@ export async function getWriterNames(): Promise<string[]> {
   }
 }
 
+// ---------- Rewind ("on this day" series) ----------
+
+export interface RewindLead {
+  id: string;
+  canonicalTitle: string;
+  month: number;
+  day: number;
+  canonicalYear: number | null;
+  canonicalRegion: string;
+  category: string;
+  weight: number;
+  headline: string | null;
+  blurb: string | null;
+  verified: boolean;
+  confidence: number;
+  status: string;
+}
+
+export async function getRewindLeads(opts?: {
+  month?: number;
+  day?: number;
+  verifiedOnly?: boolean;
+}): Promise<RewindLead[]> {
+  const q = new URLSearchParams();
+  if (opts?.month) q.set("month", String(opts.month));
+  if (opts?.day) q.set("day", String(opts.day));
+  if (opts?.verifiedOnly) q.set("verifiedOnly", "true");
+  const qs = q.toString();
+  return handle(
+    await fetch(`/api/newsroom/admin/rewind/leads${qs ? `?${qs}` : ""}`),
+  );
+}
+
+export async function commissionRewind(input: {
+  eventId: string;
+  author?: string;
+  noImage?: boolean;
+}): Promise<{ queued: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/rewind/commission", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function pasteRewind(input: {
+  text: string;
+  month: number;
+  day: number;
+  track?: string;
+}): Promise<{
+  seen: number;
+  newEvents: number;
+  updatedEvents: number;
+  verified: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/rewind/paste", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 // ---- AI Visibility (GEO scoreboard) ----
 
 export interface AiEngineCell {
