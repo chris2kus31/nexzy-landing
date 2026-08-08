@@ -342,6 +342,7 @@ export default async function RewindEpisodePage({
                   body={ep.bodyMarkdown}
                   location="rewind"
                   tone="paper"
+                  cta={false}
                 />
               </Box>
             </Box>

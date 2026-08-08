@@ -15,13 +15,17 @@ export default function ArticleBody({
   body,
   location,
   tone = "dark",
+  cta = true,
 }: {
   body: string;
   location: string;
   tone?: "dark" | "paper";
+  cta?: boolean;
 }) {
   const { intro, rest } = splitAfterFirstParagraph(body);
-  if (!rest) return <Markdown tone={tone}>{body}</Markdown>;
+  // `cta={false}` (e.g. the Rewind retro-paper panel) renders the body whole with
+  // no inline install CTA — the dark CTA card clashes with the cream paper.
+  if (!rest || !cta) return <Markdown tone={tone}>{body}</Markdown>;
   return (
     <>
       <Markdown tone={tone}>{intro}</Markdown>
