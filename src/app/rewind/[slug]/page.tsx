@@ -20,7 +20,6 @@ import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
-import FromTheVault from "@/components/rewind/FromTheVault";
 import {
   eraForYear,
   yearsAgo,
@@ -37,6 +36,22 @@ function youTubeId(url?: string | null): string | null {
   if (!url) return null;
   const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
+}
+
+const REGION: Record<string, string> = {
+  NA: "North America",
+  US: "North America",
+  JP: "Japan",
+  EU: "Europe",
+  PAL: "PAL regions",
+  WW: "Worldwide",
+};
+function regionName(r?: string | null): string {
+  if (!r) return "—";
+  return REGION[r.toUpperCase()] ?? r;
+}
+function categoryLabel(c?: string | null): string {
+  return (c ?? "").replace(/_/g, " ").replace(/^./, (s) => s.toUpperCase());
 }
 
 export async function generateMetadata({
@@ -94,6 +109,11 @@ export default async function RewindEpisodePage({
     .filter((t) => t.slug && t.slug !== slug)
     .slice(0, 3);
 
+  const spec = ep.spec ?? null;
+  const released = ep.event
+    ? `${monthName(ep.event.month)} ${ep.event.day}${year ? `, ${year}` : ""}`
+    : null;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -102,11 +122,7 @@ export default async function RewindEpisodePage({
     dateModified: ep.updatedAt || ep.publishedAt || undefined,
     image: imageObjectLd(ep),
     author: { "@type": "Person", name: ep.author || "Nexzy Rewind" },
-    publisher: {
-      "@type": "Organization",
-      name: "Nexzy",
-      url: SITE_URL,
-    },
+    publisher: { "@type": "Organization", name: "Nexzy", url: SITE_URL },
     ...(vid
       ? {
           video: [
@@ -143,153 +159,280 @@ export default async function RewindEpisodePage({
     ],
   };
 
+  const specRows: { k: string; v: string }[] = [];
+  if (released) specRows.push({ k: "Released", v: released });
+  if (spec?.platforms?.length)
+    specRows.push({ k: "Platform", v: spec.platforms.join(", ") });
+  if (ep.event) specRows.push({ k: "Region", v: regionName(ep.event.region) });
+  if (spec?.genres?.length)
+    specRows.push({ k: "Genre", v: spec.genres.join(", ") });
+  if (spec?.esrb) specRows.push({ k: "Rating", v: spec.esrb });
+  if (ep.event)
+    specRows.push({ k: "Moment", v: categoryLabel(ep.event.category) });
+
   return (
     <Box bg="nexzy.navy" minH="100vh">
       <Navigation />
 
-      {/* HERO — era-adaptive time-machine header. pt clears the fixed 64px nav
-          so the era badge never tucks under the header. */}
+      {/* HERO — compact, horizontal, era-adaptive. pt clears the fixed 64px nav. */}
       <Box
-        textAlign="center"
+        position="relative"
         pt={{ base: 24, md: 28 }}
-        pb={{ base: 10, md: 14 }}
-        px={4}
+        pb={{ base: 8, md: 10 }}
         borderBottom="1px solid"
         borderColor="whiteAlpha.100"
+        overflow="hidden"
       >
-        <HStack
-          display="inline-flex"
-          gap={2}
-          border="1px solid"
-          borderColor={era.accent}
-          color={era.accent}
-          borderRadius="full"
-          px={3}
-          py={1}
-          mb={4}
-          fontFamily="mono"
-          fontSize="xs"
-          letterSpacing="widest"
-        >
-          <Box as="span">●</Box>
-          <Box as="span">
-            {era.label}
-            {year ? ` · ${year}` : ""}
-          </Box>
-        </HStack>
-
-        <Text
-          fontFamily="mono"
-          letterSpacing="0.4em"
-          fontSize="xs"
-          color="nexzy.gray.100"
-          mb={3}
-        >
-          ON THIS DAY
-        </Text>
-
-        {digits.length > 0 && (
-          <HStack justify="center" gap={1.5} mb={4}>
-            {digits.map((d, i) => (
+        <Box
+          position="absolute"
+          inset="0"
+          pointerEvents="none"
+          css={{
+            background:
+              "repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0 1px, transparent 1px 4px)",
+          }}
+        />
+        <Container maxW="6xl" position="relative">
+          <Flex
+            direction={{ base: "column", md: "row" }}
+            align={{ base: "center", md: "flex-start" }}
+            gap={{ base: 5, md: 8 }}
+            textAlign={{ base: "center", md: "left" }}
+          >
+            <Box flexShrink={0}>
+              {digits.length > 0 && (
+                <HStack justify="center" gap={1.5}>
+                  {digits.map((d, i) => (
+                    <Box
+                      key={i}
+                      position="relative"
+                      w={{ base: "38px", md: "44px" }}
+                      h={{ base: "50px", md: "58px" }}
+                      display="grid"
+                      placeItems="center"
+                      bg="#060b16"
+                      border="1px solid"
+                      borderColor="whiteAlpha.200"
+                      borderRadius="md"
+                      fontFamily="mono"
+                      fontWeight="800"
+                      fontSize={{ base: "3xl", md: "4xl" }}
+                      color="nexzy.gold"
+                      css={{
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          left: 0,
+                          right: 0,
+                          top: "50%",
+                          height: "1px",
+                          background: "rgba(0,0,0,.55)",
+                        },
+                      }}
+                    >
+                      {d}
+                    </Box>
+                  ))}
+                </HStack>
+              )}
               <Box
-                key={i}
-                w={{ base: "34px", md: "42px" }}
-                h={{ base: "46px", md: "56px" }}
-                display="grid"
-                placeItems="center"
-                bg="#060b16"
+                display="inline-block"
+                mt={3}
                 border="1px solid"
-                borderColor="whiteAlpha.200"
-                borderRadius="md"
+                borderColor={era.accent}
+                color={era.accent}
                 fontFamily="mono"
-                fontWeight="800"
-                fontSize={{ base: "2xl", md: "4xl" }}
-                color="nexzy.gold"
+                fontSize="10px"
+                letterSpacing="0.18em"
+                px={2.5}
+                py={1}
+                borderRadius="full"
               >
-                {d}
+                ● {era.label}
               </Box>
-            ))}
-          </HStack>
-        )}
+            </Box>
 
-        <Heading
-          as="h1"
-          fontFamily="title"
-          size={{ base: "xl", md: "3xl" }}
-          color="nexzy.white"
-          maxW="3xl"
-          mx="auto"
-          lineHeight="1.15"
-        >
-          {ep.title}
-        </Heading>
-
-        <Text color="nexzy.gray.100" fontSize="sm" mt={3}>
-          {ep.event
-            ? `${monthName(ep.event.month)} ${ep.event.day}${year ? `, ${year}` : ""}`
-            : ""}
-          {ya ? ` · ${ya} years ago today` : ""}
-        </Text>
-        <Text color="nexzy.gray.100" fontSize="sm" mt={1}>
-          By{" "}
-          <Box as="span" color="nexzy.white">
-            {ep.author || "Nexzy Rewind"}
-          </Box>{" "}
-          · Nexzy Rewind
-        </Text>
+            <Box flex="1">
+              <Text
+                fontFamily="mono"
+                letterSpacing="0.32em"
+                fontSize="11px"
+                color="nexzy.gray.100"
+                mb={2}
+              >
+                ON THIS DAY
+                {ep.event
+                  ? ` · ${monthName(ep.event.month).toUpperCase()} ${ep.event.day}`
+                  : ""}
+              </Text>
+              <Heading
+                as="h1"
+                fontFamily="title"
+                size={{ base: "lg", md: "2xl" }}
+                color="nexzy.white"
+                lineHeight="1.15"
+              >
+                {ep.title}
+              </Heading>
+              <Text color="nexzy.gray.100" fontSize="sm" mt={3}>
+                {ya ? `${ya} years ago today · ` : ""}By{" "}
+                <Box as="span" color="nexzy.white">
+                  {ep.author || "Nexzy Rewind"}
+                </Box>{" "}
+                · Nexzy Rewind
+              </Text>
+            </Box>
+          </Flex>
+        </Container>
       </Box>
 
-      <Container maxW="3xl" py={{ base: 8, md: 12 }}>
-        {ep.heroImageUrl && (
-          <Image
-            src={ep.heroImageUrl}
-            alt={ep.imageAlt || ep.title}
-            w="100%"
-            borderRadius="xl"
-            mb={8}
-          />
-        )}
-
-        {/* Body on "retro paper" — the signature Rewind reading panel: aged
-            cream stock, a red drop-cap, a "set the clock" dateline. */}
-        {ep.bodyMarkdown && (
-          <Box
-            bg="#efe7d3"
-            borderRadius="xl"
-            p={{ base: 5, md: 8 }}
-            boxShadow="0 20px 40px rgba(0,0,0,.35)"
-            css={{
-              "& p:first-of-type::first-letter": {
-                float: "left",
-                fontFamily: "Georgia, 'Times New Roman', serif",
-                fontSize: "3.4rem",
-                lineHeight: "0.82",
-                fontWeight: 700,
-                color: "#b23a1e",
-                paddingRight: "10px",
-                paddingTop: "4px",
-              },
-            }}
-          >
-            <Text
-              as="div"
-              fontFamily="mono"
-              fontSize="xs"
-              letterSpacing="0.2em"
-              color="#8a6d3b"
-              mb={4}
+      <Container maxW="6xl" py={{ base: 8, md: 12 }}>
+        {/* READING — a SET-HEIGHT cream paper that scrolls internally, beside the
+            box art + Spec Plate. Fixed window: the page stays put no matter how
+            long the article runs (only the paper body scrolls). */}
+        <Flex direction={{ base: "column", md: "row" }} gap={6} align="start">
+          {ep.bodyMarkdown && (
+            <Box
+              flex="1"
+              minW={0}
+              bg="#efe7d3"
+              borderRadius="xl"
+              boxShadow="0 20px 44px rgba(0,0,0,.4)"
+              display="flex"
+              flexDirection="column"
+              h={{ base: "auto", md: "480px" }}
+              overflow="hidden"
             >
-              SET THE CLOCK TO {year ?? "—"} ▸
-            </Text>
-            <ArticleBody
-              body={ep.bodyMarkdown}
-              location="rewind"
-              tone="paper"
-            />
-          </Box>
-        )}
+              <Text
+                as="div"
+                fontFamily="mono"
+                fontSize="xs"
+                letterSpacing="0.2em"
+                color="#8a6d3b"
+                px={{ base: 5, md: 8 }}
+                pt={{ base: 5, md: 7 }}
+                pb={3}
+                borderBottom="1px solid rgba(138,109,59,.25)"
+              >
+                SET THE CLOCK TO {year ?? "—"} ▸
+              </Text>
+              <Box
+                overflowY="auto"
+                px={{ base: 5, md: 8 }}
+                py={{ base: 5, md: 6 }}
+                css={{
+                  "& p:first-of-type::first-letter": {
+                    float: "left",
+                    fontFamily: "Georgia, 'Times New Roman', serif",
+                    fontSize: "3.5rem",
+                    lineHeight: "0.8",
+                    fontWeight: 700,
+                    color: era.accent,
+                    paddingRight: "10px",
+                    paddingTop: "4px",
+                  },
+                  "&::-webkit-scrollbar": { width: "8px" },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "rgba(90,75,54,.35)",
+                    borderRadius: "4px",
+                  },
+                }}
+              >
+                <ArticleBody
+                  body={ep.bodyMarkdown}
+                  location="rewind"
+                  tone="paper"
+                />
+              </Box>
+            </Box>
+          )}
 
-        {/* THEN vs NOW — physical-media contrast (conditional) */}
+          {/* Box art + Spec Plate — the hero-image + stat-card cascade tiers.
+              Fills the paper's height so the two columns bottom-align. */}
+          <Box
+            w={{ base: "100%", md: "320px" }}
+            flexShrink={0}
+            h={{ base: "auto", md: "480px" }}
+          >
+            <VStack align="stretch" gap={4} h="100%">
+              {ep.heroImageUrl && (
+                <Image
+                  src={ep.heroImageUrl}
+                  alt={ep.imageAlt || ep.title}
+                  w="100%"
+                  flex={{ md: "1" }}
+                  minH={{ base: "200px", md: "0" }}
+                  objectFit="contain"
+                  bg="#0b1120"
+                  p={3}
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                />
+              )}
+              {specRows.length > 0 && (
+                <Box
+                  flexShrink={0}
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="xl"
+                  p={4}
+                >
+                  <Text
+                    fontFamily="mono"
+                    fontSize="10px"
+                    letterSpacing="0.18em"
+                    color="nexzy.gray.100"
+                    mb={3}
+                  >
+                    SPEC PLATE
+                  </Text>
+                  <VStack align="stretch" gap={0}>
+                    {specRows.map((row, i) => (
+                      <Flex
+                        key={row.k}
+                        justify="space-between"
+                        gap={3}
+                        py={2}
+                        borderBottom={
+                          i < specRows.length - 1 ? "1px solid" : "none"
+                        }
+                        borderColor="whiteAlpha.100"
+                      >
+                        <Text fontSize="13px" color="nexzy.gray.100">
+                          {row.k}
+                        </Text>
+                        <Text
+                          fontSize="13px"
+                          color="nexzy.white"
+                          fontWeight="600"
+                          textAlign="right"
+                        >
+                          {row.v}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </VStack>
+                  {spec?.gameSlug && (
+                    <NextLink href={`/games/${spec.gameSlug}`}>
+                      <Text
+                        mt={3}
+                        fontSize="xs"
+                        color={era.accent}
+                        fontWeight="600"
+                      >
+                        Open the game hub ▸
+                      </Text>
+                    </NextLink>
+                  )}
+                </Box>
+              )}
+            </VStack>
+          </Box>
+        </Flex>
+
+        {/* FEATURE SLOT top tier — THEN vs NOW (physical-media eras only) */}
         {tn && (
           <Box
             mt={10}
@@ -302,40 +445,72 @@ export default async function RewindEpisodePage({
             <Text
               textAlign="center"
               fontFamily="mono"
-              letterSpacing="0.2em"
+              letterSpacing="0.24em"
               fontSize="sm"
               color="nexzy.gold"
               mb={4}
             >
               THEN vs NOW
             </Text>
-            <Flex gap={4} direction={{ base: "column", md: "row" }}>
+            <Flex
+              gap={{ base: 4, md: 10 }}
+              direction={{ base: "column", md: "row" }}
+              align={{ md: "flex-start" }}
+              justify="center"
+            >
               <Box flex="1">
                 <Text fontFamily="mono" fontSize="xs" color="green.300" mb={2}>
                   {year} — IN THE BOX
                 </Text>
-                <VStack align="stretch" gap={1}>
+                <Flex wrap="wrap" gap={2}>
                   {tn.then.map((t) => (
-                    <Text key={t} color="nexzy.gray.100" fontSize="sm">
-                      • {t}
+                    <Text
+                      key={t}
+                      fontSize="12px"
+                      color="nexzy.gray.100"
+                      border="1px solid"
+                      borderColor="whiteAlpha.200"
+                      bg="whiteAlpha.50"
+                      px={2.5}
+                      py={1}
+                      borderRadius="full"
+                    >
+                      {t}
                     </Text>
                   ))}
-                </VStack>
+                </Flex>
               </Box>
+              <Text
+                color={era.accent}
+                fontSize="2xl"
+                fontWeight="800"
+                textAlign="center"
+              >
+                →
+              </Text>
               <Box flex="1">
                 <Text fontFamily="mono" fontSize="xs" color="orange.300" mb={2}>
                   {new Date().getFullYear()} — IN THE CLOUD
                 </Text>
-                <VStack align="stretch" gap={1}>
+                <Flex wrap="wrap" gap={2}>
                   {tn.now.map((t) => (
-                    <Text key={t} color="nexzy.gray.100" fontSize="sm">
-                      • {t}
+                    <Text
+                      key={t}
+                      fontSize="12px"
+                      color="nexzy.gray.100"
+                      border="1px solid"
+                      borderColor="whiteAlpha.200"
+                      bg="whiteAlpha.50"
+                      px={2.5}
+                      py={1}
+                      borderRadius="full"
+                    >
+                      {t}
                     </Text>
                   ))}
-                </VStack>
+                </Flex>
               </Box>
             </Flex>
-
             <Text
               textAlign="center"
               mt={5}
@@ -357,20 +532,10 @@ export default async function RewindEpisodePage({
           </Box>
         )}
 
-        {/* From the Vault — the era's web, pulled from the Wayback Machine */}
-        {ep.event && (
-          <FromTheVault
-            month={ep.event.month}
-            day={ep.event.day}
-            year={year}
-            accent={era.accent}
-          />
-        )}
-
-        {/* Video — era-adaptive vault (CRT for old eras, panel for modern) */}
+        {/* MEDIA SLOT — era CRT video vault (no Wayback) */}
         {vid && <RewindVault vid={vid} title={ep.title} year={year} />}
 
-        {/* More from the vault */}
+        {/* MORE ON THIS DAY — slim chips */}
         {more.length > 0 && ep.event && (
           <Box mt={12}>
             <Text
@@ -380,10 +545,9 @@ export default async function RewindEpisodePage({
               color="nexzy.gray.100"
               mb={3}
             >
-              MORE FROM THE VAULT · {monthName(ep.event.month).toUpperCase()}{" "}
-              {ep.event.day}
+              MORE ON {monthName(ep.event.month).toUpperCase()} {ep.event.day}
             </Text>
-            <VStack align="stretch" gap={2}>
+            <Flex gap={3} wrap="wrap">
               {more.map((m) => (
                 <TrackedLink
                   key={m.slug ?? m.title}
@@ -396,6 +560,8 @@ export default async function RewindEpisodePage({
                   }}
                 >
                   <Box
+                    flex="1"
+                    minW="150px"
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     borderRadius="lg"
@@ -410,18 +576,18 @@ export default async function RewindEpisodePage({
                     >
                       {m.year ?? "—"}
                     </Text>
-                    <Text color="nexzy.white" fontWeight="600">
+                    <Text color="nexzy.white" fontWeight="600" fontSize="sm">
                       {m.title}
                     </Text>
                   </Box>
                 </TrackedLink>
               ))}
-            </VStack>
+            </Flex>
           </Box>
         )}
 
         {ep.event && (
-          <Box mt={10}>
+          <Box mt={8}>
             <NextLink
               href={`/rewind/day/${dateSlug(ep.event.month, ep.event.day)}`}
             >

@@ -310,6 +310,12 @@ export interface RewindEpisode {
     region: string;
     canonicalTitle: string;
   } | null;
+  spec?: {
+    platforms: string[];
+    genres: string[];
+    esrb: string | null;
+    gameSlug: string | null;
+  } | null;
 }
 
 export interface RewindTimelineItem {
