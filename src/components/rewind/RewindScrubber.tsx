@@ -45,9 +45,9 @@ export default function RewindScrubber({
   return (
     <Box
       mt={4}
-      bg="whiteAlpha.50"
+      bg="#e5dcc2"
       border="1px solid"
-      borderColor="whiteAlpha.200"
+      borderColor="#c7b48a"
       borderRadius="lg"
       p={{ base: 3, md: 4 }}
     >
@@ -64,7 +64,7 @@ export default function RewindScrubber({
           fontFamily="title"
           fontSize="xl"
           fontWeight="800"
-          color="nexzy.white"
+          color="#241c12"
           letterSpacing="0.08em"
         >
           {sorted[idx].year}
@@ -91,7 +91,7 @@ export default function RewindScrubber({
             style={{
               fontFamily: "ui-monospace, monospace",
               fontSize: "12px",
-              color: i === idx ? accent : "rgba(255,255,255,.55)",
+              color: i === idx ? accent : "rgba(36,28,18,.5)",
               fontWeight: i === idx ? 700 : 400,
               background: "transparent",
               border: "none",
