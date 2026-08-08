@@ -26,6 +26,15 @@ import {
 
 const REWIND_AUTHORS = ["Chuy", "Leslie", "Eli"];
 
+const selectStyle = {
+  background: "#0d1526",
+  color: "white",
+  border: "1px solid rgba(255,255,255,0.2)",
+  borderRadius: 6,
+  padding: "5px 8px",
+  fontSize: 13,
+};
+
 /** Weight heat — a decision-support signal, the human still picks the hero. */
 function heat(weight: number): string {
   if (weight >= 75) return "red.400";
@@ -55,6 +64,8 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const [backfilling, setBackfilling] = useState(false);
   const [visible, setVisible] = useState(25);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [regionFilter, setRegionFilter] = useState("");
 
   const load = useCallback(
     async (verifiedOverride?: boolean) => {
@@ -158,11 +169,22 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
     }
   }, [pasteText, month, day, load]);
 
-  const filtered = (leads ?? []).filter((l) =>
-    search.trim()
-      ? l.canonicalTitle.toLowerCase().includes(search.trim().toLowerCase())
-      : true,
-  );
+  const categories = Array.from(
+    new Set((leads ?? []).map((l) => l.category)),
+  ).sort();
+  const regions = Array.from(
+    new Set((leads ?? []).map((l) => l.canonicalRegion).filter(Boolean)),
+  ).sort();
+  const filtered = (leads ?? []).filter((l) => {
+    if (
+      search.trim() &&
+      !l.canonicalTitle.toLowerCase().includes(search.trim().toLowerCase())
+    )
+      return false;
+    if (categoryFilter && l.category !== categoryFilter) return false;
+    if (regionFilter && l.canonicalRegion !== regionFilter) return false;
+    return true;
+  });
   const shown = filtered.slice(0, visible);
 
   return (
@@ -319,18 +341,50 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       ) : (
         <VStack align="stretch" gap={2}>
           <HStack justify="space-between" flexWrap="wrap" gap={2}>
-            <Input
-              size="sm"
-              maxW="sm"
-              placeholder="Filter by title…"
-              color="nexzy.white"
-              borderColor="whiteAlpha.300"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setVisible(25);
-              }}
-            />
+            <HStack gap={2} flexWrap="wrap">
+              <Input
+                size="sm"
+                maxW="3xs"
+                placeholder="Filter by title…"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setVisible(25);
+                }}
+              />
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setVisible(25);
+                }}
+                style={selectStyle}
+              >
+                <option value="">All types</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={regionFilter}
+                onChange={(e) => {
+                  setRegionFilter(e.target.value);
+                  setVisible(25);
+                }}
+                style={selectStyle}
+              >
+                <option value="">All regions</option>
+                {regions.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </HStack>
             <Text color="nexzy.gray.100" fontSize="xs">
               Showing {shown.length} of {filtered.length}
             </Text>
@@ -383,7 +437,9 @@ function RewindLeadCard({
   busy: boolean;
   onWrite: (id: string, author: string) => void;
 }) {
-  const [author, setAuthor] = useState(authors[0] || "Chuy");
+  const [author, setAuthor] = useState(
+    authors.includes("Chuy") ? "Chuy" : authors[0] || "Chuy",
+  );
   const yearsAgo = lead.canonicalYear
     ? new Date().getFullYear() - lead.canonicalYear
     : null;
