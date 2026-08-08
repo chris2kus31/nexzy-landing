@@ -81,7 +81,7 @@ export default function RewindVault({
       </Text>
 
       <Box
-        maxW={isCrt ? "860px" : "100%"}
+        maxW={isCrt ? "640px" : "100%"}
         mx={isCrt ? "auto" : "0"}
         p={isCrt ? { base: 3, md: 4 } : "0"}
         borderRadius={isCrt ? "2xl" : "lg"}

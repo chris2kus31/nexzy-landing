@@ -547,7 +547,15 @@ export default async function RewindEpisodePage({
             >
               MORE ON {monthName(ep.event.month).toUpperCase()} {ep.event.day}
             </Text>
-            <Flex gap={3} wrap="wrap">
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                base: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+              }}
+              gap={3}
+            >
               {more.map((m) => (
                 <TrackedLink
                   key={m.slug ?? m.title}
@@ -560,12 +568,11 @@ export default async function RewindEpisodePage({
                   }}
                 >
                   <Box
-                    flex="1"
-                    minW="150px"
+                    h="100%"
                     border="1px solid"
                     borderColor="whiteAlpha.200"
                     borderRadius="lg"
-                    p={3}
+                    p={4}
                     _hover={{ borderColor: era.accent }}
                   >
                     <Text
@@ -576,13 +583,13 @@ export default async function RewindEpisodePage({
                     >
                       {m.year ?? "—"}
                     </Text>
-                    <Text color="nexzy.white" fontWeight="600" fontSize="sm">
+                    <Text color="nexzy.white" fontWeight="600">
                       {m.title}
                     </Text>
                   </Box>
                 </TrackedLink>
               ))}
-            </Flex>
+            </Box>
           </Box>
         )}
 
