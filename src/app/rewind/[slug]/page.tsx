@@ -133,6 +133,14 @@ export default async function RewindEpisodePage({
     return src.sort((a, b) => a.length - b.length)[0] || null;
   })();
 
+  // Era meta chips fill the opener's left column and add editorial context.
+  const metaChips = [
+    platform,
+    ep.event ? regionName(ep.event.region) : null,
+    era.label,
+    ep.event ? categoryLabel(ep.event.category) : null,
+  ].filter((x): x is string => !!x);
+
   const specRows: { k: string; v: string }[] = [];
   if (ep.event)
     specRows.push({
@@ -273,7 +281,7 @@ export default async function RewindEpisodePage({
             display="grid"
             gridTemplateColumns={{ base: "1fr", md: "1.3fr 0.7fr" }}
             gap={{ base: 6, md: 10 }}
-            alignItems="center"
+            alignItems="start"
             mt={{ base: 6, md: 10 }}
           >
             <Box>
@@ -282,7 +290,7 @@ export default async function RewindEpisodePage({
                 fontSize="sm"
                 letterSpacing="0.14em"
                 color={era.accent}
-                mb={1}
+                mb={2}
               >
                 ON THIS DAY
                 {ep.event
@@ -293,21 +301,21 @@ export default async function RewindEpisodePage({
               <Heading
                 as="h1"
                 fontFamily="title"
-                fontSize={{ base: "4xl", md: "5xl" }}
-                lineHeight="1.0"
+                fontSize={{ base: "4xl", md: "6xl" }}
+                lineHeight="0.95"
                 color="nexzy.white"
                 textTransform="uppercase"
-                mb={3}
+                mb={4}
               >
                 {ep.title}
               </Heading>
               {ep.excerpt && (
                 <Text
                   fontFamily={SERIF}
-                  fontSize="md"
-                  color="gray.300"
-                  lineHeight="1.6"
-                  maxW="46ch"
+                  fontSize={{ base: "lg", md: "xl" }}
+                  color="gray.200"
+                  lineHeight="1.5"
+                  maxW="48ch"
                 >
                   {ep.excerpt}
                 </Text>
@@ -316,14 +324,37 @@ export default async function RewindEpisodePage({
                 fontFamily="mono"
                 fontSize="xs"
                 color="nexzy.gray.100"
-                mt={4}
+                mt={5}
                 letterSpacing="0.08em"
                 textTransform="uppercase"
               >
-                By {ep.author || "Nexzy Rewind"} · Nexzy Rewind
-                {platform ? ` · ${platform}` : ""}
-                {ep.event ? ` · ${regionName(ep.event.region)}` : ""}
+                By{" "}
+                <Box as="span" color="nexzy.white">
+                  {ep.author || "Nexzy Rewind"}
+                </Box>{" "}
+                · Nexzy Rewind
               </Text>
+              {metaChips.length > 0 && (
+                <Flex wrap="wrap" gap={2} mt={5}>
+                  {metaChips.map((c) => (
+                    <Text
+                      key={c}
+                      fontFamily="mono"
+                      fontSize="11px"
+                      letterSpacing="0.08em"
+                      textTransform="uppercase"
+                      color={era.accent}
+                      border="1px solid"
+                      borderColor={era.accent}
+                      borderRadius="full"
+                      px={3}
+                      py={1}
+                    >
+                      {c}
+                    </Text>
+                  ))}
+                </Flex>
+              )}
             </Box>
 
             <Box>
@@ -368,11 +399,11 @@ export default async function RewindEpisodePage({
                 "& > p:first-of-type::first-letter": {
                   float: "left",
                   fontFamily: SERIF,
-                  fontSize: "62px",
-                  lineHeight: "0.6",
+                  fontSize: "76px",
+                  lineHeight: "0.58",
                   fontWeight: 700,
                   color: era.accent,
-                  paddingRight: "10px",
+                  paddingRight: "12px",
                   paddingTop: "6px",
                 },
                 "@media (min-width: 768px)": { columnCount: 2 },
@@ -385,10 +416,10 @@ export default async function RewindEpisodePage({
                     <Text
                       as="p"
                       key={`p${i}`}
-                      fontSize="md"
-                      lineHeight="1.75"
-                      color="gray.300"
-                      mb={4}
+                      fontSize={{ base: "md", md: "lg" }}
+                      lineHeight="1.8"
+                      color="gray.200"
+                      mb={5}
                       textAlign="justify"
                     >
                       {p}
@@ -408,7 +439,7 @@ export default async function RewindEpisodePage({
                         <Text
                           fontFamily="title"
                           fontWeight="700"
-                          fontSize="lg"
+                          fontSize={{ base: "xl", md: "2xl" }}
                           lineHeight="1.2"
                           color="nexzy.gold"
                         >
