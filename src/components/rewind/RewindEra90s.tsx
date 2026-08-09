@@ -404,6 +404,55 @@ export default function RewindEra90s({
                   ))}
               </Box>
             )}
+
+            {/* NEXZY SAYS — fills the left column under the screenshots */}
+            <Box mt="16px">
+              <Text
+                color={GOLD}
+                fontSize={{ base: "18px", md: "20px" }}
+                mb="6px"
+                css={{ fontFamily: DISPLAY }}
+              >
+                Nexzy Says!
+              </Text>
+              <Text
+                fontSize={{ base: "15px", md: "16px" }}
+                lineHeight="1.55"
+                color="#D7DEEC"
+                css={{ fontFamily: SANS }}
+              >
+                {note}
+              </Text>
+              {facts.length > 0 && (
+                <>
+                  <Text
+                    color={BLUE}
+                    fontSize="14px"
+                    letterSpacing="1px"
+                    mt="14px"
+                    mb="6px"
+                    css={{ fontFamily: DISPLAY }}
+                  >
+                    REWIND FACTS
+                  </Text>
+                  {facts.map((f, i) => (
+                    <Flex key={i} gap={2} mb="6px" align="flex-start">
+                      <Text color={GOLD} lineHeight="1.5">
+                        ▸
+                      </Text>
+                      <Text
+                        fontSize={{ base: "14px", md: "15px" }}
+                        lineHeight="1.5"
+                        color="#D7DEEC"
+                        css={{ fontFamily: SANS }}
+                      >
+                        {f}
+                      </Text>
+                    </Flex>
+                  ))}
+                </>
+              )}
+            </Box>
           </Box>
 
           {/* RIGHT: tagline + drop-cap body + hero screenshot */}
@@ -449,112 +498,55 @@ export default function RewindEra90s({
           </Box>
         </Box>
 
-        {/* FROM THE VAULT + NEXZY SAYS — dark rounded block */}
-        <Box
-          mt={{ base: 7, md: 8 }}
-          bg="#080F1E"
-          border="1px solid #24406A"
-          borderRadius="16px"
-          p={{ base: 4, md: 5 }}
-        >
-          <Flex align="center" gap={3} mb={4}>
-            <Text
-              color="#fff"
-              fontSize={{ base: "22px", md: "26px" }}
-              css={{ fontFamily: DISPLAY }}
-            >
-              From the Vault
-            </Text>
-            <Box
-              flex="1"
-              h="3px"
-              css={{ background: `linear-gradient(90deg,${GOLD},transparent)` }}
-            />
-          </Flex>
-
+        {/* FROM THE VAULT — wide dark block: era TV + clips fill the width */}
+        {vids.length > 0 && (
           <Box
-            display="grid"
-            gridTemplateColumns={{
-              base: "1fr",
-              md: vids.length ? "1.2fr 1fr" : "1fr",
-            }}
-            gap={{ base: 5, md: 6 }}
-            alignItems="start"
+            mt={{ base: 7, md: 8 }}
+            bg="#080F1E"
+            border="1px solid #24406A"
+            borderRadius="16px"
+            p={{ base: 4, md: 5 }}
           >
-            {vids.length > 0 && (
-              <Flex justify="center">
-                <RewindVault vids={vids} title={ep.title} year={year} compact />
-              </Flex>
-            )}
-            <Box>
+            <Flex align="center" gap={3} mb={4}>
               <Text
-                color={GOLD}
-                fontSize={{ base: "16px", md: "18px" }}
-                mb="6px"
+                color="#fff"
+                fontSize={{ base: "22px", md: "26px" }}
                 css={{ fontFamily: DISPLAY }}
               >
-                Nexzy Says!
+                From the Vault
               </Text>
-              <Text
-                fontSize={{ base: "14px", md: "15px" }}
-                lineHeight="1.5"
-                color="#D7DEEC"
-                css={{ fontFamily: SANS }}
-              >
-                {note}
-              </Text>
-              {facts.length > 0 && (
-                <>
-                  <Text
-                    color={BLUE}
-                    fontSize="13px"
-                    letterSpacing="1px"
-                    mt="14px"
-                    mb="5px"
-                    css={{ fontFamily: DISPLAY }}
-                  >
-                    REWIND FACTS
-                  </Text>
-                  {facts.map((f, i) => (
-                    <Flex key={i} gap={2} mb="5px" align="flex-start">
-                      <Text color={GOLD} lineHeight="1.5">
-                        ▸
-                      </Text>
-                      <Text
-                        fontSize={{ base: "13px", md: "14px" }}
-                        lineHeight="1.5"
-                        color="#D7DEEC"
-                        css={{ fontFamily: SANS }}
-                      >
-                        {f}
-                      </Text>
-                    </Flex>
-                  ))}
-                </>
+              <Box
+                flex="1"
+                h="3px"
+                css={{
+                  background: `linear-gradient(90deg,${GOLD},transparent)`,
+                }}
+              />
+              {year && (
+                <Flex
+                  direction="column"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                  w="52px"
+                  h="52px"
+                  borderRadius="full"
+                  bg={BLUE}
+                  color="#0B1526"
+                  css={{ border: `3px solid ${GOLD}`, fontFamily: DISPLAY }}
+                  lineHeight="1"
+                >
+                  <Text fontSize="8px">REWIND</Text>
+                  <Text fontSize="15px">&rsquo;{String(year).slice(2)}</Text>
+                </Flex>
               )}
-            </Box>
-          </Box>
-
-          {year && (
-            <Flex mt={4}>
-              <Flex
-                direction="column"
-                align="center"
-                justify="center"
-                w="52px"
-                h="52px"
-                borderRadius="full"
-                bg={BLUE}
-                color="#0B1526"
-                css={{ border: `3px solid ${GOLD}`, fontFamily: DISPLAY }}
-                lineHeight="1"
-              >
-                <Text fontSize="8px">REWIND</Text>
-                <Text fontSize="15px">&rsquo;{String(year).slice(2)}</Text>
-              </Flex>
             </Flex>
-          )}
-        </Box>
+
+            <Flex justify="center">
+              <RewindVault vids={vids} title={ep.title} year={year} />
+            </Flex>
+          </Box>
+        )}
 
         {/* FOOTER */}
         <Flex
