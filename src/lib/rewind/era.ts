@@ -21,14 +21,31 @@ export function yearsAgo(year: number | null | undefined): number | null {
   return new Date().getFullYear() - year;
 }
 
-/** The "vault" display device for the era — evolves from wood CRT to a panel. */
-export type EraDevice = "crt-wood" | "crt-flat" | "modern";
+/**
+ * The "vault" TV for the era — a real set of period TVs, chosen by year:
+ *  wood   1972–1988  wood-cabinet console, dial tuner
+ *  crt90  1989–1999  black injection-molded plastic, front controls (the 90s set)
+ *  flat00 2000–2008  silver flat-tube CRT
+ *  modern 2009+      thin flat panel
+ */
+export type EraDevice = "wood" | "crt90" | "flat00" | "modern";
 
 export function deviceForYear(year: number | null | undefined): EraDevice {
-  if (!year) return "crt-flat";
-  if (year <= 1995) return "crt-wood"; // cartridge era — wood-grain tube TV
-  if (year <= 2007) return "crt-flat"; // disc era — dark plastic CRT
-  return "modern"; // download era — sleek panel
+  if (!year) return "crt90";
+  if (year <= 1988) return "wood";
+  if (year <= 1999) return "crt90";
+  if (year <= 2008) return "flat00";
+  return "modern";
+}
+
+/** The magazine-page skin for the era: '80s print, '90s portal, '00s network. */
+export type WebEra = "e80" | "e90" | "e00";
+
+export function webEraForYear(year: number | null | undefined): WebEra {
+  if (!year) return "e90";
+  if (year < 1990) return "e80";
+  if (year < 2000) return "e90";
+  return "e00";
 }
 
 /** THEN vs NOW — a physical-media contrast, only for pre-2013 launches. */

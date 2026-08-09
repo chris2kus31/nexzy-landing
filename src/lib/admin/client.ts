@@ -31,6 +31,7 @@ export interface BlogPost {
   imageCredit: string | null;
   youtubeUrl: string | null;
   media?: ArticleMedia[] | null;
+  screenshots?: string[] | null;
   beat: string;
   type?: string;
   parentId?: string | null;

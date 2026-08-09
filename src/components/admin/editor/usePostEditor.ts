@@ -46,6 +46,7 @@ export function usePostEditor(id: string) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [media, setMedia] = useState<ArticleMedia[]>([]);
+  const [screenshots, setScreenshots] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
@@ -66,6 +67,7 @@ export function usePostEditor(id: string) {
         setPost(p);
         setForm(toForm(p));
         setMedia(mediaFromPost(p));
+        setScreenshots(p.screenshots ?? []);
         setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
@@ -87,6 +89,7 @@ export function usePostEditor(id: string) {
       setPost(updated);
       setForm(toForm(updated));
       setMedia(mediaFromPost(updated));
+      setScreenshots(updated.screenshots ?? []);
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
@@ -113,7 +116,7 @@ export function usePostEditor(id: string) {
     reader.readAsDataURL(file);
   };
 
-  const buildUpdate = (bodyMarkdown: string) => ({
+  const buildUpdate = (bodyMarkdown: string, shotsOverride?: string[]) => ({
     title: form!.title,
     seoTitle: form!.seoTitle,
     excerpt: form!.excerpt,
@@ -124,6 +127,7 @@ export function usePostEditor(id: string) {
     // The media gallery is the source of truth; the API re-syncs youtubeUrl to
     // the starred item. Send order by current position.
     media: media.map((m, i) => ({ ...m, order: i })),
+    screenshots: shotsOverride ?? screenshots,
     tags: form!.tags
       .split(",")
       .map((t) => t.trim())
@@ -148,6 +152,15 @@ export function usePostEditor(id: string) {
   // silently needs a manual Save.
   const saveBody = (nextBody: string) =>
     run("Screenshot added", () => updatePost(id, buildUpdate(nextBody)));
+
+  // Rewind screenshot gallery: persist the list immediately (like the hero
+  // upload) so an added/removed/reordered shot doesn't silently need a Save.
+  const saveScreenshots = (next: string[]) => {
+    setScreenshots(next);
+    return run("Screenshots saved", () =>
+      updatePost(id, buildUpdate(form!.bodyMarkdown, next)),
+    );
+  };
 
   const suggestAltText = async () => {
     setBusy("Suggesting alt");
@@ -176,6 +189,9 @@ export function usePostEditor(id: string) {
     form,
     media,
     setMedia,
+    screenshots,
+    setScreenshots,
+    saveScreenshots,
     error,
     busy,
     notice,

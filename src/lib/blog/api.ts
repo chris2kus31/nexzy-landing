@@ -315,6 +315,8 @@ export interface RewindEpisode {
     genres: string[];
     esrb: string | null;
     gameSlug: string | null;
+    released: string | null;
+    screenshots: string[];
   } | null;
 }
 

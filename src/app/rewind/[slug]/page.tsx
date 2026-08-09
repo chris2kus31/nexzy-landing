@@ -12,12 +12,14 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
 import RewindScrubber from "@/components/rewind/RewindScrubber";
+import RewindEra80s from "@/components/rewind/RewindEra80s";
 import {
   eraForYear,
   yearsAgo,
   thenNow,
   dateSlug,
   monthName,
+  webEraForYear,
 } from "@/lib/rewind/era";
 
 export const revalidate = 300;
@@ -202,6 +204,34 @@ export default async function RewindEpisodePage({
     ],
   };
 
+  // Era skin by the game's year. '80s magazine page is built; '90s/'00s use the
+  // current layout until their skins land.
+  if (webEraForYear(year) === "e80") {
+    return (
+      <Box bg="nexzy.navy" minH="100vh">
+        <Navigation />
+        <Box pt={{ base: 20, md: 24 }} pb={16} px={{ base: 3, md: 6 }}>
+          <RewindEra80s ep={ep} stops={stops} />
+        </Box>
+        <Footer />
+        <ViewPing slug={slug} />
+        <ArticleAnalytics
+          slug={slug}
+          type="rewind"
+          author={ep.author ?? undefined}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        />
+      </Box>
+    );
+  }
+
   const chip = (label: string) => (
     <Text
       key={label}
@@ -234,14 +264,30 @@ export default async function RewindEpisodePage({
             position="relative"
             overflow="hidden"
           >
+            {/* halftone dots */}
             <Box
               position="absolute"
               inset="0"
               pointerEvents="none"
-              opacity={0.12}
+              opacity={0.1}
               css={{
                 backgroundImage: `radial-gradient(${INK} 1px, transparent 1.4px)`,
                 backgroundSize: "5px 5px",
+              }}
+            />
+            {/* aged paper — soft creases + corner foxing multiplied into the cream */}
+            <Box
+              position="absolute"
+              inset="0"
+              pointerEvents="none"
+              css={{
+                mixBlendMode: "multiply",
+                background: `
+                  radial-gradient(140% 120% at 22% -8%, rgba(0,0,0,0) 55%, rgba(74,54,28,.20)),
+                  radial-gradient(120% 120% at 102% 104%, rgba(0,0,0,0) 58%, rgba(74,54,28,.18)),
+                  repeating-linear-gradient(104deg, rgba(96,72,40,.05) 0 1px, transparent 1px 76px),
+                  repeating-linear-gradient(15deg, rgba(96,72,40,.045) 0 1px, transparent 1px 98px)
+                `,
               }}
             />
 

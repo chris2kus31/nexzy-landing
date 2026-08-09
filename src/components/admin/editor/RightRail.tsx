@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Box,
   HStack,
@@ -18,6 +18,7 @@ import {
   regeneratePost,
   regenerateImage,
   setPostAuthor,
+  uploadBodyImage,
 } from "@/lib/admin/client";
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 import { labelProps, inputProps } from "./shared";
@@ -38,6 +39,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     form,
     media,
     setMedia,
+    screenshots,
+    saveScreenshots,
     set,
     run,
     busy,
@@ -51,7 +54,44 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     id,
   } = ed;
   const [vidInput, setVidInput] = useState("");
+  const [shotInput, setShotInput] = useState("");
+  const shotFileRef = useRef<HTMLInputElement>(null);
   if (!post || !form) return null;
+
+  const addShot = (url: string) => {
+    const u = url.trim();
+    if (!u || screenshots.includes(u)) return;
+    saveScreenshots([...screenshots, u].slice(0, 12));
+  };
+  const addShotFromInput = () => {
+    addShot(shotInput);
+    setShotInput("");
+  };
+  const removeShot = (idx: number) =>
+    saveScreenshots(screenshots.filter((_, i) => i !== idx));
+  const moveShot = (idx: number, dir: number) => {
+    const j = idx + dir;
+    if (j < 0 || j >= screenshots.length) return;
+    const next = [...screenshots];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    saveScreenshots(next);
+  };
+  const onPickShot = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const { url } = await uploadBodyImage(id, String(reader.result || ""));
+        if (url) addShot(url);
+      } catch {
+        /* surfaced via the editor's error state on next save */
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const addVideo = (url: string) => {
     const vid = youtubeId(url);
@@ -388,6 +428,122 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
           article); the rest show as thumbnails. Save to apply.
         </Text>
       </Box>
+
+      {post.type === "rewind" && (
+        <Box>
+          <Text {...labelProps}>Screenshots</Text>
+          <HStack gap={2}>
+            <Input
+              value={shotInput}
+              onChange={(e) => setShotInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addShotFromInput();
+                }
+              }}
+              placeholder="Paste an image URL"
+              {...inputProps}
+            />
+            <Button
+              size="sm"
+              onClick={addShotFromInput}
+              disabled={!shotInput.trim()}
+              flexShrink={0}
+            >
+              Add
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={() => shotFileRef.current?.click()}
+              loading={busy === "Screenshots saved"}
+              flexShrink={0}
+            >
+              ↑ Upload
+            </Button>
+          </HStack>
+          <input
+            ref={shotFileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+            style={{ display: "none" }}
+            onChange={onPickShot}
+          />
+          {screenshots.length > 0 && (
+            <Box
+              mt={2}
+              display="grid"
+              gridTemplateColumns="repeat(3, 1fr)"
+              gap={2}
+            >
+              {screenshots.map((src, i) => (
+                <Box
+                  key={src}
+                  position="relative"
+                  borderRadius="md"
+                  overflow="hidden"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  bg="black"
+                >
+                  <Image src={src} alt="" w="100%" h="64px" objectFit="cover" />
+                  <HStack
+                    gap={0}
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    bg="blackAlpha.700"
+                  >
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title="Move left"
+                      onClick={() => moveShot(i, -1)}
+                      disabled={i === 0}
+                      minW="auto"
+                      px={1}
+                      color="white"
+                    >
+                      ←
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title="Move right"
+                      onClick={() => moveShot(i, 1)}
+                      disabled={i === screenshots.length - 1}
+                      minW="auto"
+                      px={1}
+                      color="white"
+                    >
+                      →
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title="Remove"
+                      onClick={() => removeShot(i)}
+                      minW="auto"
+                      px={1}
+                      color="red.300"
+                    >
+                      ✕
+                    </Button>
+                  </HStack>
+                </Box>
+              ))}
+            </Box>
+          )}
+          <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+            Shown on the Rewind episode page (up to 12). Saved on add/remove. If
+            empty, the linked game&rsquo;s screenshots are used automatically.
+          </Text>
+        </Box>
+      )}
 
       {post.sources && post.sources.length > 0 && (
         <Box>

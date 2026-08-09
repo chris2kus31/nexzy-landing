@@ -2,19 +2,23 @@
 
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export interface RewindStop {
   year: number;
   slug: string;
 }
 
+const PAPER2 = "#e5dcc2";
+const RULE = "#c7b48a";
+const INK = "#241c12";
+const INK2 = "#5a4b36";
+
 /**
- * The "REWIND scrubber" — the interactive time control. Drag the slider (or tap a
- * year tick) to travel across every year that has a published episode on this
- * calendar date; each move navigates to that year's episode. Hidden when there's
- * only one year to show (nothing to scrub). Era accent colors the fill + active
- * year. Client component: it navigates on change.
+ * The REWIND scrubber — a timeline from the oldest episode up to the present
+ * (NOW). The handle sits where the current episode's year falls between then and
+ * now; dragging rewinds and snaps to the nearest year with a published episode,
+ * navigating on release. Year ticks are placed along the line and clickable.
  */
 export default function RewindScrubber({
   stops,
@@ -30,24 +34,33 @@ export default function RewindScrubber({
     () => [...stops].sort((a, b) => a.year - b.year),
     [stops],
   );
-  const idx = Math.max(
-    0,
-    sorted.findIndex((s) => s.slug === currentSlug),
-  );
+  const current = sorted.find((s) => s.slug === currentSlug) ?? sorted[0];
+  const [dragYear, setDragYear] = useState<number>(current?.year ?? 0);
 
-  if (sorted.length < 2) return null;
+  if (!current) return null;
 
-  const go = (i: number) => {
-    const s = sorted[i];
-    if (s && s.slug !== currentSlug) router.push(`/rewind/${s.slug}`);
+  const nowY = new Date().getFullYear();
+  const minY = sorted[0].year;
+  const maxY = Math.max(nowY, sorted[sorted.length - 1].year);
+  const span = Math.max(1, maxY - minY);
+  const pct = (y: number) => ((y - minY) / span) * 100;
+
+  const nearest = (y: number) =>
+    sorted.reduce(
+      (best, s) => (Math.abs(s.year - y) < Math.abs(best.year - y) ? s : best),
+      sorted[0],
+    );
+  const go = (slug: string) => {
+    if (slug !== currentSlug) router.push(`/rewind/${slug}`);
   };
+  const commit = () => go(nearest(dragYear).slug);
 
   return (
     <Box
       mt={4}
-      bg="#e5dcc2"
+      bg={PAPER2}
       border="1px solid"
-      borderColor="#c7b48a"
+      borderColor={RULE}
       borderRadius="lg"
       p={{ base: 3, md: 4 }}
     >
@@ -58,51 +71,68 @@ export default function RewindScrubber({
           letterSpacing="0.12em"
           color={accent}
         >
-          ◀◀ REWIND THROUGH THE YEARS
+          ◀◀ REWINDING TO
         </Text>
         <Text
           fontFamily="title"
           fontSize="xl"
           fontWeight="800"
-          color="#241c12"
+          color={INK}
           letterSpacing="0.08em"
         >
-          {sorted[idx].year}
+          {nearest(dragYear).year}
         </Text>
       </Flex>
 
       <input
         type="range"
-        min={0}
-        max={sorted.length - 1}
+        min={minY}
+        max={maxY}
         step={1}
-        value={idx}
+        value={dragYear}
         aria-label="Rewind through the years"
-        onChange={(e) => go(parseInt(e.target.value, 10))}
+        onChange={(e) => setDragYear(parseInt(e.target.value, 10))}
+        onMouseUp={commit}
+        onTouchEnd={commit}
+        onKeyUp={commit}
         style={{ width: "100%", accentColor: accent, cursor: "pointer" }}
       />
 
-      <Flex justify="space-between" mt={2} gap={2} wrap="wrap">
-        {sorted.map((s, i) => (
+      <Box position="relative" h="20px" mt={1}>
+        {sorted.map((s) => (
           <button
             type="button"
             key={s.slug}
-            onClick={() => go(i)}
+            onClick={() => go(s.slug)}
             style={{
+              position: "absolute",
+              left: `${pct(s.year)}%`,
+              transform: "translateX(-50%)",
               fontFamily: "ui-monospace, monospace",
-              fontSize: "12px",
-              color: i === idx ? accent : "rgba(36,28,18,.5)",
-              fontWeight: i === idx ? 700 : 400,
+              fontSize: "11px",
+              fontWeight: s.slug === current.slug ? 700 : 400,
+              color: s.slug === current.slug ? accent : INK2,
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              padding: "0 4px",
+              whiteSpace: "nowrap",
+              padding: 0,
             }}
           >
             {s.year}
           </button>
         ))}
-      </Flex>
+        <Text
+          position="absolute"
+          right="0"
+          fontFamily="mono"
+          fontSize="11px"
+          color={INK2}
+          whiteSpace="nowrap"
+        >
+          NOW · {nowY}
+        </Text>
+      </Box>
     </Box>
   );
 }
