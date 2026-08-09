@@ -49,7 +49,11 @@ const PHOTO_FILTER = "saturate(.9) contrast(1.03)";
 // straight over the base — no overlay, gradient, or CSS grain.
 const PAPER_BG = {
   backgroundColor: "#13233F",
-  backgroundImage: "url(/rewind/paper-80s-neon.png)",
+  // Neon poster, with a bottom-weighted navy scrim: barely there up top (neon
+  // stays punchy), darker toward the bright grid at the bottom so the vault
+  // label + caption + footer stay readable.
+  backgroundImage:
+    "linear-gradient(180deg, rgba(11,21,38,0.28) 0%, rgba(11,21,38,0.28) 52%, rgba(11,21,38,0.72) 900%), url(/rewind/paper-80s-blueish-neon.png)",
   backgroundRepeat: "no-repeat",
   backgroundSize: "cover",
   backgroundPosition: "center",

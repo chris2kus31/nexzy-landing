@@ -479,7 +479,8 @@ export default function RewindVault({
               fontFamily="mono"
               fontSize="11px"
               letterSpacing="0.14em"
-              color="#5a4b36"
+              color="#C7D4E8"
+              css={{ textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}
             >
               CLIPS ({list.length})
             </Text>
@@ -519,7 +520,13 @@ export default function RewindVault({
         )}
       </Flex>
 
-      <Text fontFamily="mono" fontSize="14px" color="#5a4b36" mt={3}>
+      <Text
+        fontFamily="mono"
+        fontSize="14px"
+        color="#B9C6DC"
+        mt={3}
+        css={{ textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}
+      >
         ▲ {caption}
         {list.length > 1 ? ` (${list.length} clips)` : ""}
       </Text>
