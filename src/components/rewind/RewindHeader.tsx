@@ -123,7 +123,7 @@ export default function RewindHeader({
       {/* TIMELINE — the scrubber we had, jumps between episodes by year */}
       {stops.length > 1 && (
         <Box mt={{ base: 4, md: 5 }}>
-          <RewindScrubber stops={stops} currentSlug={slug} accent={GOLD} />
+          <RewindScrubber stops={stops} currentSlug={slug} accent={GOLD} dark />
         </Box>
       )}
     </Box>

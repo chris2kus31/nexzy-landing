@@ -24,12 +24,22 @@ export default function RewindScrubber({
   stops,
   currentSlug,
   accent,
+  dark = false,
 }: {
   stops: RewindStop[];
   currentSlug: string;
   accent: string;
+  dark?: boolean;
 }) {
   const router = useRouter();
+  const c = dark
+    ? {
+        bg: "rgba(15,28,51,.55)",
+        border: "#2A4F7A",
+        ink: "#E3E7EF",
+        ink2: "#A3B0C7",
+      }
+    : { bg: PAPER2, border: RULE, ink: INK, ink2: INK2 };
   const sorted = useMemo(
     () => [...stops].sort((a, b) => a.year - b.year),
     [stops],
@@ -58,9 +68,9 @@ export default function RewindScrubber({
   return (
     <Box
       mt={4}
-      bg={PAPER2}
+      bg={c.bg}
       border="1px solid"
-      borderColor={RULE}
+      borderColor={c.border}
       borderRadius="lg"
       p={{ base: 3, md: 4 }}
     >
@@ -77,7 +87,7 @@ export default function RewindScrubber({
           fontFamily="title"
           fontSize="xl"
           fontWeight="800"
-          color={INK}
+          color={c.ink}
           letterSpacing="0.08em"
         >
           {nearest(dragYear).year}
@@ -111,7 +121,7 @@ export default function RewindScrubber({
               fontFamily: "ui-monospace, monospace",
               fontSize: "11px",
               fontWeight: s.slug === current.slug ? 700 : 400,
-              color: s.slug === current.slug ? accent : INK2,
+              color: s.slug === current.slug ? accent : c.ink2,
               background: "transparent",
               border: "none",
               cursor: "pointer",
@@ -127,7 +137,7 @@ export default function RewindScrubber({
           right="0"
           fontFamily="mono"
           fontSize="11px"
-          color={INK2}
+          color={c.ink2}
           whiteSpace="nowrap"
         >
           NOW · {nowY}
