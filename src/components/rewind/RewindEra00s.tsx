@@ -49,6 +49,11 @@ const REGION: Record<string, string> = {
   WW: "Worldwide",
 };
 
+function youTubeId(url?: string | null): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 function stripMd(s: string): string {
   return (s || "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
@@ -57,11 +62,6 @@ function stripMd(s: string): string {
     .replace(/_([^_]+)_/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .trim();
-}
-function youTubeId(url?: string | null): string | null {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
-  return m ? m[1] : null;
 }
 
 /** Glossy blue HUD header bar with an angled corner. */
