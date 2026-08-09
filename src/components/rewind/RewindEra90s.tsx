@@ -21,10 +21,10 @@ const GOLD = "#F5B531";
 const TEXT = "#E3E7EF";
 const BORDER = "#2A4F7A";
 
-// Same navy paper texture as the 80s skin.
+// 90s-only paper texture (the 80s skin keeps paper-80s-navy).
 const PAPER_BG = {
   backgroundColor: NAVY,
-  backgroundImage: "url(/rewind/paper-80s-navy.png)",
+  backgroundImage: "url(/rewind/paper-90s-navy.png)",
   backgroundRepeat: "repeat",
   backgroundSize: "512px 512px",
 };

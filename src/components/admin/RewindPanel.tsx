@@ -50,8 +50,12 @@ function heat(weight: number): string {
  */
 export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const today = new Date();
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [day, setDay] = useState(today.getDate());
+  // Keep the raw input text so the field can be cleared/retyped freely; derive
+  // the clamped numbers used everywhere else.
+  const [monthStr, setMonthStr] = useState(String(today.getMonth() + 1));
+  const [dayStr, setDayStr] = useState(String(today.getDate()));
+  const month = Math.min(12, Math.max(1, parseInt(monthStr, 10) || 1));
+  const day = Math.min(31, Math.max(1, parseInt(dayStr, 10) || 1));
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [leads, setLeads] = useState<RewindLead[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,10 +211,14 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
           <Input
             size="sm"
             w="16"
+            inputMode="numeric"
             color="nexzy.white"
             borderColor="whiteAlpha.300"
-            value={String(month)}
-            onChange={(e) => setMonth(parseInt(e.target.value || "0", 10) || 1)}
+            value={monthStr}
+            onChange={(e) =>
+              setMonthStr(e.target.value.replace(/\D/g, "").slice(0, 2))
+            }
+            onBlur={() => setMonthStr(String(month))}
           />
           <Text color="nexzy.gray.100" fontSize="sm">
             Day
@@ -218,10 +226,14 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
           <Input
             size="sm"
             w="16"
+            inputMode="numeric"
             color="nexzy.white"
             borderColor="whiteAlpha.300"
-            value={String(day)}
-            onChange={(e) => setDay(parseInt(e.target.value || "0", 10) || 1)}
+            value={dayStr}
+            onChange={(e) =>
+              setDayStr(e.target.value.replace(/\D/g, "").slice(0, 2))
+            }
+            onBlur={() => setDayStr(String(day))}
           />
         </HStack>
         <Button
