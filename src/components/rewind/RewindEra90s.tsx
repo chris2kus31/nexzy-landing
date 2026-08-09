@@ -18,10 +18,11 @@ const GOLD = "#F5B531";
 const TEXT = "#E3E7EF";
 const BORDER = "#2A4F7A";
 
-// 90s-only paper texture (the 80s skin keeps paper-80s-navy).
+// 90s-only paper texture — a flattened, seamless navy tile (uniform lighting +
+// feathered edges) so it repeats with no visible seams or lighter/darker bands.
 const PAPER_BG = {
   backgroundColor: NAVY,
-  backgroundImage: "url(/rewind/paper-90s-navy.png)",
+  backgroundImage: "url(/rewind/paper-90s-seamless.jpg)",
   backgroundRepeat: "repeat",
   backgroundSize: "512px 512px",
 };
@@ -319,6 +320,7 @@ export default function RewindEra90s({
             </CornerFrame>
           )}
           <Box
+            bg="#0E1B33"
             border={`1px solid ${BORDER}`}
             css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}
           >
