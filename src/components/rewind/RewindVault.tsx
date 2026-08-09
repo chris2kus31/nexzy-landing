@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Flex, HStack, Image, Text } from "@chakra-ui/react";
+import { Box, Flex, Image, Text } from "@chakra-ui/react";
 import { deviceForYear } from "@/lib/rewind/era";
 import RewindScreen from "@/components/rewind/RewindScreen";
 
@@ -458,48 +458,68 @@ export default function RewindVault({
   }
 
   return (
-    <Box>
-      {frame}
+    <Box w="100%">
+      {/* TV pinned left; when there's more than one clip, a playlist to the
+          right (wraps below the set on narrow screens). */}
+      <Flex gap={4} align="flex-start" justify="flex-start" flexWrap="wrap">
+        <Box flexShrink={0} w={setMax} maxW="100%">
+          {frame}
+        </Box>
 
-      {/* Multi-video: a thumbnail strip that swaps the video in the set. */}
-      {list.length > 1 && (
-        <HStack gap={2} mt={3} flexWrap="wrap" maxW={setMax}>
-          {list.map((id, i) => {
-            const on = i === active;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={`Play clip ${i + 1}`}
-                style={{
-                  position: "relative",
-                  width: 72,
-                  height: 44,
-                  flexShrink: 0,
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  border: `2px solid ${on ? "#f5b53d" : "rgba(0,0,0,.35)"}`,
-                  cursor: "pointer",
-                  padding: 0,
-                  opacity: on ? 1 : 0.72,
-                  background: "#000",
-                }}
-              >
-                <Image
-                  src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
-                  alt=""
-                  w="100%"
-                  h="100%"
-                  objectFit="cover"
-                />
-              </button>
-            );
-          })}
-        </HStack>
-      )}
+        {list.length > 1 && (
+          <Flex
+            direction={{ base: "row", md: "column" }}
+            flexWrap="wrap"
+            gap={2}
+            maxW={{ base: setMax, md: "160px" }}
+            flexShrink={0}
+          >
+            <Text
+              w="100%"
+              fontFamily="mono"
+              fontSize="11px"
+              letterSpacing="0.14em"
+              color="#5a4b36"
+            >
+              CLIPS ({list.length})
+            </Text>
+            {list.map((id, i) => {
+              const on = i === active;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  aria-label={`Play clip ${i + 1}`}
+                  style={{
+                    position: "relative",
+                    width: 112,
+                    height: 63,
+                    flexShrink: 0,
+                    borderRadius: 5,
+                    overflow: "hidden",
+                    border: `2px solid ${on ? "#f5b53d" : "rgba(0,0,0,.35)"}`,
+                    cursor: "pointer",
+                    padding: 0,
+                    opacity: on ? 1 : 0.72,
+                    background: "#000",
+                  }}
+                >
+                  <Image
+                    src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
+                    alt=""
+                    w="100%"
+                    h="100%"
+                    objectFit="cover"
+                  />
+                </button>
+              );
+            })}
+          </Flex>
+        )}
+      </Flex>
 
-      <Text fontFamily="mono" fontSize="14px" color="#5a4b36" mt={2}>
+      <Text fontFamily="mono" fontSize="14px" color="#5a4b36" mt={3}>
         ▲ {caption}
         {list.length > 1 ? ` (${list.length} clips)` : ""}
       </Text>
