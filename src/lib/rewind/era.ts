@@ -23,16 +23,18 @@ export function yearsAgo(year: number | null | undefined): number | null {
 
 /**
  * The "vault" TV for the era — a real set of period TVs, chosen by year:
- *  wood   1972–1988  wood-cabinet console, dial tuner
- *  crt90  1989–1999  black injection-molded plastic, front controls (the 90s set)
+ *  wood   ≤1989     black-plastic 80s set — channel buttons + round speaker
+ *  crt90  1990–1999  black injection-molded plastic, front controls (the 90s set)
  *  flat00 2000–2008  silver flat-tube CRT
  *  modern 2009+      thin flat panel
+ * Boundaries match webEraForYear (e80 <1990, e90 1990–99, e00 2000+) so the
+ * vault TV always agrees with the page's era skin.
  */
 export type EraDevice = "wood" | "crt90" | "flat00" | "modern";
 
 export function deviceForYear(year: number | null | undefined): EraDevice {
   if (!year) return "crt90";
-  if (year <= 1988) return "wood";
+  if (year <= 1989) return "wood";
   if (year <= 1999) return "crt90";
   if (year <= 2008) return "flat00";
   return "modern";

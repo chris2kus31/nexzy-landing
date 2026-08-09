@@ -7,7 +7,8 @@ import RewindScreen from "@/components/rewind/RewindScreen";
 
 /**
  * The vault TV — an era-adaptive set. The frame is chosen by the episode's year
- * (deviceForYear): a wood console for the 80s, a black plastic set for the 90s,
+ * (deviceForYear): a black-plastic set with a round speaker for the 80s, a
+ * black plastic front-control set for the 90s,
  * a silver flat-tube for the 2000s, a thin panel for modern. The screen is the
  * real YouTube player (black glossy at rest, like a set that's off) with a glass
  * sheen + era scanlines. The Nexzy badge + power LED tie it to brand.
@@ -41,12 +42,16 @@ export default function RewindVault({
   const setMax = compact
     ? device === "modern"
       ? "460px"
-      : "380px"
+      : device === "wood"
+        ? "580px"
+        : "380px"
     : device === "modern"
       ? "760px"
       : device === "flat00"
         ? "640px"
-        : "620px";
+        : device === "wood"
+          ? "780px"
+          : "620px";
 
   const screen = (
     <RewindScreen
@@ -84,64 +89,149 @@ export default function RewindVault({
   let caption = "Pulled from the archives.";
 
   if (device === "wood") {
-    caption = "The furniture-era set — wood cabinet, dial tuner.";
-    frame = (
-      <Flex
-        maxW={setMax}
-        gap={3}
-        p={4}
-        borderRadius="16px"
-        boxShadow="0 16px 30px rgba(0,0,0,.5)"
+    caption = "The 80s set — black plastic, channel buttons, round speaker.";
+    const chBtn = (n: number) => (
+      <Box
+        key={n}
+        w="9px"
+        h="12px"
+        borderRadius="2px"
+        bg="#3a3a40"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
         css={{
-          background:
-            "repeating-linear-gradient(87deg, rgba(0,0,0,.05) 0 2px, transparent 2px 8px), linear-gradient(160deg,#7a4f2a,#4a2f16)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,.14), 0 1px 1px rgba(0,0,0,.6)",
+        }}
+      >
+        <Text fontFamily="mono" fontSize="6px" lineHeight="1" color="#a2a2aa">
+          {n}
+        </Text>
+      </Box>
+    );
+    const knob = (i: number) => (
+      <Box
+        key={i}
+        position="relative"
+        w="16px"
+        h="16px"
+        borderRadius="full"
+        css={{
+          background: "radial-gradient(circle at 36% 30%,#4c4c52,#141416)",
+          boxShadow:
+            "0 1px 2px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.14)",
         }}
       >
         <Box
+          position="absolute"
+          top="2px"
+          left="50%"
+          w="1.5px"
+          h="5px"
+          bg="#d0d0d6"
+          css={{ transform: "translateX(-50%)" }}
+        />
+      </Box>
+    );
+    frame = (
+      <Flex
+        maxW={setMax}
+        position="relative"
+        align="center"
+        gap={3}
+        p={4}
+        borderRadius="18px"
+        boxShadow="0 16px 30px rgba(0,0,0,.55)"
+        css={{
+          background:
+            "linear-gradient(165deg,#2b2b2f,#111113), radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.05), transparent 60%)",
+        }}
+      >
+        {/* SCREEN — bulging tube in a thick black bezel */}
+        <Box
           flex="1"
-          bg="#120a04"
-          borderRadius="16px"
+          bg="#0a0a0c"
+          borderRadius="18px"
           p={3}
-          css={{ boxShadow: "inset 0 0 0 3px #2a1a0c" }}
+          css={{
+            boxShadow: "inset 0 0 0 4px #1c1c20, inset 0 0 26px rgba(0,0,0,.8)",
+          }}
         >
           {screen}
         </Box>
+
+        {/* CONTROL COLUMN — channel buttons, knobs, LEDs, round speaker */}
         <Flex
           direction="column"
           align="center"
-          justify="space-between"
-          w="58px"
+          w={{ base: "108px", md: "134px" }}
           py={1}
+          gap={3}
         >
+          <Flex wrap="wrap" gap="4px" justify="center" maxW="120px">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(chBtn)}
+          </Flex>
+          <Flex gap="8px" justify="center">
+            {[0, 1, 2, 3].map(knob)}
+          </Flex>
+          <Flex gap="4px">
+            <Box
+              w="10px"
+              h="4px"
+              borderRadius="1px"
+              bg="#c0392b"
+              css={{ boxShadow: "0 0 5px rgba(192,57,43,.85)" }}
+            />
+            <Box
+              w="10px"
+              h="4px"
+              borderRadius="1px"
+              bg="#37e06a"
+              css={{ boxShadow: "0 0 5px rgba(55,224,106,.85)" }}
+            />
+            <Box
+              w="10px"
+              h="4px"
+              borderRadius="1px"
+              bg="#37e06a"
+              css={{ boxShadow: "0 0 5px rgba(55,224,106,.85)" }}
+            />
+          </Flex>
           <Box
-            w="40px"
-            h="86px"
-            borderRadius="5px"
+            mt="auto"
+            w={{ base: "74px", md: "94px" }}
+            h={{ base: "74px", md: "94px" }}
+            borderRadius="full"
             css={{
               background:
-                "repeating-linear-gradient(to bottom,#3a2512 0 3px,#25170a 3px 6px)",
+                "radial-gradient(#26262b 1.1px, transparent 1.4px) 0 0/4px 4px, radial-gradient(circle at 40% 34%,#343439,#0b0b0e 72%)",
+              boxShadow:
+                "inset 0 0 0 2px #050506, inset 0 6px 14px rgba(0,0,0,.7)",
             }}
           />
-          <Box
-            w="28px"
-            h="28px"
-            borderRadius="full"
-            boxShadow="0 2px 3px rgba(0,0,0,.6)"
-            css={{
-              background: "radial-gradient(circle at 35% 30%,#5a3c20,#2a1a0c)",
-            }}
-          />
-          <Box
-            w="28px"
-            h="28px"
-            borderRadius="full"
-            boxShadow="0 2px 3px rgba(0,0,0,.6)"
-            css={{
-              background: "radial-gradient(circle at 35% 30%,#5a3c20,#2a1a0c)",
-            }}
-          />
-          {badge("#caa877", "10px")}
+          {badge("#8a8a92", "9px")}
         </Flex>
+
+        {/* FEET */}
+        <Box
+          position="absolute"
+          bottom="-6px"
+          left="24%"
+          w="26px"
+          h="7px"
+          borderRadius="0 0 4px 4px"
+          bg="#0b0b0d"
+        />
+        <Box
+          position="absolute"
+          bottom="-6px"
+          right="24%"
+          w="26px"
+          h="7px"
+          borderRadius="0 0 4px 4px"
+          bg="#0b0b0d"
+        />
       </Flex>
     );
   } else if (device === "crt90") {
