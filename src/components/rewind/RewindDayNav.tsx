@@ -16,7 +16,7 @@ function shift(month: number, day: number, delta: number) {
   d.setUTCDate(d.getUTCDate() + delta);
   return { month: d.getUTCMonth() + 1, day: d.getUTCDate() };
 }
-const href = (m: number, d: number) => `/rewind/day/${dateSlug(m, d)}`;
+const href = (m: number, d: number) => `/rewind/on-this-day/${dateSlug(m, d)}`;
 
 /**
  * Day navigator for the Rewind hub: jump to the previous/next day, pick any
@@ -35,12 +35,9 @@ export default function RewindDayNav({
   const next = shift(month, day, 1);
   const now = new Date();
   const isToday = now.getMonth() + 1 === month && now.getDate() === day;
+  const todayHref = href(now.getMonth() + 1, now.getDate());
 
-  const go = (m: number, d: number) => {
-    const t = new Date();
-    if (t.getMonth() + 1 === m && t.getDate() === d) router.push("/rewind");
-    else router.push(href(m, d));
-  };
+  const go = (m: number, d: number) => router.push(href(m, d));
   const maxDay = DAYS_IN[month - 1];
   const safeDay = Math.min(day, maxDay);
 
@@ -130,7 +127,7 @@ export default function RewindDayNav({
           <Flex {...arrow}>›</Flex>
         </Link>
 
-        <Link href="/rewind">
+        <Link href={todayHref}>
           <Flex
             px={4}
             h="38px"

@@ -20,8 +20,11 @@ import {
   backfillRewind,
   pasteRewind,
   getWriterNames,
+  getRewindPublished,
+  featureRewind,
   AuthError,
   type RewindLead,
+  type RewindPublishedItem,
 } from "@/lib/admin/client";
 
 const REWIND_AUTHORS = ["Chuy", "Leslie", "Eli"];
@@ -91,9 +94,31 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
     [month, day, verifiedOnly],
   );
 
+  const [picks, setPicks] = useState<RewindPublishedItem[]>([]);
+  const loadPicks = useCallback(async () => {
+    try {
+      setPicks(await getRewindPublished(month, day));
+    } catch {
+      setPicks([]);
+    }
+  }, [month, day]);
+
+  const onFeature = useCallback(
+    async (eventId: string, featured: boolean) => {
+      try {
+        await featureRewind(eventId, featured);
+        await loadPicks();
+      } catch (e) {
+        if (!(e instanceof AuthError)) setError((e as Error).message);
+      }
+    },
+    [loadPicks],
+  );
+
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadPicks();
+  }, [load, loadPicks]);
 
   useEffect(() => {
     getWriterNames()
@@ -317,6 +342,69 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
               Parse &amp; add to {month}/{day}
             </Button>
           </HStack>
+        </Box>
+      )}
+
+      {picks.length > 0 && (
+        <Box
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          p={3}
+        >
+          <Text color="nexzy.white" fontSize="sm" fontWeight="600" mb={1}>
+            Hero for {month}/{day} — pick which episode is “Today’s episode”
+          </Text>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+            The starred episode leads the day-hub + series landing. Default is
+            the highest-weight one.
+          </Text>
+          <VStack align="stretch" gap={1}>
+            {picks.map((p) => (
+              <Flex
+                key={p.id}
+                align="center"
+                gap={2}
+                borderRadius="md"
+                px={2}
+                py={1}
+                bg={p.featured ? "whiteAlpha.100" : "transparent"}
+              >
+                <Text
+                  fontFamily="mono"
+                  color="nexzy.gold"
+                  fontWeight="700"
+                  minW="12"
+                >
+                  {p.year ?? "—"}
+                </Text>
+                <Text color="nexzy.white" flex="1" lineClamp={1}>
+                  {p.title}
+                </Text>
+                {isOwner &&
+                  (p.featured ? (
+                    <Button
+                      size="xs"
+                      bg="nexzy.gold"
+                      color="#0d1526"
+                      onClick={() => onFeature(p.id, false)}
+                    >
+                      ★ Featured
+                    </Button>
+                  ) : (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="nexzy.gray.100"
+                      borderColor="whiteAlpha.300"
+                      onClick={() => onFeature(p.id, true)}
+                    >
+                      ☆ Feature
+                    </Button>
+                  ))}
+              </Flex>
+            ))}
+          </VStack>
         </Box>
       )}
 

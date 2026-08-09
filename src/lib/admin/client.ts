@@ -2233,6 +2233,40 @@ export async function pasteRewind(input: {
   );
 }
 
+export interface RewindPublishedItem {
+  id: string;
+  title: string;
+  year: number | null;
+  episodeId: string | null;
+  featured: boolean;
+}
+
+/** Written episodes for a date (to pick which one is the day's hero). */
+export async function getRewindPublished(
+  month: number,
+  day: number,
+): Promise<RewindPublishedItem[]> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/rewind/published?month=${month}&day=${day}`,
+    ),
+  );
+}
+
+/** Pin/unpin an event as the featured hero for its date. */
+export async function featureRewind(
+  eventId: string,
+  featured: boolean,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch("/api/newsroom/admin/rewind/feature", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId, featured }),
+    }),
+  );
+}
+
 // ---- AI Visibility (GEO scoreboard) ----
 
 export interface AiEngineCell {

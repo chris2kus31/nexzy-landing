@@ -333,6 +333,7 @@ export interface RewindTimelineItem {
   verified: boolean;
   region: string;
   slug: string | null;
+  image?: string | null;
 }
 
 export interface RewindDayHub {
@@ -365,6 +366,27 @@ export async function fetchRewindDay(
   if (!res.ok) return null;
   const text = await res.text();
   return text ? (JSON.parse(text) as RewindDayHub) : null;
+}
+
+export interface RewindRecentItem {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  image: string | null;
+  year: number | null;
+  month: number | null;
+  day: number | null;
+}
+
+export async function fetchRewindRecent(
+  limit = 12,
+): Promise<RewindRecentItem[]> {
+  const res = await fetch(`${API}/rewind/public/recent?limit=${limit}`, {
+    next: { revalidate: REVALIDATE },
+  });
+  if (!res.ok) return [];
+  const text = await res.text();
+  return text ? (JSON.parse(text) as RewindRecentItem[]) : [];
 }
 
 export async function fetchRewindToday(): Promise<RewindEpisode | null> {

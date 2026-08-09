@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  HStack,
+  Image,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import TrackedLink from "@/components/TrackedLink";
 import type { RewindTimelineItem } from "@/lib/blog/api";
-import { eraForYear } from "@/lib/rewind/era";
 
 const BATCH = 8;
 
@@ -25,7 +32,7 @@ export default function RewindMoreEpisodes({
     <>
       <VStack align="stretch" gap={2}>
         {shown.map((t, i) => {
-          const accent = eraForYear(t.year).accent;
+          const accent = "nexzy.gold";
           return (
             <TrackedLink
               key={`${t.slug ?? t.title}-${i}`}
@@ -46,6 +53,19 @@ export default function RewindMoreEpisodes({
                 p={3}
                 _hover={{ borderColor: accent }}
               >
+                {t.image && (
+                  <Image
+                    src={t.image}
+                    alt={t.title}
+                    w="56px"
+                    h="56px"
+                    objectFit="cover"
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    flexShrink={0}
+                  />
+                )}
                 <Text
                   fontFamily="mono"
                   fontWeight="800"

@@ -3,7 +3,7 @@ import TrackedLink from "@/components/TrackedLink";
 import RewindDayNav from "@/components/rewind/RewindDayNav";
 import RewindMoreEpisodes from "@/components/rewind/RewindMoreEpisodes";
 import type { RewindDayHub } from "@/lib/blog/api";
-import { eraForYear, monthName, dateSlug } from "@/lib/rewind/era";
+import { monthName, dateSlug } from "@/lib/rewind/era";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -15,7 +15,6 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
  */
 export default function DayHubView({ hub }: { hub: RewindDayHub }) {
   const hero = hub.episodes[0] ?? null;
-  const heroEra = eraForYear(hero?.event?.year);
   const dslug = dateSlug(hub.month, hub.day);
   // Everything published for this date except the hero (avoid showing it twice).
   const rest = hub.timeline.filter((t) => t.slug && t.slug !== hero?.slug);
@@ -47,17 +46,13 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
         "@type": "ListItem",
         position: 2,
         name: `${monthName(hub.month)} ${hub.day}`,
-        item: `${SITE_URL}/rewind/day/${dslug}`,
+        item: `${SITE_URL}/rewind/on-this-day/${dslug}`,
       },
     ],
   };
 
   return (
-    <Container
-      maxW="3xl"
-      pt={{ base: 24, md: 28 }}
-      pb={{ base: 10, md: 14 }}
-    >
+    <Container maxW="3xl" pt={{ base: 24, md: 28 }} pb={{ base: 10, md: 14 }}>
       <RewindDayNav month={hub.month} day={hub.day} />
 
       <Box textAlign="center" mb={8}>
@@ -92,7 +87,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
             align="center"
             gap={4}
             border="1px solid"
-            borderColor={heroEra.accent}
+            borderColor={"nexzy.gold"}
             borderRadius="xl"
             p={4}
             mb={8}
@@ -116,7 +111,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
                 fontFamily="mono"
                 fontSize="10px"
                 letterSpacing="0.15em"
-                color={heroEra.accent}
+                color={"nexzy.gold"}
                 mb={1}
               >
                 TODAY&apos;S EPISODE
@@ -130,7 +125,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
                 </Text>
               )}
             </Box>
-            <Text color={heroEra.accent} fontWeight="700" whiteSpace="nowrap">
+            <Text color={"nexzy.gold"} fontWeight="700" whiteSpace="nowrap">
               Step in ▸
             </Text>
           </Flex>

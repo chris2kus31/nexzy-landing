@@ -191,7 +191,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const days = await fetchRewindDays();
     for (const d of days) {
       rewindDayEntries.push({
-        url: `${SITE_URL}/rewind/day/${dateSlug(d.month, d.day)}`,
+        url: `${SITE_URL}/rewind/on-this-day/${dateSlug(d.month, d.day)}`,
         lastModified: now,
         changeFrequency: "weekly",
         priority: 0.5,

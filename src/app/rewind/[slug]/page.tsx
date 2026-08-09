@@ -774,7 +774,7 @@ export default async function RewindEpisodePage({
               {ep.event && (
                 <Box mt={8}>
                   <NextLink
-                    href={`/rewind/day/${dateSlug(ep.event.month, ep.event.day)}`}
+                    href={`/rewind/on-this-day/${dateSlug(ep.event.month, ep.event.day)}`}
                   >
                     <Text color={era.accent} fontWeight="600" fontSize="sm">
                       ← Everything that happened on {monthName(ep.event.month)}{" "}
