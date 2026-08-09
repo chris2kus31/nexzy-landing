@@ -43,7 +43,7 @@ export type WebEra = "e80" | "e90" | "e00";
 
 export function webEraForYear(year: number | null | undefined): WebEra {
   if (!year) return "e90";
-  if (year < 1990) return "e80";
+  if (year < 1990) return "e80"; // 1970s + 1980s → the 80s template
   if (year < 2000) return "e90";
   return "e00";
 }

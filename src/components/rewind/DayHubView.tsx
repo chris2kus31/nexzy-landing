@@ -1,13 +1,7 @@
-import {
-  Box,
-  Container,
-  Flex,
-  HStack,
-  Heading,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Box, Container, Flex, Heading, Image, Text } from "@chakra-ui/react";
 import TrackedLink from "@/components/TrackedLink";
+import RewindDayNav from "@/components/rewind/RewindDayNav";
+import RewindMoreEpisodes from "@/components/rewind/RewindMoreEpisodes";
 import type { RewindDayHub } from "@/lib/blog/api";
 import { eraForYear, monthName, dateSlug } from "@/lib/rewind/era";
 
@@ -59,7 +53,13 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
   };
 
   return (
-    <Container maxW="3xl" py={{ base: 8, md: 12 }}>
+    <Container
+      maxW="3xl"
+      pt={{ base: 24, md: 28 }}
+      pb={{ base: 10, md: 14 }}
+    >
+      <RewindDayNav month={hub.month} day={hub.day} />
+
       <Box textAlign="center" mb={8}>
         <Text
           fontFamily="mono"
@@ -98,6 +98,19 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
             mb={8}
             _hover={{ bg: "whiteAlpha.50" }}
           >
+            {hero.heroImageUrl && (
+              <Image
+                src={hero.heroImageUrl}
+                alt={hero.imageAlt || hero.title}
+                w={{ base: "84px", md: "112px" }}
+                h={{ base: "84px", md: "112px" }}
+                objectFit="cover"
+                borderRadius="lg"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                flexShrink={0}
+              />
+            )}
             <Box flex="1">
               <Text
                 fontFamily="mono"
@@ -136,65 +149,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
             MORE EPISODES ON THIS DATE
           </Text>
 
-          <VStack align="stretch" gap={2}>
-            {rest.map((t, i) => {
-              const accent = eraForYear(t.year).accent;
-              return (
-                <TrackedLink
-                  key={`${t.slug ?? t.title}-${i}`}
-                  href={`/rewind/${t.slug}`}
-                  event="content_click"
-                  params={{
-                    content_type: "rewind",
-                    slug: t.slug ?? "",
-                    from: "rewind_dayhub",
-                  }}
-                >
-                  <Flex
-                    align="center"
-                    gap={3}
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    borderRadius="lg"
-                    p={3}
-                    _hover={{ borderColor: accent }}
-                  >
-                    <Text
-                      fontFamily="mono"
-                      fontWeight="800"
-                      color="nexzy.gold"
-                      minW="12"
-                    >
-                      {t.year ?? "—"}
-                    </Text>
-                    <Box flex="1">
-                      <Text color="nexzy.white" fontWeight="600">
-                        {t.title}
-                      </Text>
-                      <HStack gap={2}>
-                        <Text
-                          fontSize="10px"
-                          fontFamily="mono"
-                          color="nexzy.gray.100"
-                          textTransform="uppercase"
-                        >
-                          {t.category.replace(/_/g, " ")}
-                        </Text>
-                        {t.verified && (
-                          <Text fontSize="10px" color="green.300">
-                            ✓ verified
-                          </Text>
-                        )}
-                      </HStack>
-                    </Box>
-                    <Text fontSize="xs" color={accent} whiteSpace="nowrap">
-                      Full episode ▸
-                    </Text>
-                  </Flex>
-                </TrackedLink>
-              );
-            })}
-          </VStack>
+          <RewindMoreEpisodes items={rest} />
         </>
       )}
 

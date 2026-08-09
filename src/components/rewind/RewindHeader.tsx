@@ -29,6 +29,9 @@ export default function RewindHeader({
   slug: string;
   stops: RewindStop[];
 }) {
+  const currentYear =
+    (stops.find((s) => s.slug === slug) ?? stops[0])?.year ?? null;
+
   const onShare = () => {
     if (typeof window === "undefined") return;
     const url = window.location.href;
@@ -120,11 +123,31 @@ export default function RewindHeader({
         />
       </Flex>
 
-      {/* TIMELINE — the scrubber we had, jumps between episodes by year */}
-      {stops.length > 1 && (
+      {/* TIMELINE — the scrubber jumps between episodes by year. With a single
+          episode there's nowhere to scrub, so show a static year chip instead. */}
+      {stops.length > 1 ? (
         <Box mt={{ base: 4, md: 5 }}>
           <RewindScrubber stops={stops} currentSlug={slug} accent={GOLD} dark />
         </Box>
+      ) : (
+        currentYear && (
+          <Flex justify="center" mt={{ base: 4, md: 5 }}>
+            <Box
+              border="1px solid"
+              borderColor="rgba(245,181,61,.5)"
+              borderRadius="md"
+              px={4}
+              py={2}
+              fontFamily="mono"
+              fontWeight="700"
+              letterSpacing="0.12em"
+              color={GOLD}
+              fontSize={{ base: "13px", md: "15px" }}
+            >
+              ◀◀ REWINDING TO {currentYear}
+            </Box>
+          </Flex>
+        )
       )}
     </Box>
   );
