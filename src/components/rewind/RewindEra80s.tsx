@@ -16,24 +16,25 @@ const VT = vt.style.fontFamily; // titles, section headings, labels
 const MONO = courier.style.fontFamily; // body, spec, captions, lists
 
 const RETRO = {
-  paper: "#EEE6CF",
-  blue: "#16438F",
-  red: "#B64035",
-  ink: "#202020",
-  caption: "#5E5848",
-  rule: "rgba(22, 63, 140, .42)",
+  paper: "#13233F", // page base
+  blue: "#4EA1FF", // titles + section headings (VT323)
+  red: "#E33D35", // red accent
+  yellow: "#FFD200", // yellow accent
+  ink: "#E3E7EF", // body text
+  secondary: "#A3B0C7", // secondary text (labels, subtitle, footer)
+  border: "#2A4F7A", // image borders
+  caption: "#A3B0C7",
+  rule: "#2A3F66", // dotted rules
 };
 const PHOTO_FILTER = "saturate(.9) contrast(1.03)";
 
-// Paper: off-white base with the texture blended lightly on top (luminosity
-// drops the tan hue → only the fibre detail remains, at ~18% strength).
+// Paper: Nexzy dark-blue stock. The texture is already navy, so it tiles
+// straight over the base — no overlay, gradient, or CSS grain.
 const PAPER_BG = {
-  backgroundColor: "#F4ECDF",
-  backgroundImage:
-    "linear-gradient(rgba(244,236,223,0.82), rgba(244,236,223,0.82)), url(/rewind/paper-80s.png)",
-  backgroundRepeat: "repeat, repeat",
-  backgroundSize: "auto, 512px 512px",
-  backgroundBlendMode: "normal, luminosity",
+  backgroundColor: "#13233F",
+  backgroundImage: "url(/rewind/paper-80s-navy.png)",
+  backgroundRepeat: "repeat",
+  backgroundSize: "512px 512px",
 };
 
 const REGION: Record<string, string> = {
@@ -90,7 +91,7 @@ function SectionHeader({ children }: { children: ReactNode }) {
         h="4px"
         css={{
           backgroundImage:
-            "radial-gradient(circle, #16438F 1.7px, transparent 2.1px)",
+            "radial-gradient(circle, #2A3F66 1.7px, transparent 2.1px)",
           backgroundSize: "11px 4px",
           backgroundRepeat: "repeat-x",
           backgroundPosition: "left center",
@@ -113,7 +114,7 @@ function SpecRow({ label, value }: { label: string; value: ReactNode }) {
       <Text
         fontSize="14px"
         fontWeight="700"
-        color={RETRO.ink}
+        color={RETRO.secondary}
         textTransform="uppercase"
       >
         {label}:
@@ -137,9 +138,9 @@ function Photo({
   return (
     <Box
       position="relative"
-      bg="#111"
+      bg="#0B1526"
       overflow="hidden"
-      border="1px solid #333"
+      border={`1px solid ${RETRO.border}`}
       css={{ aspectRatio: ratio }}
     >
       <Image
@@ -224,8 +225,8 @@ export default function RewindEra80s({
       mx="auto"
       my={{ base: 4, md: 8 }}
       color={RETRO.ink}
-      border="1px solid #BDB49A"
-      boxShadow="0 14px 40px rgba(0,0,0,.38)"
+      border={`1px solid ${RETRO.border}`}
+      boxShadow="0 14px 40px rgba(0,0,0,.45)"
       overflow="hidden"
       position="relative"
       css={PAPER_BG}
@@ -246,7 +247,7 @@ export default function RewindEra80s({
         </Heading>
         <Text
           mt="6px"
-          color={RETRO.ink}
+          color={RETRO.secondary}
           textTransform="uppercase"
           fontWeight="700"
           fontSize={{ base: "15px", md: "18px" }}
@@ -266,7 +267,12 @@ export default function RewindEra80s({
           alignItems="start"
         >
           {ep.heroImageUrl && (
-            <Box position="relative" overflow="hidden" bg="#D9D0B8">
+            <Box
+              position="relative"
+              overflow="hidden"
+              bg="#0B1526"
+              border={`1px solid ${RETRO.border}`}
+            >
               <Image
                 src={ep.heroImageUrl}
                 alt={ep.imageAlt || ep.title}
@@ -306,13 +312,13 @@ export default function RewindEra80s({
               css={{
                 "&::-webkit-scrollbar": { width: "8px" },
                 "&::-webkit-scrollbar-track": {
-                  background: "rgba(22,63,140,.08)",
+                  background: "rgba(255,255,255,.06)",
                 },
                 "&::-webkit-scrollbar-thumb": {
-                  background: "rgba(22,63,140,.42)",
+                  background: "rgba(78,161,255,.4)",
                 },
                 scrollbarWidth: "thin",
-                scrollbarColor: "rgba(22,63,140,.42) rgba(22,63,140,.08)",
+                scrollbarColor: "rgba(78,161,255,.4) rgba(255,255,255,.06)",
               }}
             >
               {aboutText.map((p, i) => {
@@ -441,8 +447,8 @@ export default function RewindEra80s({
         px={{ base: 5, md: 8 }}
         py="12px"
         borderTop="3px double"
-        borderColor={RETRO.blue}
-        color={RETRO.ink}
+        borderColor={RETRO.rule}
+        color={RETRO.secondary}
         textTransform="uppercase"
         fontSize={{ base: "12px", md: "13px" }}
         css={{ fontFamily: MONO }}

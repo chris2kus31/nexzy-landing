@@ -91,7 +91,7 @@ export default function RewindHeader({
             _hover={{ color: GOLD }}
             css={{ cursor: "pointer" }}
           >
-            <Box as="span">⌁</Box>
+            <Box as="span">⤴</Box>
             <Box as="span">Share</Box>
           </HStack>
         </Flex>
