@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Box, Flex, Heading, Image, Text } from "@chakra-ui/react";
-import { VT323, Courier_Prime } from "next/font/google";
+import { VT323, Courier_Prime, Russo_One } from "next/font/google";
 import type { RewindEpisode } from "@/lib/blog/api";
 import type { RewindStop } from "@/components/rewind/RewindScrubber";
 import RewindVault from "@/components/rewind/RewindVault";
@@ -12,8 +12,25 @@ const courier = Courier_Prime({
   subsets: ["latin"],
   display: "swap",
 });
-const VT = vt.style.fontFamily; // titles, section headings, labels
+const russo = Russo_One({ weight: "400", subsets: ["latin"], display: "swap" });
+const VT = vt.style.fontFamily; // section headings, labels
+const RUSSO = russo.style.fontFamily; // main game title
 const MONO = courier.style.fontFamily; // body, spec, captions, lists
+
+// Main title: Russo One with a 3-color repeating stripe (pale cyan / mid blue /
+// deep blue) clipped through the letters for the CRT-scanline look, plus a
+// stacked dark-blue shadow for printed depth. No neon glow.
+const TITLE_STRIPES = {
+  fontFamily: RUSSO,
+  letterSpacing: "2px",
+  backgroundImage:
+    "repeating-linear-gradient(to bottom, #b9e9ff 0px, #b9e9ff 3px, #65b8ea 3px, #65b8ea 6px, #286fa9 6px, #286fa9 8px)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+  WebkitTextFillColor: "transparent",
+  textShadow: "0 2px 0 #4d91c7, 0 4px 0 #245b91",
+} as const;
 
 const RETRO = {
   paper: "#13233F", // page base
@@ -86,16 +103,19 @@ function SectionHeader({ children }: { children: ReactNode }) {
       >
         {children}
       </Text>
-      {/* Bold dotted rule BELOW the heading. */}
+      {/* Metallic 80s chrome rule BELOW the heading — beveled bar with a bright
+          top highlight, blue body, dark underside, and a soft horizontal sheen. */}
       <Box
         mt="8px"
-        h="4px"
+        h="6px"
+        borderRadius="2px"
         css={{
-          backgroundImage:
-            "radial-gradient(circle, #2A3F66 1.7px, transparent 2.1px)",
-          backgroundSize: "11px 4px",
-          backgroundRepeat: "repeat-x",
-          backgroundPosition: "left center",
+          backgroundImage: [
+            "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.28) 14%, rgba(255,255,255,0) 30%)",
+            "linear-gradient(180deg, #EAF7FF 0%, #9FD8F5 24%, #4E92C7 56%, #234E7A 100%)",
+          ].join(", "),
+          boxShadow:
+            "inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(6,20,40,0.7), 0 1px 2px rgba(4,12,28,0.5)",
         }}
       />
     </Box>
@@ -244,13 +264,11 @@ export default function RewindEra80s({
         {/* TITLE */}
         <Heading
           as="h1"
-          color={RETRO.blue}
           textTransform="uppercase"
           fontWeight="400"
           fontSize={{ base: "42px", md: "64px" }}
-          lineHeight="0.9"
-          letterSpacing="1px"
-          css={{ fontFamily: VT }}
+          lineHeight="0.95"
+          css={TITLE_STRIPES}
         >
           {ep.title}
         </Heading>
@@ -409,9 +427,15 @@ export default function RewindEra80s({
           </Box>
 
           <Box
-            border="1px dashed"
-            borderColor={RETRO.blue}
             p={{ base: 4, md: 5 }}
+            css={{
+              // Metallic 80s chrome frame (matches the section dividers).
+              border: "3px solid transparent",
+              borderImage:
+                "linear-gradient(180deg, #EAF7FF 0%, #9FD8F5 24%, #4E92C7 56%, #234E7A 100%) 1",
+              boxShadow:
+                "inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 6px rgba(4,12,28,0.4)",
+            }}
           >
             <Text
               textAlign="center"
