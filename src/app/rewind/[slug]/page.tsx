@@ -13,6 +13,7 @@ import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
 import RewindScrubber from "@/components/rewind/RewindScrubber";
 import RewindEra80s from "@/components/rewind/RewindEra80s";
+import RewindHeader from "@/components/rewind/RewindHeader";
 import {
   eraForYear,
   yearsAgo,
@@ -211,7 +212,18 @@ export default async function RewindEpisodePage({
       <Box bg="nexzy.navy" minH="100vh">
         <Navigation />
         <Box pt={{ base: 20, md: 24 }} pb={16} px={{ base: 3, md: 6 }}>
-          <RewindEra80s ep={ep} stops={stops} />
+          <RewindHeader
+            dateLabel={
+              ep.event
+                ? `${monthName(ep.event.month).toUpperCase()} ${ep.event.day}, ${year ?? ""}`
+                : ""
+            }
+            slug={slug}
+            stops={stops}
+          />
+          <Box mt={{ base: 6, md: 8 }}>
+            <RewindEra80s ep={ep} stops={stops} />
+          </Box>
         </Box>
         <Footer />
         <ViewPing slug={slug} />

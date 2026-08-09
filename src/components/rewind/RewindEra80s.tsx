@@ -1,16 +1,11 @@
 import type { ReactNode } from "react";
 import { Box, Flex, Heading, Image, Text } from "@chakra-ui/react";
-import { Press_Start_2P, VT323, Courier_Prime } from "next/font/google";
+import { VT323, Courier_Prime } from "next/font/google";
 import type { RewindEpisode } from "@/lib/blog/api";
 import type { RewindStop } from "@/components/rewind/RewindScrubber";
 import RewindVault from "@/components/rewind/RewindVault";
 import { monthName } from "@/lib/rewind/era";
 
-const pixel = Press_Start_2P({
-  weight: "400",
-  subsets: ["latin"],
-  display: "swap",
-});
 const vt = VT323({ weight: "400", subsets: ["latin"], display: "swap" });
 const courier = Courier_Prime({
   weight: ["400", "700"],
@@ -54,7 +49,6 @@ const REGION: Record<string, string> = {
 // migration). Publisher/Developer/Players/Rating aren't in the data yet.
 const STUB = "—";
 const STUB_PLAYERS = "1";
-const STUB_RATING = 4; // out of 5
 const STUB_FEATURES = [
   "A landmark title of its generation",
   "Simple to pick up, tough to put down",
@@ -212,6 +206,8 @@ export default function RewindEra80s({
     ? aboutParas
     : [ep.excerpt || ""].filter(Boolean);
 
+  // "Nexzy Says!" is a historical note (not a review) — the article's hook, or a
+  // short line from the body, or a neutral fallback.
   const verdict =
     ep.excerpt ||
     aboutParas
@@ -219,7 +215,7 @@ export default function RewindEra80s({
       .split(/(?<=[.!?])\s+/)
       .map((s) => s.trim())
       .find((s) => s.length >= 24 && s.length <= 110) ||
-    "A must-play from the era.";
+    "A small piece of gaming history.";
 
   return (
     <Box
@@ -235,32 +231,9 @@ export default function RewindEra80s({
       css={PAPER_BG}
     >
       <Box px={{ base: 5, md: 8 }} py={{ base: 5, md: 7 }}>
-        {/* MASTHEAD (no menu bar) */}
-        <Flex align="baseline" justify="space-between" flexWrap="wrap" gap={2}>
-          <Heading
-            className={pixel.className}
-            color={RETRO.red}
-            fontSize={{ base: "30px", md: "44px" }}
-            css={{ letterSpacing: "-1px", textShadow: "2px 2px 0 #16438F" }}
-          >
-            NEXZY
-          </Heading>
-          <Text
-            color={RETRO.red}
-            fontWeight="700"
-            textTransform="uppercase"
-            fontSize={{ base: "12px", md: "15px" }}
-            css={{ fontFamily: MONO }}
-          >
-            The #1 Source for Video Game Info!
-          </Text>
-        </Flex>
-        <Box mt="12px" borderTop="3px double" borderColor={RETRO.blue} />
-
         {/* TITLE */}
         <Heading
           as="h1"
-          mt={{ base: 5, md: 7 }}
           color={RETRO.blue}
           textTransform="uppercase"
           fontWeight="400"
@@ -446,20 +419,6 @@ export default function RewindEra80s({
               css={{ fontFamily: MONO }}
             >
               {verdict}
-            </Text>
-            <Text
-              mt="12px"
-              textAlign="center"
-              fontWeight="700"
-              textTransform="uppercase"
-              fontSize="16px"
-              color={RETRO.red}
-              css={{ fontFamily: MONO }}
-            >
-              Rating: {"★".repeat(STUB_RATING)}
-              <Text as="span" color="rgba(182,64,53,.35)">
-                {"★".repeat(5 - STUB_RATING)}
-              </Text>
             </Text>
           </Box>
         </Box>
