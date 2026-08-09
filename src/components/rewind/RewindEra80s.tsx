@@ -400,7 +400,7 @@ export default function RewindEra80s({
               gap={{ base: 3, md: 4 }}
             >
               {gallery.map((src) => (
-                <Photo key={src} src={src} ratio="1.35" />
+                <Photo key={src} src={src} ratio="1.7" />
               ))}
             </Box>
           </Box>
