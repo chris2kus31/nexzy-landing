@@ -7,25 +7,31 @@ import RewindVault from "@/components/rewind/RewindVault";
 import { monthName } from "@/lib/rewind/era";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const DISPLAY = anton.style.fontFamily; // title + condensed section bars
-// Clean 90s-magazine editorial body (not typewriter/terminal).
+const DISPLAY = anton.style.fontFamily; // chrome title
 const SANS =
   'Arial, "Helvetica Neue", "Liberation Sans", Helvetica, sans-serif';
 
-const NAVY = "#13233F";
 const BLUE = "#4EA1FF";
-const GOLD = "#F5B531";
+const GOLD = "#F5C518";
 const TEXT = "#E3E7EF";
-const BORDER = "#2A4F7A";
+const EDGE = "#2E5C9E";
 
-// 90s-only paper texture (the 80s skin keeps paper-80s-navy).
-const PAPER_BG = {
-  backgroundColor: NAVY,
-  backgroundImage: "url(/rewind/paper-90s-navy.png)",
+// 2000s: the paper texture, tiled uniformly (no gradient/overlay). Lighting was
+// flattened so tiling reads uniform top-to-bottom with no visible bands.
+const PAGE_BG = {
+  backgroundColor: "#0A1226",
+  backgroundImage: "url(/rewind/paper-00s-navy.png)",
   backgroundRepeat: "repeat",
-  backgroundSize: "512px 512px",
+  backgroundSize: "1024px 683px",
 };
-const PHOTO_FILTER = "saturate(.95) contrast(1.02)";
+const PHOTO_FILTER = "saturate(1) contrast(1.02)";
+
+// HUD corner cut (top-left + bottom-right) for panels/frames.
+const CUT =
+  "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)";
+// Bar cut (angled bottom-right).
+const BARCUT = "polygon(0 0, 100% 0, 100% 58%, calc(100% - 16px) 100%, 0 100%)";
+const PANEL_BG = "linear-gradient(160deg, #12294a 0%, #0A1626 100%)";
 
 const STUB = "—";
 const STUB_PLAYERS = "1";
@@ -34,7 +40,6 @@ const STUB_FEATURES = [
   "Simple to pick up, tough to master",
   "A piece of gaming history worth revisiting",
 ];
-
 const REGION: Record<string, string> = {
   NA: "North America",
   US: "USA",
@@ -59,84 +64,71 @@ function youTubeId(url?: string | null): string | null {
   return m ? m[1] : null;
 }
 
-// 90s printed-magazine banner bars.
-const BAR_BLUE =
-  "linear-gradient(180deg, #4EA1FF 0%, #2876D2 50%, #124B99 100%)";
-const BAR_GOLD = "linear-gradient(180deg, #FFD35A, #E0A21E)";
-// Blue bar: light-blue top highlight + dark navy bottom shadow + slight bevel.
-const BEVEL_BLUE =
-  "inset 0 1px 0 rgba(150,200,255,.7), inset 0 -2px 0 rgba(6,20,45,.55), 0 1px 2px rgba(0,0,0,.35)";
-const BEVEL_GOLD =
-  "inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.30)";
-
-/** Section heading: a filled gradient banner (very 90s game magazine). */
-function SectionHead({ children }: { children: ReactNode }) {
+/** Glossy blue HUD header bar with an angled corner. */
+function BarHead({ children }: { children: ReactNode }) {
   return (
-    <Flex
-      align="stretch"
+    <Box
       mb="14px"
-      overflow="hidden"
-      css={{ boxShadow: BEVEL_BLUE }}
+      css={{
+        clipPath: BARCUT,
+        background: "linear-gradient(180deg, #2E6FD6 0%, #12326A 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,.25)",
+      }}
     >
-      <Box w="7px" bg={GOLD} />
       <Text
-        flex="1"
-        px="12px"
-        py="6px"
+        px={{ base: 3, md: 4 }}
+        py="7px"
         color="#fff"
+        fontWeight="700"
         textTransform="uppercase"
-        letterSpacing="1px"
-        fontSize={{ base: "17px", md: "19px" }}
-        css={{
-          fontFamily: DISPLAY,
-          background: BAR_BLUE,
-          textShadow: "1px 1px 0 rgba(0,0,0,.4)",
-        }}
+        letterSpacing="1.5px"
+        fontSize={{ base: "14px", md: "16px" }}
+        css={{ fontFamily: SANS, textShadow: "0 1px 2px rgba(0,0,0,.5)" }}
       >
         {children}
       </Text>
-    </Flex>
+    </Box>
   );
 }
 
-/** A frame with gold L-shaped corner brackets (SNES-mag style). */
-function CornerFrame({
+/** A dark glossy panel with a thin blue edge + HUD corner cut. */
+function Panel({
   children,
-  ratio,
+  padded = true,
 }: {
-  children?: ReactNode;
-  ratio?: string;
+  children: ReactNode;
+  padded?: boolean;
 }) {
-  const corner = (
-    pos: Record<string, string>,
-    edges: Record<string, string>,
-  ) => <Box position="absolute" w="16px" h="16px" {...pos} {...edges} />;
   return (
-    <Box position="relative">
+    <Box css={{ clipPath: CUT }} bg={EDGE} p="1px" h="100%">
       <Box
-        border={`1px solid ${BORDER}`}
-        bg="#0B1526"
-        overflow="hidden"
-        css={ratio ? { aspectRatio: ratio } : undefined}
+        css={{ clipPath: CUT, background: PANEL_BG }}
+        p={padded ? { base: 4, md: 5 } : "0"}
+        h="100%"
       >
         {children}
       </Box>
-      {corner(
-        { top: "-2px", left: "-2px" },
-        { borderTop: `3px solid ${GOLD}`, borderLeft: `3px solid ${GOLD}` },
-      )}
-      {corner(
-        { top: "-2px", right: "-2px" },
-        { borderTop: `3px solid ${GOLD}`, borderRight: `3px solid ${GOLD}` },
-      )}
-      {corner(
-        { bottom: "-2px", left: "-2px" },
-        { borderBottom: `3px solid ${GOLD}`, borderLeft: `3px solid ${GOLD}` },
-      )}
-      {corner(
-        { bottom: "-2px", right: "-2px" },
-        { borderBottom: `3px solid ${GOLD}`, borderRight: `3px solid ${GOLD}` },
-      )}
+    </Box>
+  );
+}
+
+/** Image frame — blue edge + HUD corner cut. */
+function TechFrame({
+  children,
+  ratio,
+}: {
+  children: ReactNode;
+  ratio: string;
+}) {
+  return (
+    <Box css={{ clipPath: CUT }} bg={EDGE} p="2px">
+      <Box
+        css={{ clipPath: CUT, aspectRatio: ratio }}
+        bg="#0B1526"
+        overflow="hidden"
+      >
+        {children}
+      </Box>
     </Box>
   );
 }
@@ -144,20 +136,22 @@ function CornerFrame({
 function InfoRow({
   label,
   value,
+  gold,
   last,
 }: {
   label: string;
   value: ReactNode;
+  gold?: boolean;
   last?: boolean;
 }) {
   return (
     <Box
       display="grid"
-      gridTemplateColumns={{ base: "110px 1fr", md: "140px 1fr" }}
+      gridTemplateColumns={{ base: "120px 1fr", md: "140px 1fr" }}
       gap="10px"
-      py="9px"
+      py="10px"
       borderBottom={last ? "none" : "1px solid"}
-      borderColor="rgba(78,161,255,.2)"
+      borderColor="rgba(78,161,255,.16)"
       css={{ fontFamily: SANS }}
       fontSize={{ base: "14px", md: "15px" }}
       lineHeight="1.35"
@@ -170,12 +164,14 @@ function InfoRow({
       >
         {label}:
       </Text>
-      <Text color={TEXT}>{value}</Text>
+      <Text color={gold ? GOLD : TEXT} fontWeight={gold ? "700" : "400"}>
+        {value}
+      </Text>
     </Box>
   );
 }
 
-export default function RewindEra90s({
+export default function RewindEra00s({
   ep,
 }: {
   ep: RewindEpisode;
@@ -241,55 +237,58 @@ export default function RewindEra90s({
       mx="auto"
       my={{ base: 4, md: 8 }}
       color={TEXT}
-      border={`1px solid ${BORDER}`}
-      boxShadow="0 14px 40px rgba(0,0,0,.45)"
+      border="1px solid rgba(78,161,255,.25)"
+      boxShadow="0 16px 44px rgba(0,0,0,.5)"
       overflow="hidden"
       position="relative"
-      css={PAPER_BG}
+      css={PAGE_BG}
     >
       <Box px={{ base: 5, md: 8 }} py={{ base: 5, md: 7 }}>
-        {/* TITLE */}
-        <Heading
-          as="h1"
-          color="#fff"
-          textTransform="uppercase"
-          fontSize={{ base: "42px", md: "64px" }}
-          lineHeight="0.95"
-          letterSpacing="0.5px"
-          css={{
-            fontFamily: DISPLAY,
-            fontStyle: "italic",
-            textShadow: "3px 3px 0 #0B1526, 5px 5px 0 rgba(78,161,255,.35)",
-          }}
-        >
-          {ep.title}
-        </Heading>
-        <Flex align="center" gap={3} mt="10px">
-          {/* gold platform "sticker" */}
-          <Box
-            bg={GOLD}
-            color="#10233F"
-            px="12px"
-            py="4px"
-            fontWeight="700"
-            textTransform="uppercase"
-            letterSpacing="0.5px"
-            fontSize={{ base: "13px", md: "15px" }}
-            css={{
-              fontFamily: SANS,
-              boxShadow: "2px 2px 0 rgba(0,0,0,.4)",
-            }}
-          >
-            {system}
+        {/* TITLE — chrome/metallic */}
+        <Flex justify="space-between" align="flex-start" gap={4}>
+          <Box>
+            <Heading
+              as="h1"
+              textTransform="uppercase"
+              fontSize={{ base: "40px", md: "58px" }}
+              lineHeight="0.95"
+              letterSpacing="0.5px"
+              css={{
+                fontFamily: DISPLAY,
+                fontStyle: "italic",
+                backgroundImage:
+                  "linear-gradient(180deg,#ffffff 0%,#d6deea 42%,#8492aa 60%,#c3cddc 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                filter: "drop-shadow(0 2px 2px rgba(0,0,0,.55))",
+              }}
+            >
+              {ep.title}
+            </Heading>
+            <Text
+              mt="6px"
+              color={GOLD}
+              textTransform="uppercase"
+              fontWeight="700"
+              letterSpacing="0.5px"
+              fontSize={{ base: "14px", md: "16px" }}
+              css={{ fontFamily: SANS }}
+            >
+              ({system})
+            </Text>
           </Box>
-          <Box
-            flex="1"
-            h="3px"
-            css={{
-              background:
-                "linear-gradient(to right, rgba(245,181,49,.9), rgba(245,181,49,0))",
-            }}
-          />
+          {/* tech deco */}
+          <Flex gap="4px" mt="10px" display={{ base: "none", md: "flex" }}>
+            {[10, 16, 22, 14, 20].map((h, i) => (
+              <Box
+                key={i}
+                w="7px"
+                h={`${h}px`}
+                bg={i % 2 ? "rgba(78,161,255,.5)" : "rgba(78,161,255,.9)"}
+              />
+            ))}
+          </Flex>
         </Flex>
 
         {/* BOX ART + GAME INFORMATION */}
@@ -298,10 +297,10 @@ export default function RewindEra90s({
           gridTemplateColumns={{ base: "1fr", md: "300px 1fr" }}
           gap={{ base: 6, md: 7 }}
           mt={{ base: 6, md: 7 }}
-          alignItems="start"
+          alignItems="stretch"
         >
           {ep.heroImageUrl && (
-            <CornerFrame ratio="0.76">
+            <TechFrame ratio="0.72">
               <Image
                 src={ep.heroImageUrl}
                 alt={ep.imageAlt || ep.title}
@@ -310,44 +309,19 @@ export default function RewindEra90s({
                 objectFit="contain"
                 css={{ filter: PHOTO_FILTER }}
               />
-            </CornerFrame>
+            </TechFrame>
           )}
-          <Box
-            border={`1px solid ${BORDER}`}
-            css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}
-          >
-            <Flex
-              align="stretch"
-              overflow="hidden"
-              css={{ boxShadow: BEVEL_BLUE }}
-            >
-              <Box w="7px" bg={GOLD} />
-              <Text
-                flex="1"
-                px={{ base: 3, md: 4 }}
-                py="7px"
-                color="#fff"
-                textTransform="uppercase"
-                letterSpacing="1px"
-                fontSize={{ base: "16px", md: "18px" }}
-                css={{
-                  fontFamily: DISPLAY,
-                  background: BAR_BLUE,
-                  textShadow: "1px 1px 0 rgba(0,0,0,.4)",
-                }}
-              >
-                Game Information
-              </Text>
-            </Flex>
-            <Box px={{ base: 3, md: 4 }} py="6px">
+          <Panel padded={false}>
+            <BarHead>Game Information</BarHead>
+            <Box px={{ base: 4, md: 5 }} pb={{ base: 4, md: 5 }} mt="-6px">
               <InfoRow label="Publisher" value={publisher} />
               <InfoRow label="Developer" value={developer} />
               <InfoRow label="Genre" value={genre} />
               <InfoRow label="Players" value={players} />
-              <InfoRow label="Release Date" value={releaseDate} />
+              <InfoRow label="Release Date" value={releaseDate} gold />
               <InfoRow label="System" value={system} last />
             </Box>
-          </Box>
+          </Panel>
         </Box>
 
         {/* GAME OVERVIEW + SCREENSHOT */}
@@ -359,9 +333,9 @@ export default function RewindEra90s({
           alignItems="start"
         >
           <Box>
-            <SectionHead>Game Overview</SectionHead>
+            <BarHead>Game Overview</BarHead>
             <Box
-              maxH={{ base: "none", md: "300px" }}
+              maxH={{ base: "none", md: "320px" }}
               overflowY="auto"
               pr="10px"
               css={{
@@ -382,7 +356,6 @@ export default function RewindEra90s({
                   mb="12px"
                   fontSize={{ base: "16px", md: "17px" }}
                   lineHeight="1.6"
-                  letterSpacing="0"
                   color={TEXT}
                   css={{ fontFamily: SANS }}
                 >
@@ -392,69 +365,62 @@ export default function RewindEra90s({
             </Box>
           </Box>
           {aboutImg && (
-            <CornerFrame ratio="1.14">
+            <TechFrame ratio="1.5">
               <Image
                 src={aboutImg}
                 alt=""
                 w="100%"
                 h="100%"
-                objectFit="contain"
-                css={{ imageRendering: "pixelated", filter: PHOTO_FILTER }}
+                objectFit="cover"
+                css={{ filter: PHOTO_FILTER }}
               />
-            </CornerFrame>
+            </TechFrame>
           )}
         </Box>
 
         {/* SCREENSHOTS */}
         {gallery.length > 0 && (
           <Box mt={{ base: 7, md: 9 }}>
-            <SectionHead>Screenshots</SectionHead>
+            <BarHead>Screenshots</BarHead>
             <Box
               display="grid"
               gridTemplateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }}
               gap={{ base: 3, md: 4 }}
             >
               {gallery.map((src) => (
-                <CornerFrame key={src} ratio="1.33">
+                <TechFrame key={src} ratio="1.6">
                   <Image
                     src={src}
                     alt=""
                     w="100%"
                     h="100%"
-                    objectFit="contain"
-                    css={{ imageRendering: "pixelated", filter: PHOTO_FILTER }}
+                    objectFit="cover"
+                    css={{ filter: PHOTO_FILTER }}
                   />
-                </CornerFrame>
+                </TechFrame>
               ))}
             </Box>
           </Box>
         )}
 
-        {/* KEY FEATURES + NEXZY SAYS (no review score) */}
+        {/* KEY FEATURES + NEXZY SAYS (no score) */}
         <Box
           display="grid"
           gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }}
-          gap={{ base: 6, md: 8 }}
+          gap={{ base: 6, md: 7 }}
           mt={{ base: 7, md: 9 }}
-          alignItems="start"
+          alignItems="stretch"
         >
-          <Box>
-            <SectionHead>Key Features</SectionHead>
+          <Panel>
+            <BarHead>Key Features</BarHead>
             {features.map((f, i) => (
               <Flex key={i} gap={2} mb="9px" align="flex-start">
-                <Text
-                  color={GOLD}
-                  fontWeight="700"
-                  lineHeight="1.6"
-                  fontSize={{ base: "15px", md: "16px" }}
-                  css={{ fontFamily: SANS }}
-                >
-                  ▶
+                <Text color={BLUE} fontWeight="700" lineHeight="1.6">
+                  ▸
                 </Text>
                 <Text
-                  fontSize={{ base: "16px", md: "17px" }}
+                  fontSize={{ base: "15px", md: "16px" }}
                   lineHeight="1.6"
-                  letterSpacing="0"
                   color={TEXT}
                   css={{ fontFamily: SANS }}
                 >
@@ -462,52 +428,25 @@ export default function RewindEra90s({
                 </Text>
               </Flex>
             ))}
-          </Box>
+          </Panel>
 
-          <Box
-            border={`1px solid ${BORDER}`}
-            css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}
-          >
-            <Flex
-              align="stretch"
-              overflow="hidden"
-              css={{ boxShadow: BEVEL_GOLD }}
-            >
-              <Box w="7px" bg={BLUE} />
-              <Text
-                flex="1"
-                px={{ base: 3, md: 4 }}
-                py="7px"
-                color="#10233F"
-                textTransform="uppercase"
-                letterSpacing="1px"
-                fontSize={{ base: "16px", md: "18px" }}
-                css={{
-                  fontFamily: DISPLAY,
-                  background: BAR_GOLD,
-                  textShadow: "1px 1px 0 rgba(255,255,255,.25)",
-                }}
-              >
-                Nexzy Says!
-              </Text>
-            </Flex>
+          <Panel>
+            <BarHead>Nexzy Says!</BarHead>
             <Text
-              p={{ base: 4, md: 5 }}
               fontSize={{ base: "16px", md: "17px" }}
               lineHeight="1.6"
-              letterSpacing="0"
               color={TEXT}
               css={{ fontFamily: SANS }}
             >
               {note}
             </Text>
-          </Box>
+          </Panel>
         </Box>
 
         {/* FROM THE VAULT — era TV, only when there's a video */}
         {vids.length > 0 && (
           <Box mt={{ base: 7, md: 9 }}>
-            <SectionHead>From the Vault</SectionHead>
+            <BarHead>From the Vault</BarHead>
             <Flex justify="center">
               <RewindVault vids={vids} title={ep.title} year={year} compact />
             </Flex>

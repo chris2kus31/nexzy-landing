@@ -14,6 +14,7 @@ import RewindVault from "@/components/rewind/RewindVault";
 import RewindScrubber from "@/components/rewind/RewindScrubber";
 import RewindEra80s from "@/components/rewind/RewindEra80s";
 import RewindEra90s from "@/components/rewind/RewindEra90s";
+import RewindEra00s from "@/components/rewind/RewindEra00s";
 import RewindHeader from "@/components/rewind/RewindHeader";
 import {
   eraForYear,
@@ -206,10 +207,10 @@ export default async function RewindEpisodePage({
     ],
   };
 
-  // Era skin by the game's year: '80s (Solitaire-style) + '90s (SNES-style) are
-  // built; '00s uses the current layout until its skin lands.
+  // Era skin by the game's year: '80s (Solitaire), '90s (SNES-mag), '00s
+  // (console HUD) are all built.
   const web = webEraForYear(year);
-  if (web === "e80" || web === "e90") {
+  if (web === "e80" || web === "e90" || web === "e00") {
     return (
       <Box bg="nexzy.navy" minH="100vh">
         <Navigation />
@@ -226,8 +227,10 @@ export default async function RewindEpisodePage({
           <Box mt={{ base: 6, md: 8 }}>
             {web === "e80" ? (
               <RewindEra80s ep={ep} stops={stops} />
-            ) : (
+            ) : web === "e90" ? (
               <RewindEra90s ep={ep} stops={stops} />
+            ) : (
+              <RewindEra00s ep={ep} stops={stops} />
             )}
           </Box>
         </Box>
