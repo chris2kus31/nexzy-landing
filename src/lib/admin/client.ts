@@ -16,6 +16,16 @@ export interface ArticleMedia {
   order?: number;
 }
 
+/** Rewind episode spec-sheet facts, editable in the review editor (rewind only). */
+export interface RewindFacts {
+  publisher?: string | null;
+  developer?: string | null;
+  players?: string | null;
+  genre?: string | null;
+  features?: string[] | null;
+  historicalNote?: string | null;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -32,6 +42,7 @@ export interface BlogPost {
   youtubeUrl: string | null;
   media?: ArticleMedia[] | null;
   screenshots?: string[] | null;
+  rewindFacts?: RewindFacts | null;
   beat: string;
   type?: string;
   parentId?: string | null;

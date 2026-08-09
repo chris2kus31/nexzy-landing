@@ -41,6 +41,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     setMedia,
     screenshots,
     saveScreenshots,
+    facts,
+    setFacts,
     set,
     run,
     busy,
@@ -541,6 +543,89 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
           <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
             Shown on the Rewind episode page (up to 12). Saved on add/remove. If
             empty, the linked game&rsquo;s screenshots are used automatically.
+          </Text>
+        </Box>
+      )}
+
+      {post.type === "rewind" && (
+        <Box>
+          <Text {...labelProps}>Game facts (Rewind spec sheet)</Text>
+          <HStack gap={2} mb={2}>
+            <Box flex={1}>
+              <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+                Publisher
+              </Text>
+              <Input
+                value={facts.publisher ?? ""}
+                onChange={(e) =>
+                  setFacts({ ...facts, publisher: e.target.value })
+                }
+                {...inputProps}
+              />
+            </Box>
+            <Box flex={1}>
+              <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+                Developer
+              </Text>
+              <Input
+                value={facts.developer ?? ""}
+                onChange={(e) =>
+                  setFacts({ ...facts, developer: e.target.value })
+                }
+                {...inputProps}
+              />
+            </Box>
+          </HStack>
+          <HStack gap={2} mb={2}>
+            <Box flex={1}>
+              <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+                Players
+              </Text>
+              <Input
+                value={facts.players ?? ""}
+                onChange={(e) =>
+                  setFacts({ ...facts, players: e.target.value })
+                }
+                {...inputProps}
+              />
+            </Box>
+            <Box flex={1}>
+              <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+                Genre
+              </Text>
+              <Input
+                value={facts.genre ?? ""}
+                onChange={(e) => setFacts({ ...facts, genre: e.target.value })}
+                {...inputProps}
+              />
+            </Box>
+          </HStack>
+          <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+            Features (one per line)
+          </Text>
+          <Textarea
+            value={(facts.features ?? []).join("\n")}
+            onChange={(e) =>
+              setFacts({ ...facts, features: e.target.value.split("\n") })
+            }
+            rows={4}
+            mb={2}
+            {...inputProps}
+          />
+          <Text color="nexzy.gray.100" fontSize="10px" mb={1}>
+            &ldquo;Nexzy Says!&rdquo; historical note
+          </Text>
+          <Textarea
+            value={facts.historicalNote ?? ""}
+            onChange={(e) =>
+              setFacts({ ...facts, historicalNote: e.target.value })
+            }
+            rows={2}
+            {...inputProps}
+          />
+          <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+            The writer fills these; edit and click Save to apply. Blank fields
+            fall back to the linked game or a placeholder.
           </Text>
         </Box>
       )}

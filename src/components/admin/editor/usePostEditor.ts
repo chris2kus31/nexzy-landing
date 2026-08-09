@@ -9,6 +9,7 @@ import {
   getWriterNames,
   type BlogPost,
   type ArticleMedia,
+  type RewindFacts,
 } from "@/lib/admin/client";
 import { youtubeId } from "@/lib/blog/youtube";
 import { BYLINES, type FormState, toForm } from "./shared";
@@ -47,6 +48,7 @@ export function usePostEditor(id: string) {
   const [form, setForm] = useState<FormState | null>(null);
   const [media, setMedia] = useState<ArticleMedia[]>([]);
   const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [facts, setFacts] = useState<RewindFacts>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
@@ -68,6 +70,7 @@ export function usePostEditor(id: string) {
         setForm(toForm(p));
         setMedia(mediaFromPost(p));
         setScreenshots(p.screenshots ?? []);
+        setFacts(p.rewindFacts ?? {});
         setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
@@ -90,6 +93,7 @@ export function usePostEditor(id: string) {
       setForm(toForm(updated));
       setMedia(mediaFromPost(updated));
       setScreenshots(updated.screenshots ?? []);
+      setFacts(updated.rewindFacts ?? {});
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
@@ -116,6 +120,12 @@ export function usePostEditor(id: string) {
     reader.readAsDataURL(file);
   };
 
+  // Empty/whitespace → null, so a cleared field falls back to a stub on the page.
+  const nz = (s?: string | null) => {
+    const t = (s ?? "").trim();
+    return t ? t : null;
+  };
+
   const buildUpdate = (bodyMarkdown: string, shotsOverride?: string[]) => ({
     title: form!.title,
     seoTitle: form!.seoTitle,
@@ -128,6 +138,23 @@ export function usePostEditor(id: string) {
     // the starred item. Send order by current position.
     media: media.map((m, i) => ({ ...m, order: i })),
     screenshots: shotsOverride ?? screenshots,
+    // Rewind-only: the spec-sheet facts. News/guide posts never include this, so
+    // the newsroom save path is untouched.
+    ...(post?.type === "rewind"
+      ? {
+          rewindFacts: {
+            publisher: nz(facts.publisher),
+            developer: nz(facts.developer),
+            players: nz(facts.players),
+            genre: nz(facts.genre),
+            features: (facts.features ?? [])
+              .map((f) => f.trim())
+              .filter(Boolean)
+              .slice(0, 8),
+            historicalNote: nz(facts.historicalNote),
+          },
+        }
+      : {}),
     tags: form!.tags
       .split(",")
       .map((t) => t.trim())
@@ -192,6 +219,8 @@ export function usePostEditor(id: string) {
     screenshots,
     setScreenshots,
     saveScreenshots,
+    facts,
+    setFacts,
     error,
     busy,
     notice,
