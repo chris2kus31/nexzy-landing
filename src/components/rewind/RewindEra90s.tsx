@@ -468,19 +468,38 @@ export default function RewindEra90s({
                 {tagline}
               </Text>
             )}
-            {overviewText.map((p, i) => (
-              <Text
-                key={i}
-                mb="10px"
-                fontSize={{ base: "13px", md: "13.5px" }}
-                lineHeight="1.55"
-                textAlign="justify"
-                color="#D7DEEC"
-                css={{ fontFamily: SANS, ...(i === 0 ? dropCap : {}) }}
-              >
-                {p}
-              </Text>
-            ))}
+            {/* Bigger type, fixed height — overflow scrolls instead of growing. */}
+            <Box
+              maxH={{ base: "none", md: "440px" }}
+              overflowY={{ base: "visible", md: "auto" }}
+              pr="10px"
+              css={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "rgba(78,161,255,.4) rgba(255,255,255,.06)",
+                "&::-webkit-scrollbar": { width: "8px" },
+                "&::-webkit-scrollbar-track": {
+                  background: "rgba(255,255,255,.06)",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "rgba(78,161,255,.4)",
+                  borderRadius: "4px",
+                },
+              }}
+            >
+              {overviewText.map((p, i) => (
+                <Text
+                  key={i}
+                  mb="12px"
+                  fontSize={{ base: "15px", md: "16px" }}
+                  lineHeight="1.6"
+                  textAlign="justify"
+                  color="#D7DEEC"
+                  css={{ fontFamily: SANS, ...(i === 0 ? dropCap : {}) }}
+                >
+                  {p}
+                </Text>
+              ))}
+            </Box>
             {screens[0] && (
               <Box mt="6px">
                 <Shot src={screens[0]} />
