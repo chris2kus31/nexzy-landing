@@ -148,40 +148,6 @@ function CornerFrame({
   );
 }
 
-/** A spiky gold burst sticker (GamePro/EGM "HOT!" cover flash). */
-function Starburst({ label }: { label: string }) {
-  const spike = (rot: number) => (
-    <Box
-      position="absolute"
-      inset="0"
-      bg={GOLD}
-      css={{
-        transform: `rotate(${rot}deg)`,
-        boxShadow: "0 2px 4px rgba(0,0,0,.45)",
-      }}
-    />
-  );
-  return (
-    <Box position="relative" w="64px" h="64px">
-      {spike(0)}
-      {spike(30)}
-      {spike(60)}
-      <Flex position="absolute" inset="0" align="center" justify="center">
-        <Text
-          fontStyle="italic"
-          color="#10233F"
-          fontSize="13px"
-          lineHeight="0.9"
-          textAlign="center"
-          css={{ fontFamily: DISPLAY }}
-        >
-          {label}
-        </Text>
-      </Flex>
-    </Box>
-  );
-}
-
 function InfoRow({
   label,
   value,
@@ -333,24 +299,14 @@ export default function RewindEra90s({
             >
               {coverMonth ? `${coverMonth} ${year} · ` : ""}ISSUE №{issueNo}
             </Text>
-            <Flex direction="column" align="center" gap="2px">
-              <Box
-                w="70px"
-                h="20px"
-                css={{
-                  background:
-                    "repeating-linear-gradient(90deg,#10233F 0 2px,#e9eef6 2px 3px,#10233F 3px 5px,#e9eef6 5px 6px,#10233F 6px 7px,#e9eef6 7px 10px)",
-                }}
-              />
-              <Text
-                color={TEXT}
-                fontWeight="700"
-                fontSize="10px"
-                css={{ fontFamily: SANS }}
-              >
-                $4.99
-              </Text>
-            </Flex>
+            <Box
+              w="70px"
+              h="22px"
+              css={{
+                background:
+                  "repeating-linear-gradient(90deg,#10233F 0 2px,#e9eef6 2px 3px,#10233F 3px 5px,#e9eef6 5px 6px,#10233F 6px 7px,#e9eef6 7px 10px)",
+              }}
+            />
           </Flex>
         </Flex>
 
@@ -407,27 +363,16 @@ export default function RewindEra90s({
           alignItems="start"
         >
           {ep.heroImageUrl && (
-            <Box position="relative">
-              <CornerFrame>
-                <Image
-                  src={ep.heroImageUrl}
-                  alt={ep.imageAlt || ep.title}
-                  display="block"
-                  w="100%"
-                  h="auto"
-                  css={{ filter: PHOTO_FILTER }}
-                />
-              </CornerFrame>
-              <Box
-                position="absolute"
-                top="-16px"
-                right="-14px"
-                zIndex={2}
-                css={{ transform: "rotate(12deg)" }}
-              >
-                <Starburst label="CLASSIC" />
-              </Box>
-            </Box>
+            <CornerFrame>
+              <Image
+                src={ep.heroImageUrl}
+                alt={ep.imageAlt || ep.title}
+                display="block"
+                w="100%"
+                h="auto"
+                css={{ filter: PHOTO_FILTER }}
+              />
+            </CornerFrame>
           )}
           <Box
             bg="#0E1B33"
