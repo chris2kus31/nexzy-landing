@@ -103,20 +103,26 @@ function SectionHead({ children }: { children: ReactNode }) {
 function CornerFrame({
   children,
   ratio,
+  fill,
 }: {
   children?: ReactNode;
   ratio?: string;
+  fill?: boolean;
 }) {
   const corner = (
     pos: Record<string, string>,
     edges: Record<string, string>,
   ) => <Box position="absolute" w="16px" h="16px" {...pos} {...edges} />;
+  // `fill` fills the grid row height on desktop (so the cover lines up with the
+  // Game Info block); on mobile (stacked) it falls back to the aspect ratio.
+  const fillH = fill ? { base: "auto", md: "100%" } : undefined;
   return (
-    <Box position="relative">
+    <Box position="relative" h={fillH}>
       <Box
         border={`1px solid ${BORDER}`}
         bg="#0B1526"
         overflow="hidden"
+        h={fillH}
         css={ratio ? { aspectRatio: ratio } : undefined}
       >
         {children}
@@ -301,13 +307,13 @@ export default function RewindEra90s({
           alignItems="start"
         >
           {ep.heroImageUrl && (
-            <CornerFrame ratio="0.76">
+            <CornerFrame>
               <Image
                 src={ep.heroImageUrl}
                 alt={ep.imageAlt || ep.title}
+                display="block"
                 w="100%"
-                h="100%"
-                objectFit="contain"
+                h="auto"
                 css={{ filter: PHOTO_FILTER }}
               />
             </CornerFrame>
