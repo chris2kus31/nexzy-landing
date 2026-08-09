@@ -7,7 +7,7 @@ import RewindVault from "@/components/rewind/RewindVault";
 import { monthName } from "@/lib/rewind/era";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
-const DISPLAY = anton.style.fontFamily; // title + condensed section bars
+const DISPLAY = anton.style.fontFamily; // titles, tabs, headings
 // Clean 90s-magazine editorial body (not typewriter/terminal).
 const SANS =
   'Arial, "Helvetica Neue", "Liberation Sans", Helvetica, sans-serif';
@@ -22,9 +22,10 @@ const BORDER = "#2A4F7A";
 // feathered edges) so it repeats with no visible seams or lighter/darker bands.
 const PAPER_BG = {
   backgroundColor: NAVY,
-  backgroundImage: "url(/rewind/paper-90s-seamless.jpg)",
-  backgroundRepeat: "repeat",
-  backgroundSize: "512px 512px",
+  backgroundImage:
+    "radial-gradient(rgba(255,255,255,.035) 1.1px, transparent 1.2px), url(/rewind/paper-90s-seamless.jpg)",
+  backgroundRepeat: "repeat, repeat",
+  backgroundSize: "5px 5px, 512px 512px",
 };
 const PHOTO_FILTER = "saturate(.95) contrast(1.02)";
 
@@ -60,70 +61,24 @@ function youTubeId(url?: string | null): string | null {
   return m ? m[1] : null;
 }
 
-// 90s printed-magazine banner bars.
-const BAR_BLUE =
-  "linear-gradient(180deg, #4EA1FF 0%, #2876D2 50%, #124B99 100%)";
-const BAR_GOLD = "linear-gradient(180deg, #FFD35A, #E0A21E)";
-// Blue bar: light-blue top highlight + dark navy bottom shadow + slight bevel.
-const BEVEL_BLUE =
-  "inset 0 1px 0 rgba(150,200,255,.7), inset 0 -2px 0 rgba(6,20,45,.55), 0 1px 2px rgba(0,0,0,.35)";
-const BEVEL_GOLD =
-  "inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.30)";
-
-/** Section heading: a filled gradient banner (very 90s game magazine). */
-function SectionHead({ children }: { children: ReactNode }) {
-  return (
-    <Flex
-      align="stretch"
-      mb="14px"
-      overflow="hidden"
-      css={{ boxShadow: BEVEL_BLUE }}
-    >
-      <Box w="7px" bg={GOLD} />
-      <Text
-        flex="1"
-        px="12px"
-        py="6px"
-        color="#fff"
-        textTransform="uppercase"
-        letterSpacing="1px"
-        fontSize={{ base: "17px", md: "19px" }}
-        css={{
-          fontFamily: DISPLAY,
-          background: BAR_BLUE,
-          textShadow: "1px 1px 0 rgba(0,0,0,.4)",
-        }}
-      >
-        {children}
-      </Text>
-    </Flex>
-  );
-}
-
 /** A frame with gold L-shaped corner brackets (SNES-mag style). */
 function CornerFrame({
   children,
   ratio,
-  fill,
 }: {
   children?: ReactNode;
   ratio?: string;
-  fill?: boolean;
 }) {
   const corner = (
     pos: Record<string, string>,
     edges: Record<string, string>,
   ) => <Box position="absolute" w="16px" h="16px" {...pos} {...edges} />;
-  // `fill` fills the grid row height on desktop (so the cover lines up with the
-  // Game Info block); on mobile (stacked) it falls back to the aspect ratio.
-  const fillH = fill ? { base: "auto", md: "100%" } : undefined;
   return (
-    <Box position="relative" h={fillH}>
+    <Box position="relative">
       <Box
         border={`1px solid ${BORDER}`}
         bg="#0B1526"
         overflow="hidden"
-        h={fillH}
         css={ratio ? { aspectRatio: ratio } : undefined}
       >
         {children}
@@ -148,37 +103,19 @@ function CornerFrame({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-  last,
-}: {
-  label: string;
-  value: ReactNode;
-  last?: boolean;
-}) {
+/** A screenshot in a corner frame with a small italic caption. */
+function Shot({ src, ratio = "1.6" }: { src: string; ratio?: string }) {
   return (
-    <Box
-      display="grid"
-      gridTemplateColumns={{ base: "110px 1fr", md: "140px 1fr" }}
-      gap="10px"
-      py="9px"
-      borderBottom={last ? "none" : "1px solid"}
-      borderColor="rgba(78,161,255,.2)"
-      css={{ fontFamily: SANS }}
-      fontSize={{ base: "14px", md: "15px" }}
-      lineHeight="1.35"
-    >
-      <Text
-        color={BLUE}
-        fontWeight="700"
-        textTransform="uppercase"
-        letterSpacing="0.5px"
-      >
-        {label}:
-      </Text>
-      <Text color={TEXT}>{value}</Text>
-    </Box>
+    <CornerFrame ratio={ratio}>
+      <Image
+        src={src}
+        alt=""
+        w="100%"
+        h="100%"
+        objectFit="contain"
+        css={{ imageRendering: "pixelated", filter: PHOTO_FILTER }}
+      />
+    </CornerFrame>
   );
 }
 
@@ -204,17 +141,16 @@ export default function RewindEra90s({
     ? (REGION[ep.event.region.toUpperCase()] ?? ep.event.region)
     : null;
   const releaseDate = ep.event
-    ? `${monthName(ep.event.month)} ${ep.event.day}, ${year ?? ""}${
-        region ? ` (${region})` : ""
-      }`
+    ? `${monthName(ep.event.month)} ${ep.event.day}, ${year ?? ""}`
     : STUB;
   const publisher = ep.spec?.publisher ?? STUB;
   const developer = ep.spec?.developer ?? STUB;
   const players = ep.spec?.players ?? STUB_PLAYERS;
 
   const shots = ep.spec?.screenshots ?? [];
-  const aboutImg = shots[0] ?? ep.heroImageUrl ?? null;
-  const gallery = shots.length > 1 ? shots.slice(1, 5) : [];
+  // Always 4 images: the cover (main) + up to 3 screenshots.
+  const cover = ep.heroImageUrl ?? shots[0] ?? null;
+  const screens = (ep.heroImageUrl ? shots : shots.slice(1)).slice(0, 3);
 
   const rawParas = (ep.bodyMarkdown || "")
     .split(/\n\n+/)
@@ -241,7 +177,30 @@ export default function RewindEra90s({
   const note =
     ep.spec?.historicalNote || ep.excerpt || "A small piece of gaming history.";
   const coverMonth = ep.event ? monthName(ep.event.month).toUpperCase() : "";
-  const issueNo = year ? year - 1900 : 97;
+  const tagline = ep.excerpt?.trim() || "";
+  const heroCaption = ep.imageAlt || `Scenes from ${ep.title}`;
+  const facts = features.slice(0, 3);
+  const compass: [string, ReactNode][] = [
+    ["Publisher", publisher],
+    ["Developer", developer],
+    ["Players", players],
+    ["Released", releaseDate],
+    ["Origin", region ?? STUB],
+    ["Category", genre],
+  ];
+  const dropCap = {
+    "&::first-letter": {
+      float: "left",
+      fontFamily: DISPLAY,
+      fontStyle: "italic",
+      fontSize: "50px",
+      lineHeight: "0.7",
+      paddingRight: "9px",
+      paddingTop: "2px",
+      color: BLUE,
+      textShadow: "2px 2px 0 #0B1526",
+    },
+  } as const;
 
   return (
     <Box
@@ -256,373 +215,366 @@ export default function RewindEra90s({
       position="relative"
       css={PAPER_BG}
     >
-      <Box px={{ base: 5, md: 8 }} py={{ base: 5, md: 7 }}>
-        {/* MASTHEAD KICKER — newsstand strip: wordmark · issue/date · barcode */}
+      {/* VERTICAL SPINE TAB */}
+      <Box
+        position="absolute"
+        top="0"
+        left="0"
+        zIndex={2}
+        w={{ base: "24px", md: "30px" }}
+        h={{ base: "120px", md: "152px" }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        css={{
+          background: "linear-gradient(180deg,#4EA1FF,#124B99)",
+          borderBottomRightRadius: "10px",
+          boxShadow: "0 2px 6px rgba(0,0,0,.4)",
+        }}
+      >
+        <Text
+          color="#fff"
+          fontSize={{ base: "12px", md: "14px" }}
+          css={{
+            fontFamily: DISPLAY,
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            letterSpacing: "3px",
+          }}
+        >
+          REWIND
+        </Text>
+      </Box>
+
+      <Box
+        pl={{ base: "34px", md: "48px" }}
+        pr={{ base: 4, md: 7 }}
+        py={{ base: 5, md: 7 }}
+      >
+        {/* HEADER: platform + gold flag */}
         <Flex
-          align="flex-end"
           justify="space-between"
+          align="flex-start"
           gap={3}
-          pb="10px"
-          mb={{ base: 4, md: 5 }}
-          borderBottom={`2px solid ${GOLD}`}
           flexWrap="wrap"
         >
-          <Flex align="baseline" gap="8px">
-            <Text
-              color="#fff"
-              fontStyle="italic"
-              fontSize={{ base: "20px", md: "24px" }}
-              letterSpacing="0.5px"
-              css={{ fontFamily: DISPLAY }}
-            >
-              NEXZY
-            </Text>
+          <Box>
             <Text
               color={BLUE}
-              fontWeight="700"
-              textTransform="uppercase"
-              letterSpacing="0.28em"
-              fontSize="11px"
-              css={{ fontFamily: SANS }}
+              fontSize={{ base: "22px", md: "28px" }}
+              letterSpacing="1px"
+              lineHeight="1"
+              css={{ fontFamily: DISPLAY }}
             >
-              Magazine
+              {system && system !== STUB ? system : "Rewind"}
             </Text>
-          </Flex>
-          <Flex align="center" gap={3}>
-            <Text
-              color={TEXT}
-              fontWeight="700"
-              textTransform="uppercase"
-              letterSpacing="0.1em"
-              fontSize={{ base: "11px", md: "12px" }}
-              css={{ fontFamily: SANS }}
-            >
-              {coverMonth ? `${coverMonth} ${year} · ` : ""}ISSUE №{issueNo}
-            </Text>
+            {year && (
+              <Text
+                color={GOLD}
+                fontWeight="800"
+                fontSize="11px"
+                letterSpacing="0.14em"
+                mt="3px"
+                css={{ fontFamily: SANS }}
+              >
+                {coverMonth ? `${coverMonth} ` : ""}
+                {year} · ON THIS DAY
+              </Text>
+            )}
+          </Box>
+          <Box
+            position="relative"
+            bg={GOLD}
+            color="#10233F"
+            pl="16px"
+            pr="46px"
+            py="6px"
+            fontSize={{ base: "14px", md: "16px" }}
+            css={{
+              fontFamily: DISPLAY,
+              fontStyle: "italic",
+              clipPath: "polygon(0 0,100% 0,88% 100%,0 100%)",
+            }}
+          >
+            NEXZY REWIND
             <Box
-              w="70px"
-              h="22px"
+              position="absolute"
+              right="10px"
+              top="0"
+              bottom="0"
+              w="26px"
               css={{
                 background:
-                  "repeating-linear-gradient(90deg,#10233F 0 2px,#e9eef6 2px 3px,#10233F 3px 5px,#e9eef6 5px 6px,#10233F 6px 7px,#e9eef6 7px 10px)",
+                  "repeating-linear-gradient(115deg,#10233F 0 4px,transparent 4px 9px)",
               }}
             />
-          </Flex>
+          </Box>
         </Flex>
 
         {/* TITLE */}
         <Heading
           as="h1"
           color="#fff"
-          textTransform="uppercase"
-          fontSize={{ base: "42px", md: "64px" }}
+          fontSize={{ base: "32px", md: "46px" }}
           lineHeight="0.95"
-          letterSpacing="0.5px"
+          mt={{ base: 3, md: 4 }}
           css={{
             fontFamily: DISPLAY,
             fontStyle: "italic",
-            textShadow: "3px 3px 0 #0B1526, 5px 5px 0 rgba(78,161,255,.35)",
+            textShadow: "2px 2px 0 #0B1526",
           }}
         >
           {ep.title}
         </Heading>
-        <Flex align="center" gap={3} mt="10px">
-          {/* gold platform "sticker" */}
-          <Box
-            bg={GOLD}
-            color="#10233F"
-            px="12px"
-            py="4px"
-            fontWeight="700"
-            textTransform="uppercase"
-            letterSpacing="0.5px"
-            fontSize={{ base: "13px", md: "15px" }}
-            css={{
-              fontFamily: SANS,
-              boxShadow: "2px 2px 0 rgba(0,0,0,.4)",
-            }}
-          >
-            {system}
-          </Box>
-          <Box
-            flex="1"
-            h="3px"
-            css={{
-              background:
-                "linear-gradient(to right, rgba(245,181,49,.9), rgba(245,181,49,0))",
-            }}
-          />
-        </Flex>
 
-        {/* BOX ART + GAME INFORMATION */}
+        {/* MAIN GRID: cover + compass | tagline + body + screenshots */}
         <Box
           display="grid"
-          gridTemplateColumns={{ base: "1fr", md: "300px 1fr" }}
-          gap={{ base: 6, md: 7 }}
-          mt={{ base: 6, md: 7 }}
+          gridTemplateColumns={{ base: "1fr", md: "0.85fr 1.15fr" }}
+          gap={{ base: 6, md: 6 }}
+          mt={{ base: 5, md: 6 }}
           alignItems="start"
         >
-          {ep.heroImageUrl && (
-            <CornerFrame>
-              <Image
-                src={ep.heroImageUrl}
-                alt={ep.imageAlt || ep.title}
-                display="block"
-                w="100%"
-                h="auto"
-                css={{ filter: PHOTO_FILTER }}
-              />
-            </CornerFrame>
-          )}
-          <Box
-            bg="#0E1B33"
-            border={`1px solid ${BORDER}`}
-            css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}
-          >
-            <Flex
-              align="stretch"
-              overflow="hidden"
-              css={{ boxShadow: BEVEL_BLUE }}
-            >
-              <Box w="7px" bg={GOLD} />
-              <Text
-                flex="1"
-                px={{ base: 3, md: 4 }}
-                py="7px"
-                color="#fff"
-                textTransform="uppercase"
-                letterSpacing="1px"
-                fontSize={{ base: "16px", md: "18px" }}
-                css={{
-                  fontFamily: DISPLAY,
-                  background: BAR_BLUE,
-                  textShadow: "1px 1px 0 rgba(0,0,0,.4)",
-                }}
-              >
-                Game Information
-              </Text>
-            </Flex>
-            <Box px={{ base: 3, md: 4 }} py="6px">
-              <InfoRow label="Publisher" value={publisher} />
-              <InfoRow label="Developer" value={developer} />
-              <InfoRow label="Genre" value={genre} />
-              <InfoRow label="Players" value={players} />
-              <InfoRow label="Release Date" value={releaseDate} />
-              <InfoRow label="System" value={system} last />
-            </Box>
-          </Box>
-        </Box>
-
-        {/* GAME OVERVIEW + SCREENSHOT */}
-        <Box
-          display="grid"
-          gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }}
-          gap={{ base: 6, md: 7 }}
-          mt={{ base: 7, md: 9 }}
-          alignItems="start"
-        >
+          {/* LEFT: cover + compass box */}
           <Box>
-            <SectionHead>Game Overview</SectionHead>
+            {cover && (
+              <CornerFrame>
+                <Image
+                  src={cover}
+                  alt={ep.imageAlt || ep.title}
+                  display="block"
+                  w="100%"
+                  h="auto"
+                  css={{ filter: PHOTO_FILTER }}
+                />
+              </CornerFrame>
+            )}
             <Box
-              maxH={{ base: "none", md: "300px" }}
-              overflowY="auto"
-              pr="10px"
-              css={{
-                scrollbarWidth: "thin",
-                scrollbarColor: "rgba(78,161,255,.4) rgba(255,255,255,.06)",
-                "&::-webkit-scrollbar": { width: "8px" },
-                "&::-webkit-scrollbar-track": {
-                  background: "rgba(255,255,255,.06)",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  background: "rgba(78,161,255,.4)",
-                },
-              }}
+              mt="12px"
+              border={`1px solid ${BORDER}`}
+              borderRadius="8px"
+              bg="#0E1B33"
+              p="10px 12px"
             >
-              {overviewText.map((p, i) => (
-                <Text
-                  key={i}
-                  mb="12px"
-                  fontSize={{ base: "16px", md: "17px" }}
-                  lineHeight="1.6"
-                  letterSpacing="0"
-                  color={TEXT}
-                  css={{
-                    fontFamily: SANS,
-                    ...(i === 0
-                      ? {
-                          "&::first-letter": {
-                            float: "left",
-                            fontFamily: DISPLAY,
-                            fontStyle: "italic",
-                            fontSize: "54px",
-                            lineHeight: "0.78",
-                            paddingRight: "10px",
-                            paddingTop: "4px",
-                            color: BLUE,
-                            textShadow: "2px 2px 0 rgba(0,0,0,.35)",
-                          },
-                        }
-                      : {}),
-                  }}
-                >
-                  {p}
-                </Text>
-              ))}
-            </Box>
-          </Box>
-          {aboutImg && (
-            <CornerFrame ratio="1.14">
-              <Image
-                src={aboutImg}
-                alt=""
-                w="100%"
-                h="100%"
-                objectFit="contain"
-                css={{ imageRendering: "pixelated", filter: PHOTO_FILTER }}
-              />
-            </CornerFrame>
-          )}
-        </Box>
-
-        {/* PULL-QUOTE — big italic magazine callout */}
-        <Box
-          mt={{ base: 6, md: 8 }}
-          py={{ base: 4, md: 5 }}
-          borderTop={`2px solid ${GOLD}`}
-          borderBottom={`2px solid ${GOLD}`}
-          position="relative"
-        >
-          <Text
-            textAlign="center"
-            color="#fff"
-            fontStyle="italic"
-            fontSize={{ base: "20px", md: "26px" }}
-            lineHeight="1.25"
-            px={{ base: 2, md: 8 }}
-            css={{
-              fontFamily: DISPLAY,
-              textShadow: "2px 2px 0 rgba(0,0,0,.35)",
-            }}
-          >
-            <Box as="span" color={GOLD} css={{ fontFamily: DISPLAY }}>
-              “
-            </Box>
-            {note}
-            <Box as="span" color={GOLD} css={{ fontFamily: DISPLAY }}>
-              ”
-            </Box>
-          </Text>
-        </Box>
-
-        {/* SCREENSHOTS */}
-        {gallery.length > 0 && (
-          <Box mt={{ base: 7, md: 9 }}>
-            <SectionHead>Screenshots</SectionHead>
-            <Box
-              display="grid"
-              gridTemplateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }}
-              gap={{ base: 3, md: 4 }}
-            >
-              {gallery.map((src) => (
-                <CornerFrame key={src} ratio="1.33">
-                  <Image
-                    src={src}
-                    alt=""
-                    w="100%"
-                    h="100%"
-                    objectFit="contain"
-                    css={{ imageRendering: "pixelated", filter: PHOTO_FILTER }}
-                  />
-                </CornerFrame>
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {/* KEY FEATURES + NEXZY SAYS (no review score) */}
-        <Box
-          display="grid"
-          gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }}
-          gap={{ base: 6, md: 8 }}
-          mt={{ base: 7, md: 9 }}
-          alignItems="start"
-        >
-          <Box>
-            <SectionHead>Key Features</SectionHead>
-            {features.map((f, i) => (
-              <Flex key={i} gap={2} mb="9px" align="flex-start">
-                <Text
+              <Text mb="6px" fontSize="12px" css={{ fontFamily: SANS }}>
+                <Box as="span" color={BLUE} fontWeight="800">
+                  GAME{" "}
+                </Box>
+                <Box
+                  as="span"
                   color={GOLD}
-                  fontWeight="700"
-                  lineHeight="1.6"
-                  fontSize={{ base: "15px", md: "16px" }}
+                  letterSpacing="1px"
+                  css={{ fontFamily: DISPLAY }}
+                >
+                  COMPASS
+                </Box>
+              </Text>
+              {compass.map(([label, value], i) => (
+                <Flex
+                  key={label}
+                  justify="space-between"
+                  gap={3}
+                  py="5px"
+                  borderTop={
+                    i === 0 ? "none" : "1px solid rgba(78,161,255,.15)"
+                  }
+                  fontSize="12px"
                   css={{ fontFamily: SANS }}
                 >
-                  ▶
-                </Text>
-                <Text
-                  fontSize={{ base: "16px", md: "17px" }}
-                  lineHeight="1.6"
-                  letterSpacing="0"
-                  color={TEXT}
-                  css={{ fontFamily: SANS }}
-                >
-                  {f}
-                </Text>
-              </Flex>
-            ))}
+                  <Text color="#8fb3e6" fontWeight="700">
+                    {label}
+                  </Text>
+                  <Text color={TEXT} textAlign="right">
+                    {value}
+                  </Text>
+                </Flex>
+              ))}
+            </Box>
+            {(screens[1] || screens[2]) && (
+              <Box
+                display="grid"
+                gridTemplateColumns="1fr 1fr"
+                gap={3}
+                mt="12px"
+              >
+                {[screens[1], screens[2]]
+                  .filter((s): s is string => !!s)
+                  .map((src) => (
+                    <Shot key={src} src={src} />
+                  ))}
+              </Box>
+            )}
           </Box>
 
-          <Box
-            border={`1px solid ${BORDER}`}
-            css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)" }}
-          >
-            <Flex
-              align="stretch"
-              overflow="hidden"
-              css={{ boxShadow: BEVEL_GOLD }}
-            >
-              <Box w="7px" bg={BLUE} />
+          {/* RIGHT: tagline + drop-cap body + hero screenshot */}
+          <Box>
+            {tagline && (
               <Text
-                flex="1"
-                px={{ base: 3, md: 4 }}
-                py="7px"
-                color="#10233F"
-                textTransform="uppercase"
-                letterSpacing="1px"
+                color={BLUE}
+                fontSize={{ base: "18px", md: "20px" }}
+                lineHeight="1.1"
+                mb="10px"
+                css={{ fontFamily: DISPLAY, fontStyle: "italic" }}
+              >
+                {tagline}
+              </Text>
+            )}
+            {overviewText.map((p, i) => (
+              <Text
+                key={i}
+                mb="10px"
+                fontSize={{ base: "13px", md: "13.5px" }}
+                lineHeight="1.55"
+                textAlign="justify"
+                color="#D7DEEC"
+                css={{ fontFamily: SANS, ...(i === 0 ? dropCap : {}) }}
+              >
+                {p}
+              </Text>
+            ))}
+            {screens[0] && (
+              <Box mt="6px">
+                <Shot src={screens[0]} />
+                <Text
+                  fontSize="10px"
+                  color="#8fb3e6"
+                  mt="3px"
+                  fontStyle="italic"
+                  css={{ fontFamily: SANS }}
+                >
+                  ▲ {heroCaption}
+                </Text>
+              </Box>
+            )}
+          </Box>
+        </Box>
+
+        {/* FROM THE VAULT + NEXZY SAYS — dark rounded block */}
+        <Box
+          mt={{ base: 7, md: 8 }}
+          bg="#080F1E"
+          border="1px solid #24406A"
+          borderRadius="16px"
+          p={{ base: 4, md: 5 }}
+        >
+          <Flex align="center" gap={3} mb={4}>
+            <Text
+              color="#fff"
+              fontSize={{ base: "22px", md: "26px" }}
+              css={{ fontFamily: DISPLAY }}
+            >
+              From the Vault
+            </Text>
+            <Box
+              flex="1"
+              h="3px"
+              css={{ background: `linear-gradient(90deg,${GOLD},transparent)` }}
+            />
+          </Flex>
+
+          <Box
+            display="grid"
+            gridTemplateColumns={{
+              base: "1fr",
+              md: vids.length ? "1.2fr 1fr" : "1fr",
+            }}
+            gap={{ base: 5, md: 6 }}
+            alignItems="start"
+          >
+            {vids.length > 0 && (
+              <Flex justify="center">
+                <RewindVault vids={vids} title={ep.title} year={year} compact />
+              </Flex>
+            )}
+            <Box>
+              <Text
+                color={GOLD}
                 fontSize={{ base: "16px", md: "18px" }}
-                css={{
-                  fontFamily: DISPLAY,
-                  background: BAR_GOLD,
-                  textShadow: "1px 1px 0 rgba(255,255,255,.25)",
-                }}
+                mb="6px"
+                css={{ fontFamily: DISPLAY }}
               >
                 Nexzy Says!
               </Text>
-            </Flex>
-            <Text
-              p={{ base: 4, md: 5 }}
-              fontSize={{ base: "16px", md: "17px" }}
-              lineHeight="1.6"
-              letterSpacing="0"
-              color={TEXT}
-              css={{ fontFamily: SANS }}
-            >
-              {note}
-            </Text>
+              <Text
+                fontSize={{ base: "14px", md: "15px" }}
+                lineHeight="1.5"
+                color="#D7DEEC"
+                css={{ fontFamily: SANS }}
+              >
+                {note}
+              </Text>
+              {facts.length > 0 && (
+                <>
+                  <Text
+                    color={BLUE}
+                    fontSize="13px"
+                    letterSpacing="1px"
+                    mt="14px"
+                    mb="5px"
+                    css={{ fontFamily: DISPLAY }}
+                  >
+                    REWIND FACTS
+                  </Text>
+                  {facts.map((f, i) => (
+                    <Flex key={i} gap={2} mb="5px" align="flex-start">
+                      <Text color={GOLD} lineHeight="1.5">
+                        ▸
+                      </Text>
+                      <Text
+                        fontSize={{ base: "13px", md: "14px" }}
+                        lineHeight="1.5"
+                        color="#D7DEEC"
+                        css={{ fontFamily: SANS }}
+                      >
+                        {f}
+                      </Text>
+                    </Flex>
+                  ))}
+                </>
+              )}
+            </Box>
           </Box>
+
+          {year && (
+            <Flex mt={4}>
+              <Flex
+                direction="column"
+                align="center"
+                justify="center"
+                w="52px"
+                h="52px"
+                borderRadius="full"
+                bg={BLUE}
+                color="#0B1526"
+                css={{ border: `3px solid ${GOLD}`, fontFamily: DISPLAY }}
+                lineHeight="1"
+              >
+                <Text fontSize="8px">REWIND</Text>
+                <Text fontSize="15px">&rsquo;{String(year).slice(2)}</Text>
+              </Flex>
+            </Flex>
+          )}
         </Box>
 
-        {/* FROM THE VAULT — era TV, only when there's a video */}
-        {vids.length > 0 && (
-          <Box mt={{ base: 7, md: 9 }}>
-            <SectionHead>From the Vault</SectionHead>
-            <Flex justify="center">
-              <RewindVault vids={vids} title={ep.title} year={year} compact />
-            </Flex>
-          </Box>
-        )}
+        {/* FOOTER */}
+        <Flex
+          justify="space-between"
+          align="center"
+          borderTop={`1px solid ${BORDER}`}
+          mt={{ base: 5, md: 6 }}
+          pt="8px"
+          fontSize="10px"
+          color="#8fb3e6"
+          css={{ fontFamily: SANS }}
+        >
+          <Text color="#fff" letterSpacing="1px" css={{ fontFamily: DISPLAY }}>
+            NEXZY REWIND
+          </Text>
+          <Text>
+            {coverMonth ? `${coverMonth} ` : ""}
+            {year}
+          </Text>
+        </Flex>
       </Box>
     </Box>
   );
