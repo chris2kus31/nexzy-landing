@@ -4,6 +4,7 @@ import {
   Container,
   Flex,
   Heading,
+  HStack,
   Image,
   SimpleGrid,
   Text,
@@ -51,9 +52,42 @@ export default async function RewindSeriesPage() {
             color="nexzy.gray.100"
             fontSize={{ base: "sm", md: "md" }}
           >
-            Daily video game moments that happened on this day — a permanent
-            archive we add to over time.
+            This day in gaming history — a permanent archive we add to every
+            day.
           </Text>
+        </Box>
+
+        {/* WHAT IS REWIND — the series explainer */}
+        <Box maxW="2xl" mx="auto" textAlign="center" mb={{ base: 8, md: 10 }}>
+          <Text
+            color="nexzy.gray.100"
+            fontSize={{ base: "sm", md: "md" }}
+            lineHeight="1.7"
+          >
+            Every day, Rewind resurfaces a game or moment that launched on this
+            date — then rebuilds it in the look of its era: an 80s print
+            magazine, a glossy 90s console spread, a 2000s game-info screen. One
+            day at a time, we&rsquo;re re-telling the history of video games.
+          </Text>
+          <HStack justify="center" gap={2} mt={5} flexWrap="wrap">
+            {["1970s–80s", "1990s", "2000s"].map((e) => (
+              <Box
+                key={e}
+                fontFamily="mono"
+                fontSize="11px"
+                letterSpacing="0.1em"
+                textTransform="uppercase"
+                color="nexzy.gold"
+                border="1px solid"
+                borderColor="rgba(245,181,61,.4)"
+                borderRadius="full"
+                px={3}
+                py={1}
+              >
+                {e}
+              </Box>
+            ))}
+          </HStack>
         </Box>
 
         {/* JUMP TO A DATE */}
