@@ -148,6 +148,40 @@ function CornerFrame({
   );
 }
 
+/** A spiky gold burst sticker (GamePro/EGM "HOT!" cover flash). */
+function Starburst({ label }: { label: string }) {
+  const spike = (rot: number) => (
+    <Box
+      position="absolute"
+      inset="0"
+      bg={GOLD}
+      css={{
+        transform: `rotate(${rot}deg)`,
+        boxShadow: "0 2px 4px rgba(0,0,0,.45)",
+      }}
+    />
+  );
+  return (
+    <Box position="relative" w="64px" h="64px">
+      {spike(0)}
+      {spike(30)}
+      {spike(60)}
+      <Flex position="absolute" inset="0" align="center" justify="center">
+        <Text
+          fontStyle="italic"
+          color="#10233F"
+          fontSize="13px"
+          lineHeight="0.9"
+          textAlign="center"
+          css={{ fontFamily: DISPLAY }}
+        >
+          {label}
+        </Text>
+      </Flex>
+    </Box>
+  );
+}
+
 function InfoRow({
   label,
   value,
@@ -240,6 +274,8 @@ export default function RewindEra90s({
     : [ep.excerpt || ""].filter(Boolean);
   const note =
     ep.spec?.historicalNote || ep.excerpt || "A small piece of gaming history.";
+  const coverMonth = ep.event ? monthName(ep.event.month).toUpperCase() : "";
+  const issueNo = year ? year - 1900 : 97;
 
   return (
     <Box
@@ -255,6 +291,69 @@ export default function RewindEra90s({
       css={PAPER_BG}
     >
       <Box px={{ base: 5, md: 8 }} py={{ base: 5, md: 7 }}>
+        {/* MASTHEAD KICKER — newsstand strip: wordmark · issue/date · barcode */}
+        <Flex
+          align="flex-end"
+          justify="space-between"
+          gap={3}
+          pb="10px"
+          mb={{ base: 4, md: 5 }}
+          borderBottom={`2px solid ${GOLD}`}
+          flexWrap="wrap"
+        >
+          <Flex align="baseline" gap="8px">
+            <Text
+              color="#fff"
+              fontStyle="italic"
+              fontSize={{ base: "20px", md: "24px" }}
+              letterSpacing="0.5px"
+              css={{ fontFamily: DISPLAY }}
+            >
+              NEXZY
+            </Text>
+            <Text
+              color={BLUE}
+              fontWeight="700"
+              textTransform="uppercase"
+              letterSpacing="0.28em"
+              fontSize="11px"
+              css={{ fontFamily: SANS }}
+            >
+              Magazine
+            </Text>
+          </Flex>
+          <Flex align="center" gap={3}>
+            <Text
+              color={TEXT}
+              fontWeight="700"
+              textTransform="uppercase"
+              letterSpacing="0.1em"
+              fontSize={{ base: "11px", md: "12px" }}
+              css={{ fontFamily: SANS }}
+            >
+              {coverMonth ? `${coverMonth} ${year} · ` : ""}ISSUE №{issueNo}
+            </Text>
+            <Flex direction="column" align="center" gap="2px">
+              <Box
+                w="70px"
+                h="20px"
+                css={{
+                  background:
+                    "repeating-linear-gradient(90deg,#10233F 0 2px,#e9eef6 2px 3px,#10233F 3px 5px,#e9eef6 5px 6px,#10233F 6px 7px,#e9eef6 7px 10px)",
+                }}
+              />
+              <Text
+                color={TEXT}
+                fontWeight="700"
+                fontSize="10px"
+                css={{ fontFamily: SANS }}
+              >
+                $4.99
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
+
         {/* TITLE */}
         <Heading
           as="h1"
@@ -308,16 +407,27 @@ export default function RewindEra90s({
           alignItems="start"
         >
           {ep.heroImageUrl && (
-            <CornerFrame>
-              <Image
-                src={ep.heroImageUrl}
-                alt={ep.imageAlt || ep.title}
-                display="block"
-                w="100%"
-                h="auto"
-                css={{ filter: PHOTO_FILTER }}
-              />
-            </CornerFrame>
+            <Box position="relative">
+              <CornerFrame>
+                <Image
+                  src={ep.heroImageUrl}
+                  alt={ep.imageAlt || ep.title}
+                  display="block"
+                  w="100%"
+                  h="auto"
+                  css={{ filter: PHOTO_FILTER }}
+                />
+              </CornerFrame>
+              <Box
+                position="absolute"
+                top="-16px"
+                right="-14px"
+                zIndex={2}
+                css={{ transform: "rotate(12deg)" }}
+              >
+                <Starburst label="CLASSIC" />
+              </Box>
+            </Box>
           )}
           <Box
             bg="#0E1B33"
@@ -392,7 +502,24 @@ export default function RewindEra90s({
                   lineHeight="1.6"
                   letterSpacing="0"
                   color={TEXT}
-                  css={{ fontFamily: SANS }}
+                  css={{
+                    fontFamily: SANS,
+                    ...(i === 0
+                      ? {
+                          "&::first-letter": {
+                            float: "left",
+                            fontFamily: DISPLAY,
+                            fontStyle: "italic",
+                            fontSize: "54px",
+                            lineHeight: "0.78",
+                            paddingRight: "10px",
+                            paddingTop: "4px",
+                            color: BLUE,
+                            textShadow: "2px 2px 0 rgba(0,0,0,.35)",
+                          },
+                        }
+                      : {}),
+                  }}
                 >
                   {p}
                 </Text>
@@ -411,6 +538,36 @@ export default function RewindEra90s({
               />
             </CornerFrame>
           )}
+        </Box>
+
+        {/* PULL-QUOTE — big italic magazine callout */}
+        <Box
+          mt={{ base: 6, md: 8 }}
+          py={{ base: 4, md: 5 }}
+          borderTop={`2px solid ${GOLD}`}
+          borderBottom={`2px solid ${GOLD}`}
+          position="relative"
+        >
+          <Text
+            textAlign="center"
+            color="#fff"
+            fontStyle="italic"
+            fontSize={{ base: "20px", md: "26px" }}
+            lineHeight="1.25"
+            px={{ base: 2, md: 8 }}
+            css={{
+              fontFamily: DISPLAY,
+              textShadow: "2px 2px 0 rgba(0,0,0,.35)",
+            }}
+          >
+            <Box as="span" color={GOLD} css={{ fontFamily: DISPLAY }}>
+              “
+            </Box>
+            {note}
+            <Box as="span" color={GOLD} css={{ fontFamily: DISPLAY }}>
+              ”
+            </Box>
+          </Text>
         </Box>
 
         {/* SCREENSHOTS */}
