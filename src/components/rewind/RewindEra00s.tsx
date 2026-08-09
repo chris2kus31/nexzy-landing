@@ -243,12 +243,17 @@ export default function RewindEra00s({
       position="relative"
       css={PAGE_BG}
     >
-      <Box px={{ base: 5, md: 8 }} py={{ base: 5, md: 7 }}>
+      <Box
+        px={{ base: 5, md: 8 }}
+        pt={{ base: 7, md: 10 }}
+        pb={{ base: 5, md: 7 }}
+      >
         {/* TITLE — chrome/metallic */}
         <Flex justify="space-between" align="flex-start" gap={4}>
           <Box>
             <Heading
               as="h1"
+              color="#EAF0F9"
               textTransform="uppercase"
               fontSize={{ base: "40px", md: "58px" }}
               lineHeight="0.95"
@@ -256,12 +261,10 @@ export default function RewindEra00s({
               css={{
                 fontFamily: DISPLAY,
                 fontStyle: "italic",
-                backgroundImage:
-                  "linear-gradient(180deg,#ffffff 0%,#d6deea 42%,#8492aa 60%,#c3cddc 100%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                filter: "drop-shadow(0 2px 2px rgba(0,0,0,.55))",
+                // Solid metallic — top highlight + dark drop shadow so it sits
+                // clearly ABOVE the paper texture (no background-clip see-through).
+                textShadow:
+                  "0 1px 0 rgba(255,255,255,.35), 0 3px 3px rgba(0,0,0,.7), 0 6px 16px rgba(0,0,0,.55)",
               }}
             >
               {ep.title}
