@@ -317,6 +317,11 @@ export interface RewindEpisode {
     gameSlug: string | null;
     released: string | null;
     screenshots: string[];
+    publisher: string | null;
+    developer: string | null;
+    players: string | null;
+    features: string[] | null;
+    historicalNote: string | null;
   } | null;
 }
 

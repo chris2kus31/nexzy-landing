@@ -198,7 +198,14 @@ export default function RewindEra80s({
     .filter((l) => /^[-*]\s+/.test(l))
     .map((l) => stripMd(l.replace(/^[-*]\s+/, "")))
     .slice(0, 6);
-  const features = bulletLines.length ? bulletLines : STUB_FEATURES;
+  const features = ep.spec?.features?.length
+    ? ep.spec.features
+    : bulletLines.length
+      ? bulletLines
+      : STUB_FEATURES;
+  const publisher = ep.spec?.publisher ?? STUB;
+  const developer = ep.spec?.developer ?? STUB;
+  const players = ep.spec?.players ?? STUB_PLAYERS;
   const aboutParas = rawParas
     .filter((p) => !/^[-*]\s+/.test(p))
     .map((p) => stripMd(p))
@@ -207,9 +214,10 @@ export default function RewindEra80s({
     ? aboutParas
     : [ep.excerpt || ""].filter(Boolean);
 
-  // "Nexzy Says!" is a historical note (not a review) — the article's hook, or a
-  // short line from the body, or a neutral fallback.
+  // "Nexzy Says!" is a historical note (not a review) — the LLM's historical
+  // note, else the article's hook, else a short line from the body.
   const verdict =
+    ep.spec?.historicalNote ||
     ep.excerpt ||
     aboutParas
       .join(" ")
@@ -285,10 +293,10 @@ export default function RewindEra80s({
           )}
           <Box>
             <SectionHeader>Game Info</SectionHeader>
-            <SpecRow label="Publisher" value={STUB} />
-            <SpecRow label="Developer" value={STUB} />
+            <SpecRow label="Publisher" value={publisher} />
+            <SpecRow label="Developer" value={developer} />
             <SpecRow label="Genre" value={genre} />
-            <SpecRow label="Players" value={STUB_PLAYERS} />
+            <SpecRow label="Players" value={players} />
             <SpecRow label="Release Date" value={releaseDate} />
             <SpecRow label="System" value={system} />
           </Box>
