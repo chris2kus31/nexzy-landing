@@ -235,70 +235,207 @@ export default function RewindVault({
       </Flex>
     );
   } else if (device === "crt90") {
-    caption = "The Saturday-morning set — black plastic, front controls.";
+    caption = "The 90s set — black plastic, bottom speaker grilles + AV jacks.";
+    const grille = (
+      <Box
+        flex="1"
+        minW="40px"
+        h={{ base: "26px", md: "34px" }}
+        borderRadius="4px"
+        css={{
+          background:
+            "radial-gradient(#1b1b1f 1px, transparent 1.3px) 0 0/4px 4px, linear-gradient(180deg,#232327,#161618)",
+          boxShadow: "inset 0 0 0 1px #0b0b0d, inset 0 2px 5px rgba(0,0,0,.6)",
+        }}
+      />
+    );
+    const smBtn = (i: number) => (
+      <Box
+        key={i}
+        w="13px"
+        h="13px"
+        borderRadius="full"
+        css={{
+          background: "radial-gradient(circle at 36% 30%,#4a4a50,#151517)",
+          boxShadow:
+            "0 1px 2px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12)",
+        }}
+      />
+    );
+    const tiny = (t: string) => (
+      <Text
+        fontFamily="mono"
+        fontSize="6px"
+        letterSpacing="0.08em"
+        lineHeight="1"
+        color="#8a8a92"
+      >
+        {t}
+      </Text>
+    );
     frame = (
       <Box
         maxW={setMax}
+        position="relative"
         p="16px 16px 0"
-        borderRadius="14px"
+        borderRadius="16px"
         css={{
-          background: "linear-gradient(165deg,#2d2d31,#151517)",
+          background:
+            "linear-gradient(165deg,#2d2d31,#141416), radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.05), transparent 60%)",
           boxShadow:
             "0 16px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06)",
         }}
       >
+        {/* SCREEN — big tube, thick black bezel */}
         <Box
           bg="#08080a"
           borderRadius="12px"
           p={3}
-          css={{ boxShadow: "inset 0 0 0 4px #232327" }}
+          css={{
+            boxShadow: "inset 0 0 0 4px #202024, inset 0 0 26px rgba(0,0,0,.8)",
+          }}
         >
           {screen}
         </Box>
-        <Flex align="center" gap={3} p="12px 6px 14px">
-          {led("#37e06a")}
-          <Flex gap="5px">
-            {[0, 1, 2].map((i) => (
-              <Box
-                key={i}
-                w="16px"
-                h="7px"
-                borderRadius="2px"
-                bg="#3a3a40"
-                css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.08)" }}
-              />
-            ))}
+
+        {/* BOTTOM STRIP — grille · controls · grille · AV jacks */}
+        <Flex align="center" gap={3} p="14px 8px 18px">
+          {grille}
+          <Flex direction="column" align="center" gap="5px" flexShrink={0}>
+            <Flex align="center" gap="7px">
+              {[0, 1, 2, 3, 4].map(smBtn)}
+            </Flex>
+            <Flex align="center" gap="12px">
+              {tiny("PRESET")}
+              {tiny("VOL")}
+              {tiny("CH")}
+            </Flex>
+            {badge("#9a9aa2", "8px")}
           </Flex>
-          <Box mx="auto">{badge("#c8c8cf")}</Box>
-          <Box w="10px" h="10px" borderRadius="2px" bg="#101013" />
+          {grille}
+          <Flex direction="column" align="center" gap="4px" flexShrink={0}>
+            <Flex gap="5px">
+              <Box
+                w="11px"
+                h="11px"
+                borderRadius="full"
+                bg="#e8c33a"
+                css={{ boxShadow: "inset 0 0 0 2px #0c0c0e" }}
+              />
+              <Box
+                w="11px"
+                h="11px"
+                borderRadius="full"
+                bg="#c94b4b"
+                css={{ boxShadow: "inset 0 0 0 2px #0c0c0e" }}
+              />
+            </Flex>
+            {tiny("VIDEO · AUDIO")}
+          </Flex>
         </Flex>
+
+        {/* FEET */}
+        <Box
+          position="absolute"
+          bottom="-6px"
+          left="26%"
+          w="26px"
+          h="7px"
+          borderRadius="0 0 4px 4px"
+          bg="#0b0b0d"
+        />
+        <Box
+          position="absolute"
+          bottom="-6px"
+          right="26%"
+          w="26px"
+          h="7px"
+          borderRadius="0 0 4px 4px"
+          bg="#0b0b0d"
+        />
       </Box>
     );
   } else if (device === "flat00") {
-    caption = "The flatscreen era — silver plastic, flat tube.";
-    frame = (
+    caption = "The 2000s set — silver rear-projection, center control bar.";
+    const vBtn = (i: number) => (
       <Box
-        maxW={setMax}
-        p="14px 14px 0"
-        borderRadius="12px"
-        css={{
-          background: "linear-gradient(165deg,#d3d7dd,#9aa0a8)",
-          boxShadow:
-            "0 16px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6)",
-        }}
-      >
+        key={i}
+        w="10px"
+        h="3px"
+        borderRadius="1px"
+        bg="#6b7078"
+        css={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,.5)" }}
+      />
+    );
+    frame = (
+      <Box maxW={setMax} position="relative">
+        {/* SCREEN CABINET — thin silver bezel, dark flat tube */}
         <Box
-          bg="#111"
-          borderRadius="8px"
-          p={2}
-          css={{ boxShadow: "inset 0 0 0 3px #444" }}
+          position="relative"
+          zIndex={2}
+          p="12px 12px 10px"
+          borderRadius="12px 12px 6px 6px"
+          css={{
+            background: "linear-gradient(180deg,#e4e7ec,#b7bcc4)",
+            boxShadow:
+              "0 14px 26px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.75)",
+          }}
         >
-          {screen}
+          <Box
+            bg="#0b0c0e"
+            borderRadius="6px"
+            p="8px"
+            css={{
+              boxShadow:
+                "inset 0 0 0 2px #5b616b, inset 0 0 22px rgba(0,0,0,.85)",
+            }}
+          >
+            {screen}
+          </Box>
+          <Flex align="center" justify="center" pt="7px">
+            {badge("#6b7078", "10px")}
+          </Flex>
+
+          {/* CENTER CONTROL BAR — straddles the screen/base seam */}
+          <Flex
+            position="absolute"
+            bottom="-30px"
+            left="50%"
+            zIndex={3}
+            direction="column"
+            align="center"
+            justify="center"
+            gap="4px"
+            w="20px"
+            py="7px"
+            borderRadius="10px"
+            css={{
+              transform: "translateX(-50%)",
+              background: "linear-gradient(180deg,#eef1f5,#b6bcc4)",
+              boxShadow:
+                "0 3px 6px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.85)",
+            }}
+          >
+            {[0, 1, 2, 3, 4, 5].map(vBtn)}
+          </Flex>
         </Box>
-        <Flex align="center" gap={2.5} p="10px 6px 12px">
-          {led("#3f7bff")}
-          <Box mx="auto">{badge("#5a6068")}</Box>
-        </Flex>
+
+        {/* BASE PEDESTAL — silver, speaker-cloth mesh, winged top */}
+        <Box
+          mt="-4px"
+          mx="auto"
+          w="94%"
+          h={{ base: "66px", md: "88px" }}
+          borderRadius="0 0 14px 14px"
+          css={{
+            background:
+              "radial-gradient(#c4c9d0 1px, transparent 1.4px) 0 0/5px 5px, linear-gradient(180deg,#d9dde3,#abb1b9)",
+            boxShadow:
+              "0 14px 22px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.55)",
+            clipPath:
+              "polygon(0 0, 42% 12px, 58% 12px, 100% 0, 100% 100%, 0 100%)",
+          }}
+        />
       </Box>
     );
   } else {
