@@ -32,9 +32,10 @@ const PHOTO_FILTER = "saturate(.9) contrast(1.03)";
 // straight over the base — no overlay, gradient, or CSS grain.
 const PAPER_BG = {
   backgroundColor: "#13233F",
-  backgroundImage: "url(/rewind/paper-80s-navy.png)",
-  backgroundRepeat: "repeat",
-  backgroundSize: "512px 512px",
+  backgroundImage: "url(/rewind/paper-80s-neon.png)",
+  backgroundRepeat: "no-repeat",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
 };
 
 const REGION: Record<string, string> = {
