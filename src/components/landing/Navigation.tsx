@@ -111,6 +111,19 @@ export default function Navigation() {
               _hover={{ color: "nexzy.lightBlue" }}
               transition="color 0.2s"
             >
+              <NextLink href="/rewind" onClick={() => nav("rewind")}>
+                Rewind
+              </NextLink>
+            </Link>
+
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
               <NextLink href="/videos" onClick={() => nav("videos")}>
                 Videos
               </NextLink>
@@ -292,6 +305,18 @@ export default function Navigation() {
                   }}
                 >
                   News
+                </NextLink>
+              </Link>
+
+              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+                <NextLink
+                  href="/rewind"
+                  onClick={() => {
+                    nav("rewind");
+                    close();
+                  }}
+                >
+                  Rewind
                 </NextLink>
               </Link>
 

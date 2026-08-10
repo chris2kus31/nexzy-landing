@@ -17,9 +17,107 @@ import {
   HStack,
   Badge,
 } from "@chakra-ui/react";
-import type { PublicPost, NostalgiaSpotlight } from "@/lib/blog/api";
+import type {
+  PublicPost,
+  NostalgiaSpotlight,
+  RewindEpisode,
+} from "@/lib/blog/api";
 import FeaturedCard from "@/components/blog/FeaturedCard";
 import TrendingRail from "@/components/blog/TrendingRail";
+import { monthName } from "@/lib/rewind/era";
+
+const GOLD = "#f5b53d";
+
+/** The newsroom's big feature: today's Rewind episode (replaces the old
+ *  nostalgia card). Full-bleed cover + gold "Rewind" branding, links to the
+ *  episode. */
+function RewindFeatureCard({ ep }: { ep: RewindEpisode }) {
+  const year = ep.event?.year ?? null;
+  return (
+    <NextLink href={`/rewind/${ep.slug}`} style={{ display: "block" }}>
+      <Box
+        className="group"
+        position="relative"
+        borderRadius="2xl"
+        overflow="hidden"
+        border="1px solid"
+        borderColor="nexzy.gold/25"
+        minH={{ base: "320px", md: "440px" }}
+        transition="all 0.2s"
+        _hover={{ borderColor: "nexzy.gold/60", transform: "translateY(-3px)" }}
+      >
+        {ep.heroImageUrl ? (
+          <Box
+            position="absolute"
+            inset={0}
+            transition="transform 0.4s"
+            _groupHover={{ transform: "scale(1.04)" }}
+          >
+            <NextImage
+              src={ep.heroImageUrl}
+              alt={ep.imageAlt || ep.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 800px"
+              style={{ objectFit: "cover" }}
+            />
+          </Box>
+        ) : (
+          <Box position="absolute" inset={0} bg="nexzy.gold/15" />
+        )}
+        <Box
+          position="absolute"
+          inset={0}
+          bgGradient="to-t"
+          gradientFrom="nexzy.navy"
+          gradientVia="nexzy.navy/50"
+          gradientTo="transparent"
+        />
+        <Box
+          position="absolute"
+          bottom={0}
+          left={0}
+          right={0}
+          p={{ base: 5, md: 8 }}
+        >
+          <HStack gap={2} mb={3}>
+            <Badge colorPalette="yellow" variant="solid">
+              ◀◀ Rewind
+            </Badge>
+            <Badge colorPalette="gray" variant="surface">
+              On this day
+              {ep.event
+                ? ` · ${monthName(ep.event.month)} ${ep.event.day}`
+                : ""}
+            </Badge>
+          </HStack>
+          <Heading
+            as="h2"
+            size={{ base: "xl", md: "3xl" }}
+            color="white"
+            mb={3}
+            maxW="3xl"
+          >
+            {ep.title}
+          </Heading>
+          {ep.excerpt ? (
+            <Text
+              color="gray.200"
+              fontSize={{ base: "sm", md: "md" }}
+              lineClamp={2}
+              maxW="2xl"
+              mb={3}
+            >
+              {ep.excerpt}
+            </Text>
+          ) : null}
+          <Text color={GOLD} fontWeight="700" fontSize="sm">
+            Rewind to {year ?? "then"} →
+          </Text>
+        </Box>
+      </Box>
+    </NextLink>
+  );
+}
 
 function NostalgiaCard({ n }: { n: NostalgiaSpotlight }) {
   return (
@@ -100,17 +198,19 @@ function NostalgiaCard({ n }: { n: NostalgiaSpotlight }) {
 }
 
 export default function HomeNewsroom({
+  rewind,
   nostalgia,
   lead,
   hot,
   reads,
 }: {
+  rewind: RewindEpisode | null;
   nostalgia: NostalgiaSpotlight | null;
   lead: PublicPost | null;
   hot: PublicPost[];
   reads: PublicPost[];
 }) {
-  if (!nostalgia && !lead) return null;
+  if (!rewind && !nostalgia && !lead) return null;
   return (
     <Box
       as="section"
@@ -162,7 +262,9 @@ export default function HomeNewsroom({
           gridTemplateColumns={{ base: "1fr", lg: "1.55fr 1fr" }}
           gap={{ base: 6, lg: 8 }}
         >
-          {nostalgia ? (
+          {rewind ? (
+            <RewindFeatureCard ep={rewind} />
+          ) : nostalgia ? (
             <NostalgiaCard n={nostalgia} />
           ) : lead ? (
             <FeaturedCard post={lead} />

@@ -7,10 +7,10 @@
 // ============================================
 import Navigation from "@/components/landing/Navigation";
 import Hero from "@/components/landing/Hero";
-import HomeNewsroom from "@/components/landing/HomeNewsroom";
+import TrendingBar from "@/components/landing/TrendingBar";
+import HomeRewindFeature from "@/components/landing/HomeRewindFeature";
 import HomeLibrary from "@/components/landing/HomeLibrary";
 import HomeVideos from "@/components/landing/HomeVideos";
-import HomeRewind from "@/components/landing/HomeRewind";
 import TopicBar from "@/components/landing/TopicBar";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
@@ -19,7 +19,6 @@ import {
   fetchTrending,
   fetchLibraryLatest,
   fetchVideosLatest,
-  fetchNostalgia,
   fetchRewindToday,
 } from "@/lib/blog/api";
 
@@ -27,16 +26,14 @@ import {
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [news, hot, reads, library, videos, nostalgia, rewindToday] =
-    await Promise.all([
-      fetchPosts({ pageSize: 7 }),
-      fetchTrending(6, "hot"),
-      fetchTrending(6, "reads"),
-      fetchLibraryLatest(3),
-      fetchVideosLatest(9),
-      fetchNostalgia(),
-      fetchRewindToday(),
-    ]);
+  const [news, hot, reads, library, videos, rewindToday] = await Promise.all([
+    fetchPosts({ pageSize: 7 }),
+    fetchTrending(6, "hot"),
+    fetchTrending(6, "reads"),
+    fetchLibraryLatest(3),
+    fetchVideosLatest(9),
+    fetchRewindToday(),
+  ]);
 
   // The lead story anchors the masthead; the next few are the headline list.
   const lead = news.items[0] ?? null;
@@ -49,22 +46,17 @@ export default async function HomePage() {
         {/* Newsroom masthead — lead story + latest headlines */}
         <Hero lead={lead} headlines={headlines} />
 
-        {/* Today's Rewind — a standout time-machine band below the hero */}
-        <HomeRewind episode={rewindToday} />
+        {/* Trending — horizontal popularity bar below the hero */}
+        <TrendingBar hot={hot} reads={reads} excludeSlug={lead?.slug} />
+
+        {/* Today in gaming history — the flagship Rewind feature */}
+        <HomeRewindFeature episode={rewindToday} />
 
         {/* Section bar — browse the newsroom by beat */}
         <TopicBar />
 
-        {/* Videos & Shorts — high on the page so video content is visible first */}
+        {/* Videos & Shorts */}
         <HomeVideos items={videos} />
-
-        {/* Daily newsroom — nostalgia spotlight + what's trending */}
-        <HomeNewsroom
-          nostalgia={nostalgia}
-          lead={lead}
-          hot={hot}
-          reads={reads}
-        />
 
         {/* Guides, walkthroughs & lists rail */}
         <HomeLibrary items={library} />
