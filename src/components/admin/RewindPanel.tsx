@@ -22,6 +22,7 @@ import {
   getWriterNames,
   getRewindPublished,
   featureRewind,
+  runWeeklyRewindRecap,
   AuthError,
   type RewindLead,
   type RewindPublishedItem,
@@ -69,6 +70,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const [pasteText, setPasteText] = useState("");
   const [pasting, setPasting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [recapBusy, setRecapBusy] = useState(false);
   const [visible, setVisible] = useState(25);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -154,6 +156,24 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       setMsg((e as Error).message);
     }
   }, [load]);
+
+  const doWeeklyRecap = useCallback(async () => {
+    setRecapBusy(true);
+    setMsg(null);
+    try {
+      const lead = await runWeeklyRewindRecap();
+      setMsg(
+        lead
+          ? `Weekly recap lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          : "Not enough Rewind episodes published this week yet (need at least 2).",
+      );
+    } catch (e) {
+      if (e instanceof AuthError) return;
+      setMsg((e as Error).message);
+    } finally {
+      setRecapBusy(false);
+    }
+  }, []);
 
   const doBackfill = useCallback(async () => {
     setBackfilling(true);
@@ -299,6 +319,18 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
             onClick={doAutopilot}
           >
             ⚡ Auto-pick today
+          </Button>
+        )}
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="outline"
+            borderColor="nexzy.gold"
+            color="nexzy.gold"
+            onClick={doWeeklyRecap}
+            loading={recapBusy}
+          >
+            ▶ Run weekly recap
           </Button>
         )}
       </HStack>
