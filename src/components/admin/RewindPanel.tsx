@@ -23,6 +23,7 @@ import {
   getRewindPublished,
   featureRewind,
   runWeeklyRewindRecap,
+  runWeeklyReleases,
   AuthError,
   type RewindLead,
   type RewindPublishedItem,
@@ -71,6 +72,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const [pasting, setPasting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [recapBusy, setRecapBusy] = useState(false);
+  const [releasesBusy, setReleasesBusy] = useState(false);
   const [visible, setVisible] = useState(25);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -172,6 +174,24 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       setMsg((e as Error).message);
     } finally {
       setRecapBusy(false);
+    }
+  }, []);
+
+  const doWeeklyReleases = useCallback(async () => {
+    setReleasesBusy(true);
+    setMsg(null);
+    try {
+      const lead = await runWeeklyReleases();
+      setMsg(
+        lead
+          ? `Releases rundown lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          : "No games with a release date in this week's window (need at least 2).",
+      );
+    } catch (e) {
+      if (e instanceof AuthError) return;
+      setMsg((e as Error).message);
+    } finally {
+      setReleasesBusy(false);
     }
   }, []);
 
@@ -331,6 +351,18 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
             loading={recapBusy}
           >
             ▶ Run weekly recap
+          </Button>
+        )}
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="outline"
+            borderColor="nexzy.gold"
+            color="nexzy.gold"
+            onClick={doWeeklyReleases}
+            loading={releasesBusy}
+          >
+            ▶ Run releases rundown
           </Button>
         )}
       </HStack>

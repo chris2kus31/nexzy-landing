@@ -540,6 +540,15 @@ export async function runWeeklyRewindRecap(): Promise<ContentSuggestion | null> 
   );
 }
 
+/** Compile "Games Out This Week" now into one long-form video lead. */
+export async function runWeeklyReleases(): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/weekly-releases/run", {
+      method: "POST",
+    }),
+  );
+}
+
 /** Bury a suggestion. */
 export async function skipContentSuggestion(
   id: string,
