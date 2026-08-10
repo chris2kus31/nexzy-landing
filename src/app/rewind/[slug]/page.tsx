@@ -17,6 +17,7 @@ import RewindEra90s from "@/components/rewind/RewindEra90s";
 import RewindEra00s from "@/components/rewind/RewindEra00s";
 import RewindHeader from "@/components/rewind/RewindHeader";
 import ContentComments from "@/components/comments/ContentComments";
+import RewindLightbox from "@/components/rewind/RewindLightbox";
 import {
   eraForYear,
   yearsAgo,
@@ -226,13 +227,15 @@ export default async function RewindEpisodePage({
             stops={stops}
           />
           <Box mt={{ base: 6, md: 8 }}>
-            {web === "e80" ? (
-              <RewindEra80s ep={ep} stops={stops} />
-            ) : web === "e90" ? (
-              <RewindEra90s ep={ep} stops={stops} />
-            ) : (
-              <RewindEra00s ep={ep} stops={stops} />
-            )}
+            <RewindLightbox>
+              {web === "e80" ? (
+                <RewindEra80s ep={ep} stops={stops} />
+              ) : web === "e90" ? (
+                <RewindEra90s ep={ep} stops={stops} />
+              ) : (
+                <RewindEra00s ep={ep} stops={stops} />
+              )}
+            </RewindLightbox>
           </Box>
         </Box>
         <ContentComments slug={slug} accent={era.accent} />
