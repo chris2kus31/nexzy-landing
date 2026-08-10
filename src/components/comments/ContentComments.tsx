@@ -1,40 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Box, Button, Container, Flex, Text, Textarea } from "@chakra-ui/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Button, Container, Flex, Text } from "@chakra-ui/react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInPanel from "@/components/auth/SignInPanel";
+import CommentItem, { Avatar, Composer } from "./CommentItem";
+import { CommentSort, CommentT, createComment, fetchPage } from "./commentsApi";
 
-interface Comment {
-  id: string;
-  parentId: string | null;
-  content: string;
-  author: { id: string; username: string };
-  upvotes: number;
-  downvotes: number;
-  myVote: number; // -1 | 0 | 1
-  createdAt: string;
-}
-
-function timeAgo(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (!then) return "";
-  const s = Math.floor((Date.now() - then) / 1000);
-  if (s < 60) return "just now";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
+const SORTS: { key: CommentSort; label: string }[] = [
+  { key: "top", label: "Top" },
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+];
 
 /**
- * Reader comments on any published content post — reused across rewind / blog /
- * guides / lists. Keyed by the post's public `slug`. Reading is open to
- * everyone; posting/voting requires the same account as the Nexzy app (Google /
- * Apple), and every comment is moderated server-side.
+ * Rich reader-comments section for any published content post (rewind/blog/
+ * guides/lists). Sort, cursor-paginated infinite scroll, threaded replies,
+ * avatars, optimistic votes, edit/report/delete. Reading is open; posting and
+ * voting require the same Nexzy account as the app.
  */
 export default function ContentComments({
   slug,
@@ -44,113 +27,103 @@ export default function ContentComments({
   accent?: string;
 }) {
   const { user, loading: authLoading } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [items, setItems] = useState<CommentT[]>([]);
+  const [total, setTotal] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [sort, setSort] = useState<CommentSort>("top");
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/comments/${encodeURIComponent(slug)}`, {
-        cache: "no-store",
-      });
-      if (res.ok) setComments(await res.json());
-    } catch {
-      // leave list as-is
-    } finally {
+  const sentinel = useRef<HTMLDivElement | null>(null);
+  const cursorRef = useRef<string | null>(null);
+  const loadingRef = useRef(false);
+
+  const authorName = user?.username || user?.firstName || "you";
+  const canPost = !!user && user.isVerified !== false;
+
+  // Returns true (and reveals the sign-in panel) if the user must sign in.
+  const requireSignIn = useCallback(() => {
+    if (user && user.isVerified !== false) return false;
+    setShowSignIn(true);
+    return true;
+  }, [user]);
+
+  const loadFirst = useCallback(
+    async (nextSort: CommentSort) => {
+      setLoading(true);
+      loadingRef.current = true;
+      const page = await fetchPage(slug, nextSort, null);
+      loadingRef.current = false;
       setLoading(false);
-    }
-  }, [slug]);
+      if (!page) return;
+      setItems(page.items);
+      setTotal(page.total);
+      setCursor(page.nextCursor);
+      cursorRef.current = page.nextCursor;
+    },
+    [slug],
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadFirst(sort);
+  }, [sort, loadFirst]);
 
-  async function submit() {
-    const content = draft.trim();
-    if (!content || posting) return;
-    setPosting(true);
-    setNotice(null);
-    try {
-      const res = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, content }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 403) {
-        setNotice("Please verify your Nexzy account before commenting.");
-        return;
-      }
-      if (!res.ok) {
-        setNotice(data?.message || "Couldn't post your comment.");
-        return;
-      }
-      setDraft("");
-      if (data.held) {
-        setNotice("Thanks — your comment is awaiting review.");
-      } else {
-        await load();
-      }
-    } catch {
-      setNotice("Network error — please try again.");
-    } finally {
-      setPosting(false);
-    }
-  }
+  const loadMore = useCallback(async () => {
+    if (loadingRef.current || !cursorRef.current) return;
+    loadingRef.current = true;
+    setLoadingMore(true);
+    const page = await fetchPage(slug, sort, cursorRef.current);
+    loadingRef.current = false;
+    setLoadingMore(false);
+    if (!page) return;
+    setItems((prev) => [...prev, ...page.items]);
+    setCursor(page.nextCursor);
+    cursorRef.current = page.nextCursor;
+  }, [slug, sort]);
 
-  async function vote(id: string, value: number) {
-    if (!user) {
-      setShowSignIn(true);
-      return;
-    }
-    // optimistic
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, myVote: c.myVote === value ? 0 : value } : c,
-      ),
+  // Infinite scroll — load the next page when the sentinel enters view.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: "400px" },
     );
-    try {
-      const res = await fetch("/api/comments/vote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commentId: id, value }),
-      });
-      if (res.ok) {
-        const t = await res.json();
-        setComments((prev) =>
-          prev.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  upvotes: t.upvotes,
-                  downvotes: t.downvotes,
-                  myVote: t.myVote,
-                }
-              : c,
-          ),
-        );
-      } else if (res.status === 403) {
-        setShowSignIn(true);
-      }
-    } catch {
-      // revert by reloading
-      load();
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMore]);
+
+  async function submitTop(text: string) {
+    if (requireSignIn()) return;
+    const res = await createComment(slug, text);
+    if (!res.ok) return;
+    if (!res.held && user) {
+      const now = new Date().toISOString();
+      const optimistic: CommentT = {
+        id: `tmp-${now}`,
+        parentId: null,
+        content: text,
+        author: { id: user.id, username: authorName },
+        upvotes: 0,
+        downvotes: 0,
+        myVote: 0,
+        replyCount: 0,
+        editedAt: null,
+        createdAt: now,
+      };
+      setItems((prev) => [optimistic, ...prev]);
+      setTotal((t) => t + 1);
     }
+    return { held: res.held };
   }
 
-  async function remove(id: string) {
-    setComments((prev) => prev.filter((c) => c.id !== id));
-    try {
-      await fetch(`/api/comments/${id}`, { method: "DELETE" });
-    } catch {
-      load();
-    }
+  function onDeleted(id: string) {
+    setItems((prev) => prev.filter((c) => c.id !== id));
+    setTotal((t) => Math.max(0, t - 1));
   }
-
-  const canPost = !!user && user.isVerified !== false;
 
   return (
     <Box
@@ -162,7 +135,7 @@ export default function ContentComments({
       px={{ base: 3, md: 6 }}
     >
       <Container maxW="3xl" p="0">
-        <Flex align="baseline" justify="space-between" mb={5}>
+        <Flex align="center" justify="space-between" mb={5} gap={3}>
           <Text
             fontFamily="heading"
             fontSize={{ base: "xl", md: "2xl" }}
@@ -171,44 +144,49 @@ export default function ContentComments({
           >
             Join the conversation
           </Text>
-          <Text fontSize="sm" color="whiteAlpha.600">
-            {comments.length} {comments.length === 1 ? "comment" : "comments"}
-          </Text>
+          <Flex align="center" gap={3}>
+            <Text fontSize="sm" color="whiteAlpha.600">
+              {total} {total === 1 ? "comment" : "comments"}
+            </Text>
+            <Box position="relative">
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as CommentSort)}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#c7d4e8",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: "999px",
+                  padding: "6px 12px",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                }}
+              >
+                {SORTS.map((s) => (
+                  <option
+                    key={s.key}
+                    value={s.key}
+                    style={{ background: "#0b1526" }}
+                  >
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Box>
+          </Flex>
         </Flex>
 
         {/* Composer / sign-in gate */}
         {canPost ? (
-          <Box mb={8}>
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+          <Flex gap={3} mb={8}>
+            <Avatar name={authorName} />
+            <Composer
+              accent={accent}
               placeholder="Share a memory or a hot take…"
-              rows={3}
-              bg="whiteAlpha.100"
-              border="1px solid"
-              borderColor="whiteAlpha.300"
-              color="white"
-              _placeholder={{ color: "whiteAlpha.500" }}
-              maxLength={4000}
+              authorName={authorName}
+              onSubmit={submitTop}
             />
-            <Flex mt={2} justify="space-between" align="center">
-              <Text fontSize="xs" color="whiteAlpha.500">
-                Posting as {user?.username || user?.firstName || "you"}
-              </Text>
-              <Button
-                onClick={submit}
-                loading={posting}
-                disabled={!draft.trim()}
-                bg={accent}
-                color="nexzy.navy"
-                fontWeight="700"
-                borderRadius="full"
-                px={6}
-              >
-                Post
-              </Button>
-            </Flex>
-          </Box>
+          </Flex>
         ) : (
           <Box
             mb={8}
@@ -216,7 +194,7 @@ export default function ContentComments({
             bg="whiteAlpha.100"
             border="1px solid"
             borderColor="whiteAlpha.200"
-            borderRadius="xl"
+            borderRadius="16px"
             textAlign="center"
           >
             {authLoading ? (
@@ -231,7 +209,10 @@ export default function ContentComments({
               <SignInPanel onDone={() => setShowSignIn(false)} />
             ) : (
               <>
-                <Text color="whiteAlpha.800" fontSize="sm" mb={3}>
+                <Text color="white" fontSize="md" fontWeight="600" mb={1}>
+                  Jump in — what did this take you back to?
+                </Text>
+                <Text color="whiteAlpha.700" fontSize="sm" mb={3}>
                   Sign in with your Nexzy account to comment and vote.
                 </Text>
                 <Button
@@ -242,88 +223,48 @@ export default function ContentComments({
                   borderRadius="full"
                   px={6}
                 >
-                  Sign in
+                  Sign in to comment
                 </Button>
               </>
             )}
           </Box>
         )}
 
-        {notice ? (
-          <Text mb={5} fontSize="sm" color={accent}>
-            {notice}
-          </Text>
-        ) : null}
-
         {/* List */}
         {loading ? (
           <Text color="whiteAlpha.600" fontSize="sm">
             Loading comments…
           </Text>
-        ) : comments.length === 0 ? (
+        ) : items.length === 0 ? (
           <Text color="whiteAlpha.600" fontSize="sm">
             Be the first to comment.
           </Text>
         ) : (
-          <Flex direction="column" gap={5}>
-            {comments.map((c) => (
-              <Box
+          <Box>
+            {items.map((c) => (
+              <CommentItem
                 key={c.id}
-                p={4}
-                bg="whiteAlpha.50"
-                border="1px solid"
-                borderColor="whiteAlpha.100"
-                borderRadius="lg"
-              >
-                <Flex justify="space-between" align="center" mb={2}>
-                  <Text fontWeight="600" color="white" fontSize="sm">
-                    {c.author.username}
-                  </Text>
-                  <Text fontSize="xs" color="whiteAlpha.500">
-                    {timeAgo(c.createdAt)}
-                  </Text>
-                </Flex>
-                <Text
-                  color="whiteAlpha.900"
-                  fontSize="sm"
-                  whiteSpace="pre-wrap"
-                >
-                  {c.content}
-                </Text>
-                <Flex mt={3} align="center" gap={4}>
-                  <Button
-                    onClick={() => vote(c.id, 1)}
-                    variant="ghost"
-                    size="xs"
-                    color={c.myVote === 1 ? accent : "whiteAlpha.700"}
-                    _hover={{ color: accent, bg: "whiteAlpha.100" }}
-                  >
-                    ▲ {c.upvotes}
-                  </Button>
-                  <Button
-                    onClick={() => vote(c.id, -1)}
-                    variant="ghost"
-                    size="xs"
-                    color={c.myVote === -1 ? "red.300" : "whiteAlpha.700"}
-                    _hover={{ color: "red.300", bg: "whiteAlpha.100" }}
-                  >
-                    ▼ {c.downvotes}
-                  </Button>
-                  {user && user.id === c.author.id ? (
-                    <Button
-                      onClick={() => remove(c.id)}
-                      variant="ghost"
-                      size="xs"
-                      color="whiteAlpha.500"
-                      _hover={{ color: "red.300", bg: "whiteAlpha.100" }}
-                    >
-                      Delete
-                    </Button>
-                  ) : null}
-                </Flex>
-              </Box>
+                comment={c}
+                currentUserId={user?.id}
+                authorName={authorName}
+                accent={accent}
+                slug={slug}
+                requireSignIn={requireSignIn}
+                onDeleted={onDeleted}
+              />
             ))}
-          </Flex>
+            <Box ref={sentinel} h="1px" />
+            {loadingMore ? (
+              <Text
+                textAlign="center"
+                fontSize="13px"
+                color="whiteAlpha.500"
+                pt={4}
+              >
+                Loading more…
+              </Text>
+            ) : null}
+          </Box>
         )}
       </Container>
     </Box>

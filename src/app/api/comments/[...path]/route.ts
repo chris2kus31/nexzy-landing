@@ -43,4 +43,5 @@ async function proxy(req: NextRequest, ctx: Ctx) {
 
 export const GET = proxy;
 export const POST = proxy;
+export const PATCH = proxy;
 export const DELETE = proxy;
