@@ -5,6 +5,7 @@ import NextLink from "next/link";
 import { Box, Container, Flex, HStack, Text } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel } from "@/lib/blog/beats";
+import { track } from "@/lib/analytics";
 
 type TabKey = "hot" | "reads";
 
@@ -59,7 +60,10 @@ export default function TrendingBar({
                 <Box
                   as="button"
                   key={k}
-                  onClick={() => setTab(k)}
+                  onClick={() => {
+                    setTab(k);
+                    track("trending_sort", { tab: k });
+                  }}
                   fontSize="xs"
                   fontWeight="700"
                   color={tab === k ? "white" : "gray.500"}
@@ -88,6 +92,14 @@ export default function TrendingBar({
                 key={p.slug}
                 href={`/blog/${p.slug}`}
                 style={{ flexShrink: 0 }}
+                onClick={() =>
+                  track("content_click", {
+                    content_type: "news",
+                    slug: p.slug,
+                    from: "trending",
+                    rank: i + 1,
+                  })
+                }
               >
                 <HStack gap={2} className="group" whiteSpace="nowrap">
                   <Text color="nexzy.blue" fontWeight="800" fontSize="sm">

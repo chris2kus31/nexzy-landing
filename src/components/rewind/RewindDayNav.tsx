@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Box, Flex, HStack } from "@chakra-ui/react";
 import { dateSlug, monthName } from "@/lib/rewind/era";
+import { track } from "@/lib/analytics";
 
 const GOLD = "#f5b53d";
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -37,7 +38,10 @@ export default function RewindDayNav({
   const isToday = now.getMonth() + 1 === month && now.getDate() === day;
   const todayHref = href(now.getMonth() + 1, now.getDate());
 
-  const go = (m: number, d: number) => router.push(href(m, d));
+  const go = (m: number, d: number) => {
+    track("rewind_day_nav", { action: "pick", month: m, day: d });
+    router.push(href(m, d));
+  };
   const maxDay = DAYS_IN[month - 1];
   const safeDay = Math.min(day, maxDay);
 

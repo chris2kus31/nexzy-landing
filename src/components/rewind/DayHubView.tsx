@@ -82,6 +82,7 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
           NEXZY REWIND · ON THIS DAY
         </Text>
         <Heading
+          as="h1"
           fontFamily="title"
           size="3xl"
           color="nexzy.white"

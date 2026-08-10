@@ -139,6 +139,7 @@ export default function RewindSeriesLanding({
               ◀◀
             </Box>
             <Heading
+              as="h1"
               color="#EAF0F9"
               fontStyle="italic"
               textTransform="uppercase"

@@ -18,10 +18,19 @@ export async function generateMetadata({
   const parsed = parseDateSlug(date);
   if (!parsed) return { title: "Rewind — Nexzy" };
   const label = `${monthName(parsed.month)} ${parsed.day}`;
+  const title = `${label} in Gaming History — On This Day | Nexzy Rewind`;
+  const description = `Every game launch and moment that happened on ${label}, across four decades of gaming history.`;
   return {
-    title: `${label} in Gaming History — On This Day | Nexzy Rewind`,
-    description: `Every game launch and moment that happened on ${label}, across four decades of gaming history.`,
+    title,
+    description,
     alternates: { canonical: `/rewind/on-this-day/${date}` },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `/rewind/on-this-day/${date}`,
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -34,7 +43,8 @@ export default async function RewindOnThisDayPage({
   const parsed = parseDateSlug(date);
   if (!parsed) notFound();
   const hub = await fetchRewindDay(parsed.month, parsed.day);
-  if (!hub) notFound();
+  // Don't render (or index) an empty "on this day" page — thin content.
+  if (!hub || (hub.timeline?.length ?? 0) === 0) notFound();
 
   return (
     <Box bg="nexzy.navy" minH="100vh">

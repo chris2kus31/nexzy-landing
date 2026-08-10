@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Image } from "@chakra-ui/react";
 import { FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
+import { track } from "@/lib/analytics";
 
 interface Shot {
   src: string;
@@ -52,6 +53,7 @@ export default function RewindLightbox({
     if (start < 0 || !list.length) return;
     setShots(list);
     setIndex(start);
+    track("rewind_lightbox_open", { index: start, count: list.length });
   }
 
   // Keyboard controls + body scroll lock while open.

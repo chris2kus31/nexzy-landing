@@ -2,6 +2,7 @@
 
 import { Box, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 
 /**
  * The TV screen. At rest it's a BLACK masked tube (a set that's off) with a
@@ -51,7 +52,10 @@ export default function RewindScreen({
       ) : (
         <button
           type="button"
-          onClick={() => setOn(true)}
+          onClick={() => {
+            setOn(true);
+            track("rewind_video_play", { vid, year: year ?? undefined });
+          }}
           aria-label={`Play ${title}`}
           style={{
             position: "absolute",

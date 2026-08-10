@@ -6,6 +6,7 @@ import { Press_Start_2P } from "next/font/google";
 import RewindScrubber, {
   type RewindStop,
 } from "@/components/rewind/RewindScrubber";
+import { track } from "@/lib/analytics";
 
 const pixel = Press_Start_2P({
   weight: "400",
@@ -32,6 +33,11 @@ export default function RewindHeader({
   const onShare = () => {
     if (typeof window === "undefined") return;
     const url = window.location.href;
+    track("rewind_share", {
+      target: "episode",
+      slug,
+      method: typeof navigator.share === "function" ? "native" : "clipboard",
+    });
     if (navigator.share) {
       navigator.share({ title: document.title, url }).catch(() => {});
     } else {

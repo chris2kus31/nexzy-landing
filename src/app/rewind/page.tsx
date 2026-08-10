@@ -7,11 +7,25 @@ import { fetchRewindDay, fetchRewindRecent } from "@/lib/blog/api";
 
 export const revalidate = 300;
 
+const REWIND_TITLE = "Rewind — This Day in Gaming History | Nexzy";
+const REWIND_DESC =
+  "Nexzy Rewind is a daily trip back through gaming history — the launches, consoles, and moments that mattered, on this day. Browse any date.";
+
 export const metadata: Metadata = {
-  title: "Rewind — This Day in Gaming History | Nexzy",
-  description:
-    "Nexzy Rewind is a daily trip back through gaming history — the launches, consoles, and moments that mattered, on this day. Browse any date.",
+  title: REWIND_TITLE,
+  description: REWIND_DESC,
   alternates: { canonical: "/rewind" },
+  openGraph: {
+    title: REWIND_TITLE,
+    description: REWIND_DESC,
+    type: "website",
+    url: "/rewind",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: REWIND_TITLE,
+    description: REWIND_DESC,
+  },
 };
 
 export default async function RewindSeriesPage() {
@@ -21,11 +35,36 @@ export default async function RewindSeriesPage() {
     fetchRewindRecent(10),
   ]);
 
+  const SITE_URL =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: REWIND_TITLE,
+    description: REWIND_DESC,
+    url: `${SITE_URL}/rewind`,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: (recent || [])
+        .filter((r) => r.slug)
+        .map((r, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: `${SITE_URL}/rewind/${r.slug}`,
+          name: r.title,
+        })),
+    },
+  };
+
   return (
     <Box bg="nexzy.navy" minH="100vh">
       <Navigation />
       <RewindSeriesLanding todayHub={todayHub} recent={recent} />
       <Footer />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+      />
     </Box>
   );
 }

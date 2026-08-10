@@ -168,6 +168,7 @@ export default async function RewindEpisodePage({
     "@context": "https://schema.org",
     "@type": "Article",
     headline: ep.title,
+    description: ep.seoDescription || ep.excerpt || undefined,
     datePublished: ep.publishedAt || undefined,
     dateModified: ep.updatedAt || ep.publishedAt || undefined,
     image: imageObjectLd(ep),
@@ -237,6 +238,78 @@ export default async function RewindEpisodePage({
               )}
             </RewindLightbox>
           </Box>
+
+          {/* Internal links — sibling episodes + the day hub (crawlable) */}
+          {ep.event && (
+            <Container maxW="6xl" p="0" mt={{ base: 8, md: 12 }}>
+              {more.length > 0 && (
+                <Box mb={8}>
+                  <Text
+                    fontFamily="mono"
+                    fontSize="xs"
+                    letterSpacing="0.15em"
+                    color="whiteAlpha.600"
+                    mb={3}
+                  >
+                    MORE ON {monthName(ep.event.month).toUpperCase()}{" "}
+                    {ep.event.day}
+                  </Text>
+                  <Box
+                    display="grid"
+                    gridTemplateColumns={{
+                      base: "1fr",
+                      sm: "repeat(2, 1fr)",
+                      md: "repeat(3, 1fr)",
+                    }}
+                    gap={3}
+                  >
+                    {more.map((m) => (
+                      <TrackedLink
+                        key={m.slug ?? m.title}
+                        href={`/rewind/${m.slug}`}
+                        event="content_click"
+                        params={{
+                          content_type: "rewind",
+                          slug: m.slug ?? "",
+                          from: "rewind_more",
+                        }}
+                      >
+                        <Box
+                          h="100%"
+                          border="1px solid"
+                          borderColor="whiteAlpha.200"
+                          bg="whiteAlpha.50"
+                          borderRadius="lg"
+                          p={4}
+                          _hover={{ borderColor: era.accent }}
+                        >
+                          <Text
+                            fontFamily="mono"
+                            fontSize="10px"
+                            color={era.accent}
+                            mb={1}
+                          >
+                            {m.year ?? "—"}
+                          </Text>
+                          <Text color="white" fontWeight="700">
+                            {m.title}
+                          </Text>
+                        </Box>
+                      </TrackedLink>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+              <NextLink
+                href={`/rewind/on-this-day/${dateSlug(ep.event.month, ep.event.day)}`}
+              >
+                <Text color={era.accent} fontWeight="600" fontSize="sm">
+                  ← Everything that happened on {monthName(ep.event.month)}{" "}
+                  {ep.event.day}
+                </Text>
+              </NextLink>
+            </Container>
+          )}
         </Box>
         <ContentComments slug={slug} accent={era.accent} />
         <Footer />

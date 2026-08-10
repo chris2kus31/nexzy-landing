@@ -1,4 +1,3 @@
-import NextLink from "next/link";
 import NextImage from "next/image";
 import { Box, Container, Flex, HStack, Heading, Text } from "@chakra-ui/react";
 import TrackedLink from "@/components/TrackedLink";
@@ -81,11 +80,15 @@ export default function HomeRewindFeature({
               Step into the time machine
             </Heading>
           </Box>
-          <NextLink href="/rewind">
+          <TrackedLink
+            href="/rewind"
+            event="content_click"
+            params={{ content_type: "rewind", from: "home_feature_all" }}
+          >
             <Text color="nexzy.lightBlue" fontWeight="700" fontSize="sm">
               All Rewinds →
             </Text>
-          </NextLink>
+          </TrackedLink>
         </Flex>
 
         {/* Feature card */}
