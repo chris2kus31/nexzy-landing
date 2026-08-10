@@ -8,6 +8,10 @@ import {
   FaRedditAlien,
   FaWhatsapp,
   FaTelegram,
+  FaThreads,
+  FaBluesky,
+  FaInstagram,
+  FaTiktok,
 } from "react-icons/fa6";
 import { HiLink, HiCheck, HiMail } from "react-icons/hi";
 import { IoShareSocial } from "react-icons/io5";
@@ -71,6 +75,19 @@ export default function ShareRow({
     try {
       await navigator.clipboard.writeText(url);
       track("content_share", { method: "copy_link", title });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked — ignore */
+    }
+  };
+
+  // Instagram + TikTok have no web "share/post" URL intent — the honest,
+  // working behavior is to copy the link so the user can paste it into the app.
+  const copyForApp = async (method: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      track("content_share", { method, title });
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -154,6 +171,40 @@ export default function ShareRow({
         () => open(`https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`),
         <Icon>
           <FaFacebookF />
+        </Icon>,
+      )}
+      {iconBtn(
+        "Share on Threads",
+        () =>
+          open(
+            `https://www.threads.net/intent/post?text=${enc(`${title} ${url}`)}`,
+          ),
+        <Icon>
+          <FaThreads />
+        </Icon>,
+      )}
+      {iconBtn(
+        "Share on Bluesky",
+        () =>
+          open(
+            `https://bsky.app/intent/compose?text=${enc(`${title} ${url}`)}`,
+          ),
+        <Icon>
+          <FaBluesky />
+        </Icon>,
+      )}
+      {iconBtn(
+        "Copy link for Instagram",
+        () => copyForApp("instagram"),
+        <Icon>
+          <FaInstagram />
+        </Icon>,
+      )}
+      {iconBtn(
+        "Copy link for TikTok",
+        () => copyForApp("tiktok"),
+        <Icon>
+          <FaTiktok />
         </Icon>,
       )}
       {iconBtn(

@@ -69,6 +69,22 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
 
   return (
     <Container maxW="3xl" pt={{ base: 24, md: 28 }} pb={{ base: 12, md: 16 }}>
+      <TrackedLink
+        href="/rewind"
+        event="content_click"
+        params={{ content_type: "rewind", from: "dayhub_back" }}
+      >
+        <Text
+          fontFamily="mono"
+          fontSize="sm"
+          color="nexzy.gray.100"
+          mb={4}
+          _hover={{ color: GOLD }}
+        >
+          ← Back to Rewind
+        </Text>
+      </TrackedLink>
+
       <RewindDayNav month={hub.month} day={hub.day} />
 
       {/* MASTHEAD */}

@@ -226,6 +226,18 @@ export default async function RewindEpisodePage({
             }
             slug={slug}
             stops={stops}
+            backHref={
+              ep.event
+                ? `/rewind/on-this-day/${dateSlug(ep.event.month, ep.event.day)}`
+                : "/rewind"
+            }
+            backLabel={
+              ep.event
+                ? `Back to ${monthName(ep.event.month)} ${ep.event.day}`
+                : "Back to Rewinding"
+            }
+            shareUrl={`${SITE_URL}/rewind/${slug}`}
+            shareTitle={ep.title}
           />
           <Box mt={{ base: 6, md: 8 }}>
             <RewindLightbox>

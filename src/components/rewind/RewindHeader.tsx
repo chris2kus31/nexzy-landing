@@ -6,7 +6,7 @@ import { Press_Start_2P } from "next/font/google";
 import RewindScrubber, {
   type RewindStop,
 } from "@/components/rewind/RewindScrubber";
-import { track } from "@/lib/analytics";
+import ShareMenu from "@/components/blog/ShareMenu";
 
 const pixel = Press_Start_2P({
   weight: "400",
@@ -25,26 +25,19 @@ export default function RewindHeader({
   dateLabel,
   slug,
   stops,
+  backHref = "/rewind",
+  backLabel = "Back to Rewinding",
+  shareUrl,
+  shareTitle,
 }: {
   dateLabel: string;
   slug: string;
   stops: RewindStop[];
+  backHref?: string;
+  backLabel?: string;
+  shareUrl: string;
+  shareTitle: string;
 }) {
-  const onShare = () => {
-    if (typeof window === "undefined") return;
-    const url = window.location.href;
-    track("rewind_share", {
-      target: "episode",
-      slug,
-      method: typeof navigator.share === "function" ? "native" : "clipboard",
-    });
-    if (navigator.share) {
-      navigator.share({ title: document.title, url }).catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(url).catch(() => {});
-    }
-  };
-
   return (
     <Box w="100%" maxW="900px" mx="auto" color="nexzy.white">
       <Box
@@ -53,7 +46,7 @@ export default function RewindHeader({
         alignItems="center"
         gap={3}
       >
-        <Link href="/rewind">
+        <Link href={backHref}>
           <HStack
             gap={2}
             color="nexzy.gray.100"
@@ -62,7 +55,7 @@ export default function RewindHeader({
             _hover={{ color: GOLD }}
           >
             <Box as="span">←</Box>
-            <Box as="span">Back to Rewinding</Box>
+            <Box as="span">{backLabel}</Box>
           </HStack>
         </Link>
 
@@ -87,19 +80,7 @@ export default function RewindHeader({
         </Box>
 
         <Flex justify="flex-end">
-          <HStack
-            as="button"
-            onClick={onShare}
-            gap={2}
-            color="nexzy.gray.100"
-            fontFamily="mono"
-            fontSize={{ base: "12px", md: "14px" }}
-            _hover={{ color: GOLD }}
-            css={{ cursor: "pointer" }}
-          >
-            <Box as="span">⤴</Box>
-            <Box as="span">Share</Box>
-          </HStack>
+          <ShareMenu url={shareUrl} title={shareTitle} />
         </Flex>
       </Box>
 
