@@ -7,6 +7,11 @@ export const GOOGLE_WEB_CLIENT_ID =
 export const APPLE_SERVICES_ID =
   process.env.NEXT_PUBLIC_APPLE_SERVICES_ID || "";
 
+// Email + password (with OTP) sign-in on the web. Off by default — social
+// sign-in (Google/Apple) is the primary path. Set to "true" to expose it.
+export const EMAIL_AUTH_ENABLED =
+  process.env.NEXT_PUBLIC_EMAIL_AUTH_ENABLED === "true";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 // Must exactly match a Return URL registered on the Apple Services ID.

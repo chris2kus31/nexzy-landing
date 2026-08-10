@@ -7,8 +7,10 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   APPLE_SERVICES_ID,
   APPLE_REDIRECT_URI,
+  EMAIL_AUTH_ENABLED,
   getWebDeviceId,
 } from "@/lib/auth/config";
+import EmailAuthPanel from "./EmailAuthPanel";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -57,6 +59,7 @@ export default function SignInPanel({ onDone }: { onDone?: () => void }) {
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
 
   async function postSession(path: string, payload: Record<string, unknown>) {
     setBusy(true);
@@ -176,6 +179,38 @@ export default function SignInPanel({ onDone }: { onDone?: () => void }) {
           </Button>
         ) : null}
       </Flex>
+
+      {EMAIL_AUTH_ENABLED ? (
+        <Box mt={4}>
+          {showEmail ? (
+            <EmailAuthPanel onDone={onDone} />
+          ) : (
+            <Flex direction="column" align="center" gap={2}>
+              <Flex align="center" w="260px" gap={3} opacity={0.5}>
+                <Box h="1px" flex="1" bg="whiteAlpha.400" />
+                <Text fontSize="xs" color="whiteAlpha.700">
+                  or
+                </Text>
+                <Box h="1px" flex="1" bg="whiteAlpha.400" />
+              </Flex>
+              <Button
+                onClick={() => setShowEmail(true)}
+                variant="outline"
+                borderColor="whiteAlpha.400"
+                color="white"
+                borderRadius="full"
+                w="260px"
+                h="40px"
+                fontSize="sm"
+                fontWeight="600"
+                _hover={{ bg: "whiteAlpha.100" }}
+              >
+                Continue with email
+              </Button>
+            </Flex>
+          )}
+        </Box>
+      ) : null}
 
       {error ? (
         <Text mt={3} fontSize="sm" color="red.400" textAlign="center">
