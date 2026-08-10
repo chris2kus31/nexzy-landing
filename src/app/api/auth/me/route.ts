@@ -12,6 +12,13 @@ import {
   RT_MAX_AGE,
 } from "@/lib/auth/server";
 
+// nexzy-api /auth/me returns { user: { ...userName } }. Flatten it and map the
+// backend's `userName` to the `username` the web client expects.
+function normalizeUser(body: any) {
+  const u = body?.user ?? body ?? {};
+  return { ...u, username: u.username ?? u.userName ?? null };
+}
+
 async function fetchMe(accessToken: string) {
   return fetch(`${USER_API_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -28,8 +35,7 @@ export async function GET(req: NextRequest) {
     try {
       const me = await fetchMe(at);
       if (me.ok) {
-        const user = await me.json();
-        return NextResponse.json({ user });
+        return NextResponse.json({ user: normalizeUser(await me.json()) });
       }
     } catch {
       return NextResponse.json({ user: null }, { status: 502 });
@@ -54,8 +60,9 @@ export async function GET(req: NextRequest) {
       try {
         const me = await fetchMe(tokens.accessToken);
         if (me.ok) {
-          const user = await me.json();
-          const res = NextResponse.json({ user });
+          const res = NextResponse.json({
+            user: normalizeUser(await me.json()),
+          });
           if (tokens.accessToken)
             res.cookies.set(
               USER_AT_COOKIE,

@@ -139,6 +139,7 @@ export default function CommentItem({
   isReply = false,
   requireSignIn,
   onDeleted,
+  onAddReply,
 }: {
   comment: CommentT;
   currentUserId?: string;
@@ -148,6 +149,9 @@ export default function CommentItem({
   isReply?: boolean;
   requireSignIn: () => boolean; // returns true if the user must sign in first
   onDeleted: (id: string) => void;
+  // Provided to reply items so replying to a reply appends to the SAME flat
+  // thread (single-level nesting, YouTube-style) rather than nesting deeper.
+  onAddReply?: (text: string) => Promise<{ held?: boolean } | void>;
 }) {
   const [content, setContent] = useState(comment.content);
   const [editedAt, setEditedAt] = useState<string | null>(comment.editedAt);
@@ -330,7 +334,7 @@ export default function CommentItem({
               </Box>
             </Flex>
 
-            {!isReply && (
+            {!isReply || onAddReply ? (
               <Box
                 as="button"
                 onClick={() => {
@@ -341,7 +345,7 @@ export default function CommentItem({
               >
                 Reply
               </Box>
-            )}
+            ) : null}
 
             {reported ? (
               <Text fontSize="12px" color="whiteAlpha.500">
@@ -400,15 +404,23 @@ export default function CommentItem({
           </Flex>
         )}
 
-        {replying && !isReply ? (
+        {replying ? (
           <Box mt={3}>
             <Composer
               accent={accent}
               placeholder="Write a reply…"
               submitLabel="Reply"
               authorName={authorName}
+              initialValue={isReply ? `@${comment.author.username} ` : ""}
               autoFocus
-              onSubmit={submitReply}
+              onSubmit={async (text) => {
+                const res =
+                  isReply && onAddReply
+                    ? await onAddReply(text)
+                    : await submitReply(text);
+                setReplying(false);
+                return res;
+              }}
               onCancel={() => setReplying(false)}
             />
           </Box>
@@ -434,6 +446,7 @@ export default function CommentItem({
                     slug={slug}
                     isReply
                     requireSignIn={requireSignIn}
+                    onAddReply={submitReply}
                     onDeleted={(id) =>
                       setReplies((prev) =>
                         (prev ?? []).filter((x) => x.id !== id),

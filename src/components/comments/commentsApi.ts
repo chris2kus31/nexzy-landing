@@ -76,7 +76,12 @@ export async function fetchPage(
     { cache: "no-store" },
   );
   if (!res.ok) return null;
-  return res.json();
+  const json = await res.json();
+  // Tolerate the legacy array response (pre-pagination API).
+  if (Array.isArray(json)) {
+    return { items: json, nextCursor: null, total: json.length };
+  }
+  return json;
 }
 
 export async function fetchReplies(parentId: string): Promise<CommentT[]> {

@@ -54,8 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
-  const applySession = useCallback((u: ReaderUser) => {
-    setUser(u);
+  const applySession = useCallback((u: ReaderUser & { userName?: string }) => {
+    // Backend UserDto may expose the handle as `userName`; normalize it.
+    setUser({ ...u, username: u.username ?? u.userName ?? null });
     setLoading(false);
   }, []);
 
