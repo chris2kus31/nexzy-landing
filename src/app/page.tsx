@@ -11,7 +11,6 @@ import TrendingBar from "@/components/landing/TrendingBar";
 import HomeRewindFeature from "@/components/landing/HomeRewindFeature";
 import HomeLibrary from "@/components/landing/HomeLibrary";
 import HomeVideos from "@/components/landing/HomeVideos";
-import TopicBar from "@/components/landing/TopicBar";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 import {
@@ -51,9 +50,6 @@ export default async function HomePage() {
 
         {/* Today in gaming history — the flagship Rewind feature */}
         <HomeRewindFeature episode={rewindToday} />
-
-        {/* Section bar — browse the newsroom by beat */}
-        <TopicBar />
 
         {/* Videos & Shorts */}
         <HomeVideos items={videos} />

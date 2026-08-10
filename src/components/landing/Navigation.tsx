@@ -30,6 +30,7 @@ import { useState } from "react";
 import { HiMenu, HiX, HiChevronDown } from "react-icons/hi";
 import NextLink from "next/link";
 import { track } from "@/lib/analytics";
+import { BEATS } from "@/lib/blog/beats";
 
 // Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
 const LIBRARY = [
@@ -37,6 +38,12 @@ const LIBRARY = [
   { label: "Walkthroughs", href: "/walkthroughs" },
   { label: "Lists", href: "/lists" },
   { label: "Reviews", href: "/reviews" },
+];
+
+// News beats (folded in from the old homepage TopicBar) + an "All news" entry.
+const NEWS = [
+  { label: "All news", href: "/blog" },
+  ...BEATS.map((b) => ({ label: b.label, href: `/blog?beat=${b.key}` })),
 ];
 
 export default function Navigation() {
@@ -90,18 +97,77 @@ export default function Navigation() {
               </NextLink>
             </Link>
 
-            <Link
-              asChild
-              fontSize="sm"
-              fontWeight="medium"
-              color="nexzy.white"
-              _hover={{ color: "nexzy.lightBlue" }}
-              transition="color 0.2s"
-            >
-              <NextLink href="/blog" onClick={() => nav("news")}>
-                News
-              </NextLink>
-            </Link>
+            {/* News dropdown (reveals beats on hover) */}
+            <Box position="relative" className="group">
+              <HStack
+                gap={1}
+                fontSize="sm"
+                fontWeight="medium"
+                color="nexzy.white"
+                cursor="pointer"
+                _groupHover={{ color: "nexzy.lightBlue" }}
+                transition="color 0.2s"
+              >
+                <Link asChild color="inherit" _hover={{ color: "inherit" }}>
+                  <NextLink href="/blog" onClick={() => nav("news")}>
+                    News
+                  </NextLink>
+                </Link>
+                <Box as="span" fontSize="xs" mt="1px">
+                  <HiChevronDown />
+                </Box>
+              </HStack>
+              <Box
+                position="absolute"
+                top="100%"
+                left={0}
+                pt={3}
+                minW="200px"
+                opacity={0}
+                visibility="hidden"
+                transform="translateY(6px)"
+                transition="all 0.15s"
+                _groupHover={{
+                  opacity: 1,
+                  visibility: "visible",
+                  transform: "translateY(0)",
+                }}
+              >
+                <Stack
+                  gap={0}
+                  bg="nexzy.navy"
+                  border="1px solid"
+                  borderColor="nexzy.blue/20"
+                  borderRadius="lg"
+                  p={2}
+                  boxShadow="xl"
+                >
+                  {NEWS.map((item) => (
+                    <Link
+                      key={item.href}
+                      asChild
+                      px={3}
+                      py={2}
+                      borderRadius="md"
+                      fontSize="sm"
+                      fontWeight="medium"
+                      color="nexzy.white"
+                      _hover={{
+                        bg: "whiteAlpha.100",
+                        color: "nexzy.lightBlue",
+                      }}
+                    >
+                      <NextLink
+                        href={item.href}
+                        onClick={() => nav(item.label)}
+                      >
+                        {item.label}
+                      </NextLink>
+                    </Link>
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
 
             <Link
               asChild
@@ -296,19 +362,39 @@ export default function Navigation() {
                 </NextLink>
               </Link>
 
-              <Link asChild fontSize="lg" py={2} color="nexzy.white">
-                <NextLink
-                  href="/blog"
-                  onClick={() => {
-                    nav("news");
-                    close();
-                  }}
+              <Text
+                fontSize="xs"
+                fontWeight="800"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                color="nexzy.gray.100"
+                mt={3}
+                mb={1}
+              >
+                News
+              </Text>
+              {NEWS.map((item) => (
+                <Link
+                  key={item.href}
+                  asChild
+                  fontSize="lg"
+                  py={2}
+                  pl={3}
+                  color="nexzy.white"
                 >
-                  News
-                </NextLink>
-              </Link>
+                  <NextLink
+                    href={item.href}
+                    onClick={() => {
+                      nav(item.label);
+                      close();
+                    }}
+                  >
+                    {item.label}
+                  </NextLink>
+                </Link>
+              ))}
 
-              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+              <Link asChild fontSize="lg" py={2} mt={3} color="nexzy.white">
                 <NextLink
                   href="/rewind"
                   onClick={() => {
