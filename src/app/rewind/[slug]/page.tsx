@@ -16,6 +16,7 @@ import RewindEra80s from "@/components/rewind/RewindEra80s";
 import RewindEra90s from "@/components/rewind/RewindEra90s";
 import RewindEra00s from "@/components/rewind/RewindEra00s";
 import RewindHeader from "@/components/rewind/RewindHeader";
+import ContentComments from "@/components/comments/ContentComments";
 import {
   eraForYear,
   yearsAgo,
@@ -234,6 +235,7 @@ export default async function RewindEpisodePage({
             )}
           </Box>
         </Box>
+        <ContentComments slug={slug} accent={era.accent} />
         <Footer />
         <ViewPing slug={slug} />
         <ArticleAnalytics
@@ -809,6 +811,8 @@ export default async function RewindEpisodePage({
           </Box>
         </Container>
       </Box>
+
+      <ContentComments slug={slug} accent={era.accent} />
 
       <Footer />
 
