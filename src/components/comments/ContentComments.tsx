@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button, Container, Flex, Text } from "@chakra-ui/react";
+import { Box, Container, Flex, Text } from "@chakra-ui/react";
+import { FaRegUser } from "react-icons/fa";
 import { useAuth } from "@/components/auth/AuthProvider";
-import SignInPanel from "@/components/auth/SignInPanel";
+import SignInModal from "@/components/auth/SignInModal";
 import CommentItem, { Avatar, Composer } from "./CommentItem";
 import { CommentSort, CommentT, createComment, fetchPage } from "./commentsApi";
 
@@ -26,14 +27,14 @@ export default function ContentComments({
   slug: string;
   accent?: string;
 }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, signOut } = useAuth();
   const [items, setItems] = useState<CommentT[]>([]);
   const [total, setTotal] = useState(0);
   const [cursor, setCursor] = useState<string | null>(null);
   const [sort, setSort] = useState<CommentSort>("top");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const sentinel = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<string | null>(null);
@@ -42,10 +43,10 @@ export default function ContentComments({
   const authorName = user?.username || user?.firstName || "you";
   const canPost = !!user && user.isVerified !== false;
 
-  // Returns true (and reveals the sign-in panel) if the user must sign in.
+  // Returns true (and opens the sign-in popup) if the user must sign in first.
   const requireSignIn = useCallback(() => {
     if (user && user.isVerified !== false) return false;
-    setShowSignIn(true);
+    setAuthModalOpen(true);
     return true;
   }, [user]);
 
@@ -97,7 +98,7 @@ export default function ContentComments({
   }, [loadMore]);
 
   async function submitTop(text: string) {
-    if (requireSignIn()) return;
+    if (requireSignIn()) return { blocked: true };
     const res = await createComment(slug, text);
     if (!res.ok) return;
     if (!res.held && user) {
@@ -176,59 +177,52 @@ export default function ContentComments({
           </Flex>
         </Flex>
 
-        {/* Composer / sign-in gate */}
-        {canPost ? (
-          <Flex gap={3} mb={8}>
-            <Avatar name={authorName} />
+        {/* Composer — everyone can type; posting/voting opens the sign-in popup */}
+        <Box mb={8}>
+          {canPost ? (
+            <Flex justify="flex-end" mb={2}>
+              <Text fontSize="xs" color="whiteAlpha.500">
+                Signed in as{" "}
+                <Box as="span" color="whiteAlpha.700">
+                  {authorName}
+                </Box>{" "}
+                ·{" "}
+                <Box
+                  as="button"
+                  onClick={() => signOut()}
+                  color={accent}
+                  _hover={{ textDecoration: "underline" }}
+                >
+                  Sign out
+                </Box>
+              </Text>
+            </Flex>
+          ) : null}
+          <Flex gap={3}>
+            {canPost ? (
+              <Avatar name={authorName} />
+            ) : (
+              <Flex
+                w="38px"
+                h="38px"
+                borderRadius="full"
+                bg="whiteAlpha.200"
+                color="whiteAlpha.700"
+                align="center"
+                justify="center"
+                flexShrink={0}
+              >
+                <FaRegUser />
+              </Flex>
+            )}
             <Composer
               accent={accent}
               placeholder="Share a memory or a hot take…"
-              authorName={authorName}
+              authorName={canPost ? authorName : undefined}
               onSubmit={submitTop}
             />
           </Flex>
-        ) : (
-          <Box
-            mb={8}
-            p={5}
-            bg="whiteAlpha.100"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="16px"
-            textAlign="center"
-          >
-            {authLoading ? (
-              <Text color="whiteAlpha.700" fontSize="sm">
-                Loading…
-              </Text>
-            ) : user && user.isVerified === false ? (
-              <Text color="whiteAlpha.800" fontSize="sm">
-                Please verify your Nexzy account to join the conversation.
-              </Text>
-            ) : showSignIn ? (
-              <SignInPanel onDone={() => setShowSignIn(false)} />
-            ) : (
-              <>
-                <Text color="white" fontSize="md" fontWeight="600" mb={1}>
-                  Jump in — what did this take you back to?
-                </Text>
-                <Text color="whiteAlpha.700" fontSize="sm" mb={3}>
-                  Sign in with your Nexzy account to comment and vote.
-                </Text>
-                <Button
-                  onClick={() => setShowSignIn(true)}
-                  bg={accent}
-                  color="nexzy.navy"
-                  fontWeight="700"
-                  borderRadius="full"
-                  px={6}
-                >
-                  Sign in to comment
-                </Button>
-              </>
-            )}
-          </Box>
-        )}
+        </Box>
 
         {/* List */}
         {loading ? (
@@ -267,6 +261,12 @@ export default function ContentComments({
           </Box>
         )}
       </Container>
+
+      <SignInModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSignedIn={() => loadFirst(sort)}
+      />
     </Box>
   );
 }

@@ -3,6 +3,12 @@
 import { useRef, useState } from "react";
 import { Box, Button, Flex, Text, Textarea } from "@chakra-ui/react";
 import {
+  FaThumbsUp,
+  FaRegThumbsUp,
+  FaThumbsDown,
+  FaRegThumbsDown,
+} from "react-icons/fa";
+import {
   CommentT,
   avatarColor,
   createComment,
@@ -53,7 +59,9 @@ export function Composer({
   authorName?: string;
   initialValue?: string;
   autoFocus?: boolean;
-  onSubmit: (content: string) => Promise<{ held?: boolean } | void>;
+  onSubmit: (
+    content: string,
+  ) => Promise<{ held?: boolean; blocked?: boolean } | void>;
   onCancel?: () => void;
 }) {
   const [text, setText] = useState(initialValue);
@@ -67,6 +75,8 @@ export function Composer({
     setNotice(null);
     const res = await onSubmit(content);
     setBusy(false);
+    // Blocked = sign-in popup opened; keep their text so they can continue.
+    if (res && res.blocked) return;
     if (res && res.held) {
       setNotice("Thanks — your comment is awaiting review.");
       setText("");
@@ -151,7 +161,9 @@ export default function CommentItem({
   onDeleted: (id: string) => void;
   // Provided to reply items so replying to a reply appends to the SAME flat
   // thread (single-level nesting, YouTube-style) rather than nesting deeper.
-  onAddReply?: (text: string) => Promise<{ held?: boolean } | void>;
+  onAddReply?: (
+    text: string,
+  ) => Promise<{ held?: boolean; blocked?: boolean } | void>;
 }) {
   const [content, setContent] = useState(comment.content);
   const [editedAt, setEditedAt] = useState<string | null>(comment.editedAt);
@@ -200,7 +212,7 @@ export default function CommentItem({
   }
 
   async function submitReply(text: string) {
-    if (requireSignIn()) return;
+    if (requireSignIn()) return { blocked: true };
     const res = await createComment(slug, text, comment.id);
     if (!res.ok) return;
     if (!res.held) {
@@ -316,9 +328,10 @@ export default function CommentItem({
                 _hover={{ color: accent }}
                 display="flex"
                 alignItems="center"
-                gap={1}
+                gap={1.5}
+                aria-label="Thumbs up"
               >
-                ▲ {up}
+                {myVote === 1 ? <FaThumbsUp /> : <FaRegThumbsUp />} {up}
               </Box>
               <Box w="1px" h="14px" bg="whiteAlpha.300" />
               <Box
@@ -328,19 +341,17 @@ export default function CommentItem({
                 _hover={{ color: "red.300" }}
                 display="flex"
                 alignItems="center"
-                gap={1}
+                gap={1.5}
+                aria-label="Thumbs down"
               >
-                ▼ {down}
+                {myVote === -1 ? <FaThumbsDown /> : <FaRegThumbsDown />} {down}
               </Box>
             </Flex>
 
             {!isReply || onAddReply ? (
               <Box
                 as="button"
-                onClick={() => {
-                  if (requireSignIn()) return;
-                  setReplying((v) => !v);
-                }}
+                onClick={() => setReplying((v) => !v)}
                 _hover={{ color: "white" }}
               >
                 Reply
@@ -418,7 +429,8 @@ export default function CommentItem({
                   isReply && onAddReply
                     ? await onAddReply(text)
                     : await submitReply(text);
-                setReplying(false);
+                // Keep the reply box open (with text) if a sign-in popup opened.
+                if (!res || !res.blocked) setReplying(false);
                 return res;
               }}
               onCancel={() => setReplying(false)}
