@@ -368,9 +368,11 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       </HStack>
 
       <Text color="nexzy.gray.100" fontSize="xs">
-        Verified only hides single-source candidates. Run backfill to pull this
-        day from Wikidata; paste a block below to add more. Events show verified
-        once a trusted source (Wikidata) confirms them.
+        Run backfill to pull this day from Wikidata; paste a block below to add
+        more. &ldquo;Verified&rdquo; means a structured source (Wikidata) has
+        this date — it does NOT guarantee the date, region, or that it was the
+        original launch, so double-check before writing. Autopilot only
+        auto-drafts events corroborated by 2+ sources.
       </Text>
 
       {isOwner && (
@@ -381,8 +383,8 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
           p={3}
         >
           <Text color="nexzy.white" fontSize="sm" fontWeight="600" mb={2}>
-            Paste an “On This Day” block (facts only — re-verified against
-            Wikidata)
+            Paste an “On This Day” block (facts only — lands as unverified
+            candidates until another source corroborates the same title + day)
           </Text>
           <Textarea
             value={pasteText}
