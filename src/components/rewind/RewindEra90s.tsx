@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 import { Box, Flex, Heading, Image, Text } from "@chakra-ui/react";
-import { Anton } from "next/font/google";
+import { anton } from "@/lib/rewindFonts";
 import type { RewindEpisode } from "@/lib/blog/api";
 import type { RewindStop } from "@/components/rewind/RewindScrubber";
 import RewindVault from "@/components/rewind/RewindVault";
 import { monthName } from "@/lib/rewind/era";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], display: "swap" });
 const DISPLAY = anton.style.fontFamily; // titles, tabs, headings
 // Clean 90s-magazine editorial body (not typewriter/terminal).
 const SANS =

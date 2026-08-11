@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Box, Container, Flex, Heading, Image, Text } from "@chakra-ui/react";
-import { VT323 } from "next/font/google";
+import { vt323 as vt } from "@/lib/rewindFonts";
 import {
   FiCalendar,
   FiClock,
@@ -26,7 +26,6 @@ const QR_IMG = "/qr-get-app.png";
 const PHONE_A = "/NexzyHomeLogin.png";
 const PHONE_B = "/NexzyAI.png";
 
-const vt = VT323({ weight: "400", subsets: ["latin"], display: "swap" });
 const DIGITAL = vt.style.fontFamily; // digital-clock readout
 
 const GOLD = "#f5b53d";

@@ -1,9 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import NextImage from "next/image";
 import { Box, Heading, Text, SimpleGrid } from "@chakra-ui/react";
 import type { ArticleMedia } from "@/lib/blog/api";
 import { isYoutubeShort } from "@/lib/blog/youtube";
+
+// Only hosts we've whitelisted in next.config remotePatterns can go through
+// next/image (it throws on an unconfigured host). Thumbnails come from these;
+// anything else safely falls back to a plain <img> — no runtime crash.
+const OPTIMIZABLE_HOST =
+  /(?:^|\.)(?:ytimg\.com|youtube\.com|amazonaws\.com|rawg\.io)$/i;
+function canOptimize(src: string): boolean {
+  try {
+    return OPTIMIZABLE_HOST.test(new URL(src).hostname);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * The article video gallery: the starred (lead) video plays large; any others
@@ -77,19 +91,32 @@ export default function MediaGallery({
             cursor="pointer"
             bg="black"
           >
-            <img
-              src={
+            {(() => {
+              const src =
                 current.thumbnailUrl ||
-                `https://i.ytimg.com/vi/${current.videoId}/hqdefault.jpg`
-              }
-              alt={current.title || title}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                opacity: 0.9,
-              }}
-            />
+                `https://i.ytimg.com/vi/${current.videoId}/hqdefault.jpg`;
+              return canOptimize(src) ? (
+                <NextImage
+                  src={src}
+                  alt={current.title || title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 720px"
+                  style={{ objectFit: "cover", opacity: 0.9 }}
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={src}
+                  alt={current.title || title}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    opacity: 0.9,
+                  }}
+                />
+              );
+            })()}
             <Box
               position="absolute"
               top="50%"
@@ -146,14 +173,31 @@ export default function MediaGallery({
               border="2px solid"
               borderColor={i === active ? "nexzy.lightBlue" : "whiteAlpha.200"}
             >
-              <img
-                src={
+              {(() => {
+                const src =
                   m.thumbnailUrl ||
-                  `https://i.ytimg.com/vi/${m.videoId}/mqdefault.jpg`
-                }
-                alt={m.title || ""}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
+                  `https://i.ytimg.com/vi/${m.videoId}/mqdefault.jpg`;
+                return canOptimize(src) ? (
+                  <NextImage
+                    src={src}
+                    alt={m.title || ""}
+                    fill
+                    sizes="(max-width: 640px) 33vw, 160px"
+                    style={{ objectFit: "cover" }}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={src}
+                    alt={m.title || ""}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                );
+              })()}
             </Box>
           ))}
         </SimpleGrid>
