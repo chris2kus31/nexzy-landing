@@ -158,10 +158,11 @@ export default async function GamesIndexPage() {
                     ) : (
                       <Box position="absolute" inset={0} bg="whiteAlpha.100" />
                     )}
-                    {/* gradient + title overlay */}
+                    {/* gradient + title overlay (never intercept the card tap) */}
                     <Box
                       position="absolute"
                       inset={0}
+                      pointerEvents="none"
                       style={{
                         background:
                           "linear-gradient(to top, rgba(16,18,34,0.96) 8%, rgba(16,18,34,0.35) 45%, rgba(16,18,34,0) 70%)",
@@ -173,6 +174,7 @@ export default async function GamesIndexPage() {
                       left={0}
                       right={0}
                       p={3}
+                      pointerEvents="none"
                     >
                       <Heading
                         as="h2"

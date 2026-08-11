@@ -1,9 +1,7 @@
 // ============================================
 // FILE: components/landing/Features.tsx
-// Enhanced Features with better marketing focus
+// Enhanced Features with better marketing focus. Server component (static).
 // ============================================
-"use client";
-
 import {
   Box,
   Container,

@@ -119,7 +119,7 @@ export default function Hero({
         borderRadius="full"
         bg="nexzy.blue"
         opacity={0.08}
-        filter="blur(120px)"
+        filter="blur(80px)"
       />
 
       <Container

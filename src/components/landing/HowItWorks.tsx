@@ -1,9 +1,7 @@
 // ============================================
 // FILE: components/landing/HowItWorks.tsx
-// Enhanced How It Works with better user journey
+// Enhanced How It Works with better user journey. Server component (static).
 // ============================================
-"use client";
-
 import {
   Box,
   Container,

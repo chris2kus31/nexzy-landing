@@ -5,8 +5,6 @@
 // unit (no full-width void, one focal point). LEFT: pitch + newsletter. RIGHT:
 // a compact "get the app" tile — QR on desktop/tablet, store buttons on mobile.
 // ============================================
-"use client";
-
 import {
   Box,
   Container,
@@ -25,7 +23,7 @@ import { HiSparkles } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import EmailCapture from "./EmailCapture";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
-import { trackDownload } from "@/lib/analytics";
+import { StoreAnchor } from "@/components/StoreLink";
 
 export default function CTA() {
   return (
@@ -38,7 +36,11 @@ export default function CTA() {
       id="download"
       overflow="hidden"
     >
-      <Container maxW="container.xl" position="relative" px={{ base: 5, md: 6 }}>
+      <Container
+        maxW="container.xl"
+        position="relative"
+        px={{ base: 5, md: 6 }}
+      >
         {/* One contained card — keeps the two halves close, no cross-page void */}
         <Box
           maxW="5xl"
@@ -62,7 +64,7 @@ export default function CTA() {
             borderRadius="full"
             bg="nexzy.blue"
             opacity={0.08}
-            filter="blur(90px)"
+            filter="blur(70px)"
             pointerEvents="none"
           />
 
@@ -167,17 +169,12 @@ export default function CTA() {
                   py={6}
                   _hover={{ bg: "nexzy.gray.100" }}
                 >
-                  <a
-                    href={APP_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackDownload("ios", "cta")}
-                  >
+                  <StoreAnchor store="ios" location="cta" href={APP_STORE_URL}>
                     <HStack gap={2}>
                       <FaApple size={20} />
                       <Text fontWeight="bold">App Store</Text>
                     </HStack>
-                  </a>
+                  </StoreAnchor>
                 </Button>
                 <Button
                   asChild
@@ -190,17 +187,16 @@ export default function CTA() {
                   fontWeight="600"
                   _hover={{ bg: "nexzy.gold" }}
                 >
-                  <a
+                  <StoreAnchor
+                    store="android"
+                    location="cta"
                     href={googlePlayUrl("cta")}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackDownload("android", "cta")}
                   >
                     <HStack gap={2}>
                       <FaGooglePlay size={20} />
                       <Text fontWeight="bold">Google Play</Text>
                     </HStack>
-                  </a>
+                  </StoreAnchor>
                 </Button>
               </Stack>
 

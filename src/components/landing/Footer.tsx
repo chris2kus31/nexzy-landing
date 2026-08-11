@@ -1,9 +1,8 @@
 // ============================================
 // FILE: components/landing/Footer.tsx
-// Clean landing page footer with essentials
+// Clean landing page footer with essentials. Server component — only the two
+// store links are a client leaf (StoreLink) so the whole footer isn't shipped.
 // ============================================
-"use client";
-
 import {
   Box,
   Container,
@@ -20,7 +19,7 @@ import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
 import { IoGameController } from "react-icons/io5";
 import { HiMail } from "react-icons/hi";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
-import { trackDownload } from "@/lib/analytics";
+import StoreLink from "@/components/StoreLink";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -87,11 +86,12 @@ export default function Footer() {
                 DOWNLOAD THE APP
               </Text>
               <HStack gap={3}>
-                <Link
+                <StoreLink
+                  store="ios"
+                  location="footer"
                   href={APP_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => trackDownload("ios", "footer")}
                   display="flex"
                   alignItems="center"
                   gap={2}
@@ -101,12 +101,13 @@ export default function Footer() {
                 >
                   <FaApple />
                   iOS
-                </Link>
-                <Link
+                </StoreLink>
+                <StoreLink
+                  store="android"
+                  location="footer"
                   href={googlePlayUrl("footer")}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => trackDownload("android", "footer")}
                   display="flex"
                   alignItems="center"
                   gap={2}
@@ -116,7 +117,7 @@ export default function Footer() {
                 >
                   <FaGooglePlay />
                   Android
-                </Link>
+                </StoreLink>
               </HStack>
             </Stack>
           </Stack>
