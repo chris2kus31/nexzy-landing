@@ -8,10 +8,33 @@ import { ADMIN_COOKIE, NEWSROOM_API_URL, clientIp } from "@/lib/admin/server";
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
+// Reject traversal/encoded-slash segments so the admin cookie can't be used to
+// reach nexzy-api paths outside the intended /newsroom/ prefix via an encoded
+// `../` in the catch-all. Admin routes are fixed keywords/ids only.
+function safeSegments(path: string[]): boolean {
+  return (
+    Array.isArray(path) &&
+    path.length > 0 &&
+    path.every(
+      (seg) =>
+        seg.length > 0 &&
+        !seg.includes("..") &&
+        !seg.includes("/") &&
+        !seg.includes("\\") &&
+        !/%2f/i.test(seg) &&
+        !/%5c/i.test(seg),
+    )
+  );
+}
+
 async function proxy(req: NextRequest, ctx: Ctx) {
   const { path } = await ctx.params;
+  if (!safeSegments(path)) {
+    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+  }
   const search = req.nextUrl.search || "";
-  const target = `${NEWSROOM_API_URL}/newsroom/${path.join("/")}${search}`;
+  const cleanPath = path.map(encodeURIComponent).join("/");
+  const target = `${NEWSROOM_API_URL}/newsroom/${cleanPath}${search}`;
 
   const token = req.cookies.get(ADMIN_COOKIE)?.value;
 
