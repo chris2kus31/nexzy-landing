@@ -23,6 +23,7 @@ import {
   type AudienceProfile,
   type ContentSuggestion,
 } from "@/lib/admin/client";
+import Paginated from "@/components/admin/Paginated";
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -149,7 +150,10 @@ function fmtSlot(at: Date, now: Date): string {
   const n = new Date(now);
   n.setHours(0, 0, 0, 0);
   const diff = Math.round((a.getTime() - n.getTime()) / 86400000);
-  const time = at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = at.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   if (diff === 0) return `today ${time}`;
   if (diff === 1) return `tomorrow ${time}`;
   return `${at.toLocaleDateString([], { weekday: "short" })} ${time}`;
@@ -262,8 +266,7 @@ function LeadCard({
     [lead],
   );
   const [plan, setPlan] = useState<Record<string, string>>(rec);
-  const setP = (pf: string, v: string) =>
-    setPlan((p) => ({ ...p, [pf]: v }));
+  const setP = (pf: string, v: string) => setPlan((p) => ({ ...p, [pf]: v }));
 
   const now = useMemo(() => new Date(), []);
   const postSlots = useMemo(() => {
@@ -279,8 +282,12 @@ function LeadCard({
       .filter(
         (
           x,
-        ): x is { platform: string; label: string; text: string; src: string } =>
-          x !== null,
+        ): x is {
+          platform: string;
+          label: string;
+          text: string;
+          src: string;
+        } => x !== null,
       );
   }, [lead?.platforms, audienceByPlatformDay, now]);
 
@@ -622,11 +629,18 @@ function LeadCard({
               );
             })}
           </Box>
-          <Flex justify="space-between" align="center" mt={2} mb={4} gap={2} wrap="wrap">
+          <Flex
+            justify="space-between"
+            align="center"
+            mt={2}
+            mb={4}
+            gap={2}
+            wrap="wrap"
+          >
             <Text color="nexzy.gray.100" fontSize="11px" flex={1} minW="240px">
-              Same format across platforms = one card. A different format (e.g. a
-              carousel) = its own card. “Image” = a deal graphic on deal leads,
-              an image post you design otherwise.
+              Same format across platforms = one card. A different format (e.g.
+              a carousel) = its own card. “Image” = a deal graphic on deal
+              leads, an image post you design otherwise.
             </Text>
             <Button
               size="xs"
@@ -867,7 +881,9 @@ export function AudiencePanel({
   const countries = Object.entries(audience?.topCountries || {})
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
-  const updated = audience?.fetchedAt ? relTime(new Date(audience.fetchedAt)) : "";
+  const updated = audience?.fetchedAt
+    ? relTime(new Date(audience.fetchedAt))
+    : "";
   const rows = PLATFORMS_SHOWN.map((p) => {
     const slot = slotForDay(p, sel.date, byPlat?.[p]);
     return slot ? { p, label: PLATFORM_LABEL[p] ?? p, ...slot } : null;
@@ -921,7 +937,13 @@ export function AudiencePanel({
       px={4}
       py={3}
     >
-      <Flex justify="space-between" align="center" gap={2} wrap="wrap" mb={has ? 3 : 1}>
+      <Flex
+        justify="space-between"
+        align="center"
+        gap={2}
+        wrap="wrap"
+        mb={has ? 3 : 1}
+      >
         <Text color="nexzy.white" fontSize="sm" fontWeight="700">
           Audience &amp; best times
           {has && updated ? (
@@ -962,7 +984,9 @@ export function AudiencePanel({
                 bg={o.i === dayIdx ? "nexzy.blue" : "transparent"}
                 color={o.i === dayIdx ? "white" : "nexzy.gray.100"}
                 borderColor="whiteAlpha.300"
-                _hover={{ bg: o.i === dayIdx ? "nexzy.blue" : "whiteAlpha.100" }}
+                _hover={{
+                  bg: o.i === dayIdx ? "nexzy.blue" : "whiteAlpha.100",
+                }}
                 onClick={() => setDayIdx(o.i)}
               >
                 {o.label}
@@ -984,7 +1008,12 @@ export function AudiencePanel({
             </Box>
           )}
           <Box mb={3}>
-            <Text color="whiteAlpha.500" fontSize="10px" fontWeight="700" mb={1}>
+            <Text
+              color="whiteAlpha.500"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
               GENERAL · BEST PRACTICE
               {realRows.length === 0 ? " (no post history yet)" : ""}
             </Text>
@@ -994,7 +1023,10 @@ export function AudiencePanel({
           </Box>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
-            WHO{audience?.sources?.length ? ` · from ${audience.sources.join(", ")}` : ""}
+            WHO
+            {audience?.sources?.length
+              ? ` · from ${audience.sources.join(", ")}`
+              : ""}
           </Text>
           <VStack align="stretch" gap={1} mb={2}>
             {ages.map(([k, v]) => (
@@ -1050,7 +1082,12 @@ export function AudiencePanel({
           </Text>
 
           {pull && Object.keys(pull).length > 0 && (
-            <Box mt={3} pt={2} borderTop="1px solid" borderColor="whiteAlpha.100">
+            <Box
+              mt={3}
+              pt={2}
+              borderTop="1px solid"
+              borderColor="whiteAlpha.100"
+            >
               <Text
                 color="whiteAlpha.600"
                 fontSize="10px"
@@ -1060,36 +1097,38 @@ export function AudiencePanel({
                 DATA SOURCES — what Refresh actually pulled
               </Text>
               <VStack align="stretch" gap={0.5}>
-                {["instagram", "facebook", "threads", "youtube", "x"].map((p) => {
-                  const st = pull[p];
-                  if (!st) return null;
-                  const ok = st.withReach > 0;
-                  const color = st.error
-                    ? "orange.300"
-                    : ok
-                      ? "green.300"
-                      : "whiteAlpha.500";
-                  const txt = st.error
-                    ? st.error
-                    : `${st.listed} post${st.listed === 1 ? "" : "s"} pulled · ${st.withReach} with reach`;
-                  return (
-                    <Flex key={p} align="center" gap={2}>
-                      <Text
-                        fontSize="10px"
-                        color="nexzy.gray.100"
-                        fontWeight="600"
-                        w="72px"
-                        flexShrink={0}
-                      >
-                        {PLATFORM_LABEL[p] ?? p}
-                      </Text>
-                      <Text fontSize="10px" color={color} minW={0}>
-                        {ok ? "● " : st.error ? "! " : ""}
-                        {txt}
-                      </Text>
-                    </Flex>
-                  );
-                })}
+                {["instagram", "facebook", "threads", "youtube", "x"].map(
+                  (p) => {
+                    const st = pull[p];
+                    if (!st) return null;
+                    const ok = st.withReach > 0;
+                    const color = st.error
+                      ? "orange.300"
+                      : ok
+                        ? "green.300"
+                        : "whiteAlpha.500";
+                    const txt = st.error
+                      ? st.error
+                      : `${st.listed} post${st.listed === 1 ? "" : "s"} pulled · ${st.withReach} with reach`;
+                    return (
+                      <Flex key={p} align="center" gap={2}>
+                        <Text
+                          fontSize="10px"
+                          color="nexzy.gray.100"
+                          fontWeight="600"
+                          w="72px"
+                          flexShrink={0}
+                        >
+                          {PLATFORM_LABEL[p] ?? p}
+                        </Text>
+                        <Text fontSize="10px" color={color} minW={0}>
+                          {ok ? "● " : st.error ? "! " : ""}
+                          {txt}
+                        </Text>
+                      </Flex>
+                    );
+                  },
+                )}
               </VStack>
             </Box>
           )}
@@ -1229,20 +1268,24 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
           No open leads right now.
         </Text>
       ) : (
-        leads.map((s) => (
-          <LeadCard
-            key={s.id}
-            s={s}
-            writers={writers}
-            isOwner={isOwner}
-            open={openIds.has(s.id)}
-            onToggle={() => toggle(s.id)}
-            onDone={remove}
-            reload={load}
-            audienceByDay={audience?.bestTimes?.byDay}
-            audienceByPlatformDay={audience?.bestTimes?.byPlatformDay}
-          />
-        ))
+        <Paginated items={leads} pageSize={20}>
+          {(pageLeads) =>
+            pageLeads.map((s) => (
+              <LeadCard
+                key={s.id}
+                s={s}
+                writers={writers}
+                isOwner={isOwner}
+                open={openIds.has(s.id)}
+                onToggle={() => toggle(s.id)}
+                onDone={remove}
+                reload={load}
+                audienceByDay={audience?.bestTimes?.byDay}
+                audienceByPlatformDay={audience?.bestTimes?.byPlatformDay}
+              />
+            ))
+          }
+        </Paginated>
       )}
     </VStack>
   );

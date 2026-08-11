@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
-import TrackedLink from "@/components/TrackedLink";
-import NextImage from "next/image";
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  Badge,
-  SimpleGrid,
-} from "@chakra-ui/react";
-import { fetchGamesWithContent } from "@/lib/blog/api";
+import { Box, Container, Heading, Text } from "@chakra-ui/react";
+import { fetchGamesPage } from "@/lib/blog/api";
+import GamesGrid from "@/components/games/GamesGrid";
 
 export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -21,8 +13,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/games" },
 };
 
+const PAGE_SIZE = 60;
+
 export default async function GamesIndexPage() {
-  const games = await fetchGamesWithContent();
+  const { items: games, total } = await fetchGamesPage(1, PAGE_SIZE);
 
   const collectionLd = {
     "@context": "https://schema.org",
@@ -32,7 +26,7 @@ export default async function GamesIndexPage() {
     isPartOf: { "@type": "WebSite", name: "Nexzy", url: SITE_URL },
     mainEntity: {
       "@type": "ItemList",
-      numberOfItems: games.length,
+      numberOfItems: total,
       itemListElement: games.slice(0, 100).map((g, i) => ({
         "@type": "ListItem",
         position: i + 1,
@@ -111,91 +105,7 @@ export default async function GamesIndexPage() {
           one place, and growing every week.
         </Text>
 
-        {games.length === 0 ? (
-          <Text color="gray.500">No game coverage yet — check back soon.</Text>
-        ) : (
-          <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 5 }} gap={5}>
-            {games.map((g, i) => {
-              const year = g.released
-                ? new Date(g.released).getFullYear()
-                : null;
-              return (
-                <TrackedLink
-                  key={g.slug}
-                  href={`/games/${g.slug}`}
-                  event="content_click"
-                  params={{
-                    content_type: "game",
-                    slug: g.slug,
-                    from: "games_listing",
-                    position: i,
-                  }}
-                  style={{ display: "block", height: "100%" }}
-                >
-                  <Box
-                    position="relative"
-                    borderRadius="xl"
-                    overflow="hidden"
-                    border="1px solid"
-                    borderColor="nexzy.blue/20"
-                    aspectRatio={3 / 4}
-                    transition="all 0.2s"
-                    _hover={{
-                      borderColor: "nexzy.blue/60",
-                      transform: "translateY(-4px)",
-                      shadow: "0 16px 40px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    {g.backgroundImage ? (
-                      <NextImage
-                        src={g.backgroundImage}
-                        alt={g.name}
-                        fill
-                        priority={i === 0}
-                        sizes="(max-width: 768px) 50vw, 240px"
-                        style={{ objectFit: "cover" }}
-                      />
-                    ) : (
-                      <Box position="absolute" inset={0} bg="whiteAlpha.100" />
-                    )}
-                    {/* gradient + title overlay (never intercept the card tap) */}
-                    <Box
-                      position="absolute"
-                      inset={0}
-                      pointerEvents="none"
-                      style={{
-                        background:
-                          "linear-gradient(to top, rgba(16,18,34,0.96) 8%, rgba(16,18,34,0.35) 45%, rgba(16,18,34,0) 70%)",
-                      }}
-                    />
-                    <Box
-                      position="absolute"
-                      bottom={0}
-                      left={0}
-                      right={0}
-                      p={3}
-                      pointerEvents="none"
-                    >
-                      <Heading
-                        as="h2"
-                        size="sm"
-                        color="white"
-                        lineClamp={2}
-                        mb={1}
-                      >
-                        {g.name}
-                      </Heading>
-                      <Badge colorPalette="yellow" variant="subtle">
-                        {g.count} {g.count === 1 ? "piece" : "pieces"}
-                        {year ? ` · ${year}` : ""}
-                      </Badge>
-                    </Box>
-                  </Box>
-                </TrackedLink>
-              );
-            })}
-          </SimpleGrid>
-        )}
+        <GamesGrid initialItems={games} total={total} pageSize={PAGE_SIZE} />
       </Container>
     </Box>
   );

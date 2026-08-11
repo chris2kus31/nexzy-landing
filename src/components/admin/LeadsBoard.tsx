@@ -24,6 +24,7 @@ import {
 } from "@/lib/admin/client";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
+import Paginated from "@/components/admin/Paginated";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "unknown";
@@ -584,18 +585,22 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
           feeds.
         </Text>
       ) : (
-        <VStack gap={3} align="stretch">
-          {filtered.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onWrite={doWrite}
-              onSkip={doSkip}
-              busy={busyId === lead.id}
-              authors={authors}
-            />
-          ))}
-        </VStack>
+        <Paginated items={filtered} pageSize={20}>
+          {(pageLeads) => (
+            <VStack gap={3} align="stretch">
+              {pageLeads.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onWrite={doWrite}
+                  onSkip={doSkip}
+                  busy={busyId === lead.id}
+                  authors={authors}
+                />
+              ))}
+            </VStack>
+          )}
+        </Paginated>
       )}
     </Box>
   );

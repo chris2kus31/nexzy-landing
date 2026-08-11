@@ -573,12 +573,33 @@ export async function fetchGameHub(slug: string): Promise<GameHub | null> {
   return res.json();
 }
 
-/** Every game that has a public hub (>=1 published linked content). */
+/** Every game that has a public hub (>=1 published linked content). Full list
+ *  (no paging) — used by the sitemap, which needs every game. */
 export async function fetchGamesWithContent(): Promise<GameWithContent[]> {
   const res = await fetch(`${API}/newsroom/public/games`, {
     next: { revalidate: REVALIDATE },
   });
   if (!res.ok) return [];
+  return res.json();
+}
+
+export interface GamesPage {
+  items: GameWithContent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** A single page of game hubs (sorted by coverage) for the paginated /games grid. */
+export async function fetchGamesPage(
+  page = 1,
+  pageSize = 60,
+): Promise<GamesPage> {
+  const res = await fetch(
+    `${API}/newsroom/public/games?page=${page}&pageSize=${pageSize}`,
+    { next: { revalidate: REVALIDATE } },
+  );
+  if (!res.ok) return { items: [], total: 0, page, pageSize };
   return res.json();
 }
 
