@@ -113,20 +113,56 @@ export default function HomeRewindFeature({
             transition="all 0.2s"
             _hover={{ borderColor: GOLD, transform: "translateY(-3px)" }}
           >
-            {/* Cover */}
+            {/* Cover — the whole art always shows (contain) over a blurred fill
+                of itself, so any box-art aspect ratio looks clean, never cropped. */}
             <Box
               position="relative"
               minH={{ base: "240px", md: "360px" }}
-              bg="nexzy.gold/10"
+              bg="#0b1526"
+              overflow="hidden"
             >
               {ep.heroImageUrl ? (
-                <NextImage
-                  src={ep.heroImageUrl}
-                  alt={ep.imageAlt || ep.title}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 700px"
-                  style={{ objectFit: "cover" }}
-                />
+                <>
+                  {/* blurred, dimmed backdrop of the same art fills any gaps */}
+                  <NextImage
+                    src={ep.heroImageUrl}
+                    alt=""
+                    aria-hidden
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 700px"
+                    style={{
+                      objectFit: "cover",
+                      filter: "blur(24px)",
+                      transform: "scale(1.18)",
+                      opacity: 0.5,
+                    }}
+                  />
+                  <Box position="absolute" inset={0} bg="rgba(11,21,38,.4)" />
+                  {/* vignette for depth so the framed art pops */}
+                  <Box
+                    position="absolute"
+                    inset={0}
+                    css={{
+                      background:
+                        "radial-gradient(120% 90% at 50% 45%, transparent 52%, rgba(0,0,0,.4))",
+                    }}
+                  />
+                  {/* the whole art, framed with padding + a soft shadow */}
+                  <Box position="absolute" inset={0} p={{ base: 4, md: 6 }}>
+                    <Box position="relative" w="100%" h="100%">
+                      <NextImage
+                        src={ep.heroImageUrl}
+                        alt={ep.imageAlt || ep.title}
+                        fill
+                        sizes="(max-width: 1024px) 100vw, 700px"
+                        style={{
+                          objectFit: "contain",
+                          filter: "drop-shadow(0 10px 26px rgba(0,0,0,.55))",
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </>
               ) : null}
               {/* keep the year visible over the art */}
               {year ? (
