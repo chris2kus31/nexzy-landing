@@ -99,6 +99,7 @@ export default function NewsControls({ beat, q }: { beat: string; q: string }) {
           color="white"
           borderColor="nexzy.blue/30"
           borderRadius="full"
+          fontSize="16px"
           pl={10}
           pr={term ? 10 : 4}
           _placeholder={{ color: "gray.500" }}

@@ -48,6 +48,7 @@ const NEWS = [
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<"news" | "guides" | null>(null);
   const close = () => setIsOpen(false);
   const nav = (item: string) => track("nav_click", { item });
 
@@ -61,7 +62,6 @@ export default function Navigation() {
       borderBottom="1px solid"
       borderColor="nexzy.blue/20"
       zIndex={1000}
-      backdropFilter="blur(10px)"
     >
       <Container maxW="container.xl">
         <Flex h={16} alignItems="center" justifyContent="space-between">
@@ -83,7 +83,7 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <HStack gap={8} display={{ base: "none", md: "flex" }}>
+          <HStack gap={8} display={{ base: "none", lg: "flex" }}>
             <Link
               asChild
               fontSize="sm"
@@ -97,76 +97,79 @@ export default function Navigation() {
               </NextLink>
             </Link>
 
-            {/* News dropdown (reveals beats on hover) */}
-            <Box position="relative" className="group">
+            {/* News dropdown — tap/click to toggle (works on touch, too) */}
+            <Box position="relative">
               <HStack
+                as="button"
+                onClick={() => setOpenMenu(openMenu === "news" ? null : "news")}
                 gap={1}
                 fontSize="sm"
                 fontWeight="medium"
-                color="nexzy.white"
+                color={openMenu === "news" ? "nexzy.lightBlue" : "nexzy.white"}
                 cursor="pointer"
-                _groupHover={{ color: "nexzy.lightBlue" }}
+                _hover={{ color: "nexzy.lightBlue" }}
                 transition="color 0.2s"
+                aria-haspopup="true"
+                aria-expanded={openMenu === "news"}
               >
-                <Link asChild color="inherit" _hover={{ color: "inherit" }}>
-                  <NextLink href="/blog" onClick={() => nav("news")}>
-                    News
-                  </NextLink>
-                </Link>
-                <Box as="span" fontSize="xs" mt="1px">
+                <Box as="span">News</Box>
+                <Box
+                  as="span"
+                  fontSize="xs"
+                  mt="1px"
+                  transition="transform 0.15s"
+                  transform={openMenu === "news" ? "rotate(180deg)" : undefined}
+                >
                   <HiChevronDown />
                 </Box>
               </HStack>
-              <Box
-                position="absolute"
-                top="100%"
-                left={0}
-                pt={3}
-                minW="200px"
-                opacity={0}
-                visibility="hidden"
-                transform="translateY(6px)"
-                transition="all 0.15s"
-                _groupHover={{
-                  opacity: 1,
-                  visibility: "visible",
-                  transform: "translateY(0)",
-                }}
-              >
-                <Stack
-                  gap={0}
-                  bg="nexzy.navy"
-                  border="1px solid"
-                  borderColor="nexzy.blue/20"
-                  borderRadius="lg"
-                  p={2}
-                  boxShadow="xl"
+              {openMenu === "news" && (
+                <Box
+                  position="absolute"
+                  top="100%"
+                  left={0}
+                  pt={3}
+                  minW="200px"
+                  zIndex={30}
                 >
-                  {NEWS.map((item) => (
-                    <Link
-                      key={item.href}
-                      asChild
-                      px={3}
-                      py={2}
-                      borderRadius="md"
-                      fontSize="sm"
-                      fontWeight="medium"
-                      color="nexzy.white"
-                      _hover={{
-                        bg: "whiteAlpha.100",
-                        color: "nexzy.lightBlue",
-                      }}
-                    >
-                      <NextLink
-                        href={item.href}
-                        onClick={() => nav(item.label)}
+                  <Stack
+                    gap={0}
+                    bg="nexzy.navy"
+                    border="1px solid"
+                    borderColor="nexzy.blue/20"
+                    borderRadius="lg"
+                    p={2}
+                    boxShadow="xl"
+                  >
+                    {NEWS.map((item) => (
+                      <Link
+                        key={item.href}
+                        asChild
+                        px={3}
+                        py={2}
+                        borderRadius="md"
+                        fontSize="sm"
+                        fontWeight="medium"
+                        color="nexzy.white"
+                        _hover={{
+                          bg: "whiteAlpha.100",
+                          color: "nexzy.lightBlue",
+                        }}
                       >
-                        {item.label}
-                      </NextLink>
-                    </Link>
-                  ))}
-                </Stack>
-              </Box>
+                        <NextLink
+                          href={item.href}
+                          onClick={() => {
+                            nav(item.label);
+                            setOpenMenu(null);
+                          }}
+                        >
+                          {item.label}
+                        </NextLink>
+                      </Link>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </Box>
 
             <Link
@@ -195,76 +198,85 @@ export default function Navigation() {
               </NextLink>
             </Link>
 
-            {/* Guides dropdown (reveals on hover) */}
-            <Box position="relative" className="group">
+            {/* Guides dropdown — tap/click to toggle (works on touch, too) */}
+            <Box position="relative">
               <HStack
+                as="button"
+                onClick={() =>
+                  setOpenMenu(openMenu === "guides" ? null : "guides")
+                }
                 gap={1}
                 fontSize="sm"
                 fontWeight="medium"
-                color="nexzy.white"
+                color={
+                  openMenu === "guides" ? "nexzy.lightBlue" : "nexzy.white"
+                }
                 cursor="pointer"
-                _groupHover={{ color: "nexzy.lightBlue" }}
+                _hover={{ color: "nexzy.lightBlue" }}
                 transition="color 0.2s"
+                aria-haspopup="true"
+                aria-expanded={openMenu === "guides"}
               >
-                <Link asChild color="inherit" _hover={{ color: "inherit" }}>
-                  <NextLink href="/guides" onClick={() => nav("guides")}>
-                    Guides
-                  </NextLink>
-                </Link>
-                <Box as="span" fontSize="xs" mt="1px">
+                <Box as="span">Guides</Box>
+                <Box
+                  as="span"
+                  fontSize="xs"
+                  mt="1px"
+                  transition="transform 0.15s"
+                  transform={
+                    openMenu === "guides" ? "rotate(180deg)" : undefined
+                  }
+                >
                   <HiChevronDown />
                 </Box>
               </HStack>
-              <Box
-                position="absolute"
-                top="100%"
-                left={0}
-                pt={3}
-                minW="210px"
-                opacity={0}
-                visibility="hidden"
-                transform="translateY(6px)"
-                transition="all 0.15s"
-                _groupHover={{
-                  opacity: 1,
-                  visibility: "visible",
-                  transform: "translateY(0)",
-                }}
-              >
-                <Stack
-                  gap={0}
-                  bg="nexzy.navy"
-                  border="1px solid"
-                  borderColor="nexzy.blue/20"
-                  borderRadius="lg"
-                  p={2}
-                  boxShadow="xl"
+              {openMenu === "guides" && (
+                <Box
+                  position="absolute"
+                  top="100%"
+                  left={0}
+                  pt={3}
+                  minW="210px"
+                  zIndex={30}
                 >
-                  {LIBRARY.map((item) => (
-                    <Link
-                      key={item.href}
-                      asChild
-                      px={3}
-                      py={2}
-                      borderRadius="md"
-                      fontSize="sm"
-                      fontWeight="medium"
-                      color="nexzy.white"
-                      _hover={{
-                        bg: "whiteAlpha.100",
-                        color: "nexzy.lightBlue",
-                      }}
-                    >
-                      <NextLink
-                        href={item.href}
-                        onClick={() => nav(item.label)}
+                  <Stack
+                    gap={0}
+                    bg="nexzy.navy"
+                    border="1px solid"
+                    borderColor="nexzy.blue/20"
+                    borderRadius="lg"
+                    p={2}
+                    boxShadow="xl"
+                  >
+                    {LIBRARY.map((item) => (
+                      <Link
+                        key={item.href}
+                        asChild
+                        px={3}
+                        py={2}
+                        borderRadius="md"
+                        fontSize="sm"
+                        fontWeight="medium"
+                        color="nexzy.white"
+                        _hover={{
+                          bg: "whiteAlpha.100",
+                          color: "nexzy.lightBlue",
+                        }}
                       >
-                        {item.label}
-                      </NextLink>
-                    </Link>
-                  ))}
-                </Stack>
-              </Box>
+                        <NextLink
+                          href={item.href}
+                          onClick={() => {
+                            nav(item.label);
+                            setOpenMenu(null);
+                          }}
+                        >
+                          {item.label}
+                        </NextLink>
+                      </Link>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </Box>
 
             <Link
@@ -281,8 +293,19 @@ export default function Navigation() {
             </Link>
           </HStack>
 
+          {/* Backdrop — tap outside closes an open desktop dropdown */}
+          {openMenu ? (
+            <Box
+              position="fixed"
+              inset="0"
+              zIndex={20}
+              display={{ base: "none", lg: "block" }}
+              onClick={() => setOpenMenu(null)}
+            />
+          ) : null}
+
           {/* Desktop CTA */}
-          <HStack gap={4} display={{ base: "none", md: "flex" }}>
+          <HStack gap={4} display={{ base: "none", lg: "flex" }}>
             <Button
               asChild
               size="sm"
@@ -302,7 +325,7 @@ export default function Navigation() {
 
           {/* Mobile Menu Button */}
           <IconButton
-            display={{ base: "flex", md: "none" }}
+            display={{ base: "flex", lg: "none" }}
             onClick={() => setIsOpen(true)}
             variant="ghost"
             aria-label="Open menu"
@@ -326,7 +349,7 @@ export default function Navigation() {
           position="fixed"
           right={0}
           top={0}
-          h="100vh"
+          h="100dvh"
           w="80%"
           maxW="320px"
           zIndex={1500}

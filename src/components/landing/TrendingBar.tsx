@@ -64,6 +64,8 @@ export default function TrendingBar({
                     setTab(k);
                     track("trending_sort", { tab: k });
                   }}
+                  px={2}
+                  py={2}
                   fontSize="xs"
                   fontWeight="700"
                   color={tab === k ? "white" : "gray.500"}

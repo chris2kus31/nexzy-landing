@@ -165,6 +165,8 @@ export default function Hero({
               fontWeight="700"
               fontSize="sm"
               whiteSpace="nowrap"
+              py={2}
+              display="inline-block"
             >
               All news →
             </Text>
@@ -199,6 +201,8 @@ export default function Hero({
                 fontWeight="700"
                 fontSize="sm"
                 mt={4}
+                py={2}
+                display="inline-block"
               >
                 More stories →
               </Text>
