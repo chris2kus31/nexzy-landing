@@ -1365,6 +1365,46 @@ export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
   );
 }
 
+// ---- Comment moderation (reported / auto-hidden reader comments) ----
+
+export interface ReportedComment {
+  id: string;
+  content: string;
+  author: { id: string; username: string };
+  postSlug: string | null;
+  postTitle: string | null;
+  reportCount: number;
+  hidden: boolean;
+  createdAt: string;
+  editedAt: string | null;
+}
+
+export async function getReportedComments(): Promise<ReportedComment[]> {
+  return handle(await fetch("/api/newsroom/admin/comment-moderation"));
+}
+
+export async function reinstateComment(
+  id: string,
+): Promise<{ reinstated: true }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/comment-moderation/${id}/reinstate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }),
+  );
+}
+
+export async function removeComment(id: string): Promise<{ removed: true }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/comment-moderation/${id}/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }),
+  );
+}
+
 // ---- Growth Intelligence (daily marketing brief) ----
 
 export interface GrowthBriefResponse {

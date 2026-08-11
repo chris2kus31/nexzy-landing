@@ -30,6 +30,7 @@ import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
+import CommentsModerationPanel from "@/components/admin/CommentsModerationPanel";
 import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
 import {
@@ -181,7 +182,9 @@ function AdminContent() {
     window.addEventListener("popstate", readTab);
     return () => window.removeEventListener("popstate", readTab);
   }, []);
-  const [forumView, setForumView] = useState<"seeds" | "moderation">("seeds");
+  const [forumView, setForumView] = useState<
+    "seeds" | "moderation" | "comments"
+  >("seeds");
   // Owner = the account allowed to trigger token-spending actions (scans,
   // pipeline runs, content generation). A second admin (editor) sees a
   // review-only UI. Enforced server-side too — this just hides the buttons.
@@ -437,9 +440,24 @@ function AdminContent() {
             >
               Moderation
             </Button>
+            <Button
+              size="sm"
+              variant={forumView === "comments" ? "solid" : "outline"}
+              bg={forumView === "comments" ? "nexzy.blue" : "transparent"}
+              color={forumView === "comments" ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{
+                bg: forumView === "comments" ? "nexzy.blue" : "whiteAlpha.100",
+              }}
+              onClick={() => setForumView("comments")}
+            >
+              Reported comments
+            </Button>
           </HStack>
           {forumView === "seeds" ? (
             <ForumSeedsPanel />
+          ) : forumView === "comments" ? (
+            <CommentsModerationPanel />
           ) : (
             <ForumModerationPanel />
           )}
