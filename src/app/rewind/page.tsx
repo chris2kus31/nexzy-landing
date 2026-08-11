@@ -28,10 +28,25 @@ export const metadata: Metadata = {
   },
 };
 
+// "Today" in the newsroom timezone (ET) — matches the API's today() so the
+// landing's featured day isn't a UTC day ahead of the US audience.
+function todayInNewsroomTz(): { month: number; day: number } {
+  const tz = process.env.NEWSROOM_TZ || "America/New_York";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date());
+  return {
+    month: Number(parts.find((p) => p.type === "month")?.value),
+    day: Number(parts.find((p) => p.type === "day")?.value),
+  };
+}
+
 export default async function RewindSeriesPage() {
-  const now = new Date();
+  const { month, day } = todayInNewsroomTz();
   const [todayHub, recent] = await Promise.all([
-    fetchRewindDay(now.getMonth() + 1, now.getDate()),
+    fetchRewindDay(month, day),
     fetchRewindRecent(10),
   ]);
 
