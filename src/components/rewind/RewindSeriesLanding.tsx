@@ -358,72 +358,77 @@ export default function RewindSeriesLanding({
                 const y = ep.event?.year ?? null;
                 const c = eraColor(y);
                 return (
-                  <Box
+                  <TrackedLink
                     key={ep.slug}
-                    w={{ base: "150px", md: "160px" }}
-                    flexShrink={0}
-                    css={{ scrollSnapAlign: "start" }}
+                    href={`/rewind/${ep.slug}`}
+                    event="content_click"
+                    params={{
+                      content_type: "rewind",
+                      slug: ep.slug,
+                      from: "series_moment",
+                    }}
+                    style={{
+                      display: "block",
+                      flexShrink: 0,
+                      scrollSnapAlign: "start",
+                    }}
                   >
-                    <Box position="relative" mb={3}>
-                      {y && (
-                        <Box
-                          position="absolute"
-                          top="-8px"
-                          left="10px"
-                          zIndex={1}
-                          bg={c}
-                          color="#0d1526"
-                          fontFamily="mono"
-                          fontWeight="800"
-                          fontSize="12px"
-                          px={2}
-                          py="2px"
-                          borderRadius="sm"
-                        >
-                          {y}
-                        </Box>
-                      )}
-                      <Box
-                        borderRadius="lg"
-                        overflow="hidden"
-                        border="1px solid"
-                        borderColor={c}
-                        bg="#0b1526"
-                        css={{ aspectRatio: "0.78" }}
-                      >
-                        {ep.heroImageUrl && (
-                          <Image
-                            src={ep.heroImageUrl}
-                            alt={ep.title}
-                            w="100%"
-                            h="100%"
-                            objectFit="cover"
-                          />
+                    <Box w={{ base: "150px", md: "160px" }}>
+                      <Box position="relative" mb={3}>
+                        {y && (
+                          <Box
+                            position="absolute"
+                            top="-8px"
+                            left="10px"
+                            zIndex={1}
+                            bg={c}
+                            color="#0d1526"
+                            fontFamily="mono"
+                            fontWeight="800"
+                            fontSize="12px"
+                            px={2}
+                            py="2px"
+                            borderRadius="sm"
+                          >
+                            {y}
+                          </Box>
                         )}
+                        <Box
+                          borderRadius="lg"
+                          overflow="hidden"
+                          border="1px solid"
+                          borderColor={c}
+                          bg="#0b1526"
+                          css={{ aspectRatio: "0.78" }}
+                        >
+                          {ep.heroImageUrl && (
+                            <Image
+                              src={ep.heroImageUrl}
+                              alt={ep.title}
+                              w="100%"
+                              h="100%"
+                              objectFit="cover"
+                            />
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
-                    <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
-                      {ep.title}
-                    </Text>
-                    {ep.excerpt && (
-                      <Text color="nexzy.gray.100" fontSize="sm" lineClamp={2}>
-                        {ep.excerpt}
+                      <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
+                        {ep.title}
                       </Text>
-                    )}
-                    <TrackedLink
-                      href={`/rewind/${ep.slug}`}
-                      event="content_click"
-                      params={{
-                        content_type: "rewind",
-                        slug: ep.slug,
-                        from: "series_moment",
-                      }}
-                    >
+                      {ep.excerpt && (
+                        <Text
+                          color="nexzy.gray.100"
+                          fontSize="sm"
+                          lineClamp={2}
+                        >
+                          {ep.excerpt}
+                        </Text>
+                      )}
                       <Text color={c} fontWeight="700" fontSize="sm" mt={1}>
                         Rewind to {y ?? "then"} →
                       </Text>
-                    </TrackedLink>
-                  </Box>
+                    </Box>
+                  </TrackedLink>
                 );
               })}
             </Flex>

@@ -41,6 +41,20 @@ a {
   text-decoration: none;
 }
 
+/* Touch devices have no real hover, but iOS/Android still fire :hover on tap
+   and it "sticks" under the finger — the card lift/scale animations then feel
+   laggy/janky. On any non-hover pointer, neutralize hover transforms and cut
+   the default tap-highlight for cleaner, immediate card taps. */
+@media (hover: none) {
+  *:hover {
+    transform: none !important;
+  }
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
