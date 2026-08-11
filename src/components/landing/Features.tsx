@@ -1,7 +1,14 @@
 // ============================================
 // FILE: components/landing/Features.tsx
-// Enhanced Features with better marketing focus. Server component (static).
+// Enhanced Features with better marketing focus.
+// NOTE: must stay a client component — it renders the compound `Card.Root` /
+// `Card.Body` from the "use client" ui/card barrel. Dot-notation compound
+// components from a client module resolve to `undefined` inside a server
+// component (the import becomes an opaque client reference), which crashes
+// prerender with "Element type is invalid". Keep "use client" here.
 // ============================================
+"use client";
+
 import {
   Box,
   Container,
