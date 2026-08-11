@@ -2649,3 +2649,71 @@ export async function getReviewDefaults(name: string): Promise<{
     ),
   );
 }
+
+// --- IGDB Discovery Desk (Phase 4) ---
+
+export interface DiscoveryCandidate {
+  id: string;
+  igdbId: number;
+  name: string;
+  slug: string;
+  released: string | null;
+  summary: string | null;
+  coverUrl: string | null;
+  platformSlugs: string[];
+  status: string;
+  createdAt: string;
+}
+
+/** Upcoming IGDB games not in our catalog, awaiting review. Paginated. */
+export async function getDiscoveryCandidates(
+  limit = 30,
+  offset = 0,
+  platform?: string,
+): Promise<{ items: DiscoveryCandidate[]; total: number }> {
+  const qs = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (platform) qs.set("platform", platform);
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/discovery?${qs.toString()}`),
+  );
+}
+
+/** Owner-only: scan IGDB now for upcoming games we're missing. */
+export async function scanDiscovery(
+  limit = 200,
+): Promise<{
+  scanned?: number;
+  added?: number;
+  skipped?: number;
+  error?: string;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/discovery/scan?limit=${limit}`, {
+      method: "POST",
+    }),
+  );
+}
+
+/** Owner-only: one-click import a candidate through the shared IGDB processor. */
+export async function importDiscoveryCandidate(
+  id: string,
+): Promise<{ ok: boolean; result?: unknown }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/discovery/${id}/import`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function dismissDiscoveryCandidate(
+  id: string,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/discovery/${id}/dismiss`, {
+      method: "POST",
+    }),
+  );
+}
