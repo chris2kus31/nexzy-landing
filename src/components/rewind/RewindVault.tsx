@@ -161,10 +161,13 @@ export default function RewindVault({
           {screen}
         </Box>
 
-        {/* CONTROL COLUMN — channel buttons, knobs, LEDs, round speaker */}
+        {/* CONTROL COLUMN — channel buttons, knobs, LEDs, round speaker.
+            Hidden on mobile so the screen (the play target) gets full width —
+            the side controls squeezed the tap area on phones. */}
         <Flex
           direction="column"
           align="center"
+          display={{ base: "none", md: "flex" }}
           w={{ base: "108px", md: "134px" }}
           py={1}
           gap={3}
