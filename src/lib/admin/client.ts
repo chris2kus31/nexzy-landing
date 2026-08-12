@@ -1558,6 +1558,43 @@ export async function searchGamesForLink(q: string): Promise<GameLite[]> {
   );
 }
 
+// --- Featured games (Discover hero) ---
+
+export interface FeaturedGame extends GameLite {
+  featuredRank: number | null;
+  totalRating: number | null;
+}
+
+export async function listFeaturedGames(): Promise<FeaturedGame[]> {
+  return handle(await fetch(`/api/newsroom/admin/featured`));
+}
+
+export async function addFeaturedGame(gameId: string): Promise<FeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/featured/${gameId}`, { method: "POST" }),
+  );
+}
+
+export async function removeFeaturedGame(
+  gameId: string,
+): Promise<FeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/featured/${gameId}`, { method: "DELETE" }),
+  );
+}
+
+export async function reorderFeaturedGames(
+  ids: string[],
+): Promise<FeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/featured/order`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
+  );
+}
+
 export interface TaxonomyOption {
   id: string;
   name: string;
@@ -2682,9 +2719,7 @@ export async function getDiscoveryCandidates(
 }
 
 /** Owner-only: scan IGDB now for upcoming games we're missing. */
-export async function scanDiscovery(
-  limit = 200,
-): Promise<{
+export async function scanDiscovery(limit = 200): Promise<{
   scanned?: number;
   added?: number;
   skipped?: number;
