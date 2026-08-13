@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import NextLink from "next/link";
 import NextImage from "next/image";
 import {
@@ -20,6 +20,7 @@ import { fetchPost, fetchRelated, fetchRelatedByGame } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
+import { publicPathForType } from "@/lib/blog/publicPath";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { youtubeId } from "@/lib/blog/youtube";
 import type { ArticleMedia } from "@/lib/blog/api";
@@ -90,16 +91,15 @@ export default async function BlogArticlePage({
   // Non-article content types have their own homes — guides (/guides/[slug],
   // HowTo schema), lists (/lists/[slug], ItemList), reviews (/reviews/[slug]),
   // rewind (/rewind/[slug]) and walkthroughs (/walkthroughs/[slug]). They all
-  // share this posts/:slug fetcher, so 404 them here to keep each episode on a
-  // SINGLE canonical URL (otherwise a rewind renders as a duplicate news page).
-  if (
-    post.type === "guide" ||
-    post.type === "list" ||
-    post.type === "review" ||
-    post.type === "rewind" ||
-    post.type === "walkthrough"
-  )
-    notFound();
+  // share this posts/:slug fetcher, so a typed post would otherwise render as a
+  // duplicate news page here. Permanently redirect (308) to the type's real
+  // home instead of 404-ing, so any already-indexed /blog/<slug> passes its
+  // link equity to the single canonical URL. publicPathForType returns /blog
+  // for articles, so this only fires for the non-article types.
+  if (post.type && post.type !== "article") {
+    const home = publicPathForType(post.type);
+    if (home !== "/blog") permanentRedirect(`${home}/${post.slug}`);
+  }
 
   // Related: tag-aware (shared topic first, then same beat), excluding self.
   const related = await fetchRelated(post.slug, 3);
