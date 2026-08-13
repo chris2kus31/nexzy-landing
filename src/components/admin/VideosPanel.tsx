@@ -183,17 +183,33 @@ export default function VideosPanel() {
         platformLinks,
         thumbnailUrl: thumbnailUrl.trim(),
         caption: caption.trim(),
-        series: series.trim() || undefined,
+        // Send "" (not undefined) when cleared — the API's emptyToNull turns it
+        // into NULL, so "— No series —" actually REMOVES a series on edit.
+        series: series.trim(),
         source,
         featured,
       };
       const saved = editingId
         ? await updateVideo(editingId, payload)
         : await createVideo(payload);
+      // The video row is saved. If a create, flip the form into EDIT mode right
+      // away — if the upload below fails, a retry click updates this video
+      // instead of creating a duplicate.
+      if (!editingId && saved?.id) setEditingId(saved.id);
       // If an MP4 was picked in the form, upload it now that the video exists.
       if (hostedFile && saved?.id) {
         setMsg("Uploading video…");
-        await uploadHostedFile(saved.id, hostedFile);
+        try {
+          await uploadHostedFile(saved.id, hostedFile);
+        } catch (e) {
+          // Save succeeded, upload didn't: keep the form open in edit mode so
+          // "Save changes" retries just the upload; show the video in the list.
+          setMsg(
+            `Video saved, but the MP4 upload failed: ${(e as Error).message}. Fix and hit Save to retry the upload.`,
+          );
+          await load();
+          return;
+        }
       }
       setMsg(null); // clear the "Uploading…" status on success
       setShowForm(false);
@@ -306,7 +322,13 @@ export default function VideosPanel() {
       </Text>
 
       {msg && (
-        <Text fontSize="sm" color="red.400" mb={3}>
+        <Text
+          fontSize="sm"
+          // Progress messages (e.g. "Uploading video…") aren't errors — don't
+          // paint them red.
+          color={msg.endsWith("…") ? "blue.300" : "red.400"}
+          mb={3}
+        >
           {msg}
         </Text>
       )}
