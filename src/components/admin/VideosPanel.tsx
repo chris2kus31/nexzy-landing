@@ -96,6 +96,7 @@ export default function VideosPanel() {
   const [facebook, setFacebook] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [caption, setCaption] = useState("");
+  const [series, setSeries] = useState("");
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
   const [featured, setFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -129,6 +130,7 @@ export default function VideosPanel() {
     setFacebook("");
     setThumbnailUrl("");
     setCaption("");
+    setSeries("");
     setSource("nexzy");
     setFeatured(false);
   }
@@ -146,6 +148,7 @@ export default function VideosPanel() {
     setFacebook(v.platformLinks?.facebook ?? "");
     setThumbnailUrl(v.thumbnailUrl ?? "");
     setCaption(v.caption ?? "");
+    setSeries(v.series ?? "");
     setSource(v.source === "external" ? "external" : "nexzy");
     setFeatured(!!v.featured);
     setShowForm(true);
@@ -169,6 +172,7 @@ export default function VideosPanel() {
         platformLinks,
         thumbnailUrl: thumbnailUrl.trim(),
         caption: caption.trim(),
+        series: series.trim() || undefined,
         source,
         featured,
       };
@@ -304,6 +308,12 @@ export default function VideosPanel() {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Caption / description (optional)"
+            />
+            <Input
+              {...inputStyle}
+              value={series}
+              onChange={(e) => setSeries(e.target.value)}
+              placeholder="Series (optional — e.g. Rewind, Boss Rush) — groups it on the Videos tab"
             />
             <Input
               {...inputStyle}

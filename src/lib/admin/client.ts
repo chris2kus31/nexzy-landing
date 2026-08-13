@@ -2434,6 +2434,7 @@ export interface AdminVideo {
   featured: boolean;
   status: "draft" | "published" | "hidden";
   tags: string[] | null;
+  series?: string | null;
   viewCount: number;
   // Self-hosted MP4 (Nexzy TikTok). null = YouTube-only / external.
   mediaKey?: string | null;
@@ -2473,6 +2474,7 @@ export interface CreateVideoPayload {
   thumbnailUrl?: string;
   caption?: string;
   tags?: string[];
+  series?: string;
   source?: "nexzy" | "external";
   featured?: boolean;
   gameIds?: string[];
