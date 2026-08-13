@@ -34,10 +34,12 @@ import {
   attachVideoGame,
   detachVideoGame,
   searchGamesForLink,
+  getVideoSeries,
   type AdminVideo,
   type GameLite,
 } from "@/lib/admin/client";
 import HostedVideoUpload from "@/components/admin/HostedVideoUpload";
+import { uploadHostedFile } from "@/lib/admin/hostedUpload";
 
 const primaryBtn = {
   bg: "nexzy.blue",
@@ -97,6 +99,8 @@ export default function VideosPanel() {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [series, setSeries] = useState("");
+  const [seriesOptions, setSeriesOptions] = useState<string[]>([]);
+  const [hostedFile, setHostedFile] = useState<File | null>(null);
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
   const [featured, setFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -111,6 +115,9 @@ export default function VideosPanel() {
     setLoading(true);
     try {
       setVideos(await listVideos(200));
+      getVideoSeries()
+        .then(setSeriesOptions)
+        .catch(() => {});
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
@@ -131,6 +138,7 @@ export default function VideosPanel() {
     setThumbnailUrl("");
     setCaption("");
     setSeries("");
+    setHostedFile(null);
     setSource("nexzy");
     setFeatured(false);
   }
@@ -176,8 +184,14 @@ export default function VideosPanel() {
         source,
         featured,
       };
-      if (editingId) await updateVideo(editingId, payload);
-      else await createVideo(payload);
+      const saved = editingId
+        ? await updateVideo(editingId, payload)
+        : await createVideo(payload);
+      // If an MP4 was picked in the form, upload it now that the video exists.
+      if (hostedFile && saved?.id) {
+        setMsg("Uploading video…");
+        await uploadHostedFile(saved.id, hostedFile);
+      }
       setShowForm(false);
       resetForm();
       await load();
@@ -313,8 +327,14 @@ export default function VideosPanel() {
               {...inputStyle}
               value={series}
               onChange={(e) => setSeries(e.target.value)}
-              placeholder="Series (optional — e.g. Rewind, Boss Rush) — groups it on the Videos tab"
+              list="video-series-list"
+              placeholder="Series (optional) — pick one or type a new one; groups it on the Videos tab"
             />
+            <datalist id="video-series-list">
+              {seriesOptions.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
             <Input
               {...inputStyle}
               value={youtubeUrl}
@@ -347,6 +367,23 @@ export default function VideosPanel() {
               onChange={(e) => setThumbnailUrl(e.target.value)}
               placeholder="Thumbnail URL (optional — YouTube auto-derives)"
             />
+            <Box>
+              <Text fontSize="xs" color="gray.400" mb={1}>
+                Hosted video (optional) — upload an MP4 to play natively in the
+                app feed
+              </Text>
+              <input
+                type="file"
+                accept="video/mp4,video/quicktime"
+                onChange={(e) => setHostedFile(e.target.files?.[0] ?? null)}
+                style={{ color: "#cbd5e1", fontSize: 13 }}
+              />
+              {hostedFile ? (
+                <Text fontSize="xs" color="green.300" mt={1}>
+                  {hostedFile.name} — uploads on save
+                </Text>
+              ) : null}
+            </Box>
             <HStack gap={2} wrap="wrap">
               <Text fontSize="xs" color="nexzy.gray.100">
                 Source:

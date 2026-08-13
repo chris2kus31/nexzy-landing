@@ -12,34 +12,9 @@
 import { useRef, useState } from "react";
 import { Box, Button, Text } from "@chakra-ui/react";
 import { FiUploadCloud, FiCheckCircle } from "react-icons/fi";
-import { getHostedUploadUrl, setHostedMedia } from "@/lib/admin/client";
+import { uploadHostedFile } from "@/lib/admin/hostedUpload";
 
 const ACCEPT = "video/mp4,video/quicktime";
-
-/** Read intrinsic dimensions + duration from a video File in the browser. */
-function readVideoMeta(
-  file: File,
-): Promise<{ width: number; height: number; durationSec: number }> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const el = document.createElement("video");
-    el.preload = "metadata";
-    el.onloadedmetadata = () => {
-      const meta = {
-        width: el.videoWidth || 0,
-        height: el.videoHeight || 0,
-        durationSec: Math.round(el.duration || 0),
-      };
-      URL.revokeObjectURL(url);
-      resolve(meta);
-    };
-    el.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: 0, height: 0, durationSec: 0 });
-    };
-    el.src = url;
-  });
-}
 
 export default function HostedVideoUpload({
   videoId,
@@ -58,27 +33,9 @@ export default function HostedVideoUpload({
   async function handleFile(file: File) {
     setBusy(true);
     setErr(false);
-    setMsg("Reading video…");
+    setMsg("Uploading…");
     try {
-      const meta = await readVideoMeta(file);
-      setMsg("Requesting upload URL…");
-      const { url, key } = await getHostedUploadUrl(videoId, file.type);
-
-      setMsg("Uploading to S3…");
-      const put = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-
-      setMsg("Attaching…");
-      await setHostedMedia(videoId, {
-        mediaKey: key,
-        durationSec: meta.durationSec,
-        width: meta.width,
-        height: meta.height,
-      });
+      await uploadHostedFile(videoId, file);
       setMsg("Uploaded ✓");
       onDone?.();
     } catch (e) {

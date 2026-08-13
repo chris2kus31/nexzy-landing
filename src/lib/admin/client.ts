@@ -2536,6 +2536,11 @@ export async function deleteVideo(id: string): Promise<{ ok: boolean }> {
   );
 }
 
+/** Distinct series names for the admin series dropdown. */
+export async function getVideoSeries(): Promise<string[]> {
+  return handle(await fetch("/api/newsroom/admin/videos/series"));
+}
+
 /** Presigned S3 PUT URL for uploading a hosted MP4 for this video. */
 export async function getHostedUploadUrl(
   id: string,
