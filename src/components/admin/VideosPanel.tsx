@@ -195,6 +195,7 @@ export default function VideosPanel() {
         setMsg("Uploading video…");
         await uploadHostedFile(saved.id, hostedFile);
       }
+      setMsg(null); // clear the "Uploading…" status on success
       setShowForm(false);
       resetForm();
       await load();
@@ -230,6 +231,14 @@ export default function VideosPanel() {
     }
   }
   async function remove(v: AdminVideo) {
+    // Hard delete (removes the video + its game links) — confirm first so one
+    // stray click can't wipe a video.
+    if (
+      !window.confirm(
+        `Delete “${v.title}”? This permanently removes the video and its links.`,
+      )
+    )
+      return;
     setBusy(v.id);
     try {
       await deleteVideo(v.id);
