@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
     // optimize (resize + webp/avif) them.
     remotePatterns: [
       {
+        // CloudFront CDN in front of the media bucket (CDN_BASE_URL). Newsroom
+        // images now resolve to cdn.nexzyapp.com — MUST be allowlisted or
+        // next/image returns 400 and every image breaks.
+        protocol: "https",
+        hostname: "cdn.nexzyapp.com",
+      },
+      {
+        // Legacy raw-S3 URLs (pre-CDN content, still valid — the CDN switch is
+        // backward-compatible, so both hosts must be allowed).
         protocol: "https",
         hostname: "nexzy-newsroom-media.s3.us-east-1.amazonaws.com",
       },
