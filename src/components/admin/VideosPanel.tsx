@@ -37,6 +37,7 @@ import {
   type AdminVideo,
   type GameLite,
 } from "@/lib/admin/client";
+import HostedVideoUpload from "@/components/admin/HostedVideoUpload";
 
 const primaryBtn = {
   bg: "nexzy.blue",
@@ -484,6 +485,11 @@ export default function VideosPanel() {
                           Facebook
                         </Badge>
                       )}
+                      {(v.videoUrl || v.mediaKey) && (
+                        <Badge colorPalette="green" variant="solid">
+                          Hosted
+                        </Badge>
+                      )}
                       <Text fontSize="11px" color="whiteAlpha.500">
                         {v.viewCount} views
                       </Text>
@@ -579,6 +585,15 @@ export default function VideosPanel() {
                     </Button>
                   </HStack>
                 </Flex>
+
+                {/* Self-hosted MP4 upload (Nexzy TikTok native feed source) */}
+                <Box mt={2} pl="76px">
+                  <HostedVideoUpload
+                    videoId={v.id}
+                    hasHosted={!!(v.videoUrl || v.mediaKey)}
+                    onDone={load}
+                  />
+                </Box>
 
                 {/* attach-game search row */}
                 {attachFor === v.id && (

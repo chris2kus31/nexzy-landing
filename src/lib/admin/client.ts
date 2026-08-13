@@ -2435,6 +2435,12 @@ export interface AdminVideo {
   status: "draft" | "published" | "hidden";
   tags: string[] | null;
   viewCount: number;
+  // Self-hosted MP4 (Nexzy TikTok). null = YouTube-only / external.
+  mediaKey?: string | null;
+  videoUrl?: string | null;
+  durationSec?: number | null;
+  width?: number | null;
+  height?: number | null;
   createdBy: string | null;
   publishedAt: string | null;
   createdAt: string;
@@ -2525,6 +2531,39 @@ export async function updateVideo(
 export async function deleteVideo(id: string): Promise<{ ok: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/videos/${id}`, { method: "DELETE" }),
+  );
+}
+
+/** Presigned S3 PUT URL for uploading a hosted MP4 for this video. */
+export async function getHostedUploadUrl(
+  id: string,
+  contentType: string,
+): Promise<{ url: string; key: string; expiresIn: number }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${id}/hosted/upload-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentType }),
+    }),
+  );
+}
+
+/** Attach the uploaded MP4 (key + dimensions) after the presigned PUT. */
+export async function setHostedMedia(
+  id: string,
+  payload: {
+    mediaKey: string;
+    durationSec?: number;
+    width?: number;
+    height?: number;
+  },
+): Promise<AdminVideo> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/${id}/hosted`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
   );
 }
 
