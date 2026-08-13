@@ -87,10 +87,18 @@ export default async function BlogArticlePage({
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
-  // Guides (/guides/[slug], HowTo schema) and lists (/lists/[slug], ItemList
-  // schema) have their own homes — keep the canonical URL single by 404-ing
-  // those slugs here.
-  if (post.type === "guide" || post.type === "list" || post.type === "review")
+  // Non-article content types have their own homes — guides (/guides/[slug],
+  // HowTo schema), lists (/lists/[slug], ItemList), reviews (/reviews/[slug]),
+  // rewind (/rewind/[slug]) and walkthroughs (/walkthroughs/[slug]). They all
+  // share this posts/:slug fetcher, so 404 them here to keep each episode on a
+  // SINGLE canonical URL (otherwise a rewind renders as a duplicate news page).
+  if (
+    post.type === "guide" ||
+    post.type === "list" ||
+    post.type === "review" ||
+    post.type === "rewind" ||
+    post.type === "walkthrough"
+  )
     notFound();
 
   // Related: tag-aware (shared topic first, then same beat), excluding self.
