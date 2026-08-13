@@ -99,6 +99,7 @@ export default function VideosPanel() {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [series, setSeries] = useState("");
+  const [addingNewSeries, setAddingNewSeries] = useState(false);
   const [seriesOptions, setSeriesOptions] = useState<string[]>([]);
   const [hostedFile, setHostedFile] = useState<File | null>(null);
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
@@ -138,6 +139,7 @@ export default function VideosPanel() {
     setThumbnailUrl("");
     setCaption("");
     setSeries("");
+    setAddingNewSeries(false);
     setHostedFile(null);
     setSource("nexzy");
     setFeatured(false);
@@ -157,6 +159,7 @@ export default function VideosPanel() {
     setThumbnailUrl(v.thumbnailUrl ?? "");
     setCaption(v.caption ?? "");
     setSeries(v.series ?? "");
+    setAddingNewSeries(false);
     setSource(v.source === "external" ? "external" : "nexzy");
     setFeatured(!!v.featured);
     setShowForm(true);
@@ -323,18 +326,52 @@ export default function VideosPanel() {
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Caption / description (optional)"
             />
-            <Input
-              {...inputStyle}
-              value={series}
-              onChange={(e) => setSeries(e.target.value)}
-              list="video-series-list"
-              placeholder="Series (optional) — pick one or type a new one; groups it on the Videos tab"
-            />
-            <datalist id="video-series-list">
-              {seriesOptions.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+            <Box>
+              <Text fontSize="xs" color="gray.400" mb={1}>
+                Series (optional) — groups this video into a rail on the Videos
+                tab
+              </Text>
+              <select
+                value={addingNewSeries ? "__new__" : series}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "__new__") {
+                    setAddingNewSeries(true);
+                    setSeries("");
+                  } else {
+                    setAddingNewSeries(false);
+                    setSeries(val);
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  background: "#1a2036",
+                  color: "#e6e8f0",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  fontSize: 14,
+                }}
+              >
+                <option value="">— No series —</option>
+                {seriesOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+                <option value="__new__">+ New series…</option>
+              </select>
+              {addingNewSeries ? (
+                <Input
+                  {...inputStyle}
+                  mt={2}
+                  autoFocus
+                  value={series}
+                  onChange={(e) => setSeries(e.target.value)}
+                  placeholder="New series name (e.g. Rewind, Boss Rush)"
+                />
+              ) : null}
+            </Box>
             <Input
               {...inputStyle}
               value={youtubeUrl}
