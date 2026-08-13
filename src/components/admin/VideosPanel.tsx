@@ -39,7 +39,10 @@ import {
   type GameLite,
 } from "@/lib/admin/client";
 import HostedVideoUpload from "@/components/admin/HostedVideoUpload";
+import CopyLinkButton from "@/components/admin/CopyLinkButton";
 import { uploadHostedFile } from "@/lib/admin/hostedUpload";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 const primaryBtn = {
   bg: "nexzy.blue",
@@ -688,6 +691,12 @@ export default function VideosPanel() {
                       >
                         <FiExternalLink />
                       </Button>
+                    )}
+                    {v.status === "published" && (
+                      <CopyLinkButton
+                        url={`${SITE_URL}/videos/${v.slug}`}
+                        title="Copy public video link"
+                      />
                     )}
                     <Button
                       size="xs"

@@ -13,10 +13,19 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import StatusBadge from "@/components/admin/StatusBadge";
+import CopyLinkButton from "@/components/admin/CopyLinkButton";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
+import { publicPathForType } from "@/lib/blog/publicPath";
 import { approvePost, type BlogPost } from "@/lib/admin/client";
 
 const PAGE_SIZE = 15;
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+
+/** Full public share URL for a published post, correct per content type. */
+function publicUrlFor(post: BlogPost): string {
+  return `${SITE_URL}${publicPathForType(post.type)}/${post.slug}`;
+}
 
 const TYPE_FILTERS: { key: string; label: string }[] = [
   { key: "article", label: "News" },
@@ -61,7 +70,12 @@ function PostRow({
             </Text>
           </HStack>
         </Box>
-        <StatusBadge status={post.status} />
+        <HStack gap={2} flexShrink={0}>
+          {post.status === "published" && (
+            <CopyLinkButton url={publicUrlFor(post)} />
+          )}
+          <StatusBadge status={post.status} />
+        </HStack>
       </Flex>
     </NextLink>
   );
@@ -171,6 +185,9 @@ function WalkthroughGroup({
           >
             Publish all
           </Button>
+          {parent.status === "published" && (
+            <CopyLinkButton url={publicUrlFor(parent)} />
+          )}
           <StatusBadge status={parent.status} />
         </HStack>
       </Flex>
