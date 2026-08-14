@@ -51,6 +51,17 @@ export interface PublicPost {
       metaNote?: string | null;
       fullChangelogUrl?: string | null;
     };
+    hardwareSpec?: {
+      rows: { k: string; a: string; b?: string | null }[];
+      compareLabels?: { a: string; b?: string | null };
+    };
+    whoFor?: string[];
+    essentials?: {
+      premieres?: string | null;
+      whereToWatch?: string | null;
+      basedOn?: string | null;
+      cast?: string | null;
+    };
   } | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;

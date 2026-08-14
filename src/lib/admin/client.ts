@@ -60,10 +60,27 @@ export interface PatchData {
   fullChangelogUrl?: string | null;
 }
 
-/** Beat-specific structured "core module" data (Deals / Patch for now). */
+/** Hardware beat: the spec face-off table + who-it's-for chips. */
+export interface HardwareSpec {
+  rows: { k: string; a: string; b?: string | null }[];
+  compareLabels?: { a: string; b?: string | null };
+}
+
+/** Movies & TV beat: the essentials card. */
+export interface Essentials {
+  premieres?: string | null;
+  whereToWatch?: string | null;
+  basedOn?: string | null;
+  cast?: string | null;
+}
+
+/** Beat-specific structured "core module" data. */
 export interface ArticleFormatData {
   deal?: DealData;
   patch?: PatchData;
+  hardwareSpec?: HardwareSpec;
+  whoFor?: string[];
+  essentials?: Essentials;
 }
 
 export interface BlogPost {

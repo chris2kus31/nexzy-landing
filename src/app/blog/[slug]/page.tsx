@@ -38,6 +38,8 @@ import NewsletterSignup from "@/components/blog/NewsletterSignup";
 import ContentComments from "@/components/comments/ContentComments";
 import DealBlock from "@/components/blog/DealBlock";
 import PatchBlock from "@/components/blog/PatchBlock";
+import HardwareSpecBlock from "@/components/blog/HardwareSpecBlock";
+import EssentialsBlock from "@/components/blog/EssentialsBlock";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -338,6 +340,15 @@ export default async function BlogArticlePage({
         {post.beat === "deals" && <DealBlock deal={post.formatData?.deal} />}
         {post.beat === "patch_notes" && (
           <PatchBlock patch={post.formatData?.patch} />
+        )}
+        {post.beat === "console_hardware" && (
+          <HardwareSpecBlock
+            spec={post.formatData?.hardwareSpec}
+            whoFor={post.formatData?.whoFor}
+          />
+        )}
+        {post.beat === "game_movies_tv" && (
+          <EssentialsBlock essentials={post.formatData?.essentials} />
         )}
 
         {post.bodyMarkdown && (

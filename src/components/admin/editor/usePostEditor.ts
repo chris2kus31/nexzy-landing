@@ -160,9 +160,11 @@ export function usePostEditor(id: string) {
         .map((label) => ({ label }));
       return q && options.length >= 2 ? { question: q, options } : null;
     })(),
-    // Beat core module (Deals / Patch). Only sent for those beats so other
-    // posts never touch formatData.
-    ...(post?.beat === "deals" || post?.beat === "patch_notes"
+    // Beat core module. Only sent for the beats that have one so other posts
+    // never touch formatData.
+    ...(["deals", "patch_notes", "console_hardware", "game_movies_tv"].includes(
+      post?.beat ?? "",
+    )
       ? { formatData }
       : {}),
     seoDescription: form!.seoDescription,

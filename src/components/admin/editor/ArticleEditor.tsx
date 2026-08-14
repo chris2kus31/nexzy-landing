@@ -22,6 +22,8 @@ import EditorReport from "./EditorReport";
 import PollEditor from "./PollEditor";
 import DealEditor from "./DealEditor";
 import PatchEditor from "./PatchEditor";
+import HardwareEditor from "./HardwareEditor";
+import EssentialsEditor from "./EssentialsEditor";
 
 /**
  * The editor for NEWS + LISTS (type 'article' / 'list'). Owns its own left
@@ -192,6 +194,12 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
             )}
             {post.beat === "patch_notes" && (
               <PatchEditor value={formatData} onChange={setFormatData} />
+            )}
+            {post.beat === "console_hardware" && (
+              <HardwareEditor value={formatData} onChange={setFormatData} />
+            )}
+            {post.beat === "game_movies_tv" && (
+              <EssentialsEditor value={formatData} onChange={setFormatData} />
             )}
             <PollEditor poll={poll} setPoll={setPoll} />
           </VStack>

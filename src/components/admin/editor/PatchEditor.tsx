@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Box, Text, Input, Textarea, HStack, Button } from "@chakra-ui/react";
 import { labelProps, inputProps } from "./shared";
 import type {
@@ -36,6 +37,22 @@ export default function PatchEditor({
   const removeChange = (i: number) =>
     set({ changes: changes.filter((_, j) => j !== i) });
 
+  // TL;DR is one bullet per line. Edit it as raw text and only split/trim on
+  // blur — trimming per keystroke strips the space you need between words.
+  const [tldrText, setTldrText] = useState((patch.tldr ?? []).join("\n"));
+  const tldrKey = (patch.tldr ?? []).join("");
+  useEffect(() => {
+    setTldrText((patch.tldr ?? []).join("\n"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tldrKey]);
+  const commitTldr = () =>
+    set({
+      tldr: tldrText
+        .split("\n")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    });
+
   return (
     <Box
       border="1px solid"
@@ -50,10 +67,9 @@ export default function PatchEditor({
       <Box mb={3}>
         <Text {...labelProps}>TL;DR (one per line, the 2-3 that matter)</Text>
         <Textarea
-          value={(patch.tldr ?? []).join("\n")}
-          onChange={(e) =>
-            set({ tldr: e.target.value.split("\n").map((t) => t.trim()) })
-          }
+          value={tldrText}
+          onChange={(e) => setTldrText(e.target.value)}
+          onBlur={commitTldr}
           rows={3}
           {...inputProps}
         />
