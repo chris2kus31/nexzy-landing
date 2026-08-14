@@ -271,7 +271,9 @@ export default async function GameHubPage({
 
   const tabs: HubTab[] = [
     ...(desc ? [{ key: "about", label: "About" }] : []),
-    ...(hasMedia ? [{ key: "media", label: "Media" }] : []),
+    ...(hasMedia
+      ? [{ key: "media", label: "Media", count: videos.length + shots.length }]
+      : []),
     ...contentTabs.map((t) => ({
       key: t.key,
       label: t.label,
