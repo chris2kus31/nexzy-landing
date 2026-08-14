@@ -4,9 +4,10 @@ import type { PublicPost } from "@/lib/blog/api";
 type Deal = NonNullable<NonNullable<PublicPost["formatData"]>["deal"]>;
 
 /**
- * Deals core module: the price box + the store link (the transactional payload).
- * Reporting-only — it states the price and whether it's a genuine low; it never
- * tells the reader to buy. Renders nothing without a deal + store link.
+ * Deals core module: a "price-drop" card — the money up front, the % off as the
+ * hook, urgency + all-time-low badges, and a bold store CTA (the transactional
+ * payload). Reporting-only: it states the price and whether it's a genuine low;
+ * it never tells the reader to buy. Renders nothing without a deal + store link.
  */
 export default function DealBlock({ deal }: { deal?: Deal | null }) {
   if (!deal || !deal.storeUrl) return null;
@@ -20,6 +21,7 @@ export default function DealBlock({ deal }: { deal?: Deal | null }) {
     endsAt,
     worthNote,
   } = deal;
+  const pctClean = pct ? pct.replace(/^-/, "").replace(/%$/, "") : "";
 
   return (
     <Box
@@ -30,42 +32,93 @@ export default function DealBlock({ deal }: { deal?: Deal | null }) {
       p={{ base: 5, md: 6 }}
       my={8}
     >
-      <HStack gap={3} align="baseline" flexWrap="wrap" mb={2}>
-        {priceNow && (
-          <Text
-            fontFamily="title"
-            fontWeight="700"
-            fontSize="3xl"
-            color="green.300"
+      {/* Price + the % off hook */}
+      <Flex
+        justify="space-between"
+        align="center"
+        gap={3}
+        flexWrap="wrap"
+        mb={3}
+      >
+        <HStack gap={3} align="baseline" flexWrap="wrap">
+          {priceNow && (
+            <Text
+              fontFamily="title"
+              fontWeight="700"
+              fontSize={{ base: "3xl", md: "4xl" }}
+              color="green.300"
+              lineHeight="1"
+            >
+              {priceNow}
+            </Text>
+          )}
+          {priceWas && (
+            <Text fontSize="lg" color="gray.500" textDecoration="line-through">
+              {priceWas}
+            </Text>
+          )}
+        </HStack>
+        {pctClean && (
+          <Flex
+            direction="column"
+            align="center"
+            justify="center"
+            bg="green.400"
+            color="nexzy.navy"
+            borderRadius="xl"
+            px={4}
+            py={2}
+            lineHeight="1"
           >
-            {priceNow}
-          </Text>
+            <Text fontFamily="title" fontWeight="700" fontSize="2xl">
+              {pctClean}%
+            </Text>
+            <Text
+              fontWeight="700"
+              fontSize="10px"
+              letterSpacing="wider"
+              textTransform="uppercase"
+            >
+              off
+            </Text>
+          </Flex>
         )}
-        {priceWas && (
-          <Text fontSize="lg" color="gray.500" textDecoration="line-through">
-            {priceWas}
-          </Text>
-        )}
-        {pct && (
-          <Box
-            bg="green.400/15"
-            color="green.300"
-            fontWeight="700"
-            fontSize="sm"
-            px={2.5}
-            py={1}
-            borderRadius="md"
-          >
-            -{pct.replace(/^-/, "")}
-          </Box>
-        )}
-      </HStack>
+      </Flex>
 
-      {isHistoricalLow && (
-        <Text color="green.300" fontSize="sm" mb={1}>
-          ✓ Historical low — cheapest it&apos;s been
-        </Text>
+      {/* Badges: all-time low + urgency */}
+      {(isHistoricalLow || endsAt) && (
+        <HStack gap={2} flexWrap="wrap" mb={worthNote ? 3 : 4}>
+          {isHistoricalLow && (
+            <HStack
+              gap={1.5}
+              bg="green.400/15"
+              color="green.300"
+              borderRadius="full"
+              px={3}
+              py={1}
+            >
+              <Text fontSize="xs" fontWeight="700">
+                ✓ All-time low
+              </Text>
+            </HStack>
+          )}
+          {endsAt && (
+            <HStack
+              gap={1.5}
+              bg="yellow.400/15"
+              color="yellow.300"
+              borderRadius="full"
+              px={3}
+              py={1}
+            >
+              <Text fontSize="xs" fontWeight="700">
+                ⏳ Ends {endsAt}
+              </Text>
+            </HStack>
+          )}
+        </HStack>
       )}
+
       {worthNote && (
         <Text color="gray.400" fontSize="sm" mb={4} lineHeight="1.6">
           {worthNote}
@@ -76,26 +129,22 @@ export default function DealBlock({ deal }: { deal?: Deal | null }) {
         href={storeUrl}
         target="_blank"
         rel="nofollow noopener noreferrer sponsored"
-        display="inline-flex"
+        display={{ base: "flex", sm: "inline-flex" }}
+        w={{ base: "full", sm: "auto" }}
         alignItems="center"
+        justifyContent="center"
         gap={2}
-        bg="nexzy.blue"
-        color="white"
+        bg="green.400"
+        color="nexzy.navy"
         fontWeight="700"
-        fontSize="md"
+        fontSize="sm"
         px={5}
         py={2.5}
         borderRadius="lg"
-        _hover={{ bg: "nexzy.lightBlue", textDecoration: "none" }}
+        _hover={{ bg: "green.300", textDecoration: "none" }}
       >
         Get it{store ? ` on ${store}` : ""} →
       </Link>
-
-      {endsAt && (
-        <Flex align="center" gap={1.5} mt={3} color="yellow.300" fontSize="xs">
-          <Text>⏳ Ends {endsAt}</Text>
-        </Flex>
-      )}
     </Box>
   );
 }
