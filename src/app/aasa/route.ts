@@ -14,10 +14,13 @@ const AASA = {
     details: [
       {
         appIDs: ["PZ9DJ9RV97.com.nexzy.app"],
-        components: [
-          { "/": "/blog/*", comment: "Shared news articles" },
-          { "/": "/games/*", comment: "Game hubs" },
-        ],
+        // IMPORTANT: keep /games OUT of iOS Universal Links until the app build
+        // that ships app/games/[slug].tsx is live AND widely adopted. The server
+        // AASA is read by ALREADY-INSTALLED apps; adding /games here before the
+        // new build rolls out would make iOS open the OLD app (which has no
+        // /games route) to a dead screen. Re-add when the new build is live:
+        //   { "/": "/games/*", comment: "Game hubs" },
+        components: [{ "/": "/blog/*", comment: "Shared news articles" }],
       },
     ],
   },
