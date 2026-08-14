@@ -36,6 +36,8 @@ import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import AnswerCapsule from "@/components/blog/AnswerCapsule";
 import NewsletterSignup from "@/components/blog/NewsletterSignup";
 import ContentComments from "@/components/comments/ContentComments";
+import DealBlock from "@/components/blog/DealBlock";
+import PatchBlock from "@/components/blog/PatchBlock";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -329,6 +331,13 @@ export default async function BlogArticlePage({
           <Box mb={8}>
             <MediaGallery media={media} title={post.title} />
           </Box>
+        )}
+
+        {/* Beat core modules — the transactional / reference payload, high up.
+            Each renders only for its beat and only when it has data. */}
+        {post.beat === "deals" && <DealBlock deal={post.formatData?.deal} />}
+        {post.beat === "patch_notes" && (
+          <PatchBlock patch={post.formatData?.patch} />
         )}
 
         {post.bodyMarkdown && (

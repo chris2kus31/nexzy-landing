@@ -20,6 +20,8 @@ import ReviewActionBar from "./ReviewActionBar";
 import RightRail from "./RightRail";
 import EditorReport from "./EditorReport";
 import PollEditor from "./PollEditor";
+import DealEditor from "./DealEditor";
+import PatchEditor from "./PatchEditor";
 
 /**
  * The editor for NEWS + LISTS (type 'article' / 'list'). Owns its own left
@@ -41,6 +43,8 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
     id,
     poll,
     setPoll,
+    formatData,
+    setFormatData,
   } = ed;
   const isPublished = ed.isPublished;
   if (!post || !form) return null;
@@ -183,6 +187,12 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                 {...inputProps}
               />
             </Box>
+            {post.beat === "deals" && (
+              <DealEditor value={formatData} onChange={setFormatData} />
+            )}
+            {post.beat === "patch_notes" && (
+              <PatchEditor value={formatData} onChange={setFormatData} />
+            )}
             <PollEditor poll={poll} setPoll={setPoll} />
           </VStack>
         </GridItem>

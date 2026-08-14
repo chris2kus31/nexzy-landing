@@ -33,6 +33,39 @@ export interface ArticlePoll {
   allowMultiple?: boolean;
 }
 
+/** Deals beat: the price box + store link. */
+export interface DealData {
+  priceNow?: string | null;
+  priceWas?: string | null;
+  pct?: string | null;
+  store?: string | null;
+  storeUrl?: string | null;
+  isHistoricalLow?: boolean;
+  endsAt?: string | null;
+  worthNote?: string | null;
+}
+
+/** Patch Notes beat: one structured change (buff/nerf/rework). */
+export interface PatchChange {
+  kind: "buff" | "nerf" | "rework";
+  name: string;
+  detail?: string | null;
+}
+
+/** Patch Notes beat: TL;DR + structured changes + meta note. */
+export interface PatchData {
+  tldr?: string[];
+  changes?: PatchChange[];
+  metaNote?: string | null;
+  fullChangelogUrl?: string | null;
+}
+
+/** Beat-specific structured "core module" data (Deals / Patch for now). */
+export interface ArticleFormatData {
+  deal?: DealData;
+  patch?: PatchData;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -44,6 +77,7 @@ export interface BlogPost {
   // The answer-first lede ("the short version") + the reader poll (chassis).
   answerCapsule?: string | null;
   poll?: ArticlePoll | null;
+  formatData?: ArticleFormatData | null;
   faq?: { q: string; a: string }[] | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;

@@ -29,6 +29,29 @@ export interface PublicPost {
   // The answer-first lede ("the short version"). Null on legacy rows; the
   // article page renders the AnswerCapsule only when present.
   answerCapsule?: string | null;
+  // Beat-specific structured module data (Deals price box, Patch breakdown).
+  formatData?: {
+    deal?: {
+      priceNow?: string | null;
+      priceWas?: string | null;
+      pct?: string | null;
+      store?: string | null;
+      storeUrl?: string | null;
+      isHistoricalLow?: boolean;
+      endsAt?: string | null;
+      worthNote?: string | null;
+    };
+    patch?: {
+      tldr?: string[];
+      changes?: {
+        kind: "buff" | "nerf" | "rework";
+        name: string;
+        detail?: string | null;
+      }[];
+      metaNote?: string | null;
+      fullChangelogUrl?: string | null;
+    };
+  } | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;
   imageAlt: string | null;

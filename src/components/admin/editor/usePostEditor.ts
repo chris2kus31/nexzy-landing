@@ -10,6 +10,7 @@ import {
   type BlogPost,
   type ArticleMedia,
   type RewindFacts,
+  type ArticleFormatData,
 } from "@/lib/admin/client";
 import { youtubeId } from "@/lib/blog/youtube";
 import { BYLINES, type FormState, toForm } from "./shared";
@@ -61,6 +62,7 @@ export function usePostEditor(id: string) {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [facts, setFacts] = useState<RewindFacts>({});
   const [poll, setPoll] = useState<PollDraft>({ question: "", options: [] });
+  const [formatData, setFormatData] = useState<ArticleFormatData>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
@@ -84,6 +86,7 @@ export function usePostEditor(id: string) {
         setScreenshots(p.screenshots ?? []);
         setFacts(p.rewindFacts ?? {});
         setPoll(pollFromPost(p));
+        setFormatData(p.formatData ?? {});
         setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
@@ -108,6 +111,7 @@ export function usePostEditor(id: string) {
       setScreenshots(updated.screenshots ?? []);
       setFacts(updated.rewindFacts ?? {});
       setPoll(pollFromPost(updated));
+      setFormatData(updated.formatData ?? {});
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
@@ -156,6 +160,11 @@ export function usePostEditor(id: string) {
         .map((label) => ({ label }));
       return q && options.length >= 2 ? { question: q, options } : null;
     })(),
+    // Beat core module (Deals / Patch). Only sent for those beats so other
+    // posts never touch formatData.
+    ...(post?.beat === "deals" || post?.beat === "patch_notes"
+      ? { formatData }
+      : {}),
     seoDescription: form!.seoDescription,
     bodyMarkdown,
     imageAlt: form!.imageAlt,
@@ -249,6 +258,8 @@ export function usePostEditor(id: string) {
     setFacts,
     poll,
     setPoll,
+    formatData,
+    setFormatData,
     error,
     busy,
     notice,
