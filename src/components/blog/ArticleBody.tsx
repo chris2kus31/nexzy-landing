@@ -10,7 +10,15 @@ import { splitAfterFirstParagraph } from "@/lib/blog/format";
  * (all body text stays in the HTML). On short/unsplittable bodies it just
  * renders the markdown whole. `location` is the attribution tag (content type)
  * passed through to the CTA → GA4 `app_download_click` + Android UTM medium.
+ *
+ * The inline CTA is only injected on longer pieces (>= INLINE_CTA_MIN_WORDS).
+ * Short/brief news already ends with the "make it yours" band + the newsletter,
+ * so a second in-body app CTA on a 250-word post just reads as salesy — exactly
+ * the ad-maze feel Nexzy positions against. Features (~450+ words) have the room
+ * for a high CTA and an end band, spaced far apart.
  */
+const INLINE_CTA_MIN_WORDS = 400;
+
 export default function ArticleBody({
   body,
   location,
@@ -23,9 +31,11 @@ export default function ArticleBody({
   cta?: boolean;
 }) {
   const { intro, rest } = splitAfterFirstParagraph(body);
+  const wordCount = body.trim().split(/\s+/).filter(Boolean).length;
   // `cta={false}` (e.g. the Rewind retro-paper panel) renders the body whole with
-  // no inline install CTA — the dark CTA card clashes with the cream paper.
-  if (!rest || !cta) return <Markdown tone={tone}>{body}</Markdown>;
+  // no inline install CTA. Short bodies also skip it (see INLINE_CTA_MIN_WORDS).
+  if (!rest || !cta || wordCount < INLINE_CTA_MIN_WORDS)
+    return <Markdown tone={tone}>{body}</Markdown>;
   return (
     <>
       <Markdown tone={tone}>{intro}</Markdown>
