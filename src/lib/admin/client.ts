@@ -26,6 +26,13 @@ export interface RewindFacts {
   historicalNote?: string | null;
 }
 
+/** A reader poll (the shared engagement chassis). AI-proposed, human-owned. */
+export interface ArticlePoll {
+  question: string;
+  options: { label: string }[];
+  allowMultiple?: boolean;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -34,6 +41,9 @@ export interface BlogPost {
   excerpt: string | null;
   seoDescription: string | null;
   bodyMarkdown: string | null;
+  // The answer-first lede ("the short version") + the reader poll (chassis).
+  answerCapsule?: string | null;
+  poll?: ArticlePoll | null;
   faq?: { q: string; a: string }[] | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;

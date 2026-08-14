@@ -19,6 +19,7 @@ import type { PostEditor } from "./usePostEditor";
 import ReviewActionBar from "./ReviewActionBar";
 import RightRail from "./RightRail";
 import EditorReport from "./EditorReport";
+import PollEditor from "./PollEditor";
 
 /**
  * The editor for NEWS + LISTS (type 'article' / 'list'). Owns its own left
@@ -27,8 +28,20 @@ import EditorReport from "./EditorReport";
  * so guide-only changes never touch this file (and vice versa).
  */
 export default function ArticleEditor({ ed }: { ed: PostEditor }) {
-  const { post, form, set, run, busy, preview, setPreview, notice, error, id } =
-    ed;
+  const {
+    post,
+    form,
+    set,
+    run,
+    busy,
+    preview,
+    setPreview,
+    notice,
+    error,
+    id,
+    poll,
+    setPoll,
+  } = ed;
   const isPublished = ed.isPublished;
   if (!post || !form) return null;
 
@@ -61,6 +74,16 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
               <Input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
+                {...inputProps}
+              />
+            </Box>
+            <Box>
+              <Text {...labelProps}>Short version (answer-first)</Text>
+              <Textarea
+                value={form.answerCapsule}
+                onChange={(e) => set("answerCapsule", e.target.value)}
+                rows={2}
+                placeholder="1-2 sentences shown in a box at the very top — the direct answer / most important fact."
                 {...inputProps}
               />
             </Box>
@@ -160,6 +183,7 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                 {...inputProps}
               />
             </Box>
+            <PollEditor poll={poll} setPoll={setPoll} />
           </VStack>
         </GridItem>
 

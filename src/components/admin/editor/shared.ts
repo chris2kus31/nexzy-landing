@@ -8,6 +8,7 @@ export interface FormState {
   title: string;
   seoTitle: string;
   excerpt: string;
+  answerCapsule: string;
   seoDescription: string;
   bodyMarkdown: string;
   imageAlt: string;
@@ -22,6 +23,7 @@ export function toForm(p: BlogPost): FormState {
     title: p.title || "",
     seoTitle: p.seoTitle || "",
     excerpt: p.excerpt || "",
+    answerCapsule: p.answerCapsule || "",
     seoDescription: p.seoDescription || "",
     bodyMarkdown: p.bodyMarkdown || "",
     imageAlt: p.imageAlt || "",

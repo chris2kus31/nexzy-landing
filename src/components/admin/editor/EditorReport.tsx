@@ -10,6 +10,25 @@ import {
   Badge,
 } from "@chakra-ui/react";
 
+/** Friendly labels for the format-gate module keys (see beat-formats.ts). */
+const MODULE_LABELS: Record<string, string> = {
+  answerCapsule: "Short version",
+  body: "Body",
+  poll: "Poll",
+  whyItMatters: "Why it matters",
+  details: "The details",
+  hardwareSpec: "Spec table",
+  whoFor: "Who it's for",
+  essentials: "Essentials",
+  deal: "Deal + store link",
+  patch: "Patch changes",
+  verdict: "Verdict",
+  prosCons: "Pros / cons",
+  whoForReview: "Buy / wait / skip",
+  leadVideo: "Lead video",
+  hero: "Hero",
+};
+
 /**
  * The AI editor's report card (verdict, scores, flags, and the auto-revision
  * before/after log). Shared by the article and guide editors: it renders both
@@ -35,6 +54,9 @@ export default function EditorReport({
     ? (report.revisionLog as { before: string; after: string; why: string }[])
     : [];
   const autoRevised = !!report.autoRevised;
+  const formatChecklist = Array.isArray(report.formatChecklist)
+    ? (report.formatChecklist as { module: string; status: string }[])
+    : [];
 
   // Guide Editor extras (guides only). Absent on news articles.
   const isGuideEditor = report.agent === "guide-editor";
@@ -157,6 +179,53 @@ export default function EditorReport({
             </Flex>
           )}
         </Flex>
+      )}
+
+      {/* Format checklist — the beat's required modules. Missing = holds for you
+          to fill; manual = no auto-check yet, verify by eye. */}
+      {formatChecklist.length > 0 && (
+        <Box mb={4}>
+          <Text
+            fontSize="10px"
+            color="nexzy.gray.100"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            mb={1.5}
+          >
+            Format checklist
+          </Text>
+          <Flex gap={2} flexWrap="wrap">
+            {formatChecklist.map((f) => {
+              const tone =
+                f.status === "present"
+                  ? "green"
+                  : f.status === "missing"
+                    ? "red"
+                    : "gray";
+              const icon =
+                f.status === "present"
+                  ? "✓"
+                  : f.status === "missing"
+                    ? "✕"
+                    : "•";
+              return (
+                <Box
+                  key={f.module}
+                  bg={`${tone}.400/10`}
+                  border="1px solid"
+                  borderColor={`${tone}.400/25`}
+                  borderRadius="md"
+                  px={2.5}
+                  py={1}
+                >
+                  <Text fontSize="xs" color={`${tone}.300`} fontWeight="600">
+                    {icon} {MODULE_LABELS[f.module] ?? f.module}
+                  </Text>
+                </Box>
+              );
+            })}
+          </Flex>
+        </Box>
       )}
 
       {/* Fact check (news) */}

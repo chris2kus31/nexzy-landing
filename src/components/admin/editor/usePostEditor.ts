@@ -14,6 +14,17 @@ import {
 import { youtubeId } from "@/lib/blog/youtube";
 import { BYLINES, type FormState, toForm } from "./shared";
 
+/** The poll while it's being edited — options as plain strings for the UI. */
+export interface PollDraft {
+  question: string;
+  options: string[];
+}
+
+function pollFromPost(p: BlogPost): PollDraft {
+  const opts = (p.poll?.options ?? []).map((o) => o.label);
+  return { question: p.poll?.question ?? "", options: opts };
+}
+
 /**
  * The article's video list for the editor, with backward-compat: if `media` is
  * empty but the legacy `youtubeUrl` is set, show it as a single starred item so
@@ -49,6 +60,7 @@ export function usePostEditor(id: string) {
   const [media, setMedia] = useState<ArticleMedia[]>([]);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [facts, setFacts] = useState<RewindFacts>({});
+  const [poll, setPoll] = useState<PollDraft>({ question: "", options: [] });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [notice, setNotice] = useState("");
@@ -71,6 +83,7 @@ export function usePostEditor(id: string) {
         setMedia(mediaFromPost(p));
         setScreenshots(p.screenshots ?? []);
         setFacts(p.rewindFacts ?? {});
+        setPoll(pollFromPost(p));
         setAuthorSel(p.author || "Nexzy Editorial");
       })
       .catch((e) => setError(e?.message || "Failed to load."));
@@ -94,6 +107,7 @@ export function usePostEditor(id: string) {
       setMedia(mediaFromPost(updated));
       setScreenshots(updated.screenshots ?? []);
       setFacts(updated.rewindFacts ?? {});
+      setPoll(pollFromPost(updated));
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
     } catch (e) {
@@ -130,6 +144,18 @@ export function usePostEditor(id: string) {
     title: form!.title,
     seoTitle: form!.seoTitle,
     excerpt: form!.excerpt,
+    // The answer-first lede + the reader poll (chassis). Poll is stored only
+    // when valid (question + >= 2 options); cleared to null otherwise.
+    answerCapsule: nz(form!.answerCapsule),
+    poll: (() => {
+      const q = poll.question.trim();
+      const options = poll.options
+        .map((o) => o.trim())
+        .filter(Boolean)
+        .slice(0, 4)
+        .map((label) => ({ label }));
+      return q && options.length >= 2 ? { question: q, options } : null;
+    })(),
     seoDescription: form!.seoDescription,
     bodyMarkdown,
     imageAlt: form!.imageAlt,
@@ -221,6 +247,8 @@ export function usePostEditor(id: string) {
     saveScreenshots,
     facts,
     setFacts,
+    poll,
+    setPoll,
     error,
     busy,
     notice,
