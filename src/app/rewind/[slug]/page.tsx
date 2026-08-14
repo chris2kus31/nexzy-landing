@@ -17,6 +17,7 @@ import RewindEra90s from "@/components/rewind/RewindEra90s";
 import RewindEra00s from "@/components/rewind/RewindEra00s";
 import RewindHeader from "@/components/rewind/RewindHeader";
 import ContentComments from "@/components/comments/ContentComments";
+import PollBlock from "@/components/blog/PollBlock";
 import RewindLightbox from "@/components/rewind/RewindLightbox";
 import {
   eraForYear,
@@ -323,6 +324,11 @@ export default async function RewindEpisodePage({
             </Container>
           )}
         </Box>
+        {ep.poll && (
+          <Container maxW="3xl" px={{ base: 4, md: 6 }} mb={8}>
+            <PollBlock slug={slug} poll={ep.poll} />
+          </Container>
+        )}
         <ContentComments slug={slug} accent={era.accent} />
         <Footer />
         <ViewPing slug={slug} />

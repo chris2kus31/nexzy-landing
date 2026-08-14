@@ -367,6 +367,12 @@ export interface RewindEpisode {
     features: string[] | null;
     historicalNote: string | null;
   } | null;
+  poll?: {
+    question: string;
+    options: string[];
+    votes: number[];
+    total: number;
+  } | null;
 }
 
 export interface RewindTimelineItem {
