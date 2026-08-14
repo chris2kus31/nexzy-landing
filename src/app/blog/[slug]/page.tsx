@@ -40,6 +40,7 @@ import DealBlock from "@/components/blog/DealBlock";
 import PatchBlock from "@/components/blog/PatchBlock";
 import HardwareSpecBlock from "@/components/blog/HardwareSpecBlock";
 import EssentialsBlock from "@/components/blog/EssentialsBlock";
+import PollBlock from "@/components/blog/PollBlock";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -354,6 +355,9 @@ export default async function BlogArticlePage({
         {post.bodyMarkdown && (
           <ArticleBody body={post.bodyMarkdown} location="blog" />
         )}
+
+        {/* Reader poll — Nexzy reports, you deliver the verdict. One tap. */}
+        {post.poll && <PollBlock slug={post.slug} poll={post.poll} />}
 
         {post.sources && post.sources.length > 0 && (
           <Box mt={10}>

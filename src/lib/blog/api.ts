@@ -63,6 +63,13 @@ export interface PublicPost {
       cast?: string | null;
     };
   } | null;
+  // The reader poll with live tallies (detail views). Null when there's no poll.
+  poll?: {
+    question: string;
+    options: string[];
+    votes: number[];
+    total: number;
+  } | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;
   imageAlt: string | null;
