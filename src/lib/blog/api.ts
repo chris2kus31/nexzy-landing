@@ -26,6 +26,9 @@ export interface PublicPost {
   seoTitle: string | null;
   seoDescription: string | null;
   bodyMarkdown?: string;
+  // The answer-first lede ("the short version"). Null on legacy rows; the
+  // article page renders the AnswerCapsule only when present.
+  answerCapsule?: string | null;
   heroImageUrl: string | null;
   appImageUrl: string | null;
   imageAlt: string | null;

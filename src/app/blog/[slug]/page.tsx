@@ -33,6 +33,9 @@ import MoreOnGame from "@/components/blog/MoreOnGame";
 import MediaGallery from "@/components/blog/MediaGallery";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
+import AnswerCapsule from "@/components/blog/AnswerCapsule";
+import NewsletterSignup from "@/components/blog/NewsletterSignup";
+import ContentComments from "@/components/comments/ContentComments";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -278,6 +281,8 @@ export default async function BlogArticlePage({
           </Text>
         )}
 
+        <AnswerCapsule text={post.answerCapsule} />
+
         <Box mb={8}>
           <Byline
             author={post.author}
@@ -318,11 +323,17 @@ export default async function BlogArticlePage({
           </Text>
         )}
 
+        {/* Lead video pulled high — video near the top lifts dwell time. Only
+            renders for articles that carry one; text-only posts are unchanged. */}
+        {media.length > 0 && (
+          <Box mb={8}>
+            <MediaGallery media={media} title={post.title} />
+          </Box>
+        )}
+
         {post.bodyMarkdown && (
           <ArticleBody body={post.bodyMarkdown} location="blog" />
         )}
-
-        {media.length > 0 && <MediaGallery media={media} title={post.title} />}
 
         {post.sources && post.sources.length > 0 && (
           <Box mt={10}>
@@ -379,6 +390,11 @@ export default async function BlogArticlePage({
           </Box>
         )}
 
+        {/* Owned-audience capture — the email list the AI can't zero-click away. */}
+        <Box mt={10}>
+          <NewsletterSignup />
+        </Box>
+
         {/* Turn readers into installs — the newsroom's app funnel. */}
         <Box mt={10}>
           <AppCta variant="inline" location="blog" />
@@ -415,6 +431,10 @@ export default async function BlogArticlePage({
           </Container>
         </Box>
       )}
+
+      {/* Reader comments — reuses the same system as Rewind/home. Turns a solo
+          read into a scene: comments raise time-on-site and return visits. */}
+      <ContentComments slug={post.slug} />
 
       <ViewPing slug={post.slug} />
       <ArticleAnalytics slug={post.slug} type="article" author={post.author} />
