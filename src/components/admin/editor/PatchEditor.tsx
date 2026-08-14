@@ -9,7 +9,13 @@ import type {
   PatchChange,
 } from "@/lib/admin/client";
 
-const KINDS: PatchChange["kind"][] = ["buff", "nerf", "rework"];
+const KINDS: PatchChange["kind"][] = [
+  "buff",
+  "nerf",
+  "rework",
+  "new",
+  "change",
+];
 
 /**
  * Patch Notes core-module editor: the TL;DR, the structured buffs/nerfs, and the

@@ -3,15 +3,51 @@ import type { PublicPost } from "@/lib/blog/api";
 
 type Patch = NonNullable<NonNullable<PublicPost["formatData"]>["patch"]>;
 
-const KIND_STYLE: Record<string, { color: string; label: string }> = {
-  buff: { color: "green.300", label: "▲ BUFF" },
-  nerf: { color: "red.300", label: "▼ NERF" },
-  rework: { color: "blue.300", label: "◆ REWORK" },
+const KIND: Record<
+  string,
+  { label: string; color: string; bg: string; border: string; pillBg: string }
+> = {
+  buff: {
+    label: "▲ BUFF",
+    color: "green.300",
+    bg: "green.400/8",
+    border: "green.400/25",
+    pillBg: "green.400/15",
+  },
+  nerf: {
+    label: "▼ NERF",
+    color: "red.300",
+    bg: "red.400/8",
+    border: "red.400/25",
+    pillBg: "red.400/15",
+  },
+  rework: {
+    label: "◆ REWORK",
+    color: "blue.300",
+    bg: "blue.400/8",
+    border: "blue.400/25",
+    pillBg: "blue.400/15",
+  },
+  new: {
+    label: "✦ NEW",
+    color: "teal.300",
+    bg: "teal.400/8",
+    border: "teal.400/25",
+    pillBg: "teal.400/15",
+  },
+  change: {
+    label: "● CHANGE",
+    color: "gray.300",
+    bg: "whiteAlpha.50",
+    border: "whiteAlpha.200",
+    pillBg: "whiteAlpha.100",
+  },
 };
 
 /**
- * Patch Notes core module: the TL;DR of what matters, the structured
- * buffs/nerfs, and the meta-impact note. Renders nothing without changes.
+ * Patch Notes core module: the TL;DR of what matters, a color-coded buff/nerf
+ * "scoreboard" (green up / red down / blue rework), and the meta-impact note.
+ * Renders nothing without changes.
  */
 export default function PatchBlock({ patch }: { patch?: Patch | null }) {
   const changes = patch?.changes ?? [];
@@ -25,8 +61,6 @@ export default function PatchBlock({ patch }: { patch?: Patch | null }) {
           bg="orange.400/10"
           border="1px solid"
           borderColor="orange.400/30"
-          borderLeft="4px solid"
-          borderLeftColor="orange.400"
           borderRadius="xl"
           p={{ base: 4, md: 5 }}
           mb={5}
@@ -52,35 +86,39 @@ export default function PatchBlock({ patch }: { patch?: Patch | null }) {
         </Box>
       )}
 
-      <Box
-        bg="whiteAlpha.50"
-        border="1px solid"
-        borderColor="whiteAlpha.200"
-        borderRadius="xl"
-        px={{ base: 4, md: 5 }}
-        py={2}
-      >
+      {/* Buff / nerf scoreboard */}
+      <VStack align="stretch" gap={2}>
         {changes.map((c, i) => {
-          const style = KIND_STYLE[c.kind] ?? KIND_STYLE.rework;
+          const k = KIND[c.kind] ?? KIND.rework;
           return (
             <Flex
               key={i}
               gap={3}
-              align="baseline"
+              align="center"
+              bg={k.bg}
+              border="1px solid"
+              borderColor={k.border}
+              borderRadius="lg"
+              px={3.5}
               py={2.5}
-              borderBottom={i < changes.length - 1 ? "1px solid" : "none"}
-              borderColor="whiteAlpha.100"
             >
               <Text
-                color={style.color}
+                as="span"
+                color={k.color}
+                bg={k.pillBg}
                 fontWeight="700"
-                fontSize="xs"
-                minW="64px"
+                fontSize="10px"
+                letterSpacing="0.04em"
+                px={2.5}
+                py={1}
+                borderRadius="full"
                 flexShrink={0}
+                minW="66px"
+                textAlign="center"
               >
-                {style.label}
+                {k.label}
               </Text>
-              <Text fontSize="sm" color="gray.300" lineHeight="1.5">
+              <Text fontSize="sm" color="gray.300" lineHeight="1.4">
                 <Text as="span" color="white" fontWeight="600">
                   {c.name}
                 </Text>
@@ -89,7 +127,7 @@ export default function PatchBlock({ patch }: { patch?: Patch | null }) {
             </Flex>
           );
         })}
-      </Box>
+      </VStack>
 
       {patch.metaNote && (
         <Box

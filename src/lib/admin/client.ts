@@ -45,9 +45,10 @@ export interface DealData {
   worthNote?: string | null;
 }
 
-/** Patch Notes beat: one structured change (buff/nerf/rework). */
+/** Patch Notes beat: one structured change. buff/nerf/rework = competitive
+ * balance; new/change = content or system update. */
 export interface PatchChange {
-  kind: "buff" | "nerf" | "rework";
+  kind: "buff" | "nerf" | "rework" | "new" | "change";
   name: string;
   detail?: string | null;
 }

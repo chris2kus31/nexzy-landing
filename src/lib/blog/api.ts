@@ -44,7 +44,7 @@ export interface PublicPost {
     patch?: {
       tldr?: string[];
       changes?: {
-        kind: "buff" | "nerf" | "rework";
+        kind: "buff" | "nerf" | "rework" | "new" | "change";
         name: string;
         detail?: string | null;
       }[];
