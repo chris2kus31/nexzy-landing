@@ -14,7 +14,10 @@ const AASA = {
     details: [
       {
         appIDs: ["PZ9DJ9RV97.com.nexzy.app"],
-        components: [{ "/": "/blog/*", comment: "Shared news articles" }],
+        components: [
+          { "/": "/blog/*", comment: "Shared news articles" },
+          { "/": "/games/*", comment: "Game hubs" },
+        ],
       },
     ],
   },

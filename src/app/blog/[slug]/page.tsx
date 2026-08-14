@@ -38,6 +38,7 @@ import NewsletterSignup from "@/components/blog/NewsletterSignup";
 import ContentComments from "@/components/comments/ContentComments";
 import DealBlock from "@/components/blog/DealBlock";
 import PatchBlock from "@/components/blog/PatchBlock";
+import GameActionCard from "@/components/blog/GameActionCard";
 import HardwareSpecBlock from "@/components/blog/HardwareSpecBlock";
 import EssentialsBlock from "@/components/blog/EssentialsBlock";
 import PollBlock from "@/components/blog/PollBlock";
@@ -419,9 +420,15 @@ export default async function BlogArticlePage({
           <NewsletterSignup />
         </Box>
 
-        {/* Turn readers into installs — the newsroom's app funnel. */}
+        {/* Make it yours — when the article is linked to a game, the funnel is
+            game-specific (deep-links to that game in the app); otherwise the
+            generic install band. */}
         <Box mt={10}>
-          <AppCta variant="inline" location="blog" />
+          {post.game ? (
+            <GameActionCard game={post.game} />
+          ) : (
+            <AppCta variant="inline" location="blog" />
+          )}
         </Box>
 
         <HStack
