@@ -7,7 +7,6 @@ import {
   HStack,
   VStack,
   SimpleGrid,
-  Heading,
   Text,
   Button,
   Spinner,
@@ -24,8 +23,11 @@ import {
 } from "@/lib/admin/client";
 import { beatLabel } from "@/lib/blog/beats";
 import HealthPanel from "./HealthPanel";
+import PollAnalyticsPanel from "./PollAnalyticsPanel";
+import CommentsAnalyticsPanel from "./CommentsAnalyticsPanel";
+import { num, Metric, SectionCard } from "./analyticsUi";
 
-type Section = "content" | "cost" | "health";
+type Section = "content" | "cost" | "polls" | "comments" | "health";
 
 function SegButton({
   label,
@@ -56,69 +58,6 @@ function usd(n: number): string {
   if (!n || n <= 0) return "$0";
   if (n >= 1) return `$${n.toFixed(2)}`;
   return `$${n.toFixed(4)}`;
-}
-
-function num(n: number): string {
-  return (n ?? 0).toLocaleString();
-}
-
-function Metric({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <Box bg="whiteAlpha.50" borderRadius="lg" px={4} py={3}>
-      <Text
-        color="nexzy.white"
-        fontSize="2xl"
-        fontWeight="700"
-        lineHeight="1.1"
-      >
-        {value}
-      </Text>
-      <Text color="nexzy.gray.100" fontSize="xs">
-        {label}
-      </Text>
-      {sub && (
-        <Text color="nexzy.gray.100" fontSize="xs" opacity={0.7} mt={0.5}>
-          {sub}
-        </Text>
-      )}
-    </Box>
-  );
-}
-
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Box
-      bg="whiteAlpha.50"
-      border="1px solid"
-      borderColor="whiteAlpha.200"
-      borderRadius="xl"
-      p={4}
-    >
-      <Heading
-        size="xs"
-        color="nexzy.gray.100"
-        mb={3}
-        textTransform="uppercase"
-      >
-        {title}
-      </Heading>
-      {children}
-    </Box>
-  );
 }
 
 function TopList({ items }: { items: TopArticle[] }) {
@@ -275,12 +214,22 @@ export default function AnalyticsPanel() {
             onClick={() => setSection("cost")}
           />
           <SegButton
+            label="Polls"
+            active={section === "polls"}
+            onClick={() => setSection("polls")}
+          />
+          <SegButton
+            label="Comments"
+            active={section === "comments"}
+            onClick={() => setSection("comments")}
+          />
+          <SegButton
             label="Pipeline health"
             active={section === "health"}
             onClick={() => setSection("health")}
           />
         </HStack>
-        {section !== "health" && (
+        {(section === "content" || section === "cost") && (
           <Button
             size="sm"
             variant="outline"
@@ -296,18 +245,20 @@ export default function AnalyticsPanel() {
         )}
       </Flex>
 
-      {loading && section !== "health" && (
+      {loading && (section === "content" || section === "cost") && (
         <Flex justify="center" py={10}>
           <Spinner color="nexzy.blue" size="lg" />
         </Flex>
       )}
-      {error && section !== "health" && (
+      {error && (section === "content" || section === "cost") && (
         <Text color="red.300" fontSize="sm">
           {error}
         </Text>
       )}
 
       {section === "health" && <HealthPanel />}
+      {section === "polls" && <PollAnalyticsPanel />}
+      {section === "comments" && <CommentsAnalyticsPanel />}
 
       {/* CONTENT */}
       {section === "content" && content && (

@@ -946,6 +946,172 @@ export async function getCostAnalytics(): Promise<CostAnalytics> {
 /** Direct download URL for the cost CSV (goes through the admin proxy). */
 export const COST_CSV_URL = "/api/newsroom/admin/analytics/cost.csv";
 
+// ---- Poll analytics ----
+
+export interface PollOptionStat {
+  label: string;
+  votes: number;
+  pct: number;
+}
+
+export interface PollListItem {
+  postId: string;
+  slug: string;
+  title: string;
+  beat: string;
+  type: string;
+  question: string;
+  options: PollOptionStat[];
+  totalVotes: number;
+  loggedVotes: number;
+  uniqueVoters: number;
+  signedInVoters: number;
+  lastVoteAt: string | null;
+}
+
+export interface PollAnalytics {
+  overview: {
+    totalPolls: number;
+    loggedVotes: number;
+    uniqueVoters: number;
+    signedInVotes: number;
+    signedInPct: number;
+    votes7d: number;
+    votes30d: number;
+    changedVotes: number;
+  };
+  items: PollListItem[];
+  total: number;
+}
+
+export interface PollDetail {
+  postId: string;
+  slug: string;
+  title: string;
+  beat: string;
+  type: string;
+  question: string;
+  options: (PollOptionStat & { logged: number })[];
+  totalVotes: number;
+  loggedVotes: number;
+  uniqueVoters: number;
+  signedInVotes: number;
+  anonVotes: number;
+  changedVoters: number;
+  timeline: { day: string; votes: number }[];
+  countries: { country: string; votes: number }[];
+}
+
+export async function getPollAnalytics(
+  limit = 20,
+  offset = 0,
+): Promise<PollAnalytics> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/analytics/polls?limit=${limit}&offset=${offset}`,
+    ),
+  );
+}
+
+export async function getPollDetail(postId: string): Promise<PollDetail> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/analytics/polls/${encodeURIComponent(postId)}`,
+    ),
+  );
+}
+
+// ---- Comments analytics ----
+
+export interface CommentsOverview {
+  totalComments: number;
+  comments7d: number;
+  comments30d: number;
+  uniqueCommenters: number;
+  topLevel: number;
+  replies: number;
+  hiddenCount: number;
+  reportedCount: number;
+  deletedCount: number;
+  articlesWithComments: number;
+}
+
+export interface CommentsByPostItem {
+  postId: string;
+  slug: string;
+  title: string;
+  beat: string;
+  type: string;
+  total: number;
+  uniqueCommenters: number;
+  hidden: number;
+  reported: number;
+  lastCommentAt: string | null;
+}
+
+export interface CommentsByPost {
+  items: CommentsByPostItem[];
+  total: number;
+}
+
+export interface AdminFeedComment {
+  id: string;
+  postId: string;
+  postSlug: string | null;
+  postTitle: string | null;
+  beat: string | null;
+  type: string | null;
+  parentId: string | null;
+  content: string;
+  author: { id: string; username: string };
+  upvotes: number;
+  downvotes: number;
+  reportCount: number;
+  hidden: boolean;
+  deleted: boolean;
+  editedAt: string | null;
+  createdAt: string;
+}
+
+export interface CommentsFeed {
+  items: AdminFeedComment[];
+  total: number;
+}
+
+export async function getCommentsOverview(): Promise<CommentsOverview> {
+  return handle(
+    await fetch("/api/newsroom/admin/comment-moderation/analytics/overview"),
+  );
+}
+
+export async function getCommentsByPost(
+  limit = 20,
+  offset = 0,
+): Promise<CommentsByPost> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/comment-moderation/analytics/by-post?limit=${limit}&offset=${offset}`,
+    ),
+  );
+}
+
+export async function getCommentsFeed(
+  postId: string | null,
+  limit = 20,
+  offset = 0,
+): Promise<CommentsFeed> {
+  const q = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (postId) q.set("postId", postId);
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/comment-moderation/analytics/feed?${q.toString()}`,
+    ),
+  );
+}
+
 export interface Subscriber {
   id: string;
   email: string;
