@@ -8,6 +8,29 @@ import type { PublicPost } from "@/lib/blog/api";
 type Poll = NonNullable<PublicPost["poll"]>;
 
 /**
+ * A stable anonymous visitor id, one per browser (shared across every poll, not
+ * per-slug). Lets the server dedup and count unique voters without any PII. Best
+ * effort — private mode / no storage just returns null and the vote stays
+ * anonymous-untracked.
+ */
+function getAnonId(): string | null {
+  try {
+    const k = "nx_vid";
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(k, v);
+    }
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The reader poll (shared chassis). Nexzy reports; the reader delivers the take.
  * One vote per browser (localStorage dedup, same posture as the view count).
  * Shows the options as buttons until you vote, then the live results as bars.
@@ -51,7 +74,7 @@ export default function PollBlock({
       const res = await fetch("/api/blog/poll-vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, optionIndex: i }),
+        body: JSON.stringify({ slug, optionIndex: i, anonId: getAnonId() }),
       });
       const data = await res.json().catch(() => null);
       if (data?.votes) setVotes(data.votes);
