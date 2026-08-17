@@ -165,6 +165,51 @@ export default function IndexingRitualPanel() {
         </Stack>
       </Box>
 
+      {/* Scoreboard — of everything we've requested, how many did Google
+          actually index? Appears after the first daily growth collection. */}
+      {data.scoreboard && (
+        <Box
+          bg="whiteAlpha.50"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          p={4}
+        >
+          <Text
+            color="nexzy.blue"
+            fontSize="xs"
+            fontWeight="800"
+            letterSpacing="0.1em"
+            textTransform="uppercase"
+            mb={2}
+          >
+            Scoreboard — is it working?
+          </Text>
+          <Flex align="baseline" gap={3} wrap="wrap">
+            <Text color="nexzy.gold" fontSize="3xl" fontWeight="800">
+              {data.scoreboard.indexed}
+            </Text>
+            <Text color="nexzy.white" fontSize="md" fontWeight="600">
+              of {data.scoreboard.tracked} requested URLs indexed by Google
+            </Text>
+          </Flex>
+          {data.scoreboard.trend.length > 1 && (
+            <Text color="nexzy.gray.100" fontSize="sm" mt={1}>
+              Trend:{" "}
+              {data.scoreboard.trend
+                .map((t) => `${t.day.slice(5)}: ${t.indexed}`)
+                .join(" → ")}
+            </Text>
+          )}
+          {data.scoreboard.lastChecked && (
+            <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+              Last checked:{" "}
+              {new Date(data.scoreboard.lastChecked).toLocaleString()}
+            </Text>
+          )}
+        </Box>
+      )}
+
       <Stack gap={2}>
         <Text
           color="nexzy.blue"

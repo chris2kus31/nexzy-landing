@@ -3085,6 +3085,15 @@ export async function dismissDiscoveryCandidate(
 
 // ---- Daily Search Console request-indexing ritual (SEO Phase 1) ----
 
+export interface IndexingScoreboard {
+  tracked: number;
+  checked: number;
+  indexed: number;
+  indexedUrls: string[];
+  lastChecked: string | null;
+  trend: Array<{ day: string; indexed: number }>;
+}
+
 export interface IndexingRitual {
   day: string;
   urls: string[];
@@ -3092,6 +3101,8 @@ export interface IndexingRitual {
   completedBy: string | null;
   totalRequestedEver: number;
   streakDays: number;
+  /** Null until the first growth collection runs with the collector live. */
+  scoreboard: IndexingScoreboard | null;
 }
 
 /** Today's 10-URL batch + completion state (creates the batch on first call). */
