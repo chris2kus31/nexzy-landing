@@ -22,6 +22,7 @@ import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import FeaturedCard from "@/components/blog/FeaturedCard";
 import { StoreAnchor } from "@/components/StoreLink";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
+import { FaApple, FaGooglePlay } from "react-icons/fa";
 
 function fmtDate(date: string | null): string {
   if (!date) return "";
@@ -189,6 +190,7 @@ export default function Hero({
                     as="span"
                     display="inline-flex"
                     alignItems="center"
+                    gap={2}
                     px={5}
                     py={2.5}
                     borderRadius="full"
@@ -197,6 +199,7 @@ export default function Hero({
                     fontWeight="800"
                     fontSize="sm"
                   >
+                    <FaApple />
                     Download on iOS
                   </Box>
                 </StoreAnchor>
@@ -209,6 +212,7 @@ export default function Hero({
                     as="span"
                     display="inline-flex"
                     alignItems="center"
+                    gap={2}
                     px={5}
                     py={2.5}
                     borderRadius="full"
@@ -218,6 +222,7 @@ export default function Hero({
                     fontWeight="800"
                     fontSize="sm"
                   >
+                    <FaGooglePlay />
                     Get it on Android
                   </Box>
                 </StoreAnchor>
