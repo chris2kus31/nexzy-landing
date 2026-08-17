@@ -20,6 +20,7 @@ import { IoGameController } from "react-icons/io5";
 import { HiMail } from "react-icons/hi";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import StoreLink from "@/components/StoreLink";
+import EmailCapture from "@/components/landing/EmailCapture";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -58,6 +59,32 @@ export default function Footer() {
   return (
     <Box as="footer" bg="nexzy.navy" pt={{ base: 12, md: 16 }} pb={8}>
       <Container maxW="container.xl" px={{ base: 5, md: 6 }}>
+        {/* Newsletter capture band — sitewide (footer renders on every page),
+            so every reader gets a chance to join the owned email list. */}
+        <Stack
+          align="center"
+          textAlign="center"
+          gap={2}
+          mb={12}
+          pb={12}
+          borderBottom="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text
+            fontFamily="title"
+            fontWeight="bold"
+            fontSize={{ base: "xl", md: "2xl" }}
+            color="white"
+          >
+            Never miss a deal or a new drop
+          </Text>
+          <Text fontSize="sm" color="gray.400" maxW="lg" mb={3}>
+            One free email a week with the best of Nexzy — for the games you
+            actually play.
+          </Text>
+          <EmailCapture variant="cta" source="footer" />
+        </Stack>
+
         <SimpleGrid columns={{ base: 1, sm: 2, lg: 5 }} gap={8} mb={12}>
           {/* Logo & Brand Column */}
           <Stack gap={4} pr={{ base: 0, lg: 8 }}>

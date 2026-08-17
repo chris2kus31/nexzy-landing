@@ -20,6 +20,8 @@ import {
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import FeaturedCard from "@/components/blog/FeaturedCard";
+import { StoreAnchor } from "@/components/StoreLink";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 
 function fmtDate(date: string | null): string {
   if (!date) return "";
@@ -158,6 +160,69 @@ export default function Hero({
             >
               News, guides &amp; walkthroughs for the games you play
             </Heading>
+
+            {/* App CTA — above the fold so app-seeking (social) traffic sees
+                the app immediately instead of scrolling past the newsroom. */}
+            <Stack gap={3} mt={{ base: 4, md: 5 }} maxW="xl">
+              <Box>
+                <Text
+                  color="white"
+                  fontWeight="700"
+                  fontSize={{ base: "md", md: "lg" }}
+                >
+                  Get the app — make it yours.
+                </Text>
+                <Text
+                  color="gray.300"
+                  fontSize={{ base: "sm", md: "md" }}
+                  lineHeight="1.5"
+                  mt={1}
+                >
+                  Your gaming home: track the games you play, get news &amp;
+                  deals tuned to you, and an AI that actually knows your
+                  library.
+                </Text>
+              </Box>
+              <HStack gap={3} flexWrap="wrap">
+                <StoreAnchor store="ios" location="hero" href={APP_STORE_URL}>
+                  <Box
+                    as="span"
+                    display="inline-flex"
+                    alignItems="center"
+                    px={5}
+                    py={2.5}
+                    borderRadius="full"
+                    bg="nexzy.gold"
+                    color="nexzy.navy"
+                    fontWeight="800"
+                    fontSize="sm"
+                  >
+                    Download on iOS
+                  </Box>
+                </StoreAnchor>
+                <StoreAnchor
+                  store="android"
+                  location="hero"
+                  href={googlePlayUrl("hero")}
+                >
+                  <Box
+                    as="span"
+                    display="inline-flex"
+                    alignItems="center"
+                    px={5}
+                    py={2.5}
+                    borderRadius="full"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.400"
+                    color="white"
+                    fontWeight="800"
+                    fontSize="sm"
+                  >
+                    Get it on Android
+                  </Box>
+                </StoreAnchor>
+              </HStack>
+            </Stack>
           </Box>
           <NextLink href="/blog">
             <Text
