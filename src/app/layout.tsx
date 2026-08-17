@@ -113,7 +113,7 @@ const orgJsonLd = {
       name: "Nexzy",
       url: SITE_URL,
       description:
-        "Nexzy is an independent gaming newsroom — game news, guides, and walkthroughs for the games you play — paired with a companion app that makes it yours, including an AI assistant (Ask Nexzy) to help you beat any game. For players of every age.",
+        "Nexzy is an independent gaming newsroom — game news, guides, and walkthroughs for the games you play — paired with a companion app that makes it yours, including an AI assistant (Ask Nexzy) that knows the games you play. For players of every age.",
       foundingDate: "2026-06",
       logo: {
         "@type": "ImageObject",

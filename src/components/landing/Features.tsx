@@ -20,64 +20,68 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { Card } from "@/components/ui/card";
-import { HiOutlineChartBar } from "react-icons/hi";
-import { FaRobot, FaCoins } from "react-icons/fa";
-import { IoLibrary, IoPricetag } from "react-icons/io5";
+import { FaRobot } from "react-icons/fa";
+import {
+  IoLibrary,
+  IoPricetag,
+  IoSparkles,
+  IoNewspaper,
+} from "react-icons/io5";
 import { BsStars } from "react-icons/bs";
 
 const features = [
   {
     icon: FaRobot,
-    title: "AI Gaming Assistant",
+    title: "Ask Nexzy",
     description:
-      "Get instant help for any game. Stuck on a boss? Can't find that collectible? Our AI knows every game inside out and gives you personalized strategies.",
+      "An AI that actually knows your games. It learns the games in your library and gives help tuned to what you play — not generic wiki answers.",
     color: "nexzy.yellow",
-    badge: "Most Popular",
+    badge: "Knows your games",
     highlight: true,
   },
   {
-    icon: FaCoins,
-    title: "Daily Reward Coins",
+    icon: IoSparkles,
+    title: "Your For You home",
     description:
-      "Earn coins just for opening the app daily, completing gaming challenges, and participating in the community. Redeem for real rewards!",
+      "A home screen that adapts to you: For You picks, your mood, and what's trending — all built around the games you actually love.",
     color: "nexzy.gold",
     badge: null,
     highlight: false,
   },
   {
     icon: IoLibrary,
-    title: "Smart Game Library",
+    title: "Your game library",
     description:
-      "Automatically sync and organize games from all your platforms (Steam, PlayStation, Xbox) in one place. Never forget what you own.",
+      "Bring your library together — connect Steam and add the games you play across PlayStation and Xbox, all in one place.",
     color: "nexzy.blue",
     badge: null,
     highlight: false,
   },
   {
     icon: IoPricetag,
-    title: "Wishlist Price Tracker",
+    title: "Wishlist deal tracker",
     description:
-      "Add games to your wishlist and get instant notifications when they go on sale. Never miss a deal on games you want.",
+      "Add games to your wishlist and get notified when they drop in price — with real links straight to the deal. Never miss a sale.",
     color: "nexzy.lightBlue",
-    badge: "Save Money",
+    badge: "Save money",
     highlight: false,
   },
   {
-    icon: HiOutlineChartBar,
-    title: "Gaming Stats & Progress",
+    icon: IoNewspaper,
+    title: "News, deals & Rewind",
     description:
-      "Track your gaming achievements, completion rates, and time played across all platforms. See your gaming journey visualized.",
+      "Your gaming world in one feed: the latest news, real deal links, and a daily Rewind through gaming history.",
     color: "purple.500",
     badge: null,
     highlight: false,
   },
   {
     icon: BsStars,
-    title: "Personalized Recommendations",
+    title: "Picks made for you",
     description:
-      "Our AI learns your gaming taste and suggests new games you'll love. Discover hidden gems tailored just for you.",
+      "Nexzy learns your taste and suggests games you'll love. Discover hidden gems tuned just for you.",
     color: "green.500",
-    badge: "AI Powered",
+    badge: "Personalized",
     highlight: false,
   },
 ];
@@ -206,7 +210,8 @@ export default function Features() {
               download
             </Text>
             <Text fontSize="sm" color="gray.400">
-              Optional coin purchases available for power users
+              Free to download — optional extras unlock more AI help if you want
+              it
             </Text>
           </Stack>
         </Stack>

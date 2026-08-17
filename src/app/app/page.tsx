@@ -22,32 +22,32 @@ export const revalidate = 3600;
 // deliberately took off the newsroom homepage title.
 export const metadata: Metadata = {
   title: {
-    absolute: "Nexzy App — AI Gaming Assistant, Game Library & Deal Tracker",
+    absolute: "Nexzy App — Your Gaming Home | Library, Deals & Ask Nexzy AI",
   },
   description:
-    "Nexzy is your AI gaming companion: Ask Nexzy to beat any game, keep your whole library across Steam, PlayStation & Xbox in one place, track wishlist price drops, and earn rewards — free on iOS & Android.",
+    "Make it yours: keep your whole library across Steam, PlayStation & Xbox in one place, get news and deals tuned to you, and an AI that actually knows the games you play. Free on iOS & Android.",
   keywords:
-    "AI gaming assistant, game library tracker, cross-platform game library, wishlist price tracker, game deal alerts, what to play next, gaming rewards, Ask Nexzy, gaming companion app",
+    "gaming app, game library tracker, cross-platform game library, wishlist price tracker, game deal alerts, what to play next, personalized gaming, Ask Nexzy, AI that knows your games",
   alternates: { canonical: "/app" },
   openGraph: {
-    title: "Get the Nexzy app — your AI gaming companion",
+    title: "Get the Nexzy app — your gaming home",
     description:
-      "Beat any game with Ask Nexzy, sync your library, track deals, and earn rewards. Free on iOS & Android.",
+      "Make it yours: your library, news and deals tuned to you, and an AI that knows your games. Free on iOS & Android.",
     url: `${SITE_URL}/app`,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Get the Nexzy app — your AI gaming companion",
+    title: "Get the Nexzy app — your gaming home",
     description:
-      "Beat any game with Ask Nexzy, sync your library, and catch every deal. Free on iOS & Android.",
+      "Make it yours: your library, deals tuned to you, and an AI that knows your games. Free on iOS & Android.",
   },
 };
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Is Nexzy free?",
-    a: "Yes. Nexzy is free to download on iOS and Android — read the newsroom, track your library, and use the core features at no cost. Optional coins unlock extra AI help when you want it.",
+    a: "Yes. Nexzy is free to download on iOS and Android — read the newsroom, track your library, and use the core features at no cost. Optional extras unlock more AI help when you want it.",
   },
   {
     q: "What is Ask Nexzy?",

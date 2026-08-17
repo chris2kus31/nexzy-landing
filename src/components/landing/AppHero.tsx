@@ -28,8 +28,8 @@ const AppShowcase = dynamic(() => import("./AppShowcase"), { ssr: false });
 
 const TRUST: { value: string; label: string }[] = [
   { value: "Free", label: "to download" },
-  { value: "1000+", label: "games" },
-  { value: "24/7", label: "AI help" },
+  { value: "Your", label: "games, tracked" },
+  { value: "AI", label: "that knows you" },
   { value: "iOS &", label: "Android" },
 ];
 
@@ -134,7 +134,7 @@ export default function AppHero() {
               gap={2}
             >
               <BsFillLightningChargeFill />
-              <Text>Your AI gaming companion</Text>
+              <Text>Your gaming home</Text>
             </Badge>
 
             <Heading
@@ -145,7 +145,7 @@ export default function AppHero() {
               lineHeight="1.05"
               color="nexzy.white"
             >
-              Beat any game.
+              Every game you play.
               <br />
               <Box
                 as="span"
@@ -165,9 +165,9 @@ export default function AppHero() {
               color="nexzy.gray.100"
               maxW="xl"
             >
-              Ask Nexzy to get unstuck in any game, keep your whole library in
-              one place, track every wishlist deal, and earn rewards &mdash; all
-              tuned to the games you actually play. Free on iOS &amp; Android.
+              Your gaming home: keep your whole library in one place, get news
+              and deals tuned to you, and an AI that actually knows the games
+              you play &mdash; free on iOS &amp; Android.
             </Text>
 
             {/* Store buttons + a door back to the newsroom (the loop) */}

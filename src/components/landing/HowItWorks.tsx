@@ -15,7 +15,7 @@ import {
   HStack,
   Icon,
 } from "@chakra-ui/react";
-import { FaDownload, FaRobot, FaCoins } from "react-icons/fa";
+import { FaDownload, FaRobot } from "react-icons/fa";
 import { IoGameController, IoSparkles } from "react-icons/io5";
 import { HiLightningBolt } from "react-icons/hi";
 
@@ -34,28 +34,28 @@ const steps = [
   },
   {
     number: "2",
-    title: "Get Instant AI Help",
+    title: "Ask Nexzy anything",
     description:
-      "Ask anything about any game and get immediate expert guidance",
+      "Ask about the games you're playing and get help tuned to your library",
     icon: FaRobot,
     color: "nexzy.yellow",
     details: [
-      "Type or voice chat with AI",
-      "Get walkthroughs & strategies",
-      "Find secrets & achievements",
+      "Answers that know your games",
+      "Walkthroughs & boss help",
+      "Tips for what to play next",
     ],
   },
   {
     number: "3",
-    title: "Play & Earn Daily",
+    title: "Make it yours",
     description:
-      "Complete challenges, track games, and earn coins automatically",
-    icon: FaCoins,
+      "Your home tunes to your mood and library — For You, deals, and Rewind",
+    icon: IoSparkles,
     color: "nexzy.gold",
     details: [
-      "Daily login rewards",
-      "Gaming milestone bonuses",
-      "Redeem coins for rewards",
+      "For You picks & trending",
+      "Deals on your wishlist",
+      "A new Rewind every day",
     ],
   },
 ];
@@ -260,8 +260,8 @@ export default function HowItWorks() {
                 </Heading>
               </HStack>
               <Text color="gray.200">
-                Join thousands of gamers who never get stuck and earn rewards
-                while playing
+                Make Nexzy yours — your library, your news, and Ask Nexzy in
+                your pocket.
               </Text>
               <HStack justify="center" gap={6} pt={2}>
                 <HStack>
@@ -269,15 +269,7 @@ export default function HowItWorks() {
                     <FaRobot />
                   </Icon>
                   <Text fontSize="sm" fontWeight="medium" color="gray.200">
-                    Instant AI Help
-                  </Text>
-                </HStack>
-                <HStack>
-                  <Icon color="nexzy.yellow" boxSize={5}>
-                    <FaCoins />
-                  </Icon>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.200">
-                    Daily Rewards
+                    Ask Nexzy
                   </Text>
                 </HStack>
                 <HStack>
@@ -285,7 +277,15 @@ export default function HowItWorks() {
                     <IoSparkles />
                   </Icon>
                   <Text fontSize="sm" fontWeight="medium" color="gray.200">
-                    Free Forever
+                    Your For You home
+                  </Text>
+                </HStack>
+                <HStack>
+                  <Icon color="nexzy.yellow" boxSize={5}>
+                    <HiLightningBolt />
+                  </Icon>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.200">
+                    Free to download
                   </Text>
                 </HStack>
               </HStack>

@@ -65,7 +65,7 @@ export default function HomeLibrary({ items }: { items: PublicPost[] }) {
               borderColor="nexzy.gold/30"
             >
               <Text color="nexzy.gold" fontSize="sm" fontWeight="700">
-                ✦ New pieces published every week — this fills out as we grow
+                ✦ Fresh guides, walkthroughs &amp; lists every week
               </Text>
             </HStack>
           </Box>

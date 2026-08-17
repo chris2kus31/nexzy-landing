@@ -17,6 +17,7 @@ import RewindEra90s from "@/components/rewind/RewindEra90s";
 import RewindEra00s from "@/components/rewind/RewindEra00s";
 import RewindHeader from "@/components/rewind/RewindHeader";
 import ContentComments from "@/components/comments/ContentComments";
+import AppCta from "@/components/blog/AppCta";
 import PollBlock from "@/components/blog/PollBlock";
 import RewindLightbox from "@/components/rewind/RewindLightbox";
 import {
@@ -329,6 +330,9 @@ export default async function RewindEpisodePage({
             <PollBlock slug={slug} poll={ep.poll} />
           </Container>
         )}
+        <Container maxW="3xl" px={{ base: 4, md: 6 }} mb={8}>
+          <AppCta location="rewind" />
+        </Container>
         <ContentComments slug={slug} accent={era.accent} />
         <Footer />
         <ViewPing slug={slug} />
@@ -905,6 +909,10 @@ export default async function RewindEpisodePage({
           </Box>
         </Container>
       </Box>
+
+      <Container maxW="3xl" px={{ base: 4, md: 6 }} mb={8}>
+        <AppCta location="rewind" />
+      </Container>
 
       <ContentComments slug={slug} accent={era.accent} />
 
