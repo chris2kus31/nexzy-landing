@@ -10,40 +10,28 @@ import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
 
 const appScreenshots = [
   {
-    src: "/NexzyHomeLogin.PNG",
-    alt: "Nexzy Home",
-    title: "Nexzy Home",
-    description: "Get started in seconds",
+    src: "/NexzyAppHome.png",
+    alt: "Nexzy app home screen with library, For You and Ask Nexzy",
+    title: "Your gaming home",
+    description: "Your library, your feed, and Ask Nexzy",
   },
   {
-    src: "/NexzyAI.PNG",
-    alt: "Nexzy AI",
-    title: "Nexzy AI",
-    description: "Never get stuck in a game",
+    src: "/NexzyAppGames.png",
+    alt: "Nexzy games discovery screen with For You picks",
+    title: "Find your next game",
+    description: "Picks tuned to what you play",
   },
   {
-    src: "/NexzyGames.PNG",
-    alt: "Nexzy Games Library",
-    title: "Game Library",
-    description: "All your games in one place",
+    src: "/NexzyAppVideos.png",
+    alt: "Nexzy videos screen with news and Rewind",
+    title: "Gaming news you can watch",
+    description: "News, deals, and Rewind — in video",
   },
   {
-    src: "/NexzyGameDetail.PNG",
-    alt: "Nexzy Game Details",
-    title: "Game Details & AI Help",
-    description: "Get instant assistance",
-  },
-  {
-    src: "/NexzyGameNews.PNG",
-    alt: "Nexzy Gaming News",
-    title: "Gaming News Feed",
-    description: "Stay updated with latest news",
-  },
-  {
-    src: "/NexzyForums.PNG",
-    alt: "Nexzy Forums",
-    title: "Community Forums",
-    description: "Connect with other gamers",
+    src: "/NexzyAppNews.png",
+    alt: "Nexzy gaming news feed",
+    title: "The latest, first",
+    description: "Gaming news, deals, and top stories",
   },
 ];
 
