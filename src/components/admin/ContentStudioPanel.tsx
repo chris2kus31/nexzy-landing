@@ -14,6 +14,7 @@ import AudienceInsightsPanel from "@/components/admin/AudienceInsightsPanel";
 import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
 import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
+import SeriesPanel from "@/components/admin/SeriesPanel";
 
 /**
  * Content Studio — the consolidated home for the whole content pipeline:
@@ -147,6 +148,7 @@ export default function ContentStudioPanel({
               <VStack align="stretch" gap={6}>
                 <GuidePanel onRan={onRefresh} />
                 <ListPanel onRan={onRefresh} />
+                <SeriesPanel onRan={onRefresh} />
               </VStack>
             </Box>
           )}

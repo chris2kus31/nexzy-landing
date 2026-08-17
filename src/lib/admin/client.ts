@@ -1341,6 +1341,42 @@ export async function generateList(
   );
 }
 
+/**
+ * Propose a "Retro Game Ads" compilation lead for a retro theme. Zero-token —
+ * surfaces notable era games; you paste each ad's transcript + timestamps into
+ * the steer box when you Produce it.
+ */
+export async function runRetroAd(
+  theme: string,
+): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/retro-ad/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme }),
+    }),
+  );
+}
+
+/**
+ * Commission a curated long-form series feature (console history / console wars /
+ * franchise history / story-of / canceled / whatever-happened / game-that-killed).
+ * Grounded ONLY in the pasted facts. Lands as a video lead in Content Studio.
+ */
+export async function runSeriesFeature(input: {
+  kind: string;
+  subject: string;
+  facts?: string;
+}): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/series-feature/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
