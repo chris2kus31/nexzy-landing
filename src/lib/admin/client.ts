@@ -611,6 +611,15 @@ export async function runWeeklyReleases(): Promise<ContentSuggestion | null> {
   );
 }
 
+/** Compile "This Month in Gaming History" now into one long-form video lead. */
+export async function runMonthlyHistory(): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/monthly-history/run", {
+      method: "POST",
+    }),
+  );
+}
+
 /** Bury a suggestion. */
 export async function skipContentSuggestion(
   id: string,

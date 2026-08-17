@@ -24,6 +24,7 @@ import {
   featureRewind,
   runWeeklyRewindRecap,
   runWeeklyReleases,
+  runMonthlyHistory,
   AuthError,
   type RewindLead,
   type RewindPublishedItem,
@@ -73,6 +74,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
   const [backfilling, setBackfilling] = useState(false);
   const [recapBusy, setRecapBusy] = useState(false);
   const [releasesBusy, setReleasesBusy] = useState(false);
+  const [monthlyBusy, setMonthlyBusy] = useState(false);
   const [visible, setVisible] = useState(25);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -192,6 +194,24 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       setMsg((e as Error).message);
     } finally {
       setReleasesBusy(false);
+    }
+  }, []);
+
+  const doMonthlyHistory = useCallback(async () => {
+    setMonthlyBusy(true);
+    setMsg(null);
+    try {
+      const lead = await runMonthlyHistory();
+      setMsg(
+        lead
+          ? `Monthly recap lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          : "Not enough events for this month yet (need at least 4 in the Rewind pool).",
+      );
+    } catch (e) {
+      if (e instanceof AuthError) return;
+      setMsg((e as Error).message);
+    } finally {
+      setMonthlyBusy(false);
     }
   }, []);
 
@@ -363,6 +383,18 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
             loading={releasesBusy}
           >
             ▶ Run releases rundown
+          </Button>
+        )}
+        {isOwner && (
+          <Button
+            size="sm"
+            variant="outline"
+            borderColor="nexzy.gold"
+            color="nexzy.gold"
+            onClick={doMonthlyHistory}
+            loading={monthlyBusy}
+          >
+            ▶ Run This Month
           </Button>
         )}
       </HStack>
