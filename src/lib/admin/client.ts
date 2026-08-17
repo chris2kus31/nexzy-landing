@@ -3082,3 +3082,31 @@ export async function dismissDiscoveryCandidate(
     }),
   );
 }
+
+// ---- Daily Search Console request-indexing ritual (SEO Phase 1) ----
+
+export interface IndexingRitual {
+  day: string;
+  urls: string[];
+  completedAt: string | null;
+  completedBy: string | null;
+  totalRequestedEver: number;
+  streakDays: number;
+}
+
+/** Today's 10-URL batch + completion state (creates the batch on first call). */
+export async function getIndexingRitual(): Promise<IndexingRitual> {
+  return handle(await fetch("/api/newsroom/admin/growth/indexing-ritual"));
+}
+
+/** Mark today's ritual done. */
+export async function completeIndexingRitual(): Promise<{
+  ok: boolean;
+  day: string;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/growth/indexing-ritual/complete", {
+      method: "POST",
+    }),
+  );
+}

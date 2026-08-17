@@ -18,6 +18,7 @@ import CommissionPanel from "@/components/admin/CommissionPanel";
 import SubscribersPanel from "@/components/admin/SubscribersPanel";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
 import GrowthPanel from "@/components/admin/GrowthPanel";
+import IndexingRitualPanel from "@/components/admin/IndexingRitualPanel";
 import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import DiscoveryPanel from "@/components/admin/DiscoveryPanel";
@@ -54,6 +55,7 @@ type Tab =
   | "forum"
   | "analytics"
   | "growth"
+  | "indexing"
   | "ai-visibility"
   | "games"
   | "discovery"
@@ -316,6 +318,11 @@ function AdminContent() {
             onClick={() => setTab("growth")}
           />
           <TabButton
+            label="Indexing"
+            active={tab === "indexing"}
+            onClick={() => setTab("indexing")}
+          />
+          <TabButton
             label="AI Visibility"
             active={tab === "ai-visibility"}
             onClick={() => setTab("ai-visibility")}
@@ -482,6 +489,8 @@ function AdminContent() {
 
       {tab === "analytics" && <AnalyticsPanel />}
       {tab === "growth" && <GrowthPanel isOwner={isOwner} />}
+
+      {tab === "indexing" && <IndexingRitualPanel />}
       {tab === "ai-visibility" && <AiVisibilityPanel isOwner={isOwner} />}
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
       {tab === "discovery" && <DiscoveryPanel isOwner={isOwner} />}
