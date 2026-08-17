@@ -1321,20 +1321,22 @@ export async function generateGuide(
   );
 }
 
-export type ListKind = "upcoming" | "new";
+export type ListKind = "upcoming" | "new" | "retro";
 
 /**
- * Generate an evergreen LIST article ("upcoming" games or "new this week")
- * straight from the games DB. Lands in the review queue as a draft.
+ * Generate an evergreen LIST article ("upcoming" / "new this week" / a "retro"
+ * themed nostalgia list) straight from the games DB. Lands in the review queue
+ * as a draft. For kind='retro', pass a theme preset key (e.g. 'forgotten-ps1').
  */
 export async function generateList(
   kind: ListKind = "upcoming",
+  theme?: string,
 ): Promise<{ queued: true }> {
   return handle(
     await fetch("/api/newsroom/admin/lists/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind }),
+      body: JSON.stringify({ kind, theme }),
     }),
   );
 }

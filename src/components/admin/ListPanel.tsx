@@ -17,6 +17,36 @@ const KINDS: { value: ListKind; label: string; hint: string }[] = [
   },
 ];
 
+// Retro nostalgia themes (kind='retro'). Each is a preset filter (platform era +
+// IGDB notability band) — keys must match RETRO_THEMES in list-writer.service.ts.
+const RETRO_THEMES: { key: string; label: string; hint: string }[] = [
+  {
+    key: "forgotten-ps1",
+    label: "Forgotten PS1 Gems",
+    hint: "Underrated PlayStation 1-era games (1994–2000), by notability.",
+  },
+  {
+    key: "snes-classics",
+    label: "16-Bit Nintendo Classics",
+    hint: "The defining 16-bit Nintendo classics (1990–1996).",
+  },
+  {
+    key: "n64-classics",
+    label: "N64 Classics",
+    hint: "Nintendo 64 classics that defined a generation (1996–2001).",
+  },
+  {
+    key: "ps2-underrated",
+    label: "Underrated PS2 Games",
+    hint: "PlayStation 2-era games that got lost in a stacked library.",
+  },
+  {
+    key: "sega-genesis",
+    label: "Sega Genesis Gems",
+    hint: "Sega Genesis / Mega Drive gems (1989–1996).",
+  },
+];
+
 /**
  * "Generate a list" desk. Pick a lane (upcoming / new); the ListWriter pulls
  * real games straight from the Nexzy games DB (never fabricated), writes an
@@ -25,6 +55,7 @@ const KINDS: { value: ListKind; label: string; hint: string }[] = [
  */
 export default function ListPanel({ onRan }: { onRan?: () => void }) {
   const [kind, setKind] = useState<ListKind>("upcoming");
+  const [theme, setTheme] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -32,7 +63,10 @@ export default function ListPanel({ onRan }: { onRan?: () => void }) {
     setSending(true);
     setMsg(null);
     try {
-      await generateList(kind);
+      await generateList(
+        kind,
+        kind === "retro" ? (theme ?? undefined) : undefined,
+      );
       setMsg({
         ok: true,
         text: "On it. The list is being written and illustrated from the games DB now — it'll appear in the review queue in a few minutes. Hit Refresh to check.",
@@ -48,7 +82,12 @@ export default function ListPanel({ onRan }: { onRan?: () => void }) {
     }
   };
 
-  const active = KINDS.find((k) => k.value === kind);
+  const activeHint =
+    kind === "retro"
+      ? theme
+        ? RETRO_THEMES.find((t) => t.key === theme)?.hint
+        : "Pick a retro theme above."
+      : KINDS.find((k) => k.value === kind)?.hint;
 
   return (
     <Box
@@ -80,15 +119,44 @@ export default function ListPanel({ onRan }: { onRan?: () => void }) {
             colorPalette={kind === k.value ? "purple" : "gray"}
             color={kind === k.value ? undefined : "nexzy.white"}
             borderColor="whiteAlpha.300"
-            onClick={() => setKind(k.value)}
+            onClick={() => {
+              setKind(k.value);
+              setTheme(null);
+            }}
           >
             {k.label}
           </Button>
         ))}
       </HStack>
-      {active && (
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+        Retro nostalgia lists (real games, ranked by notability):
+      </Text>
+      <HStack gap={2} mb={3} wrap="wrap">
+        {RETRO_THEMES.map((t) => {
+          const on = kind === "retro" && theme === t.key;
+          return (
+            <Button
+              key={t.key}
+              size="sm"
+              variant={on ? "solid" : "outline"}
+              colorPalette={on ? "purple" : "gray"}
+              color={on ? undefined : "nexzy.white"}
+              borderColor="whiteAlpha.300"
+              onClick={() => {
+                setKind("retro");
+                setTheme(t.key);
+              }}
+            >
+              {t.label}
+            </Button>
+          );
+        })}
+      </HStack>
+
+      {activeHint && (
         <Text color="nexzy.gray.100" fontSize="xs" mb={4}>
-          {active.hint}
+          {activeHint}
         </Text>
       )}
 
@@ -99,6 +167,7 @@ export default function ListPanel({ onRan }: { onRan?: () => void }) {
           onClick={submit}
           loading={sending}
           loadingText="Generating…"
+          disabled={kind === "retro" && !theme}
         >
           Generate list
         </Button>
