@@ -1377,6 +1377,15 @@ export async function runSeriesFeature(input: {
   );
 }
 
+/** How many series-feature leads have been commissioned per kind (tracker). */
+export async function getSeriesFeatureCounts(): Promise<
+  Record<string, number>
+> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/series-feature/counts"),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }

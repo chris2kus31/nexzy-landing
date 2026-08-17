@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Flex,
@@ -12,45 +12,57 @@ import {
   NativeSelect,
 } from "@chakra-ui/react";
 import { FiFilm } from "react-icons/fi";
-import { runSeriesFeature } from "@/lib/admin/client";
+import { runSeriesFeature, getSeriesFeatureCounts } from "@/lib/admin/client";
 
 // Curated long-form series — keys must match SERIES_KINDS in the API's
-// content-desk.service.ts.
-const SERIES_KINDS: { key: string; label: string; hint: string }[] = [
+// content-desk.service.ts. `cadence` = the recommended posting rhythm.
+const SERIES_KINDS: {
+  key: string;
+  label: string;
+  hint: string;
+  cadence: string;
+}[] = [
   {
     key: "console_history",
     label: "History of the Console",
     hint: "e.g. subject: “SNES”, “Sega Dreamcast”",
+    cadence: "~1 per month",
   },
   {
     key: "console_wars",
     label: "Console Wars",
     hint: "e.g. subject: “SNES vs Genesis”",
+    cadence: "1 episode every 2 weeks (during a season)",
   },
   {
     key: "franchise_history",
     label: "Franchise History",
     hint: "e.g. subject: “Metal Gear”, “Final Fantasy”",
+    cadence: "~1 per month",
   },
   {
     key: "game_story",
     label: "The Story Of",
     hint: "e.g. subject: “Silent Hill 2”, “id Software”",
+    cadence: "~2 per month",
   },
   {
     key: "canceled_games",
     label: "Canceled Games",
     hint: "e.g. subject: “Star Fox 2”, “P.T. / Silent Hills”",
+    cadence: "~1 per month",
   },
   {
     key: "whatever_happened",
     label: "Whatever Happened To",
     hint: "e.g. subject: “THQ”, “Tony Hawk”",
+    cadence: "~1 per month",
   },
   {
     key: "game_that_killed",
     label: "The Game That Killed",
     hint: "e.g. subject: “38 Studios”, “Ocean Software”",
+    cadence: "~1 every 6 weeks (sparingly — highest research bar)",
   },
 ];
 
@@ -66,8 +78,19 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
   const [facts, setFacts] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  const loadCounts = () => {
+    getSeriesFeatureCounts()
+      .then(setCounts)
+      .catch(() => {});
+  };
+  useEffect(() => {
+    loadCounts();
+  }, []);
 
   const active = SERIES_KINDS.find((s) => s.key === kind);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const submit = async () => {
     if (!subject.trim()) return;
@@ -85,6 +108,7 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
           ? "Series feature lead created — find it in Content Studio → Video Leads. Produce it to write the long-form script (grounded only in your facts). You can paste more facts in the steer box at Produce."
           : "Couldn't create the lead — check the subject isn't empty.",
       });
+      loadCounts();
       onRan?.();
     } catch (e) {
       setMsg({
@@ -141,6 +165,24 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
         </NativeSelect.Field>
         <NativeSelect.Indicator />
       </NativeSelect.Root>
+
+      {active && (
+        <Flex justify="space-between" align="center" wrap="wrap" gap={2} mb={3}>
+          <Text color="nexzy.gray.100" fontSize="xs">
+            Recommended cadence:{" "}
+            <Box as="span" color="nexzy.white">
+              {active.cadence}
+            </Box>
+          </Text>
+          <Text color="nexzy.gray.100" fontSize="xs">
+            Commissioned:{" "}
+            <Box as="span" color="nexzy.white">
+              {counts[kind] ?? 0}
+            </Box>{" "}
+            of this · {total} total
+          </Text>
+        </Flex>
+      )}
 
       <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
         Subject {active ? `— ${active.hint}` : ""}
