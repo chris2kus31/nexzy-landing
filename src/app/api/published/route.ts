@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { pingIndexNow } from "@/lib/seo/indexnow";
+import { pingWebSub } from "@/lib/seo/websub";
 import { publicPathForType } from "@/lib/blog/publicPath";
 
 export const dynamic = "force-dynamic";
@@ -47,10 +48,19 @@ export async function POST(req: NextRequest): Promise<Response> {
   revalidatePath("/news-sitemap.xml");
   revalidatePath("/rss.xml");
 
-  // Nudge IndexNow (best-effort) with the correct URLs.
+  // Nudge IndexNow (best-effort) with the correct URLs, and ping Google's
+  // WebSub hub that the RSS feed has fresh content (freshness discovery).
   const urls = [`${SITE_URL}${base}`];
   if (slug) urls.unshift(`${SITE_URL}${base}/${slug}`);
-  const indexNowStatus = await pingIndexNow(urls);
+  const [indexNowStatus, webSubStatus] = await Promise.all([
+    pingIndexNow(urls),
+    pingWebSub(),
+  ]);
 
-  return NextResponse.json({ ok: true, revalidated: true, indexNowStatus });
+  return NextResponse.json({
+    ok: true,
+    revalidated: true,
+    indexNowStatus,
+    webSubStatus,
+  });
 }

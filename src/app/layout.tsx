@@ -52,7 +52,12 @@ export const metadata: Metadata = {
   creator: "Nexzy",
   publisher: "Nexzy",
   metadataBase: new URL(SITE_URL),
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    // Advertise the RSS feed so Google/Chrome/aggregators discover it (powers
+    // freshness discovery, Chrome "Follow", and Discover's Following tab).
+    types: { "application/rss+xml": "/rss.xml" },
+  },
   openGraph: {
     title: "Nexzy — Gaming News, Guides & Walkthroughs",
     description:
