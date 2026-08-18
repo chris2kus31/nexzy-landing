@@ -20,7 +20,8 @@ import {
   setPostAuthor,
   uploadBodyImage,
 } from "@/lib/admin/client";
-import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
+import { isYoutubeShort } from "@/lib/blog/youtube";
+import { parseVideoUrl, mediaPoster } from "@/lib/blog/media";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewVerdictEditor from "./ReviewVerdictEditor";
@@ -96,15 +97,21 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
   };
 
   const addVideo = (url: string) => {
-    const vid = youtubeId(url);
-    if (!vid || media.some((m) => m.videoId === vid)) return;
+    // Accept YouTube or Streamable. YouTube keeps its ytimg thumbnail; Streamable
+    // has no no-API thumb, so we leave it null (the player shows a play facade).
+    const parsed = parseVideoUrl(url);
+    if (!parsed) return;
+    if (media.some((m) => m.videoId === parsed.videoId)) return;
     setMedia([
       ...media,
       {
-        type: "youtube",
+        type: parsed.type,
         url,
-        videoId: vid,
-        thumbnailUrl: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`,
+        videoId: parsed.videoId,
+        thumbnailUrl:
+          parsed.type === "youtube"
+            ? `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault.jpg`
+            : null,
         featured: media.length === 0,
         source: "manual",
       },
@@ -321,7 +328,7 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
                 addFromInput();
               }
             }}
-            placeholder="Paste a YouTube link — watch, share, or Shorts"
+            placeholder="Paste a YouTube or Streamable link"
             {...inputProps}
           />
           <Button
@@ -342,7 +349,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
         {media.length > 0 && (
           <VStack align="stretch" gap={2} mt={2}>
             {media.map((m, i) => {
-              const short = isYoutubeShort(m.url);
+              const short = m.type !== "streamable" && isYoutubeShort(m.url);
+              const poster = mediaPoster({ ...m, quality: "mq" });
               return (
                 <HStack
                   key={m.videoId}
@@ -361,26 +369,38 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
                     borderRadius="sm"
                     overflow="hidden"
                     bg="black"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
                   >
-                    <img
-                      src={
-                        m.thumbnailUrl ||
-                        `https://i.ytimg.com/vi/${m.videoId}/mqdefault.jpg`
-                      }
-                      alt=""
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
+                    {poster ? (
+                      <img
+                        src={poster}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <Text fontSize="9px" color="whiteAlpha.700">
+                        ▶
+                      </Text>
+                    )}
                   </Box>
                   <Box flex="1" minW={0}>
                     <Text fontSize="xs" color="nexzy.white" lineClamp={1}>
                       {m.title || m.url}
                     </Text>
                     <Text fontSize="10px" color="nexzy.gray.100">
-                      {m.featured ? "★ Lead video" : short ? "Short" : "Video"}
+                      {m.featured
+                        ? "★ Lead video"
+                        : m.type === "streamable"
+                          ? "Streamable"
+                          : short
+                            ? "Short"
+                            : "Video"}
                       {m.source === "auto-finder" ? " · auto-found" : ""}
                     </Text>
                   </Box>

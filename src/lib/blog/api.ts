@@ -8,7 +8,7 @@ const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
 /** One embedded video in an article's media gallery (multi-video support). */
 export interface ArticleMedia {
-  type: "youtube";
+  type: "youtube" | "streamable";
   url: string;
   videoId: string;
   title?: string | null;

@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { Box, Heading, Text, SimpleGrid } from "@chakra-ui/react";
 import type { ArticleMedia } from "@/lib/blog/api";
 import { isYoutubeShort } from "@/lib/blog/youtube";
+import { mediaEmbedUrl, mediaPoster } from "@/lib/blog/media";
 
 // Only hosts we've whitelisted in next.config remotePatterns can go through
 // next/image (it throws on an unconfigured host). Thumbnails come from these;
@@ -45,8 +46,9 @@ export default function MediaGallery({
 
   if (!ordered.length) return null;
   const current = ordered[active] ?? ordered[0];
-  const short = isYoutubeShort(current.url);
-  const embed = `https://www.youtube-nocookie.com/embed/${current.videoId}?autoplay=1`;
+  // Shorts (portrait) only apply to YouTube; Streamable always renders 16:9.
+  const short = current.type !== "streamable" && isYoutubeShort(current.url);
+  const embed = mediaEmbedUrl(current);
 
   return (
     <Box mt={10}>
@@ -92,9 +94,9 @@ export default function MediaGallery({
             bg="black"
           >
             {(() => {
-              const src =
-                current.thumbnailUrl ||
-                `https://i.ytimg.com/vi/${current.videoId}/hqdefault.jpg`;
+              // Null poster (e.g. Streamable) → just the black bg + play button.
+              const src = mediaPoster(current);
+              if (!src) return null;
               return canOptimize(src) ? (
                 <NextImage
                   src={src}
@@ -174,9 +176,30 @@ export default function MediaGallery({
               borderColor={i === active ? "nexzy.lightBlue" : "whiteAlpha.200"}
             >
               {(() => {
-                const src =
-                  m.thumbnailUrl ||
-                  `https://i.ytimg.com/vi/${m.videoId}/mqdefault.jpg`;
+                const src = mediaPoster({ ...m, quality: "mq" });
+                if (!src)
+                  return (
+                    <Box
+                      position="absolute"
+                      inset={0}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="whiteAlpha.700"
+                    >
+                      <Box
+                        as="span"
+                        style={{
+                          width: 0,
+                          height: 0,
+                          borderStyle: "solid",
+                          borderWidth: "7px 0 7px 11px",
+                          borderColor:
+                            "transparent transparent transparent currentColor",
+                        }}
+                      />
+                    </Box>
+                  );
                 return canOptimize(src) ? (
                   <NextImage
                     src={src}
