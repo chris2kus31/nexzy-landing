@@ -21,6 +21,7 @@ import { HiMail } from "react-icons/hi";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import StoreLink from "@/components/StoreLink";
 import EmailCapture from "@/components/landing/EmailCapture";
+import PreferredSourceButton from "@/components/PreferredSourceButton";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -176,6 +177,26 @@ export default function Footer() {
             </Stack>
           ))}
         </SimpleGrid>
+
+        {/* Preferred-source band — sitewide (footer renders on every page).
+            Nexzy is a newsroom, so readers can mark us a Google preferred
+            source and get more of our content in Top Stories / Discover / AI
+            Overviews. Reinforces the Discover flywheel; becomes selectable as
+            the domain gets indexed. */}
+        <Stack
+          align="center"
+          textAlign="center"
+          gap={2}
+          mb={12}
+          pb={12}
+          borderBottom="1px solid"
+          borderColor="whiteAlpha.200"
+        >
+          <Text fontSize="sm" color="gray.400" mb={1}>
+            Want more Nexzy in your Google feed?
+          </Text>
+          <PreferredSourceButton />
+        </Stack>
 
         <Separator borderColor="whiteAlpha.200" />
 
