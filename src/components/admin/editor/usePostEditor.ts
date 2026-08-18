@@ -12,6 +12,7 @@ import {
   type RewindFacts,
   type ArticleFormatData,
 } from "@/lib/admin/client";
+import { prepareImageDataUrl } from "@/lib/admin/imagePrep";
 import { youtubeId } from "@/lib/blog/youtube";
 import { BYLINES, type FormState, toForm } from "./shared";
 
@@ -125,17 +126,18 @@ export function usePostEditor(id: string) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Image is too large (max 10 MB).");
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Image is too large (max 20 MB).");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      run("Image uploaded", () => uploadArticleImage(id, dataUrl));
-    };
-    reader.onerror = () => setError("Could not read that file.");
-    reader.readAsDataURL(file);
+    // Downscale/re-encode in the browser first: big PNGs (Card Studio exports)
+    // otherwise 413 on the Netlify proxy's ~6 MB body cap. The API re-encodes
+    // to AVIF anyway, so nothing meaningful is lost.
+    prepareImageDataUrl(file)
+      .then((dataUrl) =>
+        run("Image uploaded", () => uploadArticleImage(id, dataUrl)),
+      )
+      .catch(() => setError("Could not read that file."));
   };
 
   // Empty/whitespace → null, so a cleared field falls back to a stub on the page.

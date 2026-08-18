@@ -22,6 +22,7 @@ import {
 } from "@/lib/admin/client";
 import { isYoutubeShort } from "@/lib/blog/youtube";
 import { parseVideoUrl, mediaPoster } from "@/lib/blog/media";
+import { prepareImageDataUrl } from "@/lib/admin/imagePrep";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewVerdictEditor from "./ReviewVerdictEditor";
@@ -83,17 +84,16 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const { url } = await uploadBodyImage(id, String(reader.result || ""));
+    if (file.size > 20 * 1024 * 1024) return;
+    // Browser-side downscale/re-encode so big PNGs never 413 on the proxy.
+    prepareImageDataUrl(file)
+      .then(async (dataUrl) => {
+        const { url } = await uploadBodyImage(id, dataUrl);
         if (url) addShot(url);
-      } catch {
+      })
+      .catch(() => {
         /* surfaced via the editor's error state on next save */
-      }
-    };
-    reader.readAsDataURL(file);
+      });
   };
 
   const addVideo = (url: string) => {
