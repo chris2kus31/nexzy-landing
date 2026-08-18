@@ -215,21 +215,27 @@ export default function TrendingPanel() {
   const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  // Whether we've done a live pull this session (distinguishes "empty because
+  // nobody refreshed" from "genuinely no trends"). Opening the tab never pulls.
+  const [pulled, setPulled] = useState(false);
 
-  const load = (force = false) => {
+  const load = (opts: { force?: boolean; cacheOnly?: boolean } = {}) => {
     setLoading(true);
-    getTrendingNow({ hours, force })
+    getTrendingNow({ hours, force: opts.force, cacheOnly: opts.cacheOnly })
       .then((r) => {
         setTopics(r.topics);
         setEnabled(r.enabled);
         setErr("");
+        if (opts.force) setPulled(true);
       })
       .catch((e) => setErr((e as Error)?.message || "Failed to load trends."))
       .finally(() => setLoading(false));
   };
 
+  // Opening the tab (and switching the time window) only reads cache — it never
+  // spends a SerpApi credit. A live pull happens only when you hit Refresh.
   useEffect(() => {
-    load();
+    load({ cacheOnly: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hours]);
 
@@ -260,7 +266,7 @@ export default function TrendingPanel() {
             color="nexzy.white"
             borderColor="whiteAlpha.300"
             _hover={{ bg: "whiteAlpha.100" }}
-            onClick={() => load(true)}
+            onClick={() => load({ force: true })}
             loading={loading}
           >
             Refresh
@@ -268,9 +274,10 @@ export default function TrendingPanel() {
         </HStack>
       </HStack>
       <Text fontSize="sm" color="whiteAlpha.600" mb={4}>
-        What&apos;s spiking in gaming search right now (Google Trends). Turn one
-        into a lead — add your own link or notes so the researcher grounds the
-        right story.
+        What&apos;s spiking in gaming search right now (Google Trends). Opening
+        this tab shows the last pull for free — hit Refresh to spend a search
+        and fetch live. Turn one into a lead — add your own link or notes so the
+        researcher grounds the right story.
       </Text>
 
       {!enabled ? (
@@ -288,7 +295,9 @@ export default function TrendingPanel() {
         </Text>
       ) : topics.length === 0 ? (
         <Text fontSize="sm" color="whiteAlpha.500">
-          No trending gaming topics right now. Try a wider window or Refresh.
+          {pulled
+            ? "No trending gaming topics right now. Try a wider window or Refresh."
+            : "Opening this tab doesn't spend a search. Hit Refresh to pull the latest live trends."}
         </Text>
       ) : (
         <VStack align="stretch" gap={3}>

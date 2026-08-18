@@ -2058,11 +2058,13 @@ export async function getTrendingNow(opts?: {
   hours?: number;
   geo?: string;
   force?: boolean;
+  cacheOnly?: boolean;
 }): Promise<{ topics: TrendingTopic[]; enabled: boolean }> {
   const p = new URLSearchParams();
   if (opts?.hours) p.set("hours", String(opts.hours));
   if (opts?.geo) p.set("geo", opts.geo);
   if (opts?.force) p.set("force", "1");
+  if (opts?.cacheOnly) p.set("cacheOnly", "1");
   const qs = p.toString();
   return handle(
     await fetch(`/api/newsroom/admin/trending${qs ? `?${qs}` : ""}`),
