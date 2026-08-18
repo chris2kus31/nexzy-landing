@@ -18,6 +18,7 @@ import {
 import { HiSparkles } from "react-icons/hi";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import { track } from "@/lib/analytics";
+import PreferredSourceButton from "@/components/PreferredSourceButton";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -64,23 +65,29 @@ export default function EmailCapture({
   const onCta = variant === "cta";
 
   if (status === "success") {
+    // Peak-intent moment: they just opted in. This is the highest-converting
+    // spot for the preferred-source ask (~5-12% vs ~1% in a footer), so we
+    // surface it right under the confirmation.
     return (
-      <HStack
-        gap={3}
-        bg="nexzy.blue/20"
-        border="1px solid"
-        borderColor="nexzy.lightBlue/30"
-        borderRadius="full"
-        px={6}
-        py={3}
-      >
-        <Icon color="nexzy.yellow" boxSize={5}>
-          <IoCheckmarkCircle />
-        </Icon>
-        <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-          {message}
-        </Text>
-      </HStack>
+      <Stack gap={3} align={onCta ? "center" : "flex-start"}>
+        <HStack
+          gap={3}
+          bg="nexzy.blue/20"
+          border="1px solid"
+          borderColor="nexzy.lightBlue/30"
+          borderRadius="full"
+          px={6}
+          py={3}
+        >
+          <Icon color="nexzy.yellow" boxSize={5}>
+            <IoCheckmarkCircle />
+          </Icon>
+          <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
+            {message}
+          </Text>
+        </HStack>
+        <PreferredSourceButton label="One more thing — add Nexzy to your Google feed" />
+      </Stack>
     );
   }
 
