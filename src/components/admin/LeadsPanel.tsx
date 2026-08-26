@@ -236,8 +236,10 @@ function LeadCard({
   >;
 }) {
   const lead = s.payload?.lead;
+  // The lead row's author is canonical (it persists the last chosen writer);
+  // the payload suggestion is only the analyst's initial pick.
   const [writer, setWriter] = useState(
-    lead?.suggestedWriter || s.author || "Chuy",
+    s.author || lead?.suggestedWriter || "Chuy",
   );
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
   const [steer, setSteer] = useState("");
@@ -1146,6 +1148,8 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const [error, setError] = useState("");
   const [audience, setAudience] = useState<AudienceProfile | null>(null);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  // Filter the board by the lead's writer (null = all).
+  const [writerFilter, setWriterFilter] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -1209,6 +1213,15 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
     );
   }
 
+  // Writer chips: every known writer plus any name present on the board (so a
+  // renamed/paused writer with open leads is still filterable).
+  const writerChips = Array.from(
+    new Set([...writers, ...leads.map((l) => l.author).filter(Boolean)]),
+  ) as string[];
+  const visibleLeads = writerFilter
+    ? leads.filter((l) => (l.author || "") === writerFilter)
+    : leads;
+
   return (
     <VStack align="stretch" gap={4}>
       <Flex justify="space-between" align="flex-start" gap={2} wrap="wrap">
@@ -1245,12 +1258,50 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
         )}
       </Flex>
 
+      {leads.length > 0 && writerChips.length > 1 && (
+        <HStack gap={2} wrap="wrap">
+          <Button
+            size="xs"
+            variant={writerFilter === null ? "solid" : "outline"}
+            bg={writerFilter === null ? "nexzy.blue" : "transparent"}
+            color={writerFilter === null ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{
+              bg: writerFilter === null ? "nexzy.blue" : "whiteAlpha.100",
+            }}
+            onClick={() => setWriterFilter(null)}
+          >
+            All writers
+          </Button>
+          {writerChips.map((w) => (
+            <Button
+              key={w}
+              size="xs"
+              variant={writerFilter === w ? "solid" : "outline"}
+              bg={writerFilter === w ? "nexzy.blue" : "transparent"}
+              color={writerFilter === w ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{
+                bg: writerFilter === w ? "nexzy.blue" : "whiteAlpha.100",
+              }}
+              onClick={() => setWriterFilter((f) => (f === w ? null : w))}
+            >
+              {w}
+            </Button>
+          ))}
+        </HStack>
+      )}
+
       {leads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
           No open leads right now.
         </Text>
+      ) : visibleLeads.length === 0 ? (
+        <Text color="nexzy.gray.100" fontSize="sm">
+          No open leads for {writerFilter}.
+        </Text>
       ) : (
-        <Paginated items={leads} pageSize={20}>
+        <Paginated items={visibleLeads} pageSize={20}>
           {(pageLeads) =>
             pageLeads.map((s) => (
               <LeadCard
