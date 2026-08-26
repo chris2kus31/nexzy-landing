@@ -160,9 +160,9 @@ function fmtSlot(at: Date, now: Date): string {
 }
 
 /**
- * Now-aware "when to post" for one platform, in the viewer's local time. Uses
- * real per-platform data (UTC hour by weekday) when present, else the general
- * growth-guide windows. Returns null when we have neither.
+ * Now-aware "when to post" for one platform, in the owner's local time. Uses
+ * real per-platform data (owner-local hour by weekday) when present, else the
+ * general growth-guide windows. Returns null when we have neither.
  */
 function nextPostSlot(
   platform: string,
@@ -177,21 +177,11 @@ function nextPostSlot(
   for (let i = 0; i <= 8; i++) {
     const day = new Date(now.getTime() + i * DAY);
     if (hasReal) {
-      const rd = real![DAY_NAMES[day.getUTCDay()]];
+      const rd = real![DAY_NAMES[day.getDay()]];
       if (rd) {
-        cands.push({
-          at: new Date(
-            Date.UTC(
-              day.getUTCFullYear(),
-              day.getUTCMonth(),
-              day.getUTCDate(),
-              rd.hour,
-              0,
-              0,
-            ),
-          ),
-          src: `your data (${rd.n})`,
-        });
+        const c = new Date(day);
+        c.setHours(rd.hour, 0, 0, 0);
+        cands.push({ at: c, src: `your data (${rd.n})` });
       }
     }
     if (windows) {
@@ -813,19 +803,11 @@ function slotForDay(
   target: Date,
   real?: Record<string, { hour: number; n: number; source: string }>,
 ): { time: string; src: string; isReal: boolean } | null {
-  const dnUTC = DAY_NAMES[target.getUTCDay()];
-  if (real && real[dnUTC]) {
-    const rd = real[dnUTC];
-    const at = new Date(
-      Date.UTC(
-        target.getUTCFullYear(),
-        target.getUTCMonth(),
-        target.getUTCDate(),
-        rd.hour,
-        0,
-        0,
-      ),
-    );
+  const dn = DAY_NAMES[target.getDay()];
+  if (real && real[dn]) {
+    const rd = real[dn];
+    const at = new Date(target);
+    at.setHours(rd.hour, 0, 0, 0);
     return {
       time: at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
       src: `your data (${rd.n})`,
