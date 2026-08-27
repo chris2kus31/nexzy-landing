@@ -56,7 +56,7 @@ function LeadCard({
   onWrite: (
     id: string,
     author: string,
-    noImage: boolean,
+    generateImage: boolean,
     treatment: "news" | "review",
   ) => void;
   onSkip: (id: string) => void;
@@ -65,7 +65,10 @@ function LeadCard({
 }) {
   const [showSources, setShowSources] = useState(false);
   const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
-  const [noImage, setNoImage] = useState(false);
+  // AI hero image is OPT-IN: default is no image (checking the box spends image
+  // tokens). The positive `generateImage` flag goes straight to the API, which
+  // also defaults to "no image" — a forgotten click can't silently spend tokens.
+  const [genImage, setGenImage] = useState(false);
   const [treatment, setTreatment] = useState<"news" | "review">(
     lead.suggestedTreatment || "news",
   );
@@ -300,24 +303,24 @@ function LeadCard({
           </Box>
           <Box
             as="button"
-            onClick={() => setNoImage((v) => !v)}
+            onClick={() => setGenImage((v) => !v)}
             px={2}
             py="3px"
             borderRadius="md"
             fontSize="11px"
             fontWeight="600"
             borderWidth="1px"
-            bg={noImage ? "nexzy.blue" : "transparent"}
-            color={noImage ? "white" : "nexzy.gray.100"}
-            borderColor={noImage ? "nexzy.blue" : "whiteAlpha.300"}
-            title="Skip AI hero-image generation (saves image tokens)"
+            bg={genImage ? "nexzy.blue" : "transparent"}
+            color={genImage ? "white" : "nexzy.gray.100"}
+            borderColor={genImage ? "nexzy.blue" : "whiteAlpha.300"}
+            title="Generate an AI hero image (spends image tokens) — off by default"
           >
-            {noImage ? "☑" : "☐"} Skip AI image
+            {genImage ? "☑" : "☐"} Generate AI image
           </Box>
           <Button
             size="sm"
             colorPalette={treatment === "review" ? "purple" : "blue"}
-            onClick={() => onWrite(lead.id, author, noImage, treatment)}
+            onClick={() => onWrite(lead.id, author, genImage, treatment)}
             loading={busy}
           >
             {treatment === "review" ? "Write as review" : "Write this"}
@@ -408,15 +411,15 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   const doWrite = async (
     id: string,
     author: string,
-    noImage: boolean,
+    generateImage: boolean,
     treatment: "news" | "review",
   ) => {
     setBusyId(id);
     try {
       if (treatment === "review") {
-        await writeLeadReview(id, author, noImage);
+        await writeLeadReview(id, author, generateImage);
       } else {
-        await writeLead(id, author, noImage);
+        await writeLead(id, author, generateImage);
       }
       setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
     } catch (e) {

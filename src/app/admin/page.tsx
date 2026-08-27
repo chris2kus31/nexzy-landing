@@ -36,14 +36,7 @@ import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
 import CommentsModerationPanel from "@/components/admin/CommentsModerationPanel";
 import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
-import {
-  getQueue,
-  getPublished,
-  getStats,
-  getMe,
-  type BlogPost,
-  type AdminStats,
-} from "@/lib/admin/client";
+import { getStats, getMe, type AdminStats } from "@/lib/admin/client";
 
 type Tab =
   | "leads"
@@ -152,9 +145,9 @@ function TabButton({
 }
 
 function AdminContent() {
-  const [queue, setQueue] = useState<BlogPost[] | null>(null);
-  const [published, setPublished] = useState<BlogPost[] | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  // Bumped on Refresh so the server-driven PostBrowser refetches its page.
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [tab, _setTab] = useState<Tab>("leads");
@@ -202,17 +195,14 @@ function AdminContent() {
       .catch(() => setIsOwner(false));
   }, []);
 
+  // First paint only waits on the small stats call — the queue/published
+  // lists load their own pages server-side inside PostBrowser.
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [q, p, s] = await Promise.all([
-        getQueue(),
-        getPublished(),
-        getStats(),
-      ]);
-      setQueue(q);
-      setPublished(p);
+      const s = await getStats();
       setStats(s);
+      setListRefreshKey((k) => k + 1);
       setError("");
     } catch (e) {
       setError((e as Error)?.message || "Failed to load.");
@@ -232,7 +222,7 @@ function AdminContent() {
       </Text>
     );
   }
-  if (!queue || !published || !stats) {
+  if (!stats) {
     return (
       <Flex justify="center" py={12}>
         <Spinner color="nexzy.blue" size="lg" />
@@ -277,13 +267,13 @@ function AdminContent() {
           />
           <TabButton
             label="Review queue"
-            count={queue.length}
+            count={stats.awaitingReview}
             active={tab === "queue"}
             onClick={() => setTab("queue")}
           />
           <TabButton
             label="Published"
-            count={published.length}
+            count={stats.published}
             active={tab === "published"}
             onClick={() => setTab("published")}
           />
@@ -404,9 +394,9 @@ function AdminContent() {
             Awaiting review
           </Heading>
           <PostBrowser
-            posts={queue}
+            mode="queue"
             empty="Nothing in the queue right now."
-            dateField="createdAt"
+            refreshKey={listRefreshKey}
             onChanged={load}
           />
         </Box>
@@ -418,9 +408,9 @@ function AdminContent() {
             Published articles
           </Heading>
           <PostBrowser
-            posts={published}
+            mode="published"
             empty="No published articles yet."
-            dateField="publishedAt"
+            refreshKey={listRefreshKey}
           />
         </Box>
       )}

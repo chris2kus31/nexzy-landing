@@ -182,6 +182,36 @@ export async function getPublished(): Promise<BlogPost[]> {
   return handle(await fetch("/api/newsroom/admin/published"));
 }
 
+/** One server-side page of the queue/published lists. */
+export interface AdminPostPage {
+  items: BlogPost[];
+  /** Total top-level posts matching the filters. */
+  total: number;
+}
+
+/**
+ * Server-side page of queue/published: search + filters run in SQL and only one
+ * page travels the wire (the legacy getQueue/getPublished pull the whole list).
+ */
+export async function getPostsPage(
+  scope: "queue" | "published",
+  params: {
+    offset: number;
+    limit: number;
+    q?: string;
+    beat?: string;
+    type?: string;
+  },
+): Promise<AdminPostPage> {
+  const p = new URLSearchParams();
+  p.set("limit", String(params.limit));
+  p.set("offset", String(params.offset));
+  if (params.q) p.set("q", params.q);
+  if (params.beat) p.set("beat", params.beat);
+  if (params.type) p.set("type", params.type);
+  return handle(await fetch(`/api/newsroom/admin/${scope}?${p.toString()}`));
+}
+
 export interface AdminStats {
   awaitingReview: number;
   inProgress: number;
@@ -1189,7 +1219,7 @@ export async function sendLeadDigest(): Promise<{
 export async function writeLead(
   id: string,
   author?: string,
-  noImage?: boolean,
+  generateImage?: boolean,
 ): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write`, {
@@ -1197,7 +1227,8 @@ export async function writeLead(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...(author ? { author } : {}),
-        ...(noImage ? { noImage: true } : {}),
+        // Positive opt-in — the server defaults to NO image when absent.
+        generateImage: !!generateImage,
       }),
     }),
   );
@@ -1207,7 +1238,7 @@ export async function writeLead(
 export async function writeLeadReview(
   id: string,
   author?: string,
-  noImage?: boolean,
+  generateImage?: boolean,
 ): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write-review`, {
@@ -1215,7 +1246,7 @@ export async function writeLeadReview(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...(author ? { author } : {}),
-        ...(noImage ? { noImage: true } : {}),
+        generateImage: !!generateImage,
       }),
     }),
   );
@@ -1255,8 +1286,8 @@ export interface CommissionInput {
   sourceUrl?: string;
   workingTitle?: string;
   author?: string;
-  /** Skip AI hero-image generation — you'll drop your own. */
-  noImage?: boolean;
+  /** Generate an AI hero image (opt-in — server defaults to none). */
+  generateImage?: boolean;
   /** Legacy single free-text seed (kept for back-compat). */
   instructions?: string;
 }
@@ -2991,7 +3022,8 @@ export async function commissionReview(input: {
   rating: number;
   notes: string;
   angle?: string;
-  noImage?: boolean;
+  /** Generate an AI hero image (opt-in — server defaults to none). */
+  generateImage?: boolean;
 }): Promise<{ briefId: string }> {
   return handle(
     await fetch(`/api/newsroom/admin/commission-review`, {

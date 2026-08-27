@@ -45,7 +45,8 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [author, setAuthor] = useState("");
   const [authors, setAuthors] = useState<string[]>([]);
-  const [noImage, setNoImage] = useState(false);
+  // AI hero image is OPT-IN (default off) — checking it spends image tokens.
+  const [genImage, setGenImage] = useState(false);
 
   useEffect(() => {
     getWriterNames()
@@ -76,7 +77,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           author: author || undefined,
           rating,
           notes: instructions.trim(),
-          noImage: noImage || undefined,
+          generateImage: genImage,
         });
         setMsg({
           ok: true,
@@ -92,7 +93,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           sourceUrl: sourceUrl.trim() || undefined,
           workingTitle: title.trim() || undefined,
           author: author || undefined,
-          noImage: noImage || undefined,
+          generateImage: genImage,
         });
         setMsg({
           ok: true,
@@ -105,7 +106,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
       setInstructions("");
       setStructure("");
       setDirectives("");
-      setNoImage(false);
+      setGenImage(false);
       onRan?.();
     } catch (e) {
       setMsg({
@@ -426,18 +427,19 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
         <Button
           size="sm"
           alignSelf="flex-start"
-          onClick={() => setNoImage((v) => !v)}
-          bg={noImage ? "nexzy.blue" : "transparent"}
-          color={noImage ? "white" : "nexzy.gray.100"}
+          onClick={() => setGenImage((v) => !v)}
+          bg={genImage ? "nexzy.blue" : "transparent"}
+          color={genImage ? "white" : "nexzy.gray.100"}
           borderWidth="1px"
-          borderColor={noImage ? "nexzy.blue" : "whiteAlpha.300"}
-          _hover={{ bg: noImage ? "nexzy.blue" : "whiteAlpha.100" }}
+          borderColor={genImage ? "nexzy.blue" : "whiteAlpha.300"}
+          _hover={{ bg: genImage ? "nexzy.blue" : "whiteAlpha.100" }}
         >
-          {noImage ? "✓ Skip AI image" : "Skip AI image"}
+          {genImage ? "✓ Generate AI image" : "Generate AI image"}
         </Button>
         <Text color="nexzy.gray.100" fontSize="xs" mt={-2}>
-          Bypass the art director — the post lands with no AI hero image so you
-          can drop your own (saves image tokens).
+          Off by default — the post lands with no AI hero so you can drop your
+          own. Check it to have the art director generate one (spends image
+          tokens).
         </Text>
 
         <Flex justify="flex-end">
