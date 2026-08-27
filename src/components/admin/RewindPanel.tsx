@@ -8,6 +8,7 @@ import {
   HStack,
   Heading,
   Input,
+  Link,
   Spinner,
   Text,
   Textarea,
@@ -680,12 +681,33 @@ function RewindLeadCard({
         <Text color="nexzy.white" fontWeight="600">
           {lead.canonicalTitle}
         </Text>
-        <Text color="nexzy.gray.100" fontSize="xs">
-          {lead.canonicalYear ?? "—"}
-          {yearsAgo ? ` · ${yearsAgo} years ago` : ""} · {lead.canonicalRegion}
-        </Text>
+        <HStack gap={2} flexWrap="wrap">
+          <Text color="nexzy.gray.100" fontSize="xs">
+            {lead.canonicalYear ?? "—"}
+            {yearsAgo ? ` · ${yearsAgo} years ago` : ""} ·{" "}
+            {lead.canonicalRegion}
+          </Text>
+          {lead.wikiUrl && (
+            <Link
+              href={lead.wikiUrl}
+              target="_blank"
+              rel="noreferrer"
+              color="nexzy.lightBlue"
+              fontSize="xs"
+              _hover={{ textDecoration: "underline" }}
+            >
+              Wikipedia ↗
+            </Link>
+          )}
+        </HStack>
         {lead.blurb && (
-          <Text color="nexzy.gray.100" fontSize="xs" mt={1} lineClamp={2}>
+          <Text
+            color="nexzy.gray.100"
+            fontSize="xs"
+            mt={1}
+            lineClamp={4}
+            title={lead.blurb}
+          >
             {lead.blurb}
           </Text>
         )}

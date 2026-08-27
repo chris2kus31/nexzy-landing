@@ -2569,6 +2569,8 @@ export interface RewindLead {
   verified: boolean;
   confidence: number;
   status: string;
+  /** Wikipedia article for the event (research in one click), when known. */
+  wikiUrl: string | null;
 }
 
 export async function getRewindLeads(opts?: {
