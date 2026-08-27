@@ -215,9 +215,9 @@ export default function TrendingPanel() {
   const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  // Whether we've done a live pull this session (distinguishes "empty because
-  // nobody refreshed" from "genuinely no trends"). Opening the tab never pulls.
-  const [pulled, setPulled] = useState(false);
+  // When the topics shown were actually pulled from SerpApi (persisted
+  // server-side, survives leaving the tab). Null = never pulled for this window.
+  const [pulledAt, setPulledAt] = useState<string | null>(null);
 
   const load = (opts: { force?: boolean; cacheOnly?: boolean } = {}) => {
     setLoading(true);
@@ -225,8 +225,8 @@ export default function TrendingPanel() {
       .then((r) => {
         setTopics(r.topics);
         setEnabled(r.enabled);
+        setPulledAt(r.pulledAt ?? null);
         setErr("");
-        if (opts.force) setPulled(true);
       })
       .catch((e) => setErr((e as Error)?.message || "Failed to load trends."))
       .finally(() => setLoading(false));
@@ -273,12 +273,24 @@ export default function TrendingPanel() {
           </Button>
         </HStack>
       </HStack>
-      <Text fontSize="sm" color="whiteAlpha.600" mb={4}>
+      <Text fontSize="sm" color="whiteAlpha.600" mb={pulledAt ? 1 : 4}>
         What&apos;s spiking in gaming search right now (Google Trends). Opening
         this tab shows the last pull for free — hit Refresh to spend a search
         and fetch live. Turn one into a lead — add your own link or notes so the
         researcher grounds the right story.
       </Text>
+      {pulledAt && (
+        <Text fontSize="xs" color="whiteAlpha.500" mb={4}>
+          Last refreshed:{" "}
+          {new Date(pulledAt).toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}{" "}
+          — shown for free until your next Refresh.
+        </Text>
+      )}
 
       {!enabled ? (
         <Text fontSize="sm" color="orange.300">
@@ -295,9 +307,9 @@ export default function TrendingPanel() {
         </Text>
       ) : topics.length === 0 ? (
         <Text fontSize="sm" color="whiteAlpha.500">
-          {pulled
-            ? "No trending gaming topics right now. Try a wider window or Refresh."
-            : "Opening this tab doesn't spend a search. Hit Refresh to pull the latest live trends."}
+          {pulledAt
+            ? "No trending gaming topics in the last pull. Try a wider window or Refresh."
+            : "No pull yet for this window. Opening this tab doesn't spend a search — hit Refresh to pull the latest live trends."}
         </Text>
       ) : (
         <VStack align="stretch" gap={3}>

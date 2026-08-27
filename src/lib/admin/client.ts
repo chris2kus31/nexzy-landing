@@ -201,6 +201,7 @@ export async function getPostsPage(
     q?: string;
     beat?: string;
     type?: string;
+    author?: string;
   },
 ): Promise<AdminPostPage> {
   const p = new URLSearchParams();
@@ -209,6 +210,7 @@ export async function getPostsPage(
   if (params.q) p.set("q", params.q);
   if (params.beat) p.set("beat", params.beat);
   if (params.type) p.set("type", params.type);
+  if (params.author) p.set("author", params.author);
   return handle(await fetch(`/api/newsroom/admin/${scope}?${p.toString()}`));
 }
 
@@ -2090,7 +2092,12 @@ export async function getTrendingNow(opts?: {
   geo?: string;
   force?: boolean;
   cacheOnly?: boolean;
-}): Promise<{ topics: TrendingTopic[]; enabled: boolean }> {
+}): Promise<{
+  topics: TrendingTopic[];
+  enabled: boolean;
+  /** ISO timestamp of the last live pull shown; null = never pulled. */
+  pulledAt: string | null;
+}> {
   const p = new URLSearchParams();
   if (opts?.hours) p.set("hours", String(opts.hours));
   if (opts?.geo) p.set("geo", opts.geo);

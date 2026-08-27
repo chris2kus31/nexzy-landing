@@ -17,7 +17,12 @@ import StatusBadge from "@/components/admin/StatusBadge";
 import CopyLinkButton from "@/components/admin/CopyLinkButton";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
 import { publicPathForType } from "@/lib/blog/publicPath";
-import { approvePost, getPostsPage, type BlogPost } from "@/lib/admin/client";
+import {
+  approvePost,
+  getPostsPage,
+  getWriterNames,
+  type BlogPost,
+} from "@/lib/admin/client";
 
 const PAGE_SIZE = 15;
 
@@ -33,6 +38,7 @@ const TYPE_FILTERS: { key: string; label: string }[] = [
   { key: "guide", label: "Guides" },
   { key: "walkthrough", label: "Walkthroughs" },
   { key: "list", label: "Lists" },
+  { key: "rewind", label: "Rewinds" },
 ];
 
 type DateField = "createdAt" | "publishedAt";
@@ -66,7 +72,9 @@ function PostRow({
             <Text color="nexzy.gray.100" fontSize="xs">
               {post.type === "walkthrough"
                 ? "Walkthrough"
-                : beatLabel(post.beat)}
+                : post.type === "rewind"
+                  ? "Rewind"
+                  : beatLabel(post.beat)}
             </Text>
             <Text color="nexzy.gray.100" fontSize="xs">
               {new Date(dateVal).toLocaleDateString()}
@@ -236,6 +244,8 @@ export default function PostBrowser({
   const [debouncedQ, setDebouncedQ] = useState("");
   const [beat, setBeat] = useState<string | null>(null);
   const [ptype, setPtype] = useState<string | null>(null);
+  const [author, setAuthor] = useState<string | null>(null);
+  const [writers, setWriters] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [items, setItems] = useState<BlogPost[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -244,6 +254,13 @@ export default function PostBrowser({
   // Guards against out-of-order responses (slow page 1 landing after page 2).
   const requestSeq = useRef(0);
   const [reloadTick, setReloadTick] = useState(0);
+
+  // Active writer roster for the Writer filter chips (one fetch per mount).
+  useEffect(() => {
+    getWriterNames()
+      .then(setWriters)
+      .catch(() => setWriters([]));
+  }, []);
 
   // Debounce typing so we don't fire a query per keystroke.
   useEffect(() => {
@@ -263,6 +280,7 @@ export default function PostBrowser({
       q: debouncedQ || undefined,
       beat: beat || undefined,
       type: ptype || undefined,
+      author: author || undefined,
     })
       .then((res) => {
         if (seq !== requestSeq.current) return; // stale response
@@ -277,7 +295,7 @@ export default function PostBrowser({
       .finally(() => {
         if (seq === requestSeq.current) setLoading(false);
       });
-  }, [mode, page, debouncedQ, beat, ptype, refreshKey, reloadTick]);
+  }, [mode, page, debouncedQ, beat, ptype, author, refreshKey, reloadTick]);
 
   const reload = () => {
     setReloadTick((t) => t + 1);
@@ -315,7 +333,7 @@ export default function PostBrowser({
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const to = Math.min(total, page * PAGE_SIZE + topLevel.length);
-  const filtered = Boolean(debouncedQ || beat || ptype);
+  const filtered = Boolean(debouncedQ || beat || ptype || author);
 
   return (
     <Box>
@@ -410,6 +428,48 @@ export default function PostBrowser({
                 _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
               >
                 {b.label}
+              </Button>
+            );
+          })}
+        </HStack>
+      )}
+
+      {writers.length > 0 && (
+        <HStack gap={2} wrap="wrap" mb={3}>
+          <Text color="nexzy.gray.100" fontSize="xs" mr={1} minW="36px">
+            Writer
+          </Text>
+          <Button
+            size="xs"
+            onClick={() => {
+              setAuthor(null);
+              setPage(0);
+            }}
+            bg={author === null ? "nexzy.blue" : "transparent"}
+            color={author === null ? "white" : "nexzy.gray.100"}
+            borderWidth="1px"
+            borderColor={author === null ? "nexzy.blue" : "whiteAlpha.300"}
+            _hover={{ bg: author === null ? "nexzy.blue" : "whiteAlpha.100" }}
+          >
+            All writers
+          </Button>
+          {writers.map((w) => {
+            const active = author === w;
+            return (
+              <Button
+                key={w}
+                size="xs"
+                onClick={() => {
+                  setAuthor(active ? null : w);
+                  setPage(0);
+                }}
+                bg={active ? "nexzy.blue" : "transparent"}
+                color={active ? "white" : "nexzy.gray.100"}
+                borderWidth="1px"
+                borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+              >
+                {w}
               </Button>
             );
           })}
