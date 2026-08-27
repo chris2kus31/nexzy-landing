@@ -16,6 +16,7 @@ import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
 import SeriesPanel from "@/components/admin/SeriesPanel";
 import EverythingWeKnowPanel from "@/components/admin/EverythingWeKnowPanel";
+import NexzyCountdownPanel from "@/components/admin/NexzyCountdownPanel";
 
 /**
  * Content Studio — the consolidated home for the whole content pipeline:
@@ -150,6 +151,7 @@ export default function ContentStudioPanel({
                 <GuidePanel onRan={onRefresh} />
                 <ListPanel onRan={onRefresh} />
                 <EverythingWeKnowPanel onRan={onRefresh} />
+                <NexzyCountdownPanel onRan={onRefresh} />
                 <SeriesPanel onRan={onRefresh} />
               </VStack>
             </Box>

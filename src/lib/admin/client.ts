@@ -1438,6 +1438,24 @@ export async function runExplainer(input: {
   );
 }
 
+/**
+ * Commission a "Nexzy Countdown" ranked Top-N video from a topic template.
+ * Pulls real games from the DB; `writer` picks the byline + voice (defaults Chuy).
+ */
+export async function runCountdown(input: {
+  template: string;
+  count?: number;
+  writer?: string;
+}): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/countdown/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
