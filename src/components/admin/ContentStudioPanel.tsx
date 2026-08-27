@@ -15,6 +15,7 @@ import GuideTargetsPanel from "@/components/admin/GuideTargetsPanel";
 import GuidePanel from "@/components/admin/GuidePanel";
 import ListPanel from "@/components/admin/ListPanel";
 import SeriesPanel from "@/components/admin/SeriesPanel";
+import EverythingWeKnowPanel from "@/components/admin/EverythingWeKnowPanel";
 
 /**
  * Content Studio — the consolidated home for the whole content pipeline:
@@ -148,6 +149,7 @@ export default function ContentStudioPanel({
               <VStack align="stretch" gap={6}>
                 <GuidePanel onRan={onRefresh} />
                 <ListPanel onRan={onRefresh} />
+                <EverythingWeKnowPanel onRan={onRefresh} />
                 <SeriesPanel onRan={onRefresh} />
               </VStack>
             </Box>

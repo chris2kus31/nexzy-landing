@@ -1419,6 +1419,25 @@ export async function getSeriesFeatureCounts(): Promise<
   );
 }
 
+/**
+ * Commission an "Everything We Know" big-game explainer. Grounded ONLY in the
+ * pasted notes; `writer` picks the byline + voice (defaults Chuy server-side).
+ */
+export async function runExplainer(input: {
+  subject: string;
+  notes?: string;
+  urls?: string;
+  writer?: string;
+}): Promise<ContentSuggestion | null> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/explainer/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
 export async function getPost(id: string): Promise<BlogPost> {
   return handle(await fetch(`/api/newsroom/admin/posts/${id}`));
 }
