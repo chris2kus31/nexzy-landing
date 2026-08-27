@@ -66,6 +66,8 @@ const SERIES_KINDS: {
   },
 ];
 
+const WRITERS = ["Chuy", "Eli", "Leslie"];
+
 /**
  * Commission a curated long-form documentary feature. You pick the series, type
  * the subject, and paste the sourced facts — the writer uses ONLY those facts
@@ -76,6 +78,10 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
   const [kind, setKind] = useState(SERIES_KINDS[0].key);
   const [subject, setSubject] = useState("");
   const [facts, setFacts] = useState("");
+  const [arc, setArc] = useState("");
+  const [episode, setEpisode] = useState("");
+  const [sourceUrls, setSourceUrls] = useState("");
+  const [writer, setWriter] = useState(WRITERS[0]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -97,10 +103,15 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
     setBusy(true);
     setMsg(null);
     try {
+      const epNum = parseInt(episode, 10);
       const lead = await runSeriesFeature({
         kind,
         subject: subject.trim(),
         facts: facts.trim() || undefined,
+        arc: arc.trim() || undefined,
+        episode: Number.isFinite(epNum) && epNum > 0 ? epNum : undefined,
+        sourceUrls: sourceUrls.trim() || undefined,
+        writer,
       });
       setMsg({
         ok: !!lead,
@@ -209,6 +220,75 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
         value={facts}
         onChange={(e) => setFacts(e.currentTarget.value)}
         placeholder="Paste your researched, sourced facts here. Anything not here won't be stated. You can also add more in the steer box at Produce."
+        color="nexzy.white"
+        bg="whiteAlpha.100"
+        borderColor="whiteAlpha.300"
+      />
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Arc (optional — makes this an episode of a multi-part series)
+      </Text>
+      <Input
+        size="sm"
+        mb={3}
+        value={arc}
+        onChange={(e) => setArc(e.currentTarget.value)}
+        placeholder='e.g. "Console Wars: The 16-Bit War" — leave blank for a one-off'
+        color="nexzy.white"
+        bg="whiteAlpha.100"
+        borderColor="whiteAlpha.300"
+      />
+
+      <Flex gap={4} wrap="wrap" mb={3}>
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            Episode # (blank = auto)
+          </Text>
+          <Input
+            size="sm"
+            type="number"
+            w="120px"
+            value={episode}
+            onChange={(e) => setEpisode(e.currentTarget.value)}
+            placeholder="auto"
+            color="nexzy.white"
+            bg="whiteAlpha.100"
+            borderColor="whiteAlpha.300"
+          />
+        </Box>
+        <Box>
+          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+            Writer
+          </Text>
+          <NativeSelect.Root size="sm" w="140px">
+            <NativeSelect.Field
+              value={writer}
+              onChange={(e) => setWriter(e.currentTarget.value)}
+              color="nexzy.white"
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            >
+              {WRITERS.map((w) => (
+                <option key={w} value={w} style={{ background: "#0d1526" }}>
+                  {w}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Box>
+      </Flex>
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Reference URLs (one per line — stored for attribution)
+      </Text>
+      <Textarea
+        size="sm"
+        mb={4}
+        rows={2}
+        value={sourceUrls}
+        onChange={(e) => setSourceUrls(e.currentTarget.value)}
+        placeholder="https://…"
         color="nexzy.white"
         bg="whiteAlpha.100"
         borderColor="whiteAlpha.300"

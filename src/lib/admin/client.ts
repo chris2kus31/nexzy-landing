@@ -1400,6 +1400,10 @@ export async function runSeriesFeature(input: {
   kind: string;
   subject: string;
   facts?: string;
+  arc?: string;
+  episode?: number;
+  sourceUrls?: string;
+  writer?: string;
 }): Promise<ContentSuggestion | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/series-feature/run", {
