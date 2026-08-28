@@ -2986,7 +2986,7 @@ export interface AudienceProfile {
     byDay?: Record<string, string>;
     byPlatformDay?: Record<
       string,
-      Record<string, { hour: number; n: number; source: string }>
+      Record<string, { hour: number; n: number; source: string }[]>
     >;
     pull?: Record<
       string,

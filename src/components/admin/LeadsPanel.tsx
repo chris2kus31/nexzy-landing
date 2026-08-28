@@ -220,7 +220,7 @@ function fmtSlot(at: Date, now: Date): string {
 function nextPostSlot(
   platform: string,
   now: Date,
-  real?: Record<string, { hour: number; n: number; source: string }>,
+  real?: Record<string, { hour: number; n: number; source: string }[]>,
 ): { text: string; src: string } | null {
   const flatWindows = GUIDE_WINDOWS[platform];
   const hasReal = !!real && Object.keys(real).length > 0;
@@ -230,8 +230,8 @@ function nextPostSlot(
   for (let i = 0; i <= 8; i++) {
     const day = new Date(now.getTime() + i * DAY);
     if (hasReal) {
-      const rd = real![DAY_NAMES[day.getDay()]];
-      if (rd) {
+      const ranked = real![DAY_NAMES[day.getDay()]];
+      for (const rd of ranked ?? []) {
         const c = new Date(day);
         c.setHours(rd.hour, 0, 0, 0);
         cands.push({ at: c, src: `your data (${rd.n})` });
@@ -287,7 +287,7 @@ function LeadCard({
   audienceByDay?: Record<string, string>;
   audienceByPlatformDay?: Record<
     string,
-    Record<string, { hour: number; n: number; source: string }>
+    Record<string, { hour: number; n: number; source: string }[]>
   >;
 }) {
   const lead = s.payload?.lead;
@@ -858,18 +858,23 @@ function relTime(d: Date): string {
 function slotForDay(
   platform: string,
   target: Date,
-  real?: Record<string, { hour: number; n: number; source: string }>,
+  real?: Record<string, { hour: number; n: number; source: string }[]>,
 ): { time: string; src: string; isReal: boolean } | null {
   const dn = DAY_NAMES[target.getDay()];
-  if (real && real[dn]) {
-    const rd = real[dn];
-    const at = new Date(target);
-    at.setHours(rd.hour, 0, 0, 0);
-    return {
-      time: at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-      src: `your data (${rd.n})`,
-      isReal: true,
-    };
+  const ranked = real?.[dn];
+  if (ranked && ranked.length) {
+    // Top 3–5 slots for this day, already ranked best→worst by reach. Each
+    // shows its post count so the confidence is visible. Left = strongest.
+    const parts = ranked.slice(0, 5).map((rd) => {
+      const at = new Date(target);
+      at.setHours(rd.hour, 0, 0, 0);
+      const t = at.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      return `${t} (${rd.n})`;
+    });
+    return { time: parts.join(" · "), src: "your data", isReal: true };
   }
   const windows =
     platform === "youtube" ? ytShortsWindows(target) : GUIDE_WINDOWS[platform];
