@@ -140,6 +140,53 @@ const GUIDE_WINDOWS: Record<string, number[]> = {
   youtube: [15],
   tiktok: [8, 13, 19],
 };
+
+// YouTube SHORTS best-practice windows PER WEEKDAY, in the owner's local time
+// (Central). COMBINED across all 2026 sources — Buffer (UTC heatmap converted to
+// CST → late-morning/midday), Hopper (chart: morning 6–9am + midday), Hollyland
+// (7–9am commute + 11am–2pm + 6–9pm), Viraly, SocialPilot — not any single one.
+// The consensus center is late-morning→midday (~11am–1pm CST) with a morning
+// (8–9am) and an evening (6–8pm) wing. Your own post data (≥3 posts in a slot)
+// still overrides these. 0 = Sun … 6 = Sat.
+const YT_SHORTS_BY_DAY: Record<number, number[]> = {
+  0: [10, 18], // Sun — late-morning + evening
+  1: [9, 12, 19], // Mon — morning + midday + evening
+  2: [8, 11, 19], // Tue — Hopper's 11am peak + morning + evening
+  3: [8, 12, 19], // Wed
+  4: [9, 13, 19], // Thu
+  5: [11, 13, 18], // Fri — midday primary, evening second
+  6: [10, 15], // Sat — late-morning + afternoon
+};
+// YouTube LONG-FORM windows PER WEEKDAY (CST). Long-form peaks OPPOSITE to Shorts
+// — mornings + early-afternoon (Buffer: Sun 10am / Tue / Mon mornings; Viraly &
+// Hollyland: weekdays 12–4pm, weekends 9–11am; SocialPilot gaming: 2–4pm).
+const YT_LONGFORM_BY_DAY: Record<number, number[]> = {
+  0: [10], // Sun — Buffer's #1 long-form slot
+  1: [9, 14], // Mon
+  2: [9, 14], // Tue
+  3: [8, 15], // Wed
+  4: [9, 17], // Thu
+  5: [11, 13], // Fri
+  6: [10], // Sat
+};
+function ytShortsWindows(target: Date): number[] {
+  return YT_SHORTS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
+}
+function ytLongWindows(target: Date): number[] {
+  return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
+}
+function ytLongSlot(target: Date): {
+  time: string;
+  src: string;
+  isReal: boolean;
+} {
+  const times = ytLongWindows(target).map((h) => {
+    const c = new Date(target);
+    c.setHours(h, 0, 0, 0);
+    return c.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  });
+  return { time: times.join(", "), src: "general", isReal: false };
+}
 const PLATFORM_LABEL: Record<string, string> = {
   x: "X",
   threads: "Threads",
@@ -175,9 +222,9 @@ function nextPostSlot(
   now: Date,
   real?: Record<string, { hour: number; n: number; source: string }>,
 ): { text: string; src: string } | null {
-  const windows = GUIDE_WINDOWS[platform];
+  const flatWindows = GUIDE_WINDOWS[platform];
   const hasReal = !!real && Object.keys(real).length > 0;
-  if (!windows && !hasReal) return null;
+  if (!flatWindows && platform !== "youtube" && !hasReal) return null;
   const DAY = 86400000;
   const cands: { at: Date; src: string }[] = [];
   for (let i = 0; i <= 8; i++) {
@@ -190,8 +237,10 @@ function nextPostSlot(
         cands.push({ at: c, src: `your data (${rd.n})` });
       }
     }
-    if (windows) {
-      for (const h of windows) {
+    const dayWindows =
+      platform === "youtube" ? ytShortsWindows(day) : flatWindows;
+    if (dayWindows) {
+      for (const h of dayWindows) {
         const c = new Date(day);
         c.setHours(h, 0, 0, 0);
         cands.push({ at: c, src: "general" });
@@ -822,7 +871,8 @@ function slotForDay(
       isReal: true,
     };
   }
-  const windows = GUIDE_WINDOWS[platform];
+  const windows =
+    platform === "youtube" ? ytShortsWindows(target) : GUIDE_WINDOWS[platform];
   if (!windows || !windows.length) return null;
   const times = windows.map((h) => {
     const c = new Date(target);
@@ -874,9 +924,21 @@ export function AudiencePanel({
   const updated = audience?.fetchedAt
     ? relTime(new Date(audience.fetchedAt))
     : "";
-  const rows = PLATFORMS_SHOWN.map((p) => {
+  const rows = PLATFORMS_SHOWN.flatMap((p) => {
     const slot = slotForDay(p, sel.date, byPlat?.[p]);
-    return slot ? { p, label: PLATFORM_LABEL[p] ?? p, ...slot } : null;
+    if (!slot) return [];
+    // YouTube splits into Shorts (its main row) + a separate Long-form row,
+    // because the two formats peak at opposite times (Shorts midday/evening,
+    // long-form mornings). Long-form is always the research window (our post
+    // history doesn't distinguish format).
+    if (p === "youtube") {
+      const longSlot = ytLongSlot(sel.date);
+      return [
+        { p, label: "YT Shorts", ...slot },
+        { p: "youtube-long", label: "YT Long-form", ...longSlot },
+      ];
+    }
+    return [{ p, label: PLATFORM_LABEL[p] ?? p, ...slot }];
   }).filter(
     (
       x,
@@ -1010,6 +1072,13 @@ export function AudiencePanel({
             <VStack align="stretch" gap={1}>
               {generalRows.map(renderRow)}
             </VStack>
+            <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
+              YT Shorts vs Long-form shown separately, day-specific in CST —
+              combined across all 2026 studies (Buffer UTC-heatmap converted,
+              Hopper, Hollyland, Viraly, SocialPilot). Shorts center on
+              late-morning→midday with morning &amp; evening wings; long-form
+              peaks mornings/early-afternoon.
+            </Text>
           </Box>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
