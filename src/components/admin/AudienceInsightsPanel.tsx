@@ -10,14 +10,23 @@ import {
 import { AudiencePanel } from "@/components/admin/LeadsPanel";
 
 const CAD_LABEL: Record<string, string> = {
-  youtube: "YouTube",
+  youtube: "YouTube Shorts",
+  youtube_long: "YouTube long-form",
   tiktok: "TikTok",
   instagram: "Instagram",
   facebook: "Facebook",
   threads: "Threads",
   x: "X",
 };
-const CAD_ORDER = ["youtube", "tiktok", "instagram", "facebook", "threads", "x"];
+const CAD_ORDER = [
+  "youtube",
+  "youtube_long",
+  "tiktok",
+  "instagram",
+  "facebook",
+  "threads",
+  "x",
+];
 
 const TREND_META: Record<
   string,
@@ -78,16 +87,59 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
       <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
         📈 How much to post — from YOUR data
       </Text>
-      <Text color="whiteAlpha.500" fontSize="10px" mb={3}>
-        Your own weekly reach decides this. Best-practice is only the starting
-        guess until your data has enough to say otherwise.
+      <Text color="whiteAlpha.700" fontSize="xs" mb={2} lineHeight="1.5">
+        Each row reads:{" "}
+        <b>what you post now → what your reach says to post next</b>. The rule
+        is simple —{" "}
+        <b>keep posting more only while your reach-per-post holds up</b>. If
+        posting more keeps total reach climbing and each post still pulls its
+        weight, it says{" "}
+        <Text as="span" color="green.300">
+          scale up
+        </Text>
+        . If your per-post reach starts sliding, you&apos;re competing with your
+        own posts, so it says{" "}
+        <Text as="span" color="orange.300">
+          ease off
+        </Text>
+        .
       </Text>
+      <Text color="whiteAlpha.500" fontSize="10px" mb={2}>
+        Shorts and long-form are measured separately (very different posting
+        norms). Needs a few weeks of your own history before it stops guessing.
+      </Text>
+      <Flex gap={3} wrap="wrap" mb={3} fontSize="10px" color="whiteAlpha.600">
+        <Text>
+          <Text as="span" color="green.300" fontWeight="700">
+            ↑
+          </Text>{" "}
+          scale up
+        </Text>
+        <Text>
+          <Text as="span" color="nexzy.lightBlue" fontWeight="700">
+            →
+          </Text>{" "}
+          hold — you&apos;re at a good rate
+        </Text>
+        <Text>
+          <Text as="span" color="orange.300" fontWeight="700">
+            ↓
+          </Text>{" "}
+          ease off
+        </Text>
+        <Text>
+          <Text as="span" color="whiteAlpha.500" fontWeight="700">
+            •
+          </Text>{" "}
+          learning — not enough data yet
+        </Text>
+      </Flex>
 
       {rows.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="xs">
-          Once you&apos;ve posted across a few weeks, this shows the cadence your
-          own reach actually supports per platform. Hit Refresh after you have
-          some history.
+          Once you&apos;ve posted across a few weeks, this shows the cadence
+          your own reach actually supports per platform. Hit Refresh after you
+          have some history.
         </Text>
       ) : (
         <VStack align="stretch" gap={3}>
@@ -113,7 +165,12 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
                 pt={3}
                 _first={{ borderTop: "none", pt: 0 }}
               >
-                <Flex justify="space-between" align="center" gap={3} wrap="wrap">
+                <Flex
+                  justify="space-between"
+                  align="center"
+                  gap={3}
+                  wrap="wrap"
+                >
                   <Flex align="center" gap={2} minW="150px">
                     <Text
                       color={t.color}

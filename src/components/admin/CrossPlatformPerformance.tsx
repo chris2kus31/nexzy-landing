@@ -18,7 +18,8 @@ export type PlatformStat = {
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
-  youtube: "YouTube",
+  youtube: "YouTube Shorts",
+  youtube_long: "YouTube long-form",
   instagram: "Instagram",
   facebook: "Facebook",
   threads: "Threads",
@@ -31,7 +32,14 @@ const PLATFORM_COLOR: Record<string, string> = {
   threads: "purple.400",
   x: "gray.400",
 };
-const ORDER = ["youtube", "instagram", "facebook", "threads", "x"];
+const ORDER = [
+  "youtube",
+  "youtube_long",
+  "instagram",
+  "facebook",
+  "threads",
+  "x",
+];
 
 function fmt(n?: number): string {
   return typeof n === "number" ? n.toLocaleString() : "—";
