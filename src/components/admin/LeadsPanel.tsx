@@ -24,6 +24,9 @@ import {
   type ContentSuggestion,
 } from "@/lib/admin/client";
 import Paginated from "@/components/admin/Paginated";
+import YouTubePerformance, {
+  type YtSource,
+} from "@/components/admin/YouTubePerformance";
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -1116,6 +1119,14 @@ export function AudiencePanel({
               </VStack>
             </Box>
           )}
+
+          {audience?.raw?.youtubePerformance ? (
+            <Box mt={3}>
+              <YouTubePerformance
+                src={audience.raw.youtubePerformance as YtSource}
+              />
+            </Box>
+          ) : null}
         </>
       ) : (
         <Text color="nexzy.gray.100" fontSize="xs">

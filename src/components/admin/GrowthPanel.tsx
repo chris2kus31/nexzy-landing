@@ -14,6 +14,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import Markdown from "@/components/blog/Markdown";
+import YouTubePerformance, { type YtSource } from "./YouTubePerformance";
 import {
   getGrowthBrief,
   getGrowthBriefs,
@@ -454,6 +455,10 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
             <Kpi label="Reads 7d" value={fmt(kpis.reads7d)} />
             <Kpi label="Subscribers" value={fmt(kpis.subscribersTotal)} />
           </SimpleGrid>
+
+          <YouTubePerformance
+            src={(sources as Record<string, YtSource>).youtube}
+          />
 
           {data?.briefMarkdown ? (
             <Box

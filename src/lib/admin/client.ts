@@ -3011,6 +3011,7 @@ export interface AudienceProfile {
     computedAt?: string;
   };
   sources?: string[];
+  raw?: Record<string, unknown>;
   errors?: Record<string, string>;
   fetchedAt?: string | null;
 }
