@@ -269,8 +269,16 @@ function nextPostSlot(
   for (let i = 0; i <= 8; i++) {
     const day = new Date(now.getTime() + i * DAY);
     if (hasReal) {
-      const ranked = real![DAY_NAMES[day.getDay()]];
-      for (const rd of ranked ?? []) {
+      const rawReal = real![DAY_NAMES[day.getDay()]] as
+        | { hour: number; n: number; source: string }
+        | { hour: number; n: number; source: string }[]
+        | undefined;
+      const ranked = Array.isArray(rawReal)
+        ? rawReal
+        : rawReal
+          ? [rawReal]
+          : [];
+      for (const rd of ranked) {
         const c = new Date(day);
         c.setHours(rd.hour, 0, 0, 0);
         cands.push({ at: c, src: `your data (${rd.n})` });
@@ -906,8 +914,14 @@ function slotForDay(
   real?: Record<string, { hour: number; n: number; source: string }[]>,
 ): { time: string; src: string; isReal: boolean } | null {
   const dn = DAY_NAMES[target.getDay()];
-  const ranked = real?.[dn];
-  if (ranked && ranked.length) {
+  // Tolerate BOTH shapes: the new ranked array, and the legacy single object
+  // from profiles pulled before the ranked change (until the next Refresh).
+  const rawReal = real?.[dn] as
+    | { hour: number; n: number; source: string }
+    | { hour: number; n: number; source: string }[]
+    | undefined;
+  const ranked = Array.isArray(rawReal) ? rawReal : rawReal ? [rawReal] : [];
+  if (ranked.length) {
     // Top 3–5 slots for this day, already ranked best→worst by reach. Each
     // shows its post count so the confidence is visible. Left = strongest.
     const parts = ranked.slice(0, 5).map((rd) => {
