@@ -172,6 +172,25 @@ const YT_LONGFORM_BY_DAY: Record<number, number[]> = {
 function ytShortsWindows(target: Date): number[] {
   return YT_SHORTS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
 }
+
+// FACEBOOK (Reels-adjacent) best-practice windows PER WEEKDAY, in local time
+// (Central). COMBINED across all 2026 sources — Buffer (14M posts, mornings win),
+// Sprout (2B engagements, midday→evening 12–8pm Tue–Thu wins), SocialPilot
+// (50k accounts, spread) — plus SocialPilot's gaming-industry lean (3pm/7pm/9pm).
+// FB has broad all-day engagement; these are the strongest overlapping clusters
+// per day: a morning, a midday, and an evening. Your post data still overrides.
+const FB_BY_DAY: Record<number, number[]> = {
+  0: [10, 18], // Sun — morning (Buffer) + afternoon/evening (SP/gaming)
+  1: [11, 19], // Mon — Sprout midday + Buffer/gaming evening
+  2: [8, 13, 19], // Tue — powerhouse day: morning + midday + evening
+  3: [9, 14, 18], // Wed — 2nd-best day
+  4: [9, 13, 20], // Thu — Buffer's #1 day (9am) + Sprout midday/8pm
+  5: [8, 13, 17], // Fri — mornings fade into weekend; midday/late-afternoon
+  6: [11, 15], // Sat — weakest day; late-morning + afternoon only
+};
+function fbWindows(target: Date): number[] {
+  return FB_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.facebook;
+}
 function ytLongWindows(target: Date): number[] {
   return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
 }
@@ -238,7 +257,11 @@ function nextPostSlot(
       }
     }
     const dayWindows =
-      platform === "youtube" ? ytShortsWindows(day) : flatWindows;
+      platform === "youtube"
+        ? ytShortsWindows(day)
+        : platform === "facebook"
+          ? fbWindows(day)
+          : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
         const c = new Date(day);
@@ -877,7 +900,11 @@ function slotForDay(
     return { time: parts.join(" · "), src: "your data", isReal: true };
   }
   const windows =
-    platform === "youtube" ? ytShortsWindows(target) : GUIDE_WINDOWS[platform];
+    platform === "youtube"
+      ? ytShortsWindows(target)
+      : platform === "facebook"
+        ? fbWindows(target)
+        : GUIDE_WINDOWS[platform];
   if (!windows || !windows.length) return null;
   const times = windows.map((h) => {
     const c = new Date(target);
@@ -1078,11 +1105,11 @@ export function AudiencePanel({
               {generalRows.map(renderRow)}
             </VStack>
             <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
-              YT Shorts vs Long-form shown separately, day-specific in CST —
-              combined across all 2026 studies (Buffer UTC-heatmap converted,
-              Hopper, Hollyland, Viraly, SocialPilot). Shorts center on
-              late-morning→midday with morning &amp; evening wings; long-form
-              peaks mornings/early-afternoon.
+              YouTube (Shorts + Long-form) and Facebook are day-specific in CST,
+              combined across all 2026 studies. YT Shorts center on
+              late-morning→midday (morning &amp; evening wings); long-form peaks
+              mornings. Facebook: Buffer (mornings) + Sprout (midday–evening) +
+              SocialPilot + gaming lean → morning · midday · evening per day.
             </Text>
           </Box>
 
