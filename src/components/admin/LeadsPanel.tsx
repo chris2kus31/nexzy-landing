@@ -1171,12 +1171,11 @@ export function AudiencePanel({
               {generalRows.map(renderRow)}
             </VStack>
             <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
-              YouTube (Shorts + Long-form), Facebook &amp; Instagram are
-              day-specific in CST, combined across all 2026 studies. YT Shorts:
-              late-morning→midday; long-form: mornings. Facebook: morning ·
-              midday · evening. Instagram (Reels): midday + evening (Buffer
-              evenings + Sprout + Hopper EST→CST), Thursday morning is the
-              exception.
+              YouTube, Facebook, Instagram &amp; Threads are day-specific in
+              CST, combined across all 2026 studies (gaming rows weighted 3x for
+              YT/FB). YT Shorts &amp; Facebook &amp; Instagram: afternoon +
+              evening. YT long-form: mornings. Threads: mornings (8–11am,
+              text-first), Tue–Thu best. Others (X, TikTok) use flat windows.
             </Text>
           </Box>
 
