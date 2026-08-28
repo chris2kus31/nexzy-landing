@@ -27,6 +27,9 @@ import Paginated from "@/components/admin/Paginated";
 import YouTubePerformance, {
   type YtSource,
 } from "@/components/admin/YouTubePerformance";
+import CrossPlatformPerformance, {
+  type PlatformStat,
+} from "@/components/admin/CrossPlatformPerformance";
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -1119,6 +1122,19 @@ export function AudiencePanel({
               </VStack>
             </Box>
           )}
+
+          {audience?.raw?.platformPerformance ? (
+            <Box mt={3}>
+              <CrossPlatformPerformance
+                summary={
+                  audience.raw.platformPerformance as Record<
+                    string,
+                    PlatformStat
+                  >
+                }
+              />
+            </Box>
+          ) : null}
 
           {audience?.raw?.youtubePerformance ? (
             <Box mt={3}>
