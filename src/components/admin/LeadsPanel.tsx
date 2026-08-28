@@ -149,13 +149,16 @@ const GUIDE_WINDOWS: Record<string, number[]> = {
 // (8–9am) and an evening (6–8pm) wing. Your own post data (≥3 posts in a slot)
 // still overrides these. 0 = Sun … 6 = Sat.
 const YT_SHORTS_BY_DAY: Record<number, number[]> = {
-  0: [10, 18], // Sun — late-morning + evening
-  1: [9, 12, 19], // Mon — morning + midday + evening
-  2: [8, 11, 19], // Tue — Hopper's 11am peak + morning + evening
-  3: [8, 12, 19], // Wed
-  4: [9, 13, 19], // Thu
-  5: [11, 13, 18], // Fri — midday primary, evening second
-  6: [10, 15], // Sat — late-morning + afternoon
+  // Cross-source VOTE COUNT with the GAMING-industry rows weighted 3x
+  // (SocialPilot gaming 3-4pm+7-10pm Thu-Fri; Viraly gaming/ent 5-8pm wk,
+  // 10-12 wknd). CST, best->worst. Gaming pulls weekdays to eve+afternoon.
+  0: [19, 10, 16], // Sun — eve · late-morning · afternoon
+  1: [19, 13, 16], // Mon — eve · midday · afternoon
+  2: [19, 13, 16], // Tue — eve · midday · afternoon
+  3: [19, 13, 16], // Wed — eve · midday · afternoon
+  4: [19, 13, 16], // Thu — eve · midday · afternoon (gaming strongest)
+  5: [19, 13, 16], // Fri — eve · midday · afternoon (gaming strongest)
+  6: [10, 19, 16], // Sat — late-morning · eve · afternoon (weekend)
 };
 // YouTube LONG-FORM windows PER WEEKDAY (CST). Long-form peaks OPPOSITE to Shorts
 // — mornings + early-afternoon (Buffer: Sun 10am / Tue / Mon mornings; Viraly &
@@ -180,13 +183,15 @@ function ytShortsWindows(target: Date): number[] {
 // FB has broad all-day engagement; these are the strongest overlapping clusters
 // per day: a morning, a midday, and an evening. Your post data still overrides.
 const FB_BY_DAY: Record<number, number[]> = {
-  0: [10, 18], // Sun — morning (Buffer) + afternoon/evening (SP/gaming)
-  1: [11, 19], // Mon — Sprout midday + Buffer/gaming evening
-  2: [8, 13, 19], // Tue — powerhouse day: morning + midday + evening
-  3: [9, 14, 18], // Wed — 2nd-best day
-  4: [9, 13, 20], // Thu — Buffer's #1 day (9am) + Sprout midday/8pm
-  5: [8, 13, 17], // Fri — mornings fade into weekend; midday/late-afternoon
-  6: [11, 15], // Sat — weakest day; late-morning + afternoon only
+  // Cross-source VOTE COUNT with the GAMING row weighted 3x (SocialPilot gaming
+  // = 3pm/7pm/9pm all days). Buffer + Sprout + SocialPilot gen/USA. CST, best->worst.
+  0: [16, 10, 8], // Sun — afternoon · late-morning · morning [weak day]
+  1: [19, 16, 13], // Mon — eve · afternoon · midday
+  2: [19, 16, 8], // Tue — eve · afternoon · morning
+  3: [16, 19, 8], // Wed — afternoon · eve · morning
+  4: [19, 16, 8], // Thu — eve · afternoon · morning
+  5: [16, 8, 13], // Fri — afternoon · morning · midday
+  6: [16, 19, 8], // Sat — afternoon · eve · morning [weak day]
 };
 function fbWindows(target: Date): number[] {
   return FB_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.facebook;
@@ -200,13 +205,15 @@ function fbWindows(target: Date): number[] {
 // audience. Consensus clusters: midday (12–2pm) + evening (6–8pm); Thursday is
 // the morning exception. Your post data still overrides. 0=Sun … 6=Sat.
 const IG_BY_DAY: Record<number, number[]> = {
-  0: [10, 19], // Sun — late-morning + evening (weekend, weaker)
-  1: [13, 19], // Mon — Sprout midday + Buffer evening
-  2: [13, 19], // Tue — Sprout 1–7pm + Buffer evening
-  3: [12, 18], // Wed — best day: Buffer's 12pm & 6pm top slots
-  4: [8, 13, 18], // Thu — MORNING exception (Buffer) + midday + evening
-  5: [12, 17], // Fri — weak day; midday + late afternoon
-  6: [11, 20], // Sat — weak day; late-morning + evening
+  // Cross-source VOTE COUNT (Buffer + Sprout + Hopper EST->CST) + a light gaming
+  // PROXY = evening (x2), since NO IG source split out gaming. CST, best->worst.
+  0: [19, 10, 16], // Sun — eve · late-morning · afternoon [weak day]
+  1: [19, 13, 16], // Mon — eve · midday · afternoon
+  2: [19, 16, 13], // Tue — eve · afternoon · midday
+  3: [19, 13, 8], // Wed — eve · midday · morning
+  4: [19, 8, 13], // Thu — eve · morning (Buffer exception) · midday
+  5: [19, 8, 10], // Fri — eve · morning · late-morning [weak day]
+  6: [19, 10, 16], // Sat — eve · late-morning · afternoon [weak day]
 };
 function igWindows(target: Date): number[] {
   return IG_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.instagram;
@@ -1005,7 +1012,7 @@ export function AudiencePanel({
       const longSlot = ytLongSlot(sel.date);
       return [
         { p, label: "YT Shorts", ...slot },
-        { p: "youtube-long", label: "YT Long-form", ...longSlot },
+        { p: "youtube-long", label: "YT Long", ...longSlot },
       ];
     }
     return [{ p, label: PLATFORM_LABEL[p] ?? p, ...slot }];
