@@ -191,6 +191,26 @@ const FB_BY_DAY: Record<number, number[]> = {
 function fbWindows(target: Date): number[] {
   return FB_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.facebook;
 }
+
+// INSTAGRAM (Reels-relevant) best-practice windows PER WEEKDAY, in local time
+// (Central). COMBINED across all 2026 sources — Buffer (9.6M posts: evenings
+// 6–11pm win, except Thu mornings; Wed/Thu/Tue best), Sprout (2B engagements:
+// midday→evening, Tue 1–7pm / Wed 12–9pm), Hopper (reported in EST → converted
+// −1hr to CST: morning + midday + evening) — leaning to the evening/gaming
+// audience. Consensus clusters: midday (12–2pm) + evening (6–8pm); Thursday is
+// the morning exception. Your post data still overrides. 0=Sun … 6=Sat.
+const IG_BY_DAY: Record<number, number[]> = {
+  0: [10, 19], // Sun — late-morning + evening (weekend, weaker)
+  1: [13, 19], // Mon — Sprout midday + Buffer evening
+  2: [13, 19], // Tue — Sprout 1–7pm + Buffer evening
+  3: [12, 18], // Wed — best day: Buffer's 12pm & 6pm top slots
+  4: [8, 13, 18], // Thu — MORNING exception (Buffer) + midday + evening
+  5: [12, 17], // Fri — weak day; midday + late afternoon
+  6: [11, 20], // Sat — weak day; late-morning + evening
+};
+function igWindows(target: Date): number[] {
+  return IG_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.instagram;
+}
 function ytLongWindows(target: Date): number[] {
   return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
 }
@@ -261,7 +281,9 @@ function nextPostSlot(
         ? ytShortsWindows(day)
         : platform === "facebook"
           ? fbWindows(day)
-          : flatWindows;
+          : platform === "instagram"
+            ? igWindows(day)
+            : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
         const c = new Date(day);
@@ -904,7 +926,9 @@ function slotForDay(
       ? ytShortsWindows(target)
       : platform === "facebook"
         ? fbWindows(target)
-        : GUIDE_WINDOWS[platform];
+        : platform === "instagram"
+          ? igWindows(target)
+          : GUIDE_WINDOWS[platform];
   if (!windows || !windows.length) return null;
   const times = windows.map((h) => {
     const c = new Date(target);
@@ -1105,11 +1129,12 @@ export function AudiencePanel({
               {generalRows.map(renderRow)}
             </VStack>
             <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
-              YouTube (Shorts + Long-form) and Facebook are day-specific in CST,
-              combined across all 2026 studies. YT Shorts center on
-              late-morning→midday (morning &amp; evening wings); long-form peaks
-              mornings. Facebook: Buffer (mornings) + Sprout (midday–evening) +
-              SocialPilot + gaming lean → morning · midday · evening per day.
+              YouTube (Shorts + Long-form), Facebook &amp; Instagram are
+              day-specific in CST, combined across all 2026 studies. YT Shorts:
+              late-morning→midday; long-form: mornings. Facebook: morning ·
+              midday · evening. Instagram (Reels): midday + evening (Buffer
+              evenings + Sprout + Hopper EST→CST), Thursday morning is the
+              exception.
             </Text>
           </Box>
 
