@@ -8,11 +8,9 @@ import {
   Heading,
   Text,
   HStack,
-  VStack,
   SimpleGrid,
   Badge,
   Link,
-  Separator,
   Icon,
 } from "@chakra-ui/react";
 import { HiClock } from "react-icons/hi";
@@ -29,6 +27,7 @@ import BlogCard from "@/components/blog/BlogCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
+import SourcesBlock from "@/components/blog/SourcesBlock";
 
 // ISR: list pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -322,28 +321,7 @@ export default async function ListPage({
           </Box>
         )}
 
-        {post.sources && post.sources.length > 0 && (
-          <Box mt={10}>
-            <Separator borderColor="whiteAlpha.200" mb={4} />
-            <Heading as="h2" size="sm" color="gray.300" mb={3}>
-              Sources
-            </Heading>
-            <VStack align="stretch" gap={2}>
-              {post.sources.map((s, i) => (
-                <Link
-                  key={i}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  color="nexzy.lightBlue"
-                  fontSize="sm"
-                >
-                  {s.name}
-                </Link>
-              ))}
-            </VStack>
-          </Box>
-        )}
+        <SourcesBlock sources={post.sources} />
 
         {topics.length > 0 && (
           <Box mt={10}>

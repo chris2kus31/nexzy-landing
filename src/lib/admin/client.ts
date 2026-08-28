@@ -522,6 +522,13 @@ export interface ContentSuggestion {
       notKeywordFirst?: boolean;
       original?: string;
     };
+    // Deterministic YouTube description guardrail: notKeywordFirst = keyword not
+    // in the first ~150 chars (the snippet); tooLong = a Shorts description ran
+    // past ~320 chars.
+    descFlags?: {
+      notKeywordFirst?: boolean;
+      tooLong?: boolean;
+    };
     // Per-platform target cut lengths (Phase 4) — the band to trim each
     // platform's cut to (one front-loaded spoken spine serves them all).
     lengths?: {

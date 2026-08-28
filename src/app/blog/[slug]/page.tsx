@@ -8,11 +8,9 @@ import {
   Heading,
   Text,
   HStack,
-  VStack,
   SimpleGrid,
   Badge,
   Link,
-  Separator,
   Icon,
 } from "@chakra-ui/react";
 import { HiCalendar, HiClock } from "react-icons/hi";
@@ -43,6 +41,7 @@ import GameActionCard from "@/components/blog/GameActionCard";
 import HardwareSpecBlock from "@/components/blog/HardwareSpecBlock";
 import EssentialsBlock from "@/components/blog/EssentialsBlock";
 import PollBlock from "@/components/blog/PollBlock";
+import SourcesBlock from "@/components/blog/SourcesBlock";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -371,28 +370,7 @@ export default async function BlogArticlePage({
         {/* Reader poll — Nexzy reports, you deliver the verdict. One tap. */}
         {post.poll && <PollBlock slug={post.slug} poll={post.poll} />}
 
-        {post.sources && post.sources.length > 0 && (
-          <Box mt={10}>
-            <Separator borderColor="whiteAlpha.200" mb={4} />
-            <Heading as="h2" size="sm" color="gray.300" mb={3}>
-              Sources
-            </Heading>
-            <VStack align="stretch" gap={2}>
-              {post.sources.map((s, i) => (
-                <Link
-                  key={i}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  color="nexzy.lightBlue"
-                  fontSize="sm"
-                >
-                  {s.name}
-                </Link>
-              ))}
-            </VStack>
-          </Box>
-        )}
+        <SourcesBlock sources={post.sources} />
 
         {topics.length > 0 && (
           <Box mt={10}>

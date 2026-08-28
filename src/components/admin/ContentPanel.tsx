@@ -1723,6 +1723,38 @@ function SuggestionCard({
                 </Text>
               </Box>
             )}
+
+            {/* Description guardrail — keyword not in the first ~150 chars (the
+                search snippet), and/or a Shorts description that ran long. */}
+            {(view.payload?.descFlags?.notKeywordFirst ||
+              view.payload?.descFlags?.tooLong) && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="yellow.900"
+                border="1px solid"
+                borderColor="yellow.500"
+              >
+                <Text color="yellow.100" fontSize="xs">
+                  ✂️ <b>Description guardrail:</b>{" "}
+                  {view.payload?.descFlags?.notKeywordFirst && (
+                    <>
+                      focus keyword isn&apos;t in the first ~150 chars (the
+                      search snippet) — move it up
+                      {view.payload?.descFlags?.tooLong ? "; " : ""}
+                    </>
+                  )}
+                  {view.payload?.descFlags?.tooLong && (
+                    <>
+                      Shorts description is long — tighten to 1&ndash;2
+                      sentences
+                    </>
+                  )}
+                  .
+                </Text>
+              </Box>
+            )}
           </Section>
 
           <Section title="Content" defaultOpen>
