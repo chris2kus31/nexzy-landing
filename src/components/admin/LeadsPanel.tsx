@@ -218,6 +218,23 @@ const IG_BY_DAY: Record<number, number[]> = {
 function igWindows(target: Date): number[] {
   return IG_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.instagram;
 }
+
+// THREADS best-practice windows PER WEEKDAY, in local time (Central). Threads is
+// a text-first, MORNING platform (Buffer heatmap + day-chart: dark cluster
+// 8-11am Tue-Thu, tapering after noon; weekends weak). No gaming-industry split
+// exists for Threads, so no gaming weighting. Your post data still overrides.
+const THREADS_BY_DAY: Record<number, number[]> = {
+  0: [10, 8], // Sun — morning only [weak day]
+  1: [9, 11, 8], // Mon — morning
+  2: [9, 10, 8], // Tue — best day (8-11am darkest)
+  3: [9, 10, 11], // Wed — 2nd best (9-10am darkest)
+  4: [9, 10, 8], // Thu — 3rd best
+  5: [9, 10, 8], // Fri — morning
+  6: [10, 8], // Sat — morning only [weak day]
+};
+function threadsWindows(target: Date): number[] {
+  return THREADS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.threads;
+}
 function ytLongWindows(target: Date): number[] {
   return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
 }
@@ -298,7 +315,9 @@ function nextPostSlot(
           ? fbWindows(day)
           : platform === "instagram"
             ? igWindows(day)
-            : flatWindows;
+            : platform === "threads"
+              ? threadsWindows(day)
+              : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
         const c = new Date(day);
@@ -949,7 +968,9 @@ function slotForDay(
         ? fbWindows(target)
         : platform === "instagram"
           ? igWindows(target)
-          : GUIDE_WINDOWS[platform];
+          : platform === "threads"
+            ? threadsWindows(target)
+            : GUIDE_WINDOWS[platform];
   if (!windows || !windows.length) return null;
   const times = windows.map((h) => {
     const c = new Date(target);

@@ -203,6 +203,47 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
         </>
       )}
 
+      {/* YouTube only: the 2-3 ranked title candidates + why each was chosen
+          (traced to the ranking signal), so the pick is informed. Option 0 is
+          the one mirrored into TITLE above; we show the alternates to pick from. */}
+      {(kit.titleOptions?.length ?? 0) > 0 && (
+        <Box mt={2}>
+          <FieldLabel
+            text="RANKED TITLE OPTIONS"
+            copy={(kit.titleOptions ?? [])
+              .map((o) => o.title)
+              .filter(Boolean)
+              .join("\n")}
+          />
+          <VStack align="stretch" gap={1.5} mt={0.5}>
+            {(kit.titleOptions ?? []).map((o, i) => (
+              <Box key={i}>
+                <Text
+                  color={i === 0 ? "nexzy.white" : "nexzy.gray.100"}
+                  fontSize="sm"
+                  fontWeight={i === 0 ? "700" : "500"}
+                >
+                  {i === 0 ? "★ " : `${i + 1}. `}
+                  {o.title}{" "}
+                  <Text as="span" color="nexzy.gray.300" fontSize="2xs">
+                    ({o.title.length}/70)
+                  </Text>
+                </Text>
+                {o.why && (
+                  <Text
+                    color="nexzy.gray.300"
+                    fontSize="2xs"
+                    fontStyle="italic"
+                  >
+                    {o.why}
+                  </Text>
+                )}
+              </Box>
+            ))}
+          </VStack>
+        </Box>
+      )}
+
       {(body || hashtags || kit.cta) && (
         <>
           <FieldLabel text="DESCRIPTION + HASHTAGS" copy={caption} />
@@ -301,7 +342,10 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
 
       {pinned && (
         <>
-          <FieldLabel text="📌 PINNED COMMENT — pin after posting" copy={pinned} />
+          <FieldLabel
+            text="📌 PINNED COMMENT — pin after posting"
+            copy={pinned}
+          />
           <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
             {pinned}
           </Text>
@@ -497,7 +541,8 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       "Upload the finished video — Facebook and Instagram need it.",
     );
   }
-  if (fb && !fbCaption.trim()) publishBlockers.push("Facebook caption is empty.");
+  if (fb && !fbCaption.trim())
+    publishBlockers.push("Facebook caption is empty.");
   if (ig && !igCaption.trim())
     publishBlockers.push("Instagram caption is empty.");
   if (th && !threadsText.trim()) publishBlockers.push("Threads text is empty.");
@@ -593,7 +638,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       <VStack align="stretch" gap={2} mb={2}>
         {fb && p?.facebook && (
           <Box>
-            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={0.5}
+            >
               FACEBOOK CAPTION
             </Text>
             <Textarea
@@ -620,7 +670,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         )}
         {ig && p?.reels && (
           <Box>
-            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={0.5}
+            >
               INSTAGRAM CAPTION
             </Text>
             <Textarea
@@ -647,7 +702,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         )}
         {th && p?.threads && (
           <Box>
-            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={0.5}
+            >
               THREADS TEXT (≤500 chars)
             </Text>
             <Textarea
@@ -700,7 +760,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         )}
         {xOn && p?.x && (
           <Box>
-            <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={0.5}>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={0.5}
+            >
               X POST (≤280 — the link is fine in the post)
             </Text>
             <Textarea
@@ -900,11 +965,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 >
                   ▸ X{cfg?.x ? "" : " (disabled — needs API keys)"}
                 </Text>
-                <Text
-                  color="whiteAlpha.600"
-                  fontSize="10px"
-                  fontWeight="700"
-                >
+                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
                   POST (posts exactly as shown)
                 </Text>
                 <Text
@@ -1009,7 +1070,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             <Text
               key={i}
               fontSize="xs"
-              color={r.ok ? "green.200" : r.skipped ? "whiteAlpha.500" : "red.300"}
+              color={
+                r.ok ? "green.200" : r.skipped ? "whiteAlpha.500" : "red.300"
+              }
             >
               {r.platform}:{" "}
               {r.skipped
@@ -1172,8 +1235,7 @@ function SuggestionCard({
   const isImageCard = fmt === "image_card";
   // SLIDE decks (Phase 3): carousel / photo / album — copy-only slide deck +
   // captions. Same "brief card" family as image_card — no video/TTS/Produce/Publish.
-  const isSlideCard =
-    fmt === "carousel" || fmt === "photo" || fmt === "album";
+  const isSlideCard = fmt === "carousel" || fmt === "photo" || fmt === "album";
   const isBriefCard = isImageCard || isSlideCard;
   const slides = view.payload?.slides ?? [];
   const saveCta = view.payload?.saveCta ?? "";
@@ -1342,15 +1404,15 @@ function SuggestionCard({
             !isNonVideo &&
             !isImage &&
             !isBriefCard && (
-            <Button
-              size="xs"
-              colorPalette="green"
-              variant="solid"
-              onClick={openProduce}
-            >
-              🎬 Produce
-            </Button>
-          )}
+              <Button
+                size="xs"
+                colorPalette="green"
+                variant="solid"
+                onClick={openProduce}
+              >
+                🎬 Produce
+              </Button>
+            )}
           <Button
             size="xs"
             colorPalette="green"
@@ -1380,713 +1442,407 @@ function SuggestionCard({
           with it (forcing a re-upload of the finished file). */}
       <Box display={collapsed ? "none" : "block"}>
         <>
-      {produced && (
-        <Box
-          mb={3}
-          p={3}
-          borderRadius="lg"
-          bg="green.500/10"
-          border="1px solid"
-          borderColor="green.400/40"
-        >
-          <Text fontSize="sm" color="green.200" mb={1}>
-            ✓ Published to /videos
-            {produced.gameLinked
-              ? " and linked to the game."
-              : " — no game resolved; attach one in the Videos tab."}
-          </Text>
-          <Link
-            href={`/videos/${produced.videoSlug}`}
-            target="_blank"
-            color="nexzy.lightBlue"
-            fontSize="sm"
-          >
-            View video →
-          </Link>
-        </Box>
-      )}
-
-      {s.kind === "video" &&
-        showProduce &&
-        !produced &&
-        !isNonVideo &&
-        !isImage &&
-        !isBriefCard && (
-        <Box
-          mb={3}
-          p={3}
-          borderWidth="1px"
-          borderColor="green.400/40"
-          borderRadius="lg"
-          bg="green.500/5"
-        >
-          <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
-            🎬 Publish this short to /videos
-          </Text>
-          <VStack align="stretch" gap={2}>
-            <Input
-              {...fld}
-              value={pTitle}
-              onChange={(e) => setPTitle(e.target.value)}
-              placeholder="Title (prefilled from the YouTube kit)"
-            />
-            <Input
-              {...fld}
-              value={pYoutube}
-              onChange={(e) => setPYoutube(e.target.value)}
-              placeholder="YouTube URL (plays inline)"
-            />
-            <HStack gap={2}>
-              <Input
-                {...fld}
-                value={pTiktok}
-                onChange={(e) => setPTiktok(e.target.value)}
-                placeholder="TikTok URL (optional)"
-              />
-              <Input
-                {...fld}
-                value={pReels}
-                onChange={(e) => setPReels(e.target.value)}
-                placeholder="Reels URL (optional)"
-              />
-            </HStack>
-            <Input
-              {...fld}
-              value={pFacebook}
-              onChange={(e) => setPFacebook(e.target.value)}
-              placeholder="Facebook Reels URL (optional)"
-            />
-            <Input
-              {...fld}
-              value={pThumb}
-              onChange={(e) => setPThumb(e.target.value)}
-              placeholder="Thumbnail URL (optional — YouTube auto-derives)"
-            />
-            <HStack gap={2}>
-              <Button
-                size="sm"
-                colorPalette="green"
-                onClick={produce}
-                loading={busy === "produce"}
-                loadingText="Publishing…"
-                disabled={
-                  !pYoutube.trim() &&
-                  !pTiktok.trim() &&
-                  !pReels.trim() &&
-                  !pFacebook.trim()
-                }
-              >
-                Publish to /videos
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                color="nexzy.gray.100"
-                onClick={() => setShowProduce(false)}
-              >
-                Cancel
-              </Button>
-            </HStack>
-            <Text fontSize="xs" color="whiteAlpha.500">
-              Creates a Nexzy video linked to this article&rsquo;s game (Nexzy
-              videos rank first). At least one platform URL is required.
-            </Text>
-          </VStack>
-        </Box>
-      )}
-
-      <Section
-        title="Review & flags"
-        tag={editorFlags.length ? `${editorFlags.length} to verify` : undefined}
-        tagColor={editorFlags.length ? "yellow" : "green"}
-        defaultOpen
-      >
-      {/* ✎ What the Editor changed (Tier-1 completeness/structure guards) */}
-      {editorReport.length > 0 && (
-        <Box
-          mb={3}
-          p={2}
-          borderRadius="md"
-          bg={editorFlags.length ? "yellow.500/10" : "green.500/10"}
-          border="1px solid"
-          borderColor={editorFlags.length ? "yellow.400/40" : "green.400/40"}
-        >
-          <Text
-            color={editorFlags.length ? "yellow.200" : "green.200"}
-            fontSize="xs"
-            fontWeight="700"
-            mb={1}
-          >
-            ✎ Editor · {editorRewrites.length} rewritten · {editorFixes.length}{" "}
-            fixed · {editorFlags.length} to check
-          </Text>
-          <VStack align="stretch" gap={0.5}>
-            {editorRewrites.map((n, i) => (
-              <Text key={`r${i}`} color="nexzy.lightBlue" fontSize="xs">
-                ✎ {n.label}
-              </Text>
-            ))}
-            {editorFixes.map((n, i) => (
-              <Text key={`f${i}`} color="green.200" fontSize="xs">
-                ✓ {n.label}
-              </Text>
-            ))}
-            {editorFlags.map((n, i) => (
-              <Text key={`w${i}`} color="yellow.200" fontSize="xs">
-                ⚠ {n.label}
-              </Text>
-            ))}
-          </VStack>
-        </Box>
-      )}
-
-      {/* Format brain's recommendation (why this format) */}
-      {decision?.reason && (
-        <Box
-          mb={3}
-          p={2}
-          borderRadius="md"
-          bg="whiteAlpha.50"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-        >
-          <Text color="nexzy.gray.100" fontSize="xs">
-            <b>Format brain:</b> {decision.reason}
-          </Text>
-        </Box>
-      )}
-
-      {/* Suggested posting time, carried from the lead */}
-      {postTiming?.timing && (
-        <Box
-          mb={3}
-          p={2}
-          borderRadius="md"
-          bg="whiteAlpha.50"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-        >
-          <Text color="nexzy.lightBlue" fontSize="xs">
-            🕒 <b>When to post:</b> {postTiming.timing}
-          </Text>
-        </Box>
-      )}
-
-      {/* What the free YouTube signal grounded this card against (Phase 1) */}
-      {(view.payload?.groundedOn?.length ?? 0) > 0 && (
-        <Box
-          mb={3}
-          p={2}
-          borderRadius="md"
-          bg="whiteAlpha.50"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-        >
-          <Text color="nexzy.gray.100" fontSize="xs">
-            🔎 <b>Grounded against</b> (top YouTube now):{" "}
-            {(view.payload?.groundedOn ?? [])
-              .map((g) => `${g.title}${g.views ? ` (${g.views})` : ""}`)
-              .join(" · ")}
-          </Text>
-        </Box>
-      )}
-      </Section>
-
-      <Section title="Content" defaultOpen>
-      {/* Non-video formats: ready-to-post copy with a Copy button */}
-      {isNonVideo && fmt !== "none" && view.payload?.copy && (
-        <Box
-          mb={3}
-          p={3}
-          borderRadius="lg"
-          bg="whiteAlpha.50"
-          border="1px solid"
-          borderColor="whiteAlpha.200"
-        >
-          <Flex justify="space-between" align="center" mb={1} gap={2}>
-            <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-              Ready to post
-            </Text>
-            <CopyBtn text={view.payload.copy} label="Copy" />
-          </Flex>
-          <Text color="nexzy.white" fontSize="sm" whiteSpace="pre-wrap">
-            {view.payload.copy}
-          </Text>
-        </Box>
-      )}
-
-      {/* Deal IMAGE card: the generated graphic + overlay lines + captions */}
-      {isImage && (
-        <VStack align="stretch" gap={3} mb={3}>
-          {dealImageUrl && (
+          {produced && (
             <Box
-              borderRadius="lg"
-              overflow="hidden"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              maxW="360px"
-            >
-              <Image
-                src={dealImageUrl}
-                alt={s.title}
-                w="100%"
-                h="auto"
-                display="block"
-              />
-            </Box>
-          )}
-          {dealImageUrl && (
-            <Link
-              href={dealImageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              color="nexzy.lightBlue"
-              fontSize="xs"
-            >
-              ⬇ Download image
-            </Link>
-          )}
-          {onScreen.length > 0 && (
-            <Box
-              bg="whiteAlpha.50"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              borderRadius="lg"
+              mb={3}
               p={3}
-            >
-              <Flex justify="space-between" align="center" mb={1} gap={2}>
-                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                  ON-SCREEN TEXT (overlay on the image)
-                </Text>
-                <CopyBtn text={onScreen.join("\n")} label="Copy" />
-              </Flex>
-              <VStack align="stretch" gap={0.5}>
-                {onScreen.map((line, i) => (
-                  <Text key={i} color="nexzy.white" fontSize="sm">
-                    {line}
-                  </Text>
-                ))}
-              </VStack>
-            </Box>
-          )}
-          {platforms && (
-            <VStack align="stretch" gap={2}>
-              <KitBlock name="YouTube (community)" kit={platforms.youtube} />
-              <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
-              <KitBlock name="Instagram" kit={platforms.reels} />
-              <KitBlock name="Facebook" kit={platforms.facebook} />
-              <KitBlock name="X (Twitter)" kit={platforms.x} />
-            </VStack>
-          )}
-        </VStack>
-      )}
-
-      {/* IMAGE CARD (DIY): image brief + on-image text + per-platform captions.
-          No image is generated — the brief is what you use to make it yourself. */}
-      {isImageCard && (
-        <VStack align="stretch" gap={3} mb={3}>
-          {onSendToCards && (
-            <Button
-              size="xs"
-              variant="outline"
-              colorPalette="blue"
-              alignSelf="flex-start"
-              onClick={() =>
-                onSendToCards({
-                  format: aspectToFmt(aspect),
-                  template: "news",
-                  title: view.title,
-                  slides: [onScreen.filter(Boolean)],
-                })
-              }
-            >
-              Open in Card Studio
-            </Button>
-          )}
-          <Box
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="lg"
-            p={3}
-          >
-            <Flex justify="space-between" align="center" mb={1} gap={2}>
-              <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                📸 IMAGE BRIEF (make this image yourself)
-                {aspect ? ` · ${aspect}` : ""}
-              </Text>
-              {imageBrief && <CopyBtn text={imageBrief} label="Copy" />}
-            </Flex>
-            {imageBrief ? (
-              <Text color="nexzy.white" fontSize="sm" whiteSpace="pre-wrap">
-                {imageBrief}
-              </Text>
-            ) : (
-              <Text color="nexzy.gray.100" fontSize="xs">
-                —
-              </Text>
-            )}
-          </Box>
-          {onScreen.length > 0 && (
-            <Box
-              bg="whiteAlpha.50"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
               borderRadius="lg"
-              p={3}
+              bg="green.500/10"
+              border="1px solid"
+              borderColor="green.400/40"
             >
-              <Flex justify="space-between" align="center" mb={1} gap={2}>
-                <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                  ON-IMAGE TEXT (overlay on the image)
-                </Text>
-                <CopyBtn text={onScreen.join("\n")} label="Copy" />
-              </Flex>
-              <VStack align="stretch" gap={0.5}>
-                {onScreen.map((line, i) => (
-                  <Text key={i} color="nexzy.white" fontSize="sm">
-                    {line}
-                  </Text>
-                ))}
-              </VStack>
-            </Box>
-          )}
-          {platforms && (
-            <VStack align="stretch" gap={2}>
-              {inPlan("x") && <KitBlock name="X (Twitter)" kit={platforms.x} />}
-              {inPlan("threads") && (
-                <KitBlock name="Threads" kit={platforms.threads} />
-              )}
-              {inPlan("instagram") && (
-                <KitBlock name="Instagram" kit={platforms.reels} />
-              )}
-              {inPlan("tiktok") && (
-                <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
-              )}
-              {inPlan("facebook") && (
-                <KitBlock name="Facebook" kit={platforms.facebook} />
-              )}
-            </VStack>
-          )}
-        </VStack>
-      )}
-
-      {isSlideCard && (
-        <VStack align="stretch" gap={3} mb={3}>
-          {onSendToCards && (
-            <Button
-              size="xs"
-              variant="outline"
-              colorPalette="blue"
-              alignSelf="flex-start"
-              onClick={() =>
-                onSendToCards({
-                  format: aspectToFmt(aspect),
-                  template: "news",
-                  title: view.title,
-                  slides: slides.map((sl) =>
-                    [sl.headline ?? "", sl.body ?? ""].filter(Boolean),
-                  ),
-                })
-              }
-            >
-              Open all slides in Card Studio
-            </Button>
-          )}
-          <Box
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="lg"
-            p={3}
-          >
-            <Flex justify="space-between" align="center" mb={1} gap={2}>
-              <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
-                {slideLabel} ({slides.length} · {aspect || "4:5"}) — design these
-                in the Cards tab
+              <Text fontSize="sm" color="green.200" mb={1}>
+                ✓ Published to /videos
+                {produced.gameLinked
+                  ? " and linked to the game."
+                  : " — no game resolved; attach one in the Videos tab."}
               </Text>
-              <CopyBtn
-                text={slides
-                  .map(
-                    (sl, i) =>
-                      `${i + 1}. ${sl.headline ?? ""}${
-                        sl.body ? " — " + sl.body : ""
-                      }`,
-                  )
-                  .join("\n")}
-                label="Copy all"
-              />
-            </Flex>
-            <VStack align="stretch" gap={2}>
-              {slides.map((sl, i) => (
-                <Box
-                  key={i}
-                  borderLeft="2px solid"
-                  borderColor="nexzy.lightBlue"
-                  pl={2}
-                >
-                  <Text color="nexzy.white" fontSize="sm" fontWeight="600">
-                    {i + 1}. {sl.headline}
-                  </Text>
-                  {sl.body && (
-                    <Text color="nexzy.gray.100" fontSize="xs">
-                      {sl.body}
-                    </Text>
-                  )}
-                </Box>
-              ))}
-            </VStack>
-          </Box>
-          {saveCta && (
-            <Text color="nexzy.lightBlue" fontSize="xs">
-              Final slide (Save-CTA): {saveCta}
-            </Text>
-          )}
-          {platforms && (
-            <VStack align="stretch" gap={2}>
-              {inPlan("instagram") && platforms.reels && (
-                <KitBlock name="Instagram" kit={platforms.reels} />
-              )}
-              {inPlan("threads") && platforms.threads && (
-                <KitBlock name="Threads" kit={platforms.threads} />
-              )}
-              {inPlan("tiktok") && platforms.tiktok && (
-                <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
-              )}
-              {inPlan("facebook") && platforms.facebook && (
-                <KitBlock name="Facebook" kit={platforms.facebook} />
-              )}
-            </VStack>
-          )}
-        </VStack>
-      )}
-
-      {/* The script */}
-      <VStack align="stretch" gap={1} mb={3}>
-        {view.hook && (
-          <Text color="nexzy.white" fontSize="sm">
-            <b>Hook:</b> {view.hook}
-          </Text>
-        )}
-        {view.script && !isNonVideo && (
-          <Text color="nexzy.gray.100" fontSize="sm" whiteSpace="pre-wrap">
-            {view.script}
-          </Text>
-        )}
-        {view.payload?.forPlatforms &&
-          view.payload.forPlatforms.length > 0 && (
-            <Text color="nexzy.gray.100" fontSize="xs">
-              <b>For:</b>{" "}
-              {view.payload.forPlatforms
-                .map(
-                  (p) =>
-                    ({
-                      youtube: "YouTube",
-                      instagram: "Instagram",
-                      tiktok: "TikTok",
-                      facebook: "Facebook",
-                      threads: "Threads",
-                      x: "X",
-                    })[p] ?? p,
-                )
-                .join(" · ")}
-            </Text>
-          )}
-        {view.payload?.lengths && !isBriefCard && !isLong && (
-          <Text color="nexzy.gray.100" fontSize="xs">
-            <b>Cut lengths:</b> TikTok {view.payload.lengths.tiktok} · Reels{" "}
-            {view.payload.lengths.reels} · Facebook{" "}
-            {view.payload.lengths.facebook} · Shorts{" "}
-            {view.payload.lengths.youtube}
-          </Text>
-        )}
-        {view.payload?.cta && (
-          <Text color="nexzy.gray.100" fontSize="xs">
-            📣 CTA: {view.payload.cta}
-          </Text>
-        )}
-        {view.url && (
-          <Link
-            href={view.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            color="nexzy.lightBlue"
-            fontSize="xs"
-          >
-            Backing page ↗
-          </Link>
-        )}
-      </VStack>
-      </Section>
-
-      {!isNonVideo && !isImage && !isBriefCard && (
-        <>
-          <Section title="Per-platform kits">
-          {/* Per-platform posting kits */}
-          {platforms && (
-            <VStack align="stretch" gap={2}>
-              {inPlan("youtube") && (
-                <KitBlock
-                  name={isLong ? "YouTube (Long-form)" : "YouTube Shorts"}
-                  kit={platforms.youtube}
-                />
-              )}
-              {inPlan("tiktok") && (
-                <KitBlock
-                  name={isLong ? "TikTok (teaser)" : "TikTok"}
-                  kit={platforms.tiktok}
-                />
-              )}
-              {inPlan("instagram") && (
-                <KitBlock
-                  name={isLong ? "Instagram Reels (teaser)" : "Instagram Reels"}
-                  kit={platforms.reels}
-                />
-              )}
-              {inPlan("facebook") && (
-                <KitBlock
-                  name={isLong ? "Facebook Reels (teaser)" : "Facebook Reels"}
-                  kit={platforms.facebook}
-                />
-              )}
-              {inPlan("threads") && (
-                <KitBlock name="Threads (text take)" kit={platforms.threads} />
-              )}
-              {inPlan("x") && <KitBlock name="X (Twitter)" kit={platforms.x} />}
-            </VStack>
-          )}
-
-          {/* Long-form plan: chapters + thumbnail + teaser advice */}
-          {isLong && longform && (
-            <Box
-              mt={3}
-              pt={3}
-              borderTop="1px solid"
-              borderColor="whiteAlpha.200"
-            >
-              <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
-                Long-form plan (YouTube)
-              </Text>
-              {longform.thumbnailConcept && (
-                <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-                  <Text as="span" color="nexzy.white" fontWeight="600">
-                    Thumbnail:{" "}
-                  </Text>
-                  {longform.thumbnailConcept}
-                </Text>
-              )}
-              {Array.isArray(longform.chapters) &&
-                longform.chapters.length > 0 && (
-                  <VStack align="stretch" gap={1} mb={2}>
-                    {longform.chapters.map((c, i) => (
-                      <HStack key={i} gap={2} align="baseline">
-                        <Text
-                          color="nexzy.blue"
-                          fontSize="xs"
-                          fontWeight="700"
-                          minW="38px"
-                        >
-                          {c.timestamp ?? ""}
-                        </Text>
-                        <Text
-                          color="nexzy.white"
-                          fontSize="xs"
-                          fontWeight="600"
-                        >
-                          {c.title}
-                        </Text>
-                        {c.summary && (
-                          <Text color="nexzy.gray.100" fontSize="xs">
-                            — {c.summary}
-                          </Text>
-                        )}
-                      </HStack>
-                    ))}
-                  </VStack>
-                )}
-              {longform.teaserAdvice && (
-                <Text color="nexzy.gray.100" fontSize="xs">
-                  <Text as="span" color="nexzy.white" fontWeight="600">
-                    Teasers:{" "}
-                  </Text>
-                  {longform.teaserAdvice}
-                </Text>
-              )}
+              <Link
+                href={`/videos/${produced.videoSlug}`}
+                target="_blank"
+                color="nexzy.lightBlue"
+                fontSize="sm"
+              >
+                View video →
+              </Link>
             </Box>
           )}
 
-          </Section>
-          <Section title="Voiceover &amp; production">
-          {/* ElevenLabs shorts script + production notes */}
-          <Box>
-            {isOwner && (
-              <Flex gap={2} align="center" wrap="wrap">
-                {writers.length > 1 && (
-                  <HStack gap={1}>
-                    <Text color="nexzy.gray.100" fontSize="xs">
-                      Voice:
-                    </Text>
-                    {writers.map((w) => {
-                      const active = persona === w;
-                      return (
-                        <Button
-                          key={w}
-                          size="xs"
-                          onClick={() => setPersona(w)}
-                          bg={active ? "nexzy.blue" : "transparent"}
-                          color={active ? "white" : "nexzy.gray.100"}
-                          borderWidth="1px"
-                          borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
-                          _hover={{
-                            bg: active ? "nexzy.blue" : "whiteAlpha.100",
-                          }}
-                        >
-                          {w}
-                        </Button>
-                      );
-                    })}
-                  </HStack>
-                )}
-                <Button
-                  size="xs"
-                  colorPalette="purple"
-                  variant={view.ttsScript ? "outline" : "solid"}
-                  onClick={regen}
-                  loading={busy === "script"}
-                  loadingText="Regenerating…"
-                >
-                  {view.ttsScript
-                    ? "↻ Regenerate in " + persona + "\u2019s voice"
-                    : "🎙 Generate in " + persona + "\u2019s voice"}
-                </Button>
-                {view.ttsScript && (
-                  <HStack gap={1} flex={1} minW="220px">
+          {s.kind === "video" &&
+            showProduce &&
+            !produced &&
+            !isNonVideo &&
+            !isImage &&
+            !isBriefCard && (
+              <Box
+                mb={3}
+                p={3}
+                borderWidth="1px"
+                borderColor="green.400/40"
+                borderRadius="lg"
+                bg="green.500/5"
+              >
+                <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
+                  🎬 Publish this short to /videos
+                </Text>
+                <VStack align="stretch" gap={2}>
+                  <Input
+                    {...fld}
+                    value={pTitle}
+                    onChange={(e) => setPTitle(e.target.value)}
+                    placeholder="Title (prefilled from the YouTube kit)"
+                  />
+                  <Input
+                    {...fld}
+                    value={pYoutube}
+                    onChange={(e) => setPYoutube(e.target.value)}
+                    placeholder="YouTube URL (plays inline)"
+                  />
+                  <HStack gap={2}>
                     <Input
-                      size="xs"
-                      bg="whiteAlpha.50"
-                      color="nexzy.white"
-                      borderColor="whiteAlpha.300"
-                      fontSize="xs"
-                      placeholder="steer the script (e.g. more excited, less sarcastic)"
-                      value={scriptSteer}
-                      onChange={(e) => setScriptSteer(e.target.value)}
+                      {...fld}
+                      value={pTiktok}
+                      onChange={(e) => setPTiktok(e.target.value)}
+                      placeholder="TikTok URL (optional)"
                     />
+                    <Input
+                      {...fld}
+                      value={pReels}
+                      onChange={(e) => setPReels(e.target.value)}
+                      placeholder="Reels URL (optional)"
+                    />
+                  </HStack>
+                  <Input
+                    {...fld}
+                    value={pFacebook}
+                    onChange={(e) => setPFacebook(e.target.value)}
+                    placeholder="Facebook Reels URL (optional)"
+                  />
+                  <Input
+                    {...fld}
+                    value={pThumb}
+                    onChange={(e) => setPThumb(e.target.value)}
+                    placeholder="Thumbnail URL (optional — YouTube auto-derives)"
+                  />
+                  <HStack gap={2}>
                     <Button
-                      size="xs"
-                      colorPalette="purple"
-                      variant="solid"
-                      onClick={regenScript}
-                      loading={busy === "rescript"}
-                      loadingText="Rewriting…"
-                      disabled={!scriptSteer.trim()}
+                      size="sm"
+                      colorPalette="green"
+                      onClick={produce}
+                      loading={busy === "produce"}
+                      loadingText="Publishing…"
+                      disabled={
+                        !pYoutube.trim() &&
+                        !pTiktok.trim() &&
+                        !pReels.trim() &&
+                        !pFacebook.trim()
+                      }
                     >
-                      ↻ Script only
+                      Publish to /videos
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      color="nexzy.gray.100"
+                      onClick={() => setShowProduce(false)}
+                    >
+                      Cancel
                     </Button>
                   </HStack>
-                )}
-              </Flex>
+                  <Text fontSize="xs" color="whiteAlpha.500">
+                    Creates a Nexzy video linked to this article&rsquo;s game
+                    (Nexzy videos rank first). At least one platform URL is
+                    required.
+                  </Text>
+                </VStack>
+              </Box>
             )}
-            {view.ttsScript && (
-              <VStack align="stretch" gap={2} mt={2}>
+
+          <Section
+            title="Review & flags"
+            tag={
+              editorFlags.length ? `${editorFlags.length} to verify` : undefined
+            }
+            tagColor={editorFlags.length ? "yellow" : "green"}
+            defaultOpen
+          >
+            {/* ✎ What the Editor changed (Tier-1 completeness/structure guards) */}
+            {editorReport.length > 0 && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg={editorFlags.length ? "yellow.500/10" : "green.500/10"}
+                border="1px solid"
+                borderColor={
+                  editorFlags.length ? "yellow.400/40" : "green.400/40"
+                }
+              >
+                <Text
+                  color={editorFlags.length ? "yellow.200" : "green.200"}
+                  fontSize="xs"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  ✎ Editor · {editorRewrites.length} rewritten ·{" "}
+                  {editorFixes.length} fixed · {editorFlags.length} to check
+                </Text>
+                <VStack align="stretch" gap={0.5}>
+                  {editorRewrites.map((n, i) => (
+                    <Text key={`r${i}`} color="nexzy.lightBlue" fontSize="xs">
+                      ✎ {n.label}
+                    </Text>
+                  ))}
+                  {editorFixes.map((n, i) => (
+                    <Text key={`f${i}`} color="green.200" fontSize="xs">
+                      ✓ {n.label}
+                    </Text>
+                  ))}
+                  {editorFlags.map((n, i) => (
+                    <Text key={`w${i}`} color="yellow.200" fontSize="xs">
+                      ⚠ {n.label}
+                    </Text>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+
+            {/* Format brain's recommendation (why this format) */}
+            {decision?.reason && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+              >
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  <b>Format brain:</b> {decision.reason}
+                </Text>
+              </Box>
+            )}
+
+            {/* Suggested posting time, carried from the lead */}
+            {postTiming?.timing && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+              >
+                <Text color="nexzy.lightBlue" fontSize="xs">
+                  🕒 <b>When to post:</b> {postTiming.timing}
+                </Text>
+              </Box>
+            )}
+
+            {/* YouTube ranking signal was DOWN when this title was written — the
+          title/description were blind-guessed, not grounded against what's
+          ranking now. Only set on video cards (undefined elsewhere). */}
+            {view.payload?.signalGrounded === false && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="orange.900"
+                border="1px solid"
+                borderColor="orange.400"
+              >
+                <Text color="orange.100" fontSize="xs">
+                  ⚠️ <b>YouTube title not ranking-grounded</b>
+                  {view.payload?.signalStatus === "no-key"
+                    ? " — no YouTube API key configured"
+                    : view.payload?.signalStatus === "quota-exhausted"
+                      ? " — YouTube API quota exhausted"
+                      : view.payload?.signalStatus === "disabled"
+                        ? " — signal disabled"
+                        : view.payload?.signalStatus === "error"
+                          ? " — YouTube API error"
+                          : ""}
+                  . The title + description were written from the article alone
+                  — give the YouTube title an extra pass before you post.
+                </Text>
+              </Box>
+            )}
+
+            {/* What the free YouTube signal grounded this card against (Phase 1) */}
+            {(view.payload?.groundedOn?.length ?? 0) > 0 && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+              >
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  🔎 <b>Grounded against</b> (top YouTube now, by views/day):{" "}
+                  {(view.payload?.groundedOn ?? [])
+                    .map(
+                      (g) =>
+                        `${g.title}${g.perDay ? ` (${g.perDay})` : g.views ? ` (${g.views})` : ""}`,
+                    )
+                    .join(" · ")}
+                </Text>
+              </Box>
+            )}
+
+            {/* Deterministic title guardrail results — auto-trim happened, and/or
+                the focus keyword isn't in the first ~3 words (can't auto-fix). */}
+            {(view.payload?.titleFlags?.overLength ||
+              view.payload?.titleFlags?.notKeywordFirst) && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="yellow.900"
+                border="1px solid"
+                borderColor="yellow.500"
+              >
+                <Text color="yellow.100" fontSize="xs">
+                  ✂️ <b>Title guardrail:</b>{" "}
+                  {view.payload?.titleFlags?.overLength && (
+                    <>
+                      auto-trimmed to ≤70 chars
+                      {view.payload?.titleFlags?.original
+                        ? ` (was: "${view.payload.titleFlags.original}")`
+                        : ""}
+                      {view.payload?.titleFlags?.notKeywordFirst ? "; " : ""}
+                    </>
+                  )}
+                  {view.payload?.titleFlags?.notKeywordFirst && (
+                    <>
+                      focus keyword isn&apos;t in the first ~3 words — reorder
+                      it
+                    </>
+                  )}
+                  .
+                </Text>
+              </Box>
+            )}
+          </Section>
+
+          <Section title="Content" defaultOpen>
+            {/* Non-video formats: ready-to-post copy with a Copy button */}
+            {isNonVideo && fmt !== "none" && view.payload?.copy && (
+              <Box
+                mb={3}
+                p={3}
+                borderRadius="lg"
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+              >
+                <Flex justify="space-between" align="center" mb={1} gap={2}>
+                  <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700">
+                    Ready to post
+                  </Text>
+                  <CopyBtn text={view.payload.copy} label="Copy" />
+                </Flex>
+                <Text color="nexzy.white" fontSize="sm" whiteSpace="pre-wrap">
+                  {view.payload.copy}
+                </Text>
+              </Box>
+            )}
+
+            {/* Deal IMAGE card: the generated graphic + overlay lines + captions */}
+            {isImage && (
+              <VStack align="stretch" gap={3} mb={3}>
+                {dealImageUrl && (
+                  <Box
+                    borderRadius="lg"
+                    overflow="hidden"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    maxW="360px"
+                  >
+                    <Image
+                      src={dealImageUrl}
+                      alt={s.title}
+                      w="100%"
+                      h="auto"
+                      display="block"
+                    />
+                  </Box>
+                )}
+                {dealImageUrl && (
+                  <Link
+                    href={dealImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    color="nexzy.lightBlue"
+                    fontSize="xs"
+                  >
+                    ⬇ Download image
+                  </Link>
+                )}
+                {onScreen.length > 0 && (
+                  <Box
+                    bg="whiteAlpha.50"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="lg"
+                    p={3}
+                  >
+                    <Flex justify="space-between" align="center" mb={1} gap={2}>
+                      <Text
+                        color="nexzy.lightBlue"
+                        fontSize="xs"
+                        fontWeight="700"
+                      >
+                        ON-SCREEN TEXT (overlay on the image)
+                      </Text>
+                      <CopyBtn text={onScreen.join("\n")} label="Copy" />
+                    </Flex>
+                    <VStack align="stretch" gap={0.5}>
+                      {onScreen.map((line, i) => (
+                        <Text key={i} color="nexzy.white" fontSize="sm">
+                          {line}
+                        </Text>
+                      ))}
+                    </VStack>
+                  </Box>
+                )}
+                {platforms && (
+                  <VStack align="stretch" gap={2}>
+                    <KitBlock
+                      name="YouTube (community)"
+                      kit={platforms.youtube}
+                    />
+                    <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                    <KitBlock name="Instagram" kit={platforms.reels} />
+                    <KitBlock name="Facebook" kit={platforms.facebook} />
+                    <KitBlock name="X (Twitter)" kit={platforms.x} />
+                  </VStack>
+                )}
+              </VStack>
+            )}
+
+            {/* IMAGE CARD (DIY): image brief + on-image text + per-platform captions.
+          No image is generated — the brief is what you use to make it yourself. */}
+            {isImageCard && (
+              <VStack align="stretch" gap={3} mb={3}>
+                {onSendToCards && (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    colorPalette="blue"
+                    alignSelf="flex-start"
+                    onClick={() =>
+                      onSendToCards({
+                        format: aspectToFmt(aspect),
+                        template: "news",
+                        title: view.title,
+                        slides: [onScreen.filter(Boolean)],
+                      })
+                    }
+                  >
+                    Open in Card Studio
+                  </Button>
+                )}
                 <Box
                   bg="whiteAlpha.50"
                   border="1px solid"
@@ -2100,97 +1856,96 @@ function SuggestionCard({
                       fontSize="xs"
                       fontWeight="700"
                     >
-                      ElevenLabs · Core cut ·{" "}
-                      {view.payload?.ttsScripts?.extended
-                        ? "TikTok · Shorts · X"
-                        : "all video platforms"}{" "}
-                      · {draft.length.toLocaleString()} credits · ~
-                      {Math.max(1, Math.round(draft.length / 15))}s
+                      📸 IMAGE BRIEF (make this image yourself)
+                      {aspect ? ` · ${aspect}` : ""}
                     </Text>
-                    <HStack gap={1}>
-                      {isOwner && dirty && (
-                        <Button
-                          size="xs"
-                          colorPalette="green"
-                          variant="outline"
-                          onClick={saveScript}
-                          loading={saving}
-                          loadingText="Saving…"
-                        >
-                          Save
-                        </Button>
-                      )}
-                      <CopyBtn text={draft} label="Copy script" />
-                    </HStack>
+                    {imageBrief && <CopyBtn text={imageBrief} label="Copy" />}
                   </Flex>
-                  {isOwner ? (
-                    <Textarea
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      rows={8}
-                      bg="whiteAlpha.50"
-                      color="nexzy.white"
-                      borderColor="whiteAlpha.300"
-                      fontSize="sm"
-                    />
-                  ) : (
+                  {imageBrief ? (
                     <Text
-                      color="nexzy.gray.100"
+                      color="nexzy.white"
                       fontSize="sm"
                       whiteSpace="pre-wrap"
                     >
-                      {view.ttsScript}
+                      {imageBrief}
+                    </Text>
+                  ) : (
+                    <Text color="nexzy.gray.100" fontSize="xs">
+                      —
                     </Text>
                   )}
                 </Box>
-                {/* Optional longer cut — only when the article supported it.
-                    (tight/long are legacy fields kept for older cards.) */}
-                {(
-                  [
-                    ["extended", "Extended cut", "Instagram · Facebook"],
-                    ["tight", "Tight cut", "TikTok / Shorts"],
-                    ["long", "Long cut", "Facebook"],
-                  ] as const
-                ).map(([key, label, plat]) => {
-                  const txt = view.payload?.ttsScripts?.[key];
-                  if (!txt) return null;
-                  return (
-                    <Box
-                      key={key}
-                      bg="whiteAlpha.50"
-                      border="1px solid"
-                      borderColor="whiteAlpha.200"
-                      borderRadius="lg"
-                      p={3}
-                    >
-                      <Flex
-                        justify="space-between"
-                        align="center"
-                        mb={1}
-                        gap={2}
-                      >
-                        <Text
-                          color="nexzy.lightBlue"
-                          fontSize="xs"
-                          fontWeight="700"
-                        >
-                          {label} · {plat} · ~
-                          {Math.max(1, Math.round(txt.length / 15))}s
-                        </Text>
-                        <CopyBtn text={txt} label="Copy" />
-                      </Flex>
+                {onScreen.length > 0 && (
+                  <Box
+                    bg="whiteAlpha.50"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="lg"
+                    p={3}
+                  >
+                    <Flex justify="space-between" align="center" mb={1} gap={2}>
                       <Text
-                        color="nexzy.gray.100"
-                        fontSize="sm"
-                        whiteSpace="pre-wrap"
+                        color="nexzy.lightBlue"
+                        fontSize="xs"
+                        fontWeight="700"
                       >
-                        {txt}
+                        ON-IMAGE TEXT (overlay on the image)
                       </Text>
-                    </Box>
-                  );
-                })}
-                {/* One production block: everything you hand the editor to
-                    actually cut the video — delivery, music, footage, captions. */}
+                      <CopyBtn text={onScreen.join("\n")} label="Copy" />
+                    </Flex>
+                    <VStack align="stretch" gap={0.5}>
+                      {onScreen.map((line, i) => (
+                        <Text key={i} color="nexzy.white" fontSize="sm">
+                          {line}
+                        </Text>
+                      ))}
+                    </VStack>
+                  </Box>
+                )}
+                {platforms && (
+                  <VStack align="stretch" gap={2}>
+                    {inPlan("x") && (
+                      <KitBlock name="X (Twitter)" kit={platforms.x} />
+                    )}
+                    {inPlan("threads") && (
+                      <KitBlock name="Threads" kit={platforms.threads} />
+                    )}
+                    {inPlan("instagram") && (
+                      <KitBlock name="Instagram" kit={platforms.reels} />
+                    )}
+                    {inPlan("tiktok") && (
+                      <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                    )}
+                    {inPlan("facebook") && (
+                      <KitBlock name="Facebook" kit={platforms.facebook} />
+                    )}
+                  </VStack>
+                )}
+              </VStack>
+            )}
+
+            {isSlideCard && (
+              <VStack align="stretch" gap={3} mb={3}>
+                {onSendToCards && (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    colorPalette="blue"
+                    alignSelf="flex-start"
+                    onClick={() =>
+                      onSendToCards({
+                        format: aspectToFmt(aspect),
+                        template: "news",
+                        title: view.title,
+                        slides: slides.map((sl) =>
+                          [sl.headline ?? "", sl.body ?? ""].filter(Boolean),
+                        ),
+                      })
+                    }
+                  >
+                    Open all slides in Card Studio
+                  </Button>
+                )}
                 <Box
                   bg="whiteAlpha.50"
                   border="1px solid"
@@ -2198,92 +1953,533 @@ function SuggestionCard({
                   borderRadius="lg"
                   p={3}
                 >
-                  <Text
-                    color="nexzy.lightBlue"
-                    fontSize="xs"
-                    fontWeight="700"
-                    mb={1.5}
-                  >
-                    🎬 Production notes
-                  </Text>
-                  <VStack align="stretch" gap={1.5}>
-                    {view.payload?.voicePersona && (
-                      <Text color="nexzy.gray.100" fontSize="xs">
-                        🗣 <b>Delivery:</b> {view.payload.voicePersona}
-                      </Text>
-                    )}
-                    {view.payload?.music && (
-                      <Text color="nexzy.gray.100" fontSize="xs">
-                        🎵 <b>Music:</b> {view.payload.music}
-                      </Text>
-                    )}
-                    {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
-                      <Text color="nexzy.gray.100" fontSize="xs">
-                        🎞 <b>Background footage:</b>{" "}
-                        {(view.payload?.backgroundVideo ?? []).join(" · ")}
-                      </Text>
-                    )}
-                    {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
-                      <Text color="nexzy.gray.100" fontSize="xs">
-                        🎬 <b>B-roll / SFX:</b>{" "}
-                        {(view.payload?.brollSfx ?? []).join(" · ")}
-                      </Text>
-                    ) : (
-                      view.payload?.broll && (
-                        <Text color="nexzy.gray.100" fontSize="xs">
-                          🎬 <b>B-roll / SFX:</b> {view.payload.broll}
-                        </Text>
-                      )
-                    )}
-                    {(view.payload?.onScreenText?.length ?? 0) > 0 && (
-                      <Text color="nexzy.gray.100" fontSize="xs">
-                        💬 <b>On-screen text</b> (captions to overlay):{" "}
-                        {(view.payload?.onScreenText ?? []).join(" · ")}
-                      </Text>
-                    )}
-                    {(view.payload?.postingTips?.length ?? 0) > 0 && (
+                  <Flex justify="space-between" align="center" mb={1} gap={2}>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="xs"
+                      fontWeight="700"
+                    >
+                      {slideLabel} ({slides.length} · {aspect || "4:5"}) —
+                      design these in the Cards tab
+                    </Text>
+                    <CopyBtn
+                      text={slides
+                        .map(
+                          (sl, i) =>
+                            `${i + 1}. ${sl.headline ?? ""}${
+                              sl.body ? " — " + sl.body : ""
+                            }`,
+                        )
+                        .join("\n")}
+                      label="Copy all"
+                    />
+                  </Flex>
+                  <VStack align="stretch" gap={2}>
+                    {slides.map((sl, i) => (
                       <Box
-                        mt={1}
-                        pt={1.5}
-                        borderTop="1px solid"
-                        borderColor="whiteAlpha.100"
+                        key={i}
+                        borderLeft="2px solid"
+                        borderColor="nexzy.lightBlue"
+                        pl={2}
+                      >
+                        <Text
+                          color="nexzy.white"
+                          fontSize="sm"
+                          fontWeight="600"
+                        >
+                          {i + 1}. {sl.headline}
+                        </Text>
+                        {sl.body && (
+                          <Text color="nexzy.gray.100" fontSize="xs">
+                            {sl.body}
+                          </Text>
+                        )}
+                      </Box>
+                    ))}
+                  </VStack>
+                </Box>
+                {saveCta && (
+                  <Text color="nexzy.lightBlue" fontSize="xs">
+                    Final slide (Save-CTA): {saveCta}
+                  </Text>
+                )}
+                {platforms && (
+                  <VStack align="stretch" gap={2}>
+                    {inPlan("instagram") && platforms.reels && (
+                      <KitBlock name="Instagram" kit={platforms.reels} />
+                    )}
+                    {inPlan("threads") && platforms.threads && (
+                      <KitBlock name="Threads" kit={platforms.threads} />
+                    )}
+                    {inPlan("tiktok") && platforms.tiktok && (
+                      <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                    )}
+                    {inPlan("facebook") && platforms.facebook && (
+                      <KitBlock name="Facebook" kit={platforms.facebook} />
+                    )}
+                  </VStack>
+                )}
+              </VStack>
+            )}
+
+            {/* The script */}
+            <VStack align="stretch" gap={1} mb={3}>
+              {view.hook && (
+                <Text color="nexzy.white" fontSize="sm">
+                  <b>Hook:</b> {view.hook}
+                </Text>
+              )}
+              {view.script && !isNonVideo && (
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="sm"
+                  whiteSpace="pre-wrap"
+                >
+                  {view.script}
+                </Text>
+              )}
+              {view.payload?.forPlatforms &&
+                view.payload.forPlatforms.length > 0 && (
+                  <Text color="nexzy.gray.100" fontSize="xs">
+                    <b>For:</b>{" "}
+                    {view.payload.forPlatforms
+                      .map(
+                        (p) =>
+                          ({
+                            youtube: "YouTube",
+                            instagram: "Instagram",
+                            tiktok: "TikTok",
+                            facebook: "Facebook",
+                            threads: "Threads",
+                            x: "X",
+                          })[p] ?? p,
+                      )
+                      .join(" · ")}
+                  </Text>
+                )}
+              {view.payload?.lengths && !isBriefCard && !isLong && (
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  <b>Cut lengths:</b> TikTok {view.payload.lengths.tiktok} ·
+                  Reels {view.payload.lengths.reels} · Facebook{" "}
+                  {view.payload.lengths.facebook} · Shorts{" "}
+                  {view.payload.lengths.youtube}
+                </Text>
+              )}
+              {view.payload?.cta && (
+                <Text color="nexzy.gray.100" fontSize="xs">
+                  📣 CTA: {view.payload.cta}
+                </Text>
+              )}
+              {view.url && (
+                <Link
+                  href={view.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  color="nexzy.lightBlue"
+                  fontSize="xs"
+                >
+                  Backing page ↗
+                </Link>
+              )}
+            </VStack>
+          </Section>
+
+          {!isNonVideo && !isImage && !isBriefCard && (
+            <>
+              <Section title="Per-platform kits">
+                {/* Per-platform posting kits */}
+                {platforms && (
+                  <VStack align="stretch" gap={2}>
+                    {inPlan("youtube") && (
+                      <KitBlock
+                        name={isLong ? "YouTube (Long-form)" : "YouTube Shorts"}
+                        kit={platforms.youtube}
+                      />
+                    )}
+                    {inPlan("tiktok") && (
+                      <KitBlock
+                        name={isLong ? "TikTok (teaser)" : "TikTok"}
+                        kit={platforms.tiktok}
+                      />
+                    )}
+                    {inPlan("instagram") && (
+                      <KitBlock
+                        name={
+                          isLong
+                            ? "Instagram Reels (teaser)"
+                            : "Instagram Reels"
+                        }
+                        kit={platforms.reels}
+                      />
+                    )}
+                    {inPlan("facebook") && (
+                      <KitBlock
+                        name={
+                          isLong ? "Facebook Reels (teaser)" : "Facebook Reels"
+                        }
+                        kit={platforms.facebook}
+                      />
+                    )}
+                    {inPlan("threads") && (
+                      <KitBlock
+                        name="Threads (text take)"
+                        kit={platforms.threads}
+                      />
+                    )}
+                    {inPlan("x") && (
+                      <KitBlock name="X (Twitter)" kit={platforms.x} />
+                    )}
+                  </VStack>
+                )}
+
+                {/* Long-form plan: chapters + thumbnail + teaser advice */}
+                {isLong && longform && (
+                  <Box
+                    mt={3}
+                    pt={3}
+                    borderTop="1px solid"
+                    borderColor="whiteAlpha.200"
+                  >
+                    <Text
+                      color="nexzy.white"
+                      fontWeight="700"
+                      fontSize="sm"
+                      mb={2}
+                    >
+                      Long-form plan (YouTube)
+                    </Text>
+                    {longform.thumbnailConcept && (
+                      <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                        <Text as="span" color="nexzy.white" fontWeight="600">
+                          Thumbnail:{" "}
+                        </Text>
+                        {longform.thumbnailConcept}
+                      </Text>
+                    )}
+                    {Array.isArray(longform.chapters) &&
+                      longform.chapters.length > 0 && (
+                        <VStack align="stretch" gap={1} mb={2}>
+                          {longform.chapters.map((c, i) => (
+                            <HStack key={i} gap={2} align="baseline">
+                              <Text
+                                color="nexzy.blue"
+                                fontSize="xs"
+                                fontWeight="700"
+                                minW="38px"
+                              >
+                                {c.timestamp ?? ""}
+                              </Text>
+                              <Text
+                                color="nexzy.white"
+                                fontSize="xs"
+                                fontWeight="600"
+                              >
+                                {c.title}
+                              </Text>
+                              {c.summary && (
+                                <Text color="nexzy.gray.100" fontSize="xs">
+                                  — {c.summary}
+                                </Text>
+                              )}
+                            </HStack>
+                          ))}
+                        </VStack>
+                      )}
+                    {longform.teaserAdvice && (
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        <Text as="span" color="nexzy.white" fontWeight="600">
+                          Teasers:{" "}
+                        </Text>
+                        {longform.teaserAdvice}
+                      </Text>
+                    )}
+                  </Box>
+                )}
+              </Section>
+              <Section title="Voiceover &amp; production">
+                {/* ElevenLabs shorts script + production notes */}
+                <Box>
+                  {isOwner && (
+                    <Flex gap={2} align="center" wrap="wrap">
+                      {writers.length > 1 && (
+                        <HStack gap={1}>
+                          <Text color="nexzy.gray.100" fontSize="xs">
+                            Voice:
+                          </Text>
+                          {writers.map((w) => {
+                            const active = persona === w;
+                            return (
+                              <Button
+                                key={w}
+                                size="xs"
+                                onClick={() => setPersona(w)}
+                                bg={active ? "nexzy.blue" : "transparent"}
+                                color={active ? "white" : "nexzy.gray.100"}
+                                borderWidth="1px"
+                                borderColor={
+                                  active ? "nexzy.blue" : "whiteAlpha.300"
+                                }
+                                _hover={{
+                                  bg: active ? "nexzy.blue" : "whiteAlpha.100",
+                                }}
+                              >
+                                {w}
+                              </Button>
+                            );
+                          })}
+                        </HStack>
+                      )}
+                      <Button
+                        size="xs"
+                        colorPalette="purple"
+                        variant={view.ttsScript ? "outline" : "solid"}
+                        onClick={regen}
+                        loading={busy === "script"}
+                        loadingText="Regenerating…"
+                      >
+                        {view.ttsScript
+                          ? "↻ Regenerate in " + persona + "\u2019s voice"
+                          : "🎙 Generate in " + persona + "\u2019s voice"}
+                      </Button>
+                      {view.ttsScript && (
+                        <HStack gap={1} flex={1} minW="220px">
+                          <Input
+                            size="xs"
+                            bg="whiteAlpha.50"
+                            color="nexzy.white"
+                            borderColor="whiteAlpha.300"
+                            fontSize="xs"
+                            placeholder="steer the script (e.g. more excited, less sarcastic)"
+                            value={scriptSteer}
+                            onChange={(e) => setScriptSteer(e.target.value)}
+                          />
+                          <Button
+                            size="xs"
+                            colorPalette="purple"
+                            variant="solid"
+                            onClick={regenScript}
+                            loading={busy === "rescript"}
+                            loadingText="Rewriting…"
+                            disabled={!scriptSteer.trim()}
+                          >
+                            ↻ Script only
+                          </Button>
+                        </HStack>
+                      )}
+                    </Flex>
+                  )}
+                  {view.ttsScript && (
+                    <VStack align="stretch" gap={2} mt={2}>
+                      <Box
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        borderRadius="lg"
+                        p={3}
+                      >
+                        <Flex
+                          justify="space-between"
+                          align="center"
+                          mb={1}
+                          gap={2}
+                        >
+                          <Text
+                            color="nexzy.lightBlue"
+                            fontSize="xs"
+                            fontWeight="700"
+                          >
+                            ElevenLabs · Core cut ·{" "}
+                            {view.payload?.ttsScripts?.extended
+                              ? "TikTok · Shorts · X"
+                              : "all video platforms"}{" "}
+                            · {draft.length.toLocaleString()} credits · ~
+                            {Math.max(1, Math.round(draft.length / 15))}s
+                          </Text>
+                          <HStack gap={1}>
+                            {isOwner && dirty && (
+                              <Button
+                                size="xs"
+                                colorPalette="green"
+                                variant="outline"
+                                onClick={saveScript}
+                                loading={saving}
+                                loadingText="Saving…"
+                              >
+                                Save
+                              </Button>
+                            )}
+                            <CopyBtn text={draft} label="Copy script" />
+                          </HStack>
+                        </Flex>
+                        {isOwner ? (
+                          <Textarea
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            rows={8}
+                            bg="whiteAlpha.50"
+                            color="nexzy.white"
+                            borderColor="whiteAlpha.300"
+                            fontSize="sm"
+                          />
+                        ) : (
+                          <Text
+                            color="nexzy.gray.100"
+                            fontSize="sm"
+                            whiteSpace="pre-wrap"
+                          >
+                            {view.ttsScript}
+                          </Text>
+                        )}
+                      </Box>
+                      {/* Optional longer cut — only when the article supported it.
+                    (tight/long are legacy fields kept for older cards.) */}
+                      {(
+                        [
+                          ["extended", "Extended cut", "Instagram · Facebook"],
+                          ["tight", "Tight cut", "TikTok / Shorts"],
+                          ["long", "Long cut", "Facebook"],
+                        ] as const
+                      ).map(([key, label, plat]) => {
+                        const txt = view.payload?.ttsScripts?.[key];
+                        if (!txt) return null;
+                        return (
+                          <Box
+                            key={key}
+                            bg="whiteAlpha.50"
+                            border="1px solid"
+                            borderColor="whiteAlpha.200"
+                            borderRadius="lg"
+                            p={3}
+                          >
+                            <Flex
+                              justify="space-between"
+                              align="center"
+                              mb={1}
+                              gap={2}
+                            >
+                              <Text
+                                color="nexzy.lightBlue"
+                                fontSize="xs"
+                                fontWeight="700"
+                              >
+                                {label} · {plat} · ~
+                                {Math.max(1, Math.round(txt.length / 15))}s
+                              </Text>
+                              <CopyBtn text={txt} label="Copy" />
+                            </Flex>
+                            <Text
+                              color="nexzy.gray.100"
+                              fontSize="sm"
+                              whiteSpace="pre-wrap"
+                            >
+                              {txt}
+                            </Text>
+                          </Box>
+                        );
+                      })}
+                      {/* One production block: everything you hand the editor to
+                    actually cut the video — delivery, music, footage, captions. */}
+                      <Box
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        borderRadius="lg"
+                        p={3}
                       >
                         <Text
                           color="nexzy.lightBlue"
-                          fontSize="10px"
+                          fontSize="xs"
                           fontWeight="700"
-                          mb={0.5}
+                          mb={1.5}
                         >
-                          WHEN YOU POST
+                          🎬 Production notes
                         </Text>
-                        <VStack align="stretch" gap={0.5}>
-                          {(view.payload?.postingTips ?? []).map((t, i) => (
-                            <Text key={i} color="nexzy.gray.100" fontSize="xs">
-                              • {t}
+                        <VStack align="stretch" gap={1.5}>
+                          {view.payload?.voicePersona && (
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              🗣 <b>Delivery:</b> {view.payload.voicePersona}
                             </Text>
-                          ))}
+                          )}
+                          {view.payload?.music && (
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              🎵 <b>Music:</b> {view.payload.music}
+                            </Text>
+                          )}
+                          {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              🎞 <b>Background footage:</b>{" "}
+                              {(view.payload?.backgroundVideo ?? []).join(
+                                " · ",
+                              )}
+                            </Text>
+                          )}
+                          {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              🎬 <b>B-roll / SFX:</b>{" "}
+                              {(view.payload?.brollSfx ?? []).join(" · ")}
+                            </Text>
+                          ) : (
+                            view.payload?.broll && (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                🎬 <b>B-roll / SFX:</b> {view.payload.broll}
+                              </Text>
+                            )
+                          )}
+                          {(view.payload?.onScreenText?.length ?? 0) > 0 && (
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              💬 <b>On-screen text</b> (captions to overlay):{" "}
+                              {(view.payload?.onScreenText ?? []).join(" · ")}
+                            </Text>
+                          )}
+                          {(view.payload?.postingTips?.length ?? 0) > 0 && (
+                            <Box
+                              mt={1}
+                              pt={1.5}
+                              borderTop="1px solid"
+                              borderColor="whiteAlpha.100"
+                            >
+                              <Text
+                                color="nexzy.lightBlue"
+                                fontSize="10px"
+                                fontWeight="700"
+                                mb={0.5}
+                              >
+                                WHEN YOU POST
+                              </Text>
+                              <VStack align="stretch" gap={0.5}>
+                                {(view.payload?.postingTips ?? []).map(
+                                  (t, i) => (
+                                    <Text
+                                      key={i}
+                                      color="nexzy.gray.100"
+                                      fontSize="xs"
+                                    >
+                                      • {t}
+                                    </Text>
+                                  ),
+                                )}
+                              </VStack>
+                            </Box>
+                          )}
                         </VStack>
                       </Box>
-                    )}
-                  </VStack>
+                    </VStack>
+                  )}
                 </Box>
-              </VStack>
-            )}
-          </Box>
-          </Section>
-        </>
-      )}
+              </Section>
+            </>
+          )}
 
-      {/* Publish this card straight to FB/IG Reels + a Threads text post */}
-      {s.kind === "video" &&
-        !isNonVideo &&
-        !isImage &&
-        !isBriefCard &&
-        isOwner && (
-          <Section title="Publish to social">
-            <PublishBox s={view} />
-          </Section>
-        )}
+          {/* Publish this card straight to FB/IG Reels + a Threads text post */}
+          {s.kind === "video" &&
+            !isNonVideo &&
+            !isImage &&
+            !isBriefCard &&
+            isOwner && (
+              <Section title="Publish to social">
+                <PublishBox s={view} />
+              </Section>
+            )}
         </>
       </Box>
     </Box>

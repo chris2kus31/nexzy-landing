@@ -427,6 +427,11 @@ export async function marketingPost(input: {
 
 export interface PlatformKit {
   title?: string;
+  /**
+   * YouTube only: 2-3 ranked title candidates, best-first, each with a one-line
+   * rationale tracing it to the ranking signal. `title` mirrors titleOptions[0].
+   */
+  titleOptions?: { title: string; why?: string }[];
   description?: string;
   caption?: string;
   hashtags?: string[];
@@ -502,8 +507,21 @@ export interface ContentSuggestion {
     // Carousel (format === "carousel"): the slide deck + the final Save-CTA line.
     slides?: { n?: number; headline?: string; body?: string }[];
     saveCta?: string;
-    // Top-ranking YouTube videos this card was grounded against (Phase 1 signal).
-    groundedOn?: { title: string; views?: string }[];
+    // Top-ranking YouTube videos this card was grounded against (Phase 1 signal),
+    // ranked by views/day velocity (perDay).
+    groundedOn?: { title: string; views?: string; perDay?: string }[];
+    // Whether the YouTube ranking signal was live when the title was written.
+    // false = NOT ranking-grounded (blind-guessed); signalStatus is the reason
+    // (no-key / quota-exhausted / error / disabled).
+    signalGrounded?: boolean;
+    signalStatus?: string;
+    // Deterministic YouTube title guardrail: overLength was auto-trimmed to <=70;
+    // notKeywordFirst means the focus keyword isn't in the first ~3 words.
+    titleFlags?: {
+      overLength?: boolean;
+      notKeywordFirst?: boolean;
+      original?: string;
+    };
     // Per-platform target cut lengths (Phase 4) — the band to trim each
     // platform's cut to (one front-loaded spoken spine serves them all).
     lengths?: {
