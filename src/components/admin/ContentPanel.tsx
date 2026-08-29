@@ -1756,6 +1756,39 @@ function SuggestionCard({
               </Box>
             )}
 
+            {/* Quality guardrails — audio SEO (keyword not spoken early) + a weak
+                pinned comment. Only render when something actually fired. */}
+            {(view.payload?.qualityFlags?.keywordNotSpokenEarly ||
+              view.payload?.qualityFlags?.weakPinned) && (
+              <Box
+                mb={3}
+                p={2}
+                borderRadius="md"
+                bg="orange.900"
+                border="1px solid"
+                borderColor="orange.400"
+              >
+                <Text color="orange.100" fontSize="xs">
+                  🎙️ <b>Script/comment check:</b>{" "}
+                  {view.payload?.qualityFlags?.keywordNotSpokenEarly && (
+                    <>
+                      the game/topic name isn&apos;t spoken in the first ~15s of
+                      the script — YouTube ranks on the transcript, so say it up
+                      front
+                      {view.payload?.qualityFlags?.weakPinned ? "; " : ""}
+                    </>
+                  )}
+                  {view.payload?.qualityFlags?.weakPinned && (
+                    <>
+                      the pinned comment is a generic open-ender — make it a
+                      this-or-that debate
+                    </>
+                  )}
+                  .
+                </Text>
+              </Box>
+            )}
+
             {/* Hashtag A/B experiment variant used for this card's YouTube tail. */}
             {view.payload?.hashtagVariant && (
               <Text color="nexzy.gray.300" fontSize="2xs" mb={2}>

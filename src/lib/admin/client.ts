@@ -531,6 +531,12 @@ export interface ContentSuggestion {
     };
     // Hashtag A/B/C experiment variant for the YouTube hashtag tail.
     hashtagVariant?: "A" | "B" | "C";
+    // Quality guardrails: keywordNotSpokenEarly = game name isn't spoken in the
+    // first ~15s of the script; weakPinned = pinned comment is a banned open-ender.
+    qualityFlags?: {
+      keywordNotSpokenEarly?: boolean;
+      weakPinned?: boolean;
+    };
     // Per-platform target cut lengths (Phase 4) — the band to trim each
     // platform's cut to (one front-loaded spoken spine serves them all).
     lengths?: {
