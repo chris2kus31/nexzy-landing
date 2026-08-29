@@ -1759,7 +1759,8 @@ function SuggestionCard({
             {/* Quality guardrails — audio SEO (keyword not spoken early) + a weak
                 pinned comment. Only render when something actually fired. */}
             {(view.payload?.qualityFlags?.keywordNotSpokenEarly ||
-              view.payload?.qualityFlags?.weakPinned) && (
+              view.payload?.qualityFlags?.weakPinned ||
+              view.payload?.qualityFlags?.fbKeywordLate) && (
               <Box
                 mb={3}
                 p={2}
@@ -1775,13 +1776,24 @@ function SuggestionCard({
                       the game/topic name isn&apos;t spoken in the first ~15s of
                       the script — YouTube ranks on the transcript, so say it up
                       front
-                      {view.payload?.qualityFlags?.weakPinned ? "; " : ""}
+                      {view.payload?.qualityFlags?.weakPinned ||
+                      view.payload?.qualityFlags?.fbKeywordLate
+                        ? "; "
+                        : ""}
                     </>
                   )}
                   {view.payload?.qualityFlags?.weakPinned && (
                     <>
                       the pinned comment is a generic open-ender — make it a
                       this-or-that debate
+                      {view.payload?.qualityFlags?.fbKeywordLate ? "; " : ""}
+                    </>
+                  )}
+                  {view.payload?.qualityFlags?.fbKeywordLate && (
+                    <>
+                      the Facebook caption doesn&apos;t lead with the keyword in
+                      the first ~125 chars (before &ldquo;See more&rdquo;) —
+                      move it up
                     </>
                   )}
                   .

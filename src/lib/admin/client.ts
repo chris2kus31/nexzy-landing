@@ -536,6 +536,9 @@ export interface ContentSuggestion {
     qualityFlags?: {
       keywordNotSpokenEarly?: boolean;
       weakPinned?: boolean;
+      // Facebook caption: focus keyword isn't in the first ~125 chars (the part
+      // shown before "…See more", and what FB indexes for search).
+      fbKeywordLate?: boolean;
     };
     // Per-platform target cut lengths (Phase 4) — the band to trim each
     // platform's cut to (one front-loaded spoken spine serves them all).
