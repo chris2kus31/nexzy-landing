@@ -52,7 +52,7 @@ export default function EverythingWeKnowPanel({
       setMsg({
         ok: !!lead,
         text: lead
-          ? "Everything We Know lead created — find it in Content Studio → Video Leads. Produce it to write the ~5-min timeline script (confirmed vs leaked, grounded only in your notes). Add more facts in the steer box at Produce."
+          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads, where you Generate the ~5-min timeline script (confirmed vs leaked, grounded only in your notes)."
           : "Couldn't create the lead — check the subject isn't empty.",
       });
       onRan?.();

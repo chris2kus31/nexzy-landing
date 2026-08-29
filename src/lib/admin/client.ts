@@ -662,7 +662,7 @@ export async function suggestContentNow(
 }
 
 /** Compile "This Week in Gaming History" now into one long-form video lead. */
-export async function runWeeklyRewindRecap(): Promise<ContentSuggestion | null> {
+export async function runWeeklyRewindRecap(): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/weekly-history/run", {
       method: "POST",
@@ -671,7 +671,7 @@ export async function runWeeklyRewindRecap(): Promise<ContentSuggestion | null> 
 }
 
 /** Compile "Games Out This Week" now into one long-form video lead. */
-export async function runWeeklyReleases(): Promise<ContentSuggestion | null> {
+export async function runWeeklyReleases(): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/weekly-releases/run", {
       method: "POST",
@@ -680,7 +680,7 @@ export async function runWeeklyReleases(): Promise<ContentSuggestion | null> {
 }
 
 /** Compile "This Month in Gaming History" now into one long-form video lead. */
-export async function runMonthlyHistory(): Promise<ContentSuggestion | null> {
+export async function runMonthlyHistory(): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/monthly-history/run", {
       method: "POST",
@@ -1415,9 +1415,7 @@ export async function generateList(
  * surfaces notable era games; you paste each ad's transcript + timestamps into
  * the steer box when you Produce it.
  */
-export async function runRetroAd(
-  theme: string,
-): Promise<ContentSuggestion | null> {
+export async function runRetroAd(theme: string): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/retro-ad/run", {
       method: "POST",
@@ -1440,7 +1438,7 @@ export async function runSeriesFeature(input: {
   episode?: number;
   sourceUrls?: string;
   writer?: string;
-}): Promise<ContentSuggestion | null> {
+}): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/series-feature/run", {
       method: "POST",
@@ -1468,7 +1466,7 @@ export async function runExplainer(input: {
   notes?: string;
   urls?: string;
   writer?: string;
-}): Promise<ContentSuggestion | null> {
+}): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/explainer/run", {
       method: "POST",
@@ -1486,7 +1484,7 @@ export async function runCountdown(input: {
   template: string;
   count?: number;
   writer?: string;
-}): Promise<ContentSuggestion | null> {
+}): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/countdown/run", {
       method: "POST",

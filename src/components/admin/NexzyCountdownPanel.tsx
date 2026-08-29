@@ -69,7 +69,7 @@ export default function NexzyCountdownPanel({ onRan }: { onRan?: () => void }) {
       setMsg({
         ok: !!lead,
         text: lead
-          ? "Countdown lead created — find it in Content Studio → Video Leads. Produce it to write the ranked countdown script (real games, counted down to #1)."
+          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads, where you Generate the ranked countdown script (real games, counted down to #1)."
           : "Not enough games with the needed data for this topic yet (the IGDB enrichment backfill fills hype/ratings in). Try another template.",
       });
       onRan?.();

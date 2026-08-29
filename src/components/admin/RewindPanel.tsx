@@ -169,7 +169,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       const lead = await runWeeklyRewindRecap();
       setMsg(
         lead
-          ? `Weekly recap lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          ? `Draft created — “${lead.title}”. Find it in the Review queue; publish it and it becomes a video lead in Content Studio → Video Leads, then hit Generate for the long-form video.`
           : "Not enough Rewind episodes published this week yet (need at least 2).",
       );
     } catch (e) {
@@ -187,7 +187,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       const lead = await runWeeklyReleases();
       setMsg(
         lead
-          ? `Releases rundown lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          ? `Draft created — “${lead.title}”. Find it in the Review queue; publish it and it becomes a video lead in Content Studio → Video Leads, then hit Generate for the long-form video.`
           : "No games with a release date in this week's window (need at least 2).",
       );
     } catch (e) {
@@ -205,7 +205,7 @@ export default function RewindPanel({ isOwner }: { isOwner?: boolean }) {
       const lead = await runMonthlyHistory();
       setMsg(
         lead
-          ? `Monthly recap lead created — “${lead.title}”. Find it in Content Studio → Video Leads and hit Generate for the long-form video.`
+          ? `Draft created — “${lead.title}”. Find it in the Review queue; publish it and it becomes a video lead in Content Studio → Video Leads, then hit Generate for the long-form video.`
           : "Not enough events for this month yet (need at least 4 in the Rewind pool).",
       );
     } catch (e) {

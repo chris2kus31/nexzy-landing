@@ -111,7 +111,7 @@ export default function ListPanel({ onRan }: { onRan?: () => void }) {
       setMsg({
         ok: !!lead,
         text: lead
-          ? "Retro Ads lead created — find it in Content Studio → Video Leads. When you Produce it, paste each ad's transcript + timestamps into the steer box so it's grounded in the real ad."
+          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads; when you Generate, paste each ad's transcript + timestamps into the steer box so it's grounded in the real ad."
           : "Not enough era games with a notability score for this theme yet (the IGDB enrichment backfill fills this in).",
       });
       onRan?.();

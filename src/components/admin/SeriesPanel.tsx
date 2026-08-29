@@ -116,7 +116,7 @@ export default function SeriesPanel({ onRan }: { onRan?: () => void }) {
       setMsg({
         ok: !!lead,
         text: lead
-          ? "Series feature lead created — find it in Content Studio → Video Leads. Produce it to write the long-form script (grounded only in your facts). You can paste more facts in the steer box at Produce."
+          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads, where you Generate the long-form script (grounded only in your facts)."
           : "Couldn't create the lead — check the subject isn't empty.",
       });
       loadCounts();

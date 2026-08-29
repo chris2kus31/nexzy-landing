@@ -167,10 +167,30 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
   const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
   const pinned = kit.pinnedComment || "";
   const firstReply = kit.firstReply || "";
-  const thread = kit.thread && kit.thread.length > 0 ? kit.thread : [];
+  // The model occasionally returns thread items / poll options as OBJECTS
+  // (e.g. {tweet: "..."}) instead of strings; rendering an object as a React
+  // child throws (error #31). Coerce everything to text so the card can't crash.
+  const toText = (v: unknown): string =>
+    typeof v === "string"
+      ? v
+      : v && typeof v === "object"
+        ? String(
+            (v as Record<string, unknown>).tweet ??
+              (v as Record<string, unknown>).text ??
+              (v as Record<string, unknown>).option ??
+              (v as Record<string, unknown>).content ??
+              JSON.stringify(v),
+          )
+        : String(v ?? "");
+  const thread = (
+    Array.isArray(kit.thread) && kit.thread.length > 0 ? kit.thread : []
+  ).map(toText);
   const poll =
-    kit.poll && kit.poll.options && kit.poll.options.length > 0
-      ? kit.poll
+    kit.poll && Array.isArray(kit.poll.options) && kit.poll.options.length > 0
+      ? {
+          question: toText(kit.poll.question),
+          options: kit.poll.options.map(toText),
+        }
       : null;
   const empty =
     !title &&
