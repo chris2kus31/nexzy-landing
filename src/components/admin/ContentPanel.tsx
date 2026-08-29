@@ -1740,8 +1740,8 @@ function SuggestionCard({
                   ✂️ <b>Description guardrail:</b>{" "}
                   {view.payload?.descFlags?.notKeywordFirst && (
                     <>
-                      focus keyword isn&apos;t in the first ~150 chars (the
-                      search snippet) — move it up
+                      focus keyword isn&apos;t in the first ~7 words (the search
+                      snippet) — move it up
                       {view.payload?.descFlags?.tooLong ? "; " : ""}
                     </>
                   )}

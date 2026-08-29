@@ -523,7 +523,7 @@ export interface ContentSuggestion {
       original?: string;
     };
     // Deterministic YouTube description guardrail: notKeywordFirst = keyword not
-    // in the first ~150 chars (the snippet); tooLong = a Shorts description ran
+    // in the first ~7 words (the snippet); tooLong = a Shorts description ran
     // past ~320 chars.
     descFlags?: {
       notKeywordFirst?: boolean;
