@@ -5,7 +5,9 @@ import { Box, Flex, VStack, Heading, Text, Spinner } from "@chakra-ui/react";
 import {
   getAudienceProfile,
   refreshAudienceProfile,
+  getHashtagAb,
   type AudienceProfile,
+  type HashtagAbRollup,
 } from "@/lib/admin/client";
 import { AudiencePanel } from "@/components/admin/LeadsPanel";
 
@@ -226,6 +228,121 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
  * the audience is, when they are active (moved from Leads), and how much OUR OWN
  * data says to post per platform.
  */
+const VARIANT_LABEL: Record<"A" | "B" | "C", string> = {
+  A: "A · broad tail (#Platform #Gaming)",
+  B: "B · branded tail (#Gaming #Nexzy)",
+  C: "C · niche tail (#Genre #Platform)",
+};
+
+/**
+ * Hashtag A/B readout — which tail variant (broad / branded / niche) earns more
+ * on YouTube, split Shorts vs long-form. The first 3 hashtags are identical
+ * across variants, so any gap is attributable to the tail. Directional at low
+ * volume (small samples), but the data compounds.
+ */
+function HashtagAbPanel() {
+  const [data, setData] = useState<HashtagAbRollup | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getHashtagAb()
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const renderFormat = (
+    label: string,
+    cells: HashtagAbRollup["formats"]["short"],
+  ) => {
+    const variants: ("A" | "B" | "C")[] = ["A", "B", "C"];
+    const withAny = variants.some((v) => cells[v].withData > 0);
+    const best = withAny
+      ? variants.reduce((a, b) =>
+          cells[b].avgViews > cells[a].avgViews ? b : a,
+        )
+      : null;
+    return (
+      <Box mb={4}>
+        <Text color="nexzy.lightBlue" fontSize="xs" fontWeight="700" mb={1}>
+          {label}
+        </Text>
+        <VStack align="stretch" gap={1}>
+          {variants.map((v) => {
+            const c = cells[v];
+            const isBest = best === v && c.withData > 0;
+            return (
+              <Flex
+                key={v}
+                justify="space-between"
+                align="center"
+                px={2}
+                py={1}
+                borderRadius="md"
+                bg={isBest ? "green.900" : "whiteAlpha.50"}
+                border="1px solid"
+                borderColor={isBest ? "green.500" : "whiteAlpha.200"}
+              >
+                <Text
+                  color="nexzy.gray.100"
+                  fontSize="2xs"
+                  maxW="55%"
+                  lineClamp={1}
+                >
+                  {isBest ? "🏆 " : ""}
+                  {VARIANT_LABEL[v]}
+                </Text>
+                <Text color="nexzy.white" fontSize="2xs">
+                  {c.withData > 0
+                    ? `${c.avgViews.toLocaleString()} avg views`
+                    : "no data yet"}
+                  {" · "}
+                  {c.videos} vid{c.videos === 1 ? "" : "s"}
+                  {c.withData > 0 ? ` · ${c.avgEngagement} eng` : ""}
+                </Text>
+              </Flex>
+            );
+          })}
+        </VStack>
+      </Box>
+    );
+  };
+
+  return (
+    <Box
+      p={4}
+      borderRadius="lg"
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+    >
+      <Heading size="sm" color="nexzy.white" mb={1}>
+        🧪 Hashtag A/B
+      </Heading>
+      <Text color="nexzy.gray.100" fontSize="xs" mb={3}>
+        Which YouTube hashtag tail wins. First 3 tags are identical across
+        variants — only the tail differs, so the gap is the tail&apos;s doing.
+        Directional at low volume; the signal compounds.
+      </Text>
+      {loading ? (
+        <Flex justify="center" py={4}>
+          <Spinner color="nexzy.blue" size="sm" />
+        </Flex>
+      ) : !data ? (
+        <Text color="whiteAlpha.600" fontSize="xs">
+          No data yet — generate + publish some videos, then attach their
+          YouTube URLs so their views join the loop.
+        </Text>
+      ) : (
+        <>
+          {renderFormat("YouTube Shorts", data.formats.short)}
+          {renderFormat("YouTube long-form", data.formats.long)}
+        </>
+      )}
+    </Box>
+  );
+}
+
 export default function AudienceInsightsPanel({
   isOwner,
 }: {
@@ -279,6 +396,7 @@ export default function AudienceInsightsPanel({
         busy={busy}
       />
       <CadencePanel cadence={audience?.cadence} />
+      <HashtagAbPanel />
     </VStack>
   );
 }

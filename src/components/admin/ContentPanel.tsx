@@ -1755,6 +1755,19 @@ function SuggestionCard({
                 </Text>
               </Box>
             )}
+
+            {/* Hashtag A/B experiment variant used for this card's YouTube tail. */}
+            {view.payload?.hashtagVariant && (
+              <Text color="nexzy.gray.300" fontSize="2xs" mb={2}>
+                🧪 Hashtag variant <b>{view.payload.hashtagVariant}</b>{" "}
+                {view.payload.hashtagVariant === "A"
+                  ? "(broad tail)"
+                  : view.payload.hashtagVariant === "B"
+                    ? "(branded tail · #Nexzy)"
+                    : "(niche tail)"}{" "}
+                — tracked in Audience → Hashtag A/B
+              </Text>
+            )}
           </Section>
 
           <Section title="Content" defaultOpen>

@@ -529,6 +529,8 @@ export interface ContentSuggestion {
       notKeywordFirst?: boolean;
       tooLong?: boolean;
     };
+    // Hashtag A/B/C experiment variant for the YouTube hashtag tail.
+    hashtagVariant?: "A" | "B" | "C";
     // Per-platform target cut lengths (Phase 4) — the band to trim each
     // platform's cut to (one front-loaded spoken spine serves them all).
     lengths?: {
@@ -3051,6 +3053,27 @@ export async function refreshAudienceProfile(): Promise<AudienceProfile> {
       method: "POST",
     }),
   );
+}
+
+/** One variant × format cell of the hashtag A/B readout. */
+export interface HashtagVariantStat {
+  videos: number;
+  withData: number;
+  avgViews: number;
+  avgEngagement: number;
+}
+
+export interface HashtagAbRollup {
+  generatedAt: string;
+  formats: {
+    short: Record<"A" | "B" | "C", HashtagVariantStat>;
+    long: Record<"A" | "B" | "C", HashtagVariantStat>;
+  };
+}
+
+/** Hashtag A/B readout — views/engagement per variant, split short vs long. */
+export async function getHashtagAb(): Promise<HashtagAbRollup> {
+  return handle(await fetch("/api/newsroom/admin/content/hashtag-ab"));
 }
 
 /** Generate the real card FROM a lead in the chosen writer + format (spends tokens). */
