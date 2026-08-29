@@ -226,7 +226,7 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
                   {i === 0 ? "★ " : `${i + 1}. `}
                   {o.title}{" "}
                   <Text as="span" color="nexzy.gray.300" fontSize="2xs">
-                    ({o.title.length}/70)
+                    ({o.title.length}/60)
                   </Text>
                 </Text>
                 {o.why && (
