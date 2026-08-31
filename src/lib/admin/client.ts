@@ -1290,6 +1290,7 @@ export async function writeLead(
   id: string,
   author?: string,
   generateImage?: boolean,
+  opts?: { angle?: string; take?: string },
 ): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write`, {
@@ -1297,6 +1298,10 @@ export async function writeLead(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...(author ? { author } : {}),
+        // Phase 2 — original value entered at the lead: the chosen angle drives
+        // the writer; the raw take gets voice-matched into the article.
+        ...(opts?.angle?.trim() ? { angle: opts.angle.trim() } : {}),
+        ...(opts?.take?.trim() ? { take: opts.take.trim() } : {}),
         // Positive opt-in — the server defaults to NO image when absent.
         generateImage: !!generateImage,
       }),

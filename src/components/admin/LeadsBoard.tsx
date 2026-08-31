@@ -11,6 +11,8 @@ import {
   Button,
   Spinner,
   Link,
+  Input,
+  Textarea,
 } from "@chakra-ui/react";
 import {
   getLeads,
@@ -58,6 +60,7 @@ function LeadCard({
     author: string,
     generateImage: boolean,
     treatment: "news" | "review",
+    opts?: { angle?: string; take?: string },
   ) => void;
   onSkip: (id: string) => void;
   busy: boolean;
@@ -72,6 +75,10 @@ function LeadCard({
   const [treatment, setTreatment] = useState<"news" | "review">(
     lead.suggestedTreatment || "news",
   );
+  // Phase 2 — the author's angle + raw take, entered here at the lead.
+  const [showTake, setShowTake] = useState(false);
+  const [take, setTake] = useState("");
+  const [angle, setAngle] = useState("");
   const hot = lead.trendScore >= 60;
   return (
     <Box
@@ -317,10 +324,48 @@ function LeadCard({
           >
             {genImage ? "☑" : "☐"} Generate AI image
           </Box>
+          <Box w="full">
+            <Box
+              as="button"
+              onClick={() => setShowTake((v) => !v)}
+              fontSize="11px"
+              fontWeight="600"
+              color="#FFD866"
+              textAlign="left"
+            >
+              {showTake ? "▾" : "▸"} Add your take (original value)
+            </Box>
+            {showTake && (
+              <VStack align="stretch" gap={2} mt={2}>
+                <Input
+                  value={angle}
+                  onChange={(e) => setAngle(e.target.value)}
+                  placeholder="Angle (optional) — the different approach you're taking"
+                  size="sm"
+                  bg="whiteAlpha.50"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _placeholder={{ color: "whiteAlpha.500" }}
+                />
+                <Textarea
+                  value={take}
+                  onChange={(e) => setTake(e.target.value)}
+                  rows={3}
+                  placeholder={`Your take — rough notes are fine, we'll shape it into ${author}'s voice. Leave empty for commodity news.`}
+                  bg="whiteAlpha.50"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  _placeholder={{ color: "whiteAlpha.500" }}
+                />
+              </VStack>
+            )}
+          </Box>
           <Button
             size="sm"
             colorPalette={treatment === "review" ? "purple" : "blue"}
-            onClick={() => onWrite(lead.id, author, genImage, treatment)}
+            onClick={() =>
+              onWrite(lead.id, author, genImage, treatment, { angle, take })
+            }
             loading={busy}
           >
             {treatment === "review" ? "Write as review" : "Write this"}
@@ -413,13 +458,14 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     author: string,
     generateImage: boolean,
     treatment: "news" | "review",
+    opts?: { angle?: string; take?: string },
   ) => {
     setBusyId(id);
     try {
       if (treatment === "review") {
         await writeLeadReview(id, author, generateImage);
       } else {
-        await writeLead(id, author, generateImage);
+        await writeLead(id, author, generateImage, opts);
       }
       setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
     } catch (e) {
