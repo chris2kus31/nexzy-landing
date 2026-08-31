@@ -282,8 +282,8 @@ function LeadCard({
         <VStack
           gap={2}
           align="stretch"
-          minW={{ base: "auto", md: "120px" }}
-          w={{ base: "full", md: "auto" }}
+          w={{ base: "full", md: "340px" }}
+          flexShrink={0}
         >
           {/* News ⇄ Review — pre-set to the desk's suggestion; the Write button
               writes against whatever is selected here. */}
