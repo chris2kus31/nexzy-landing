@@ -9,6 +9,7 @@ import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import { fetchRewindEpisode, fetchRewindDay } from "@/lib/blog/api";
 import { imageObjectLd } from "@/lib/blog/imageLd";
+import { NOINDEX_ROBOTS } from "@/lib/blog/indexing";
 import TrackedLink from "@/components/TrackedLink";
 import RewindVault from "@/components/rewind/RewindVault";
 import RewindScrubber from "@/components/rewind/RewindScrubber";
@@ -86,6 +87,9 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // Per-game Rewind stubs publish for readers/social/app but stay out of the
+    // index (thin/templated) — the day-hubs carry the indexable Rewind. Phase 0.
+    robots: NOINDEX_ROBOTS,
     alternates: { canonical: `/rewind/${slug}` },
     openGraph: {
       title,

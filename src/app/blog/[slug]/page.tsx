@@ -19,6 +19,7 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
 import { publicPathForType } from "@/lib/blog/publicPath";
+import { isArticleBeatIndexable, NOINDEX_ROBOTS } from "@/lib/blog/indexing";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { youtubeId } from "@/lib/blog/youtube";
 import type { ArticleMedia } from "@/lib/blog/api";
@@ -68,6 +69,9 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // Commodity beats (deals, patch notes) publish for readers/social/app but
+    // stay out of Google's index — see lib/blog/indexing.ts (Phase 0).
+    robots: isArticleBeatIndexable(post.beat) ? undefined : NOINDEX_ROBOTS,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title,

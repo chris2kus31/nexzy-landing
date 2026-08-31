@@ -13,12 +13,12 @@ import {
   fetchGamesWithContent,
   fetchVideosForSitemap,
   fetchTags,
-  fetchRewindSlugs,
   fetchRewindDays,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 import { dateSlug } from "@/lib/rewind/era";
+import { isArticleBeatIndexable } from "@/lib/blog/indexing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -78,6 +78,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const { items, total } = await fetchPosts({ page, pageSize: PAGE_SIZE });
       for (const p of items) {
+        // Commodity beats (deals, patch notes) are noindex — keep them out of
+        // the sitemap so Google doesn't waste crawl budget on them (Phase 0).
+        if (!isArticleBeatIndexable(p.beat)) continue;
         articleEntries.push({
           url: `${SITE_URL}/blog/${p.slug}`,
           lastModified: p.updatedAt
@@ -168,21 +171,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
-  // Rewind episodes (/rewind/<slug>) — evergreen, best-effort.
-  const rewindEntries: MetadataRoute.Sitemap = [];
-  try {
-    const eps = await fetchRewindSlugs();
-    for (const e of eps) {
-      rewindEntries.push({
-        url: `${SITE_URL}/rewind/${e.slug}`,
-        lastModified: e.updatedAt ? new Date(e.updatedAt) : now,
-        changeFrequency: "weekly",
-        priority: 0.6,
-      });
-    }
-  } catch {
-    // keep whatever we already collected
-  }
+  // Rewind per-game episode stubs (/rewind/<slug>) are INTENTIONALLY excluded
+  // from the sitemap + carry noindex (thin, templated, commodity — Phase 0).
+  // The /rewind/on-this-day day-hubs below stay indexed (aggregated, stronger).
 
   // Rewind day-hubs (/rewind/day/<date>) — one per date with a published
   // episode, best-effort.
@@ -254,7 +245,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...evergreenEntries,
     ...chapterEntries,
     ...videoEntries,
-    ...rewindEntries,
     ...rewindDayEntries,
     ...gameHubEntries,
     ...authorEntries,
