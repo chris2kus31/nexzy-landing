@@ -295,14 +295,19 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Outcome of the last Scan now — "nothing happened" is never the answer.
+  const [runNote, setRunNote] = useState<string | null>(null);
 
   const load = useCallback(async (day?: string) => {
     setLoading(true);
     setErr(null);
     try {
-      setData(await getGrowthBrief(day));
+      const res = await getGrowthBrief(day);
+      setData(res);
+      return res;
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
+      return null;
     } finally {
       setLoading(false);
     }
@@ -321,14 +326,19 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
     void refreshList();
   }, [load, refreshList]);
 
-  const onRun = async () => {
+  const onRun = async (force = false) => {
     setRunning(true);
     setErr(null);
+    setRunNote(null);
+    const prevGeneratedAt = data?.generatedAt ?? null;
     try {
       // Kicks off a BACKGROUND run and returns immediately (no long-held
       // request → no 502). Then poll the status until it finishes, and load
       // the fresh brief.
-      await runGrowth();
+      const started = await runGrowth(force);
+      if (started.alreadyRunning) {
+        setRunNote("A scan is already running — waiting for it to finish…");
+      }
       setSelectedDay(null);
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const startedAt = Date.now();
@@ -344,8 +354,17 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
         if (!running) break;
         await sleep(4000);
       }
-      await load();
+      const fresh = await load();
       await refreshList();
+      // Say what actually happened — a silently reused brief looks like a
+      // broken button otherwise.
+      if (fresh?.generatedAt && fresh.generatedAt !== prevGeneratedAt) {
+        setRunNote("Done — fresh data collected and a new brief written.");
+      } else {
+        setRunNote(
+          "Done — fresh data collected. Today's brief already existed, so it was reused (no AI spend). Use “Rewrite brief” to regenerate it from the new numbers.",
+        );
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Run failed");
     } finally {
@@ -400,16 +419,30 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
             ))}
           </select>
           {isOwner && (
-            <Button
-              onClick={onRun}
-              loading={running}
-              size="sm"
-              bg="nexzy.blue"
-              color="white"
-              _hover={{ opacity: 0.9 }}
-            >
-              {running ? "Scanning…" : "Scan now"}
-            </Button>
+            <>
+              <Button
+                onClick={() => onRun(false)}
+                loading={running}
+                size="sm"
+                bg="nexzy.blue"
+                color="white"
+                _hover={{ opacity: 0.9 }}
+              >
+                {running ? "Scanning…" : "Scan now"}
+              </Button>
+              <Button
+                onClick={() => onRun(true)}
+                disabled={running}
+                size="sm"
+                variant="outline"
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: "whiteAlpha.100" }}
+                title="Collect fresh data AND regenerate today's brief (spends AI tokens)"
+              >
+                Rewrite brief
+              </Button>
+            </>
           )}
         </HStack>
       </Flex>
@@ -417,6 +450,11 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
       {err && (
         <Text color="red.300" fontSize="sm" mb={3}>
           {err}
+        </Text>
+      )}
+      {runNote && !err && (
+        <Text color="nexzy.lightBlue" fontSize="sm" mb={3}>
+          {runNote}
         </Text>
       )}
 

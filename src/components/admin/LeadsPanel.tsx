@@ -13,6 +13,7 @@ import {
   Link,
   Spinner,
   Textarea,
+  Input,
 } from "@chakra-ui/react";
 import {
   getVideoLeads,
@@ -22,6 +23,8 @@ import {
   getAudienceProfile,
   type AudienceProfile,
   type ContentSuggestion,
+  type LongFormVerdict,
+  type LongFormChapter,
 } from "@/lib/admin/client";
 import Paginated from "@/components/admin/Paginated";
 import YouTubePerformance, {
@@ -344,6 +347,213 @@ function topEntry(m?: Record<string, number>): [string, number] | null {
   return e.length ? e[0] : null;
 }
 
+/** mm:ss from a seconds count (long-form target length). */
+function fmtDuration(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
+const LF_VERDICT_COLOR: Record<string, string> = {
+  enough: "green",
+  "needs-notes": "yellow",
+  thin: "red",
+};
+
+/**
+ * LONG-FORM decision block on a video lead (flag-gated — only renders when the
+ * lead carries a longForm verdict). Shows: recommend/against + why, the
+ * grounding readout, the target length + hook, and the EDITABLE chapter
+ * timeline. The "Generate long-form" action is wired in Phase 3; here it's shown
+ * disabled so the plan is visible first. Purely additive — no effect elsewhere.
+ */
+function LongFormBlock({
+  lf,
+  chapters,
+  setChapters,
+}: {
+  lf: LongFormVerdict;
+  chapters: LongFormChapter[];
+  setChapters: (c: LongFormChapter[]) => void;
+}) {
+  const editCh = (i: number, patch: Partial<LongFormChapter>) =>
+    setChapters(chapters.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= chapters.length) return;
+    const next = chapters.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    setChapters(next);
+  };
+  const remove = (i: number) => setChapters(chapters.filter((_, j) => j !== i));
+  const total = chapters.reduce((s, c) => s + (c.seconds || 0), 0) + 25;
+
+  return (
+    <Box
+      border="1px solid"
+      borderColor={lf.recommended ? "purple.400" : "whiteAlpha.200"}
+      bg="whiteAlpha.50"
+      borderRadius="lg"
+      p={3}
+      mb={3}
+    >
+      <Flex align="center" gap={2} mb={1} wrap="wrap">
+        <Text
+          color="nexzy.white"
+          fontSize="11px"
+          fontWeight="800"
+          letterSpacing="0.06em"
+        >
+          LONG-FORM VIDEO
+        </Text>
+        <Badge
+          colorPalette={lf.recommended ? "purple" : "gray"}
+          variant="solid"
+          fontSize="10px"
+        >
+          {lf.recommended ? "Recommended" : "Not recommended"}
+        </Badge>
+        <Badge colorPalette="gray" variant="subtle" fontSize="10px">
+          {lf.confidence} confidence
+        </Badge>
+        <Badge
+          colorPalette={LF_VERDICT_COLOR[lf.grounding.verdict] ?? "gray"}
+          variant="subtle"
+          fontSize="10px"
+        >
+          grounding: {lf.grounding.verdict}
+        </Badge>
+        <Text color="whiteAlpha.600" fontSize="10px">
+          ~{fmtDuration(lf.targetSeconds)} target
+        </Text>
+      </Flex>
+
+      {lf.why && (
+        <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+          {lf.why}
+        </Text>
+      )}
+      <Text color="whiteAlpha.600" fontSize="10px" mb={2}>
+        Grounding readout: {lf.grounding.factsFound} facts ·{" "}
+        {lf.grounding.datedFacts} dated · {lf.grounding.sections} sections
+      </Text>
+
+      {lf.hook && (
+        <Box mb={2}>
+          <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
+            COLD-OPEN HOOK
+          </Text>
+          <Text color="nexzy.gray.100" fontSize="xs">
+            {lf.hook}
+          </Text>
+        </Box>
+      )}
+
+      <Flex align="center" justify="space-between" mb={1}>
+        <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
+          CHAPTER TIMELINE — edit / reorder before you generate
+        </Text>
+        <Text color="whiteAlpha.500" fontSize="10px">
+          {chapters.length} chapters · ~{fmtDuration(total)}
+        </Text>
+      </Flex>
+
+      <VStack align="stretch" gap={1.5}>
+        {chapters.map((c, i) => (
+          <Box
+            key={i}
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="md"
+            p={2}
+          >
+            <Flex align="center" gap={1} mb={1}>
+              <Text color="whiteAlpha.500" fontSize="10px" w="16px">
+                {i + 1}
+              </Text>
+              <Input
+                size="xs"
+                value={c.title}
+                placeholder="Chapter title"
+                bg="whiteAlpha.100"
+                borderColor="whiteAlpha.200"
+                color="nexzy.white"
+                onChange={(e) => editCh(i, { title: e.target.value })}
+              />
+              <Input
+                size="xs"
+                w="52px"
+                type="number"
+                value={c.seconds}
+                bg="whiteAlpha.100"
+                borderColor="whiteAlpha.200"
+                color="nexzy.white"
+                onChange={(e) =>
+                  editCh(i, { seconds: Number(e.target.value) || 0 })
+                }
+              />
+              <Button
+                size="xs"
+                variant="ghost"
+                color="whiteAlpha.700"
+                onClick={() => move(i, -1)}
+                disabled={i === 0}
+                aria-label="Move up"
+              >
+                ↑
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="whiteAlpha.700"
+                onClick={() => move(i, 1)}
+                disabled={i === chapters.length - 1}
+                aria-label="Move down"
+              >
+                ↓
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="red.300"
+                onClick={() => remove(i)}
+                aria-label="Remove chapter"
+              >
+                ✕
+              </Button>
+            </Flex>
+            <Textarea
+              size="xs"
+              value={c.covers}
+              placeholder="What this chapter covers (grounded in the article)"
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.200"
+              color="nexzy.gray.100"
+              rows={1}
+              onChange={(e) => editCh(i, { covers: e.target.value })}
+            />
+          </Box>
+        ))}
+      </VStack>
+
+      <Button
+        size="xs"
+        mt={2}
+        colorPalette="purple"
+        variant="solid"
+        disabled
+        title="Generation wires up in the next update"
+      >
+        Generate long-form
+      </Button>
+      <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
+        Review the timeline now — the “Generate long-form” action activates in
+        the next update.
+      </Text>
+    </Box>
+  );
+}
+
 /** One video lead: collapsible; set the per-platform plan, then Generate. */
 function LeadCard({
   s,
@@ -393,6 +603,14 @@ function LeadCard({
   );
   const [plan, setPlan] = useState<Record<string, string>>(rec);
   const setP = (pf: string, v: string) => setPlan((p) => ({ ...p, [pf]: v }));
+
+  // LONG-FORM (flag-gated): the verdict rides the lead payload. The proposed
+  // chapter timeline is editable locally so the operator can tweak it before
+  // generating (generation wiring lands in Phase 3). Absent → nothing renders.
+  const longForm = lead?.longForm;
+  const [lfChapters, setLfChapters] = useState<LongFormChapter[]>(
+    longForm?.chapters ?? [],
+  );
 
   const now = useMemo(() => new Date(), []);
   const postSlots = useMemo(() => {
@@ -614,6 +832,14 @@ function LeadCard({
             >
               Why: {lead.reason}
             </Text>
+          )}
+
+          {longForm && (
+            <LongFormBlock
+              lf={longForm}
+              chapters={lfChapters}
+              setChapters={setLfChapters}
+            />
           )}
 
           {lastError && (

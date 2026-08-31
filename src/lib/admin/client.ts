@@ -453,6 +453,30 @@ export interface PlatformKit {
   poll?: { question?: string; options?: string[] };
 }
 
+/** One proposed chapter in a long-form timeline (~30–35s each). */
+export interface LongFormChapter {
+  title: string;
+  covers: string;
+  seconds: number;
+}
+
+/** The long-form decision layer attached to a video lead (flag-gated). */
+export interface LongFormVerdict {
+  recommended: boolean;
+  confidence: "high" | "med" | "low";
+  why: string;
+  targetSeconds: number;
+  hook: string;
+  chapters: LongFormChapter[];
+  grounding: {
+    factsFound: number;
+    datedFacts: number;
+    sections: number;
+    verdict: "enough" | "thin" | "needs-notes";
+  };
+  version: string;
+}
+
 export interface ContentSuggestion {
   id: string;
   kind: string;
@@ -631,6 +655,10 @@ export interface ContentSuggestion {
           >;
         }
       >;
+      /** LONG-FORM VERDICT (present only when LONGFORM_LEAD_ENABLED is on): the
+       * decision layer — should this become a long-form video, why, a proposed
+       * chapter timeline, and the grounding readout. Absent → nothing renders. */
+      longForm?: LongFormVerdict;
     };
     // Suggested posting time carried from the lead onto the generated card.
     postTiming?: { when?: string; timing?: string };
@@ -1838,13 +1866,15 @@ export async function getGrowthMetrics(
   return handle(await fetch(`/api/newsroom/admin/growth/metrics?days=${days}`));
 }
 
-export async function runGrowth(): Promise<{
+export async function runGrowth(force?: boolean): Promise<{
   ok: boolean;
   started?: boolean;
   alreadyRunning?: boolean;
 }> {
   return handle(
-    await fetch("/api/newsroom/admin/growth/run", { method: "POST" }),
+    await fetch(`/api/newsroom/admin/growth/run${force ? "?force=true" : ""}`, {
+      method: "POST",
+    }),
   );
 }
 
