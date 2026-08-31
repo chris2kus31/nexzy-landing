@@ -120,6 +120,34 @@ function LeadCard({
             >
               {beatLabel(lead.beat)}
             </Box>
+            {lead.ownable === "none" && (
+              <Box
+                px={2}
+                py="1px"
+                borderRadius="md"
+                bg="whiteAlpha.100"
+                color="whiteAlpha.700"
+                fontSize="xs"
+                fontWeight="600"
+                title="Commodity beat — write for social / noindex"
+              >
+                Commodity
+              </Box>
+            )}
+            {lead.ownable && lead.ownable !== "none" && (
+              <Box
+                px={2}
+                py="1px"
+                borderRadius="md"
+                bg="green.600"
+                color="white"
+                fontSize="xs"
+                fontWeight="700"
+                title="Nexzy can add original value here"
+              >
+                Ownable
+              </Box>
+            )}
             {lead.suggestedTreatment === "review" && (
               <Box
                 px={2}
