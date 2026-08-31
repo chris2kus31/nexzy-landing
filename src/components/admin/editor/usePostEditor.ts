@@ -153,6 +153,10 @@ export function usePostEditor(id: string) {
     // The answer-first lede + the reader poll (chassis). Poll is stored only
     // when valid (question + >= 2 options); cleared to null otherwise.
     answerCapsule: nz(form!.answerCapsule),
+    // The author's "Nexzy's take" (empty clears to null) + the index override
+    // ("" = beat default → null, else explicit true/false).
+    authorTake: nz(form!.authorTake),
+    indexable: form!.indexable === "" ? null : form!.indexable === "true",
     poll: (() => {
       const q = poll.question.trim();
       const options = poll.options

@@ -94,6 +94,10 @@ export interface BlogPost {
   bodyMarkdown: string | null;
   // The answer-first lede ("the short version") + the reader poll (chassis).
   answerCapsule?: string | null;
+  // The author's bylined "Nexzy's take" (original value); index override
+  // (null = beat default, true = force index, false = noindex).
+  authorTake?: string | null;
+  indexable?: boolean | null;
   poll?: ArticlePoll | null;
   formatData?: ArticleFormatData | null;
   faq?: { q: string; a: string }[] | null;

@@ -94,6 +94,45 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
               />
             </Box>
             <Box>
+              <Text {...labelProps}>Your take (original value)</Text>
+              <Textarea
+                value={form.authorTake}
+                onChange={(e) => set("authorTake", e.target.value)}
+                rows={3}
+                placeholder="Your genuine take / verdict — the angle a reader can't get from IGN. Renders as a bylined 'take' block. Leave empty for commodity pieces."
+                {...inputProps}
+              />
+            </Box>
+            <Box>
+              <Text {...labelProps}>Search index</Text>
+              <Flex gap={2}>
+                {[
+                  { v: "", label: "Auto (beat)" },
+                  { v: "true", label: "Index" },
+                  { v: "false", label: "Noindex" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.v || "auto"}
+                    size="xs"
+                    variant={form.indexable === opt.v ? "solid" : "outline"}
+                    bg={form.indexable === opt.v ? "nexzy.blue" : undefined}
+                    color={
+                      form.indexable === opt.v ? "white" : "whiteAlpha.800"
+                    }
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() => set("indexable", opt.v)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </Flex>
+              <Text fontSize="xs" color="whiteAlpha.600" mt={1}>
+                Auto = beat default (deals / patch → noindex). Override to force
+                index or noindex. Noindex still publishes for social + app.
+              </Text>
+            </Box>
+            <Box>
               <Flex align="center" justify="space-between" mb={1}>
                 <Text {...labelProps} mb={0}>
                   Excerpt

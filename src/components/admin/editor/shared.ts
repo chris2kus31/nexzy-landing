@@ -9,6 +9,11 @@ export interface FormState {
   seoTitle: string;
   excerpt: string;
   answerCapsule: string;
+  // The author's "Nexzy's take" (original value).
+  authorTake: string;
+  // Index override as a select value: "" = beat default, "true" = index,
+  // "false" = noindex.
+  indexable: string;
   seoDescription: string;
   bodyMarkdown: string;
   imageAlt: string;
@@ -24,6 +29,8 @@ export function toForm(p: BlogPost): FormState {
     seoTitle: p.seoTitle || "",
     excerpt: p.excerpt || "",
     answerCapsule: p.answerCapsule || "",
+    authorTake: p.authorTake || "",
+    indexable: p.indexable == null ? "" : p.indexable ? "true" : "false",
     seoDescription: p.seoDescription || "",
     bodyMarkdown: p.bodyMarkdown || "",
     imageAlt: p.imageAlt || "",
