@@ -371,10 +371,16 @@ function LongFormBlock({
   lf,
   chapters,
   setChapters,
+  onGenerate,
+  busy,
+  generating,
 }: {
   lf: LongFormVerdict;
   chapters: LongFormChapter[];
   setChapters: (c: LongFormChapter[]) => void;
+  onGenerate: () => void;
+  busy: boolean;
+  generating: boolean;
 }) {
   const editCh = (i: number, patch: Partial<LongFormChapter>) =>
     setChapters(chapters.map((c, j) => (j === i ? { ...c, ...patch } : c)));
@@ -541,14 +547,16 @@ function LongFormBlock({
         mt={2}
         colorPalette="purple"
         variant="solid"
-        disabled
-        title="Generation wires up in the next update"
+        loading={busy}
+        disabled={busy || generating || chapters.length === 0}
+        onClick={onGenerate}
       >
-        Generate long-form
+        {generating ? "Generating…" : "Generate long-form"}
       </Button>
       <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
-        Review the timeline now — the “Generate long-form” action activates in
-        the next update.
+        Builds the full narrated long-form from this timeline, in the chosen
+        voice — it lands under Suggestions. Editing the timeline above is
+        applied when you generate.
       </Text>
     </Box>
   );
@@ -669,6 +677,28 @@ function LeadCard({
         steer.trim() || undefined,
         undefined,
         plan,
+      );
+      await reload();
+    } catch {
+      /* leave the lead in place so you can retry */
+    } finally {
+      setBusy(null);
+    }
+  };
+  // Generate a LONG-FORM video from the (edited) chapter timeline. Separate from
+  // the per-platform "Generate N cards" path — no plan, format 'long', and it
+  // passes the reviewed chapters so the writer follows them exactly.
+  const generateLong = async () => {
+    setBusy("gen");
+    try {
+      await generateFromLead(
+        s.id,
+        writer,
+        "long",
+        steer.trim() || undefined,
+        undefined,
+        undefined,
+        lfChapters,
       );
       await reload();
     } catch {
@@ -839,6 +869,9 @@ function LeadCard({
               lf={longForm}
               chapters={lfChapters}
               setChapters={setLfChapters}
+              onGenerate={generateLong}
+              busy={busy === "gen"}
+              generating={generating}
             />
           )}
 

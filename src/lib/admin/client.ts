@@ -3124,6 +3124,7 @@ export async function generateFromLead(
   steer?: string,
   xFormat?: string,
   plan?: Record<string, string>,
+  longFormChapters?: LongFormChapter[],
 ): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/generate-from-lead`, {
@@ -3135,6 +3136,9 @@ export async function generateFromLead(
         ...(steer ? { steer } : {}),
         ...(xFormat ? { xFormat } : {}),
         ...(plan ? { plan } : {}),
+        ...(longFormChapters && longFormChapters.length
+          ? { longFormChapters }
+          : {}),
       }),
     }),
   );
