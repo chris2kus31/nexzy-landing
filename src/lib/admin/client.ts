@@ -1484,6 +1484,9 @@ export async function runCountdown(input: {
   template: string;
   count?: number;
   writer?: string;
+  angle?: string;
+  context?: string;
+  games?: string;
 }): Promise<BlogPost | null> {
   return handle(
     await fetch("/api/newsroom/admin/content/countdown/run", {

@@ -8,6 +8,7 @@ import {
   Text,
   Button,
   Input,
+  Textarea,
   NativeSelect,
 } from "@chakra-ui/react";
 import { FiTrendingUp } from "react-icons/fi";
@@ -46,31 +47,47 @@ const TEMPLATES: { key: string; label: string; hint: string }[] = [
 const WRITERS = ["Chuy", "Eli", "Leslie"];
 
 /**
- * Nexzy Countdown — a WatchMojo-style ranked Top-N video, topic-first. Pick a
- * template, a count, and a writer, and Generate: the DB fills it with real games
- * ranked by the metric that fits the topic (hype / rating / release), and the
- * writer counts them down. Lands as a long-form video lead in Content Studio →
- * Video Leads. Real games only, never fabricated.
+ * Nexzy Countdown — a WatchMojo-style ranked Top-N video. Two modes:
+ *  - Topic mode: pick a template + count and the DB fills it with real games
+ *    ranked by the fitting metric (hype / rating / release).
+ *  - Bring-your-own mode: paste your own games (2+ lines) + an angle + context;
+ *    the DB/template are skipped and it's built from your list.
+ * Either way it creates a DRAFT article; publishing it mints the video lead in
+ * Content Studio → Video Leads (where you Generate the script).
  */
 export default function NexzyCountdownPanel({ onRan }: { onRan?: () => void }) {
   const [template, setTemplate] = useState(TEMPLATES[0].key);
   const [count, setCount] = useState(10);
   const [writer, setWriter] = useState(WRITERS[0]);
+  const [angle, setAngle] = useState("");
+  const [context, setContext] = useState("");
+  const [games, setGames] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const active = TEMPLATES.find((t) => t.key === template);
+  const byoCount = games.split(/\r?\n/).filter((l) => l.trim()).length;
+  const byo = byoCount >= 2;
 
   const submit = async () => {
     setBusy(true);
     setMsg(null);
     try {
-      const lead = await runCountdown({ template, count, writer });
+      const lead = await runCountdown({
+        template,
+        count,
+        writer,
+        angle: angle.trim() || undefined,
+        context: context.trim() || undefined,
+        games: games.trim() || undefined,
+      });
       setMsg({
         ok: !!lead,
         text: lead
-          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads, where you Generate the ranked countdown script (real games, counted down to #1)."
-          : "Not enough games with the needed data for this topic yet (the IGDB enrichment backfill fills hype/ratings in). Try another template.",
+          ? "Draft created — find it in the Review queue. Publish it and it becomes a video lead in Content Studio → Video Leads, where you Generate the ranked countdown script (counted down to #1)."
+          : byo
+            ? "Need at least 2 games in your list to build a countdown."
+            : "Not enough games with the needed data for this topic yet (the IGDB enrichment backfill fills hype/ratings in). Try another template, or paste your own list below.",
       });
       onRan?.();
     } catch (e) {
@@ -96,16 +113,20 @@ export default function NexzyCountdownPanel({ onRan }: { onRan?: () => void }) {
         Nexzy Countdown
       </Heading>
       <Text color="nexzy.gray.100" fontSize="sm" mb={4}>
-        A WatchMojo-style ranked Top-N video. Pick a topic; the games DB fills
-        it with{" "}
+        A WatchMojo-style ranked Top-N video. Pick a topic and the games DB
+        fills it with{" "}
         <Box as="span" color="nexzy.white">
           real games
         </Box>{" "}
-        ranked by the metric that fits (hype / rating / release). Lands in{" "}
+        ranked by the metric that fits — or paste your{" "}
         <Box as="span" color="nexzy.white">
-          Content Studio → Video Leads
+          own list + angle
+        </Box>{" "}
+        below. Creates a{" "}
+        <Box as="span" color="nexzy.white">
+          draft article
         </Box>
-        .
+        ; publish it and it becomes a video lead in Content Studio.
       </Text>
 
       <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
@@ -176,6 +197,67 @@ export default function NexzyCountdownPanel({ onRan }: { onRan?: () => void }) {
         </Box>
       </Flex>
 
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Angle{" "}
+        <Box as="span" color="whiteAlpha.500">
+          (optional — the take the video leads with; also used as the title)
+        </Box>
+      </Text>
+      <Input
+        size="sm"
+        mb={3}
+        placeholder="e.g. The games actually worth your September"
+        value={angle}
+        onChange={(e) => setAngle(e.currentTarget.value)}
+        color="nexzy.white"
+        bg="whiteAlpha.100"
+        borderColor="whiteAlpha.300"
+      />
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Context / notes{" "}
+        <Box as="span" color="whiteAlpha.500">
+          (optional — extra facts the writer may use)
+        </Box>
+      </Text>
+      <Textarea
+        size="sm"
+        mb={3}
+        rows={3}
+        placeholder="Anything the script should know — release windows, why each pick matters, tone…"
+        value={context}
+        onChange={(e) => setContext(e.currentTarget.value)}
+        color="nexzy.white"
+        bg="whiteAlpha.100"
+        borderColor="whiteAlpha.300"
+      />
+
+      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+        Your games{" "}
+        <Box as="span" color="whiteAlpha.500">
+          (optional — one per line, “Name — one-line note”. 2+ lines overrides
+          the topic + DB and builds from YOUR list, #1 = first line)
+        </Box>
+      </Text>
+      <Textarea
+        size="sm"
+        mb={1}
+        rows={5}
+        placeholder={
+          "Silksong — the wait is finally over\nHades II — 1.0 at last\nGhost of Yotei — Sucker Punch's next"
+        }
+        value={games}
+        onChange={(e) => setGames(e.currentTarget.value)}
+        color="nexzy.white"
+        bg="whiteAlpha.100"
+        borderColor="whiteAlpha.300"
+      />
+      <Text fontSize="xs" mb={4} color={byo ? "purple.300" : "whiteAlpha.500"}>
+        {byo
+          ? `Bring-your-own mode: ${byoCount} games — the topic + DB pull are ignored.`
+          : "Leave blank to auto-fill from the topic above."}
+      </Text>
+
       <Flex justify="flex-end">
         <Button
           size="sm"
@@ -184,7 +266,8 @@ export default function NexzyCountdownPanel({ onRan }: { onRan?: () => void }) {
           loading={busy}
           loadingText="Generating…"
         >
-          <FiTrendingUp /> Generate countdown
+          <FiTrendingUp />{" "}
+          {byo ? "Generate from my list" : "Generate countdown"}
         </Button>
       </Flex>
 
