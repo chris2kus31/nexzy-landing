@@ -369,98 +369,23 @@ function LeadCard({
           >
             {genImage ? "☑" : "☐"} Generate AI image
           </Box>
-          <Box w="full">
-            <Box
-              as="button"
-              onClick={() => setShowTake((v) => !v)}
-              fontSize="11px"
-              fontWeight="600"
-              color="#FFD866"
-              textAlign="left"
-            >
-              {showTake ? "▾" : "▸"} Add your take (original value)
-            </Box>
-            {showTake && (
-              <VStack align="stretch" gap={2} mt={2}>
-                {!analysis ? (
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    color="nexzy.gray.100"
-                    borderColor="whiteAlpha.300"
-                    _hover={{ bg: "whiteAlpha.100" }}
-                    onClick={runAnalyze}
-                    loading={analyzing}
-                  >
-                    See competing angles
-                  </Button>
-                ) : (
-                  <Box
-                    bg="whiteAlpha.50"
-                    borderRadius="md"
-                    p={2}
-                    fontSize="xs"
-                    color="nexzy.gray.100"
-                  >
-                    {(analysis.differentiation?.clusters ?? []).map((c, i) => (
-                      <Text key={i} mb={1}>
-                        <b>{c.angle}:</b>{" "}
-                        {(c.outlets ?? []).map((o) => o.name).join(", ")}
-                      </Text>
-                    ))}
-                    {(analysis.differentiation?.gap ?? []).length > 0 && (
-                      <Text color="#FFD866" mb={1}>
-                        Unclaimed:{" "}
-                        {(analysis.differentiation?.gap ?? []).join("; ")}
-                      </Text>
-                    )}
-                    {(analysis.angleSuggestions ?? []).length > 0 ? (
-                      <VStack align="stretch" gap={1} mt={1}>
-                        {(analysis.angleSuggestions ?? []).map((s, i) => (
-                          <Box
-                            key={i}
-                            as="button"
-                            textAlign="left"
-                            onClick={() => setAngle(s.angle)}
-                            color="nexzy.lightBlue"
-                          >
-                            → {s.angle}{" "}
-                            <Text as="span" color="whiteAlpha.600">
-                              ({s.well}) — {s.whyDifferent}
-                            </Text>
-                          </Box>
-                        ))}
-                      </VStack>
-                    ) : (
-                      <Text color="whiteAlpha.600">
-                        No ownable angle — commodity (write for social /
-                        noindex).
-                      </Text>
-                    )}
-                  </Box>
-                )}
-                <Input
-                  value={angle}
-                  onChange={(e) => setAngle(e.target.value)}
-                  placeholder="Angle (optional) — the different approach you're taking"
-                  size="sm"
-                  bg="whiteAlpha.50"
-                  color="nexzy.white"
-                  borderColor="whiteAlpha.300"
-                  _placeholder={{ color: "whiteAlpha.500" }}
-                />
-                <Textarea
-                  value={take}
-                  onChange={(e) => setTake(e.target.value)}
-                  rows={3}
-                  placeholder={`Your take — rough notes are fine, we'll shape it into ${author}'s voice. Leave empty for commodity news.`}
-                  bg="whiteAlpha.50"
-                  color="nexzy.white"
-                  borderColor="whiteAlpha.300"
-                  _placeholder={{ color: "whiteAlpha.500" }}
-                />
-              </VStack>
-            )}
+          <Box
+            as="button"
+            onClick={() => setShowTake((v) => !v)}
+            w="full"
+            textAlign="center"
+            fontSize="xs"
+            fontWeight="600"
+            color="#FFD866"
+            borderWidth="1px"
+            borderColor="rgba(255,216,102,0.35)"
+            borderRadius="md"
+            py="6px"
+            _hover={{ bg: "rgba(255,216,102,0.08)" }}
+          >
+            {showTake
+              ? "▾ Hide take workspace"
+              : "✎ Add your take (original value)"}
           </Box>
           <Button
             size="sm"
@@ -485,6 +410,124 @@ function LeadCard({
           </Button>
         </VStack>
       </Flex>
+      {showTake && (
+        <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Flex
+            direction={{ base: "column", lg: "row" }}
+            gap={5}
+            align="stretch"
+          >
+            {/* Competing angles */}
+            <Box flex={1} minW={0}>
+              <Text
+                fontSize="11px"
+                color="#FFD866"
+                fontWeight="700"
+                mb={2}
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Competing angles
+              </Text>
+              {!analysis ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  color="nexzy.gray.100"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  onClick={runAnalyze}
+                  loading={analyzing}
+                >
+                  See competing angles
+                </Button>
+              ) : (
+                <VStack
+                  align="stretch"
+                  gap={2}
+                  fontSize="sm"
+                  color="nexzy.gray.100"
+                  lineHeight="1.5"
+                >
+                  {(analysis.differentiation?.clusters ?? []).map((c, i) => (
+                    <Text key={i}>
+                      <Text as="span" color="nexzy.white" fontWeight="600">
+                        {c.angle}:
+                      </Text>{" "}
+                      {(c.outlets ?? []).map((o) => o.name).join(", ")}
+                    </Text>
+                  ))}
+                  {(analysis.differentiation?.gap ?? []).length > 0 && (
+                    <Text color="#FFD866">
+                      Unclaimed:{" "}
+                      {(analysis.differentiation?.gap ?? []).join("; ")}
+                    </Text>
+                  )}
+                  {(analysis.angleSuggestions ?? []).length > 0 ? (
+                    <VStack align="stretch" gap={2} mt={1}>
+                      {(analysis.angleSuggestions ?? []).map((s, i) => (
+                        <Box
+                          key={i}
+                          as="button"
+                          textAlign="left"
+                          onClick={() => setAngle(s.angle)}
+                          color="nexzy.lightBlue"
+                          _hover={{ textDecoration: "underline" }}
+                        >
+                          → {s.angle}{" "}
+                          <Text as="span" color="whiteAlpha.600">
+                            ({s.well}) — {s.whyDifferent}
+                          </Text>
+                        </Box>
+                      ))}
+                      <Text color="whiteAlpha.500" fontSize="xs">
+                        Click an angle to drop it into your take.
+                      </Text>
+                    </VStack>
+                  ) : (
+                    <Text color="whiteAlpha.600">
+                      No ownable angle — commodity (write for social / noindex).
+                    </Text>
+                  )}
+                </VStack>
+              )}
+            </Box>
+            {/* Your take */}
+            <Box flex={1} minW={0}>
+              <Text
+                fontSize="11px"
+                color="#FFD866"
+                fontWeight="700"
+                mb={2}
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Your take (original value)
+              </Text>
+              <Input
+                value={angle}
+                onChange={(e) => setAngle(e.target.value)}
+                placeholder="Angle (optional) — the different approach you're taking"
+                mb={2}
+                bg="whiteAlpha.50"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _placeholder={{ color: "whiteAlpha.500" }}
+              />
+              <Textarea
+                value={take}
+                onChange={(e) => setTake(e.target.value)}
+                rows={8}
+                placeholder={`Your take — rough notes are fine, we'll shape it into ${author}'s voice. Leave empty for commodity news.`}
+                bg="whiteAlpha.50"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _placeholder={{ color: "whiteAlpha.500" }}
+              />
+            </Box>
+          </Flex>
+        </Box>
+      )}
     </Box>
   );
 }
