@@ -759,6 +759,99 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
         })}
       </HStack>
 
+      {/* Tag legend — why a lead is Commodity / Ownable / untagged. */}
+      <Box
+        border="1px solid"
+        borderColor="whiteAlpha.200"
+        borderRadius="lg"
+        bg="whiteAlpha.50"
+        px={4}
+        py={3}
+        mb={4}
+      >
+        <Text
+          fontSize="11px"
+          color="#FFD866"
+          fontWeight="700"
+          textTransform="uppercase"
+          letterSpacing="wide"
+          mb={2}
+        >
+          What the tags mean
+        </Text>
+        <VStack align="stretch" gap={2} fontSize="sm">
+          <HStack align="flex-start" gap={3}>
+            <Box
+              px={2}
+              py="1px"
+              borderRadius="md"
+              bg="whiteAlpha.100"
+              color="whiteAlpha.700"
+              fontSize="xs"
+              fontWeight="600"
+              flexShrink={0}
+              mt="1px"
+            >
+              Commodity
+            </Box>
+            <Text color="nexzy.gray.100">
+              Everyone will run this story the same way — no fresh angle. Write
+              it for readers/social, but it stays{" "}
+              <Text as="span" color="nexzy.white" fontWeight="600">
+                out of Google
+              </Text>
+              . Auto-set for <b>Deals</b> + <b>Patch notes</b>, or set when the
+              angle check finds nothing ownable.
+            </Text>
+          </HStack>
+          <HStack align="flex-start" gap={3}>
+            <Box
+              px={2}
+              py="1px"
+              borderRadius="md"
+              bg="green.600"
+              color="white"
+              fontSize="xs"
+              fontWeight="700"
+              flexShrink={0}
+              mt="1px"
+            >
+              Ownable
+            </Box>
+            <Text color="nexzy.gray.100">
+              There's an angle only Nexzy can add. Worth a real take →{" "}
+              <Text as="span" color="nexzy.white" fontWeight="600">
+                index it in Google
+              </Text>
+              . Set after you click <b>See competing angles</b> and the check
+              finds a gap.
+            </Text>
+          </HStack>
+          <HStack align="flex-start" gap={3}>
+            <Box
+              px={2}
+              py="1px"
+              borderRadius="md"
+              bg="transparent"
+              border="1px dashed"
+              borderColor="whiteAlpha.400"
+              color="whiteAlpha.600"
+              fontSize="xs"
+              fontWeight="600"
+              flexShrink={0}
+              mt="1px"
+            >
+              no tag
+            </Box>
+            <Text color="nexzy.gray.100">
+              Not judged yet. News leads start blank because deciding costs an
+              AI call — click <b>See competing angles</b> on the card and it
+              becomes Commodity or Ownable.
+            </Text>
+          </HStack>
+        </VStack>
+      </Box>
+
       {msg && (
         <Text color="nexzy.lightBlue" fontSize="sm" mb={3}>
           {msg}
