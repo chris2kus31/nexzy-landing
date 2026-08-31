@@ -80,7 +80,11 @@ function LeadCard({
   const [showTake, setShowTake] = useState(false);
   const [take, setTake] = useState("");
   const [angle, setAngle] = useState("");
-  const [analysis, setAnalysis] = useState<Lead | null>(null);
+  // Pre-load the angle map if this lead was already analyzed (it's saved on the
+  // brief + returned in the list), so a refresh doesn't hide it behind the button.
+  const [analysis, setAnalysis] = useState<Lead | null>(
+    lead.differentiation ? lead : null,
+  );
   const [analyzing, setAnalyzing] = useState(false);
   const runAnalyze = async () => {
     setAnalyzing(true);
