@@ -57,6 +57,14 @@ export default function EditorReport({
   const formatChecklist = Array.isArray(report.formatChecklist)
     ? (report.formatChecklist as { module: string; status: string }[])
     : [];
+  // Phase 3 — original-value gate + index recommendation (advisory).
+  const originalValue = (report.originalValue ?? null) as {
+    takeExpected: boolean;
+    takePresent: boolean;
+    takeSubstantive: boolean;
+    qcFlags: string[];
+    indexRecommendation: "index" | "noindex";
+  } | null;
 
   // Guide Editor extras (guides only). Absent on news articles.
   const isGuideEditor = report.agent === "guide-editor";
@@ -225,6 +233,89 @@ export default function EditorReport({
               );
             })}
           </Flex>
+        </Box>
+      )}
+
+      {/* Original value + index recommendation (Phase 3, advisory) */}
+      {originalValue && (
+        <Box mb={4}>
+          <Text
+            fontSize="10px"
+            color="nexzy.gray.100"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            mb={1.5}
+          >
+            Original value + index
+          </Text>
+          <Flex
+            gap={2}
+            flexWrap="wrap"
+            mb={originalValue.qcFlags.length ? 2 : 0}
+          >
+            {originalValue.takeExpected && (
+              <Box
+                bg={`${originalValue.takePresent ? "green" : "red"}.400/10`}
+                border="1px solid"
+                borderColor={`${originalValue.takePresent ? "green" : "red"}.400/25`}
+                borderRadius="md"
+                px={2.5}
+                py={1}
+              >
+                <Text
+                  fontSize="xs"
+                  color={`${originalValue.takePresent ? "green" : "red"}.300`}
+                  fontWeight="600"
+                >
+                  {originalValue.takePresent ? "✓" : "✕"} Take present
+                </Text>
+              </Box>
+            )}
+            {originalValue.takePresent && (
+              <Box
+                bg={`${originalValue.takeSubstantive ? "green" : "orange"}.400/10`}
+                border="1px solid"
+                borderColor={`${originalValue.takeSubstantive ? "green" : "orange"}.400/25`}
+                borderRadius="md"
+                px={2.5}
+                py={1}
+              >
+                <Text
+                  fontSize="xs"
+                  color={`${originalValue.takeSubstantive ? "green" : "orange"}.300`}
+                  fontWeight="600"
+                >
+                  {originalValue.takeSubstantive ? "✓" : "•"} Substantive
+                </Text>
+              </Box>
+            )}
+            <Box
+              bg={`${originalValue.indexRecommendation === "index" ? "green" : "gray"}.400/10`}
+              border="1px solid"
+              borderColor={`${originalValue.indexRecommendation === "index" ? "green" : "gray"}.400/25`}
+              borderRadius="md"
+              px={2.5}
+              py={1}
+            >
+              <Text
+                fontSize="xs"
+                color={`${originalValue.indexRecommendation === "index" ? "green" : "gray"}.300`}
+                fontWeight="600"
+                textTransform="capitalize"
+              >
+                Recommend: {originalValue.indexRecommendation}
+              </Text>
+            </Box>
+          </Flex>
+          {originalValue.qcFlags.length > 0 && (
+            <VStack align="stretch" gap={1}>
+              {originalValue.qcFlags.map((q, i) => (
+                <Text key={i} fontSize="xs" color="red.300" lineHeight="1.4">
+                  ⚠ {q}
+                </Text>
+              ))}
+            </VStack>
+          )}
         </Box>
       )}
 
