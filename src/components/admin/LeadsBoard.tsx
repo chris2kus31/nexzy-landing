@@ -18,6 +18,7 @@ import {
   getLeads,
   runDesk,
   sendLeadDigest,
+  analyzeLead,
   writeLead,
   writeLeadReview,
   skipLead,
@@ -79,6 +80,18 @@ function LeadCard({
   const [showTake, setShowTake] = useState(false);
   const [take, setTake] = useState("");
   const [angle, setAngle] = useState("");
+  const [analysis, setAnalysis] = useState<Lead | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const runAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      setAnalysis(await analyzeLead(lead.id));
+    } catch {
+      // best-effort — leave the angle map hidden on failure
+    } finally {
+      setAnalyzing(false);
+    }
+  };
   const hot = lead.trendScore >= 60;
   return (
     <Box
@@ -337,6 +350,63 @@ function LeadCard({
             </Box>
             {showTake && (
               <VStack align="stretch" gap={2} mt={2}>
+                {!analysis ? (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={runAnalyze}
+                    loading={analyzing}
+                  >
+                    See competing angles
+                  </Button>
+                ) : (
+                  <Box
+                    bg="whiteAlpha.50"
+                    borderRadius="md"
+                    p={2}
+                    fontSize="xs"
+                    color="nexzy.gray.100"
+                  >
+                    {(analysis.differentiation?.clusters ?? []).map((c, i) => (
+                      <Text key={i} mb={1}>
+                        <b>{c.angle}:</b>{" "}
+                        {(c.outlets ?? []).map((o) => o.name).join(", ")}
+                      </Text>
+                    ))}
+                    {(analysis.differentiation?.gap ?? []).length > 0 && (
+                      <Text color="#FFD866" mb={1}>
+                        Unclaimed:{" "}
+                        {(analysis.differentiation?.gap ?? []).join("; ")}
+                      </Text>
+                    )}
+                    {(analysis.angleSuggestions ?? []).length > 0 ? (
+                      <VStack align="stretch" gap={1} mt={1}>
+                        {(analysis.angleSuggestions ?? []).map((s, i) => (
+                          <Box
+                            key={i}
+                            as="button"
+                            textAlign="left"
+                            onClick={() => setAngle(s.angle)}
+                            color="nexzy.lightBlue"
+                          >
+                            → {s.angle}{" "}
+                            <Text as="span" color="whiteAlpha.600">
+                              ({s.well}) — {s.whyDifferent}
+                            </Text>
+                          </Box>
+                        ))}
+                      </VStack>
+                    ) : (
+                      <Text color="whiteAlpha.600">
+                        No ownable angle — commodity (write for social /
+                        noindex).
+                      </Text>
+                    )}
+                  </Box>
+                )}
                 <Input
                   value={angle}
                   onChange={(e) => setAngle(e.target.value)}

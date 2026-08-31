@@ -1254,6 +1254,15 @@ export interface Lead {
   sourceCount: number;
   latestSourceDate: string | null;
   sources: { name: string; url: string }[] | null;
+  // Phase 2 — competitive analysis, populated on demand via analyzeLead().
+  ownable?: "data" | "expertise" | "connection" | "none" | null;
+  differentiation?: {
+    clusters: { angle: string; outlets: { name: string; url: string }[] }[];
+    gap: string[];
+  } | null;
+  angleSuggestions?:
+    | { angle: string; well: string; whyDifferent: string }[]
+    | null;
   confidenceFacts: "high" | "medium" | "low" | null;
   status: string;
   suggestedAuthor?: string;
@@ -1286,6 +1295,18 @@ export async function sendLeadDigest(): Promise<{
 }
 
 /** "Write this": assign a lead to the writer, optionally choosing the author. */
+/** Phase 2 — competitive angle map + ownable angle suggestions (owner-only;
+ *  cached on the brief, so re-opening a lead is free unless force). */
+export async function analyzeLead(id: string, force = false): Promise<Lead> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    }),
+  );
+}
+
 export async function writeLead(
   id: string,
   author?: string,
