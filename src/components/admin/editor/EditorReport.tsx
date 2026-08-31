@@ -253,7 +253,7 @@ export default function EditorReport({
             flexWrap="wrap"
             mb={originalValue.qcFlags.length ? 2 : 0}
           >
-            {originalValue.takeExpected && (
+            {(originalValue.takeExpected || originalValue.takePresent) && (
               <Box
                 bg={`${originalValue.takePresent ? "green" : "red"}.400/10`}
                 border="1px solid"
