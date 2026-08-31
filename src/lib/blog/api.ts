@@ -29,6 +29,10 @@ export interface PublicPost {
   // The answer-first lede ("the short version"). Null on legacy rows; the
   // article page renders the AnswerCapsule only when present.
   answerCapsule?: string | null;
+  // The author's bylined "Nexzy's take" (original value). Null when none.
+  authorTake?: string | null;
+  // Whether Google may index this page (null = use the beat default).
+  indexable?: boolean | null;
   // Beat-specific structured module data (Deals price box, Patch breakdown).
   formatData?: {
     deal?: {

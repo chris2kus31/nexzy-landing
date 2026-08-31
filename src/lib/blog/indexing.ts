@@ -24,6 +24,18 @@ export function isArticleBeatIndexable(beat?: string | null): boolean {
 }
 
 /**
+ * Resolve a post's index posture. The explicit per-article flag wins; `null`
+ * (legacy rows + anything the API hasn't set) falls back to the beat default.
+ * This is the single check robots + sitemap use for /blog + evergreen types.
+ */
+export function isPostIndexable(post: {
+  beat?: string | null;
+  indexable?: boolean | null;
+}): boolean {
+  return post.indexable ?? isArticleBeatIndexable(post.beat);
+}
+
+/**
  * Per-game Rewind episode stubs (/rewind/<slug>) are noindex — thin, templated,
  * near-duplicate. The /rewind/on-this-day day-hubs stay indexed (aggregated,
  * stronger). Flip to true to re-index the stubs.

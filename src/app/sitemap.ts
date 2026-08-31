@@ -18,7 +18,7 @@ import {
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 import { dateSlug } from "@/lib/rewind/era";
-import { isArticleBeatIndexable } from "@/lib/blog/indexing";
+import { isPostIndexable } from "@/lib/blog/indexing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -78,9 +78,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const { items, total } = await fetchPosts({ page, pageSize: PAGE_SIZE });
       for (const p of items) {
-        // Commodity beats (deals, patch notes) are noindex — keep them out of
-        // the sitemap so Google doesn't waste crawl budget on them (Phase 0).
-        if (!isArticleBeatIndexable(p.beat)) continue;
+        // Noindex articles (commodity beats, or an explicit per-article flag)
+        // are kept out of the sitemap so Google doesn't waste crawl budget.
+        if (!isPostIndexable(p)) continue;
         articleEntries.push({
           url: `${SITE_URL}/blog/${p.slug}`,
           lastModified: p.updatedAt

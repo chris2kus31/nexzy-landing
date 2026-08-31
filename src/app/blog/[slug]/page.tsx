@@ -19,7 +19,7 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
 import { slugifyTag } from "@/lib/blog/tags";
 import { publicPathForType } from "@/lib/blog/publicPath";
-import { isArticleBeatIndexable, NOINDEX_ROBOTS } from "@/lib/blog/indexing";
+import { isPostIndexable, NOINDEX_ROBOTS } from "@/lib/blog/indexing";
 import { getAuthorByName } from "@/lib/blog/authors";
 import { youtubeId } from "@/lib/blog/youtube";
 import type { ArticleMedia } from "@/lib/blog/api";
@@ -34,6 +34,7 @@ import MediaGallery from "@/components/blog/MediaGallery";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import AnswerCapsule from "@/components/blog/AnswerCapsule";
+import AuthorTake from "@/components/blog/AuthorTake";
 import NewsletterSignup from "@/components/blog/NewsletterSignup";
 import ContentComments from "@/components/comments/ContentComments";
 import DealBlock from "@/components/blog/DealBlock";
@@ -69,9 +70,9 @@ export async function generateMetadata({
   return {
     title,
     description,
-    // Commodity beats (deals, patch notes) publish for readers/social/app but
-    // stay out of Google's index — see lib/blog/indexing.ts (Phase 0).
-    robots: isArticleBeatIndexable(post.beat) ? undefined : NOINDEX_ROBOTS,
+    // Index posture: explicit per-article flag wins, else the beat default —
+    // noindex pages still publish for readers/social/app. See lib/blog/indexing.
+    robots: isPostIndexable(post) ? undefined : NOINDEX_ROBOTS,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title,
@@ -292,6 +293,7 @@ export default async function BlogArticlePage({
         )}
 
         <AnswerCapsule text={post.answerCapsule} />
+        <AuthorTake text={post.authorTake} author={post.author} />
 
         <Box mb={6}>
           <Byline
