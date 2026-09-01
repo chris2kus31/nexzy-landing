@@ -436,11 +436,10 @@ export default async function BlogArticlePage({
             </Heading>
             <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
               {post.games.map((g) => (
-                <Link
-                  as={NextLink}
+                <NextLink
                   key={g.id}
                   href={`/games/${g.slug}`}
-                  _hover={{ textDecoration: "none" }}
+                  style={{ textDecoration: "none" }}
                 >
                   <Box
                     position="relative"
@@ -464,15 +463,11 @@ export default async function BlogArticlePage({
                           width: "100%",
                           height: "100%",
                           objectFit: "cover",
-                          opacity: 0.45,
+                          opacity: 0.4,
                         }}
                       />
                     )}
-                    <Box
-                      position="absolute"
-                      inset={0}
-                      bgGradient="linear(to-t, blackAlpha.800, blackAlpha.300)"
-                    />
+                    <Box position="absolute" inset={0} bg="blackAlpha.600" />
                     <Flex position="absolute" inset={0} align="flex-end" p={3}>
                       <Text
                         color="white"
@@ -484,7 +479,7 @@ export default async function BlogArticlePage({
                       </Text>
                     </Flex>
                   </Box>
-                </Link>
+                </NextLink>
               ))}
             </SimpleGrid>
           </Box>
