@@ -111,8 +111,9 @@ export default function IndexingRitualPanel() {
         `Hid ${hidden} news article${hidden === 1 ? "" : "s"} from Google. They'll drop out of the sitemap within ~5 min and deindex on Google's next crawl.`,
       );
       setConfirmHide(false);
-      const s = await getBacklogNewsStatus().catch(() => null);
-      setNewsStatus(s);
+      // Refresh both the count AND today's batch — the server just recomputed
+      // the batch to drop the pages we hid, so reload it here too.
+      load();
     } catch (e) {
       setHideMsg(e instanceof Error ? e.message : "Failed to hide");
     } finally {
