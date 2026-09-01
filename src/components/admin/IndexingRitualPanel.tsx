@@ -9,7 +9,7 @@
 // only sanctioned per-URL accelerator (~10/day, manual by design).
 // ============================================
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   Box,
   Button,
@@ -87,6 +87,9 @@ export default function IndexingRitualPanel() {
   const [hiding, setHiding] = useState(false);
   const [hideMsg, setHideMsg] = useState("");
 
+  // Plain-language reference modal ("How this works").
+  const [showHelp, setShowHelp] = useState(false);
+
   const load = useCallback(() => {
     getIndexingRitual()
       .then(setData)
@@ -146,9 +149,22 @@ export default function IndexingRitualPanel() {
   return (
     <Stack gap={5} maxW="3xl">
       <Box>
-        <Heading size="md" color="nexzy.white" mb={1}>
-          Daily indexing ritual {done ? "— done for today ✓" : "— not done yet"}
-        </Heading>
+        <Flex align="center" gap={3} mb={1} wrap="wrap">
+          <Heading size="md" color="nexzy.white">
+            Daily indexing ritual{" "}
+            {done ? "— done for today ✓" : "— not done yet"}
+          </Heading>
+          <Button
+            size="xs"
+            variant="outline"
+            color="nexzy.lightBlue"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={() => setShowHelp(true)}
+          >
+            ⓘ How this works
+          </Button>
+        </Flex>
         <Text color="nexzy.gray.100" fontSize="sm">
           Google has crawled almost none of the site. Requesting indexing in
           Search Console is the only sanctioned way to push specific pages into
@@ -359,6 +375,134 @@ export default function IndexingRitualPanel() {
           {done ? `Done ✓ (${data.completedBy ?? ""})` : "Mark today done"}
         </Button>
       </Box>
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </Stack>
+  );
+}
+
+/** Plain-language reference for the whole Indexing tab. Click "How this works"
+ *  to open it anytime. No jargon — this is the "what does all this mean" card. */
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Box
+      position="fixed"
+      inset={0}
+      zIndex={2000}
+      bg="rgba(0,0,0,0.6)"
+      display="flex"
+      alignItems="flex-start"
+      justifyContent="center"
+      p={4}
+      overflowY="auto"
+      onClick={onClose}
+    >
+      <Box
+        onClick={(e) => e.stopPropagation()}
+        bg="#141127"
+        border="1px solid"
+        borderColor="whiteAlpha.200"
+        borderRadius="xl"
+        maxW="640px"
+        w="full"
+        my={8}
+        p={6}
+        boxShadow="0 20px 60px rgba(0,0,0,0.5)"
+      >
+        <Flex align="center" justify="space-between" mb={4}>
+          <Heading size="md" color="nexzy.white">
+            What this tab does
+          </Heading>
+          <Button
+            size="sm"
+            variant="outline"
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            onClick={onClose}
+          >
+            Close ✕
+          </Button>
+        </Flex>
+
+        <Stack gap={5}>
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="sm" lineHeight="1.6">
+              Google has barely crawled Nexzy. This tab is where you push your
+              good pages to Google and keep the junk out — so Google spends its
+              limited attention on pages that can actually rank.
+            </Text>
+          </Box>
+
+          <HelpItem title="🔴 Start fresh with Google (the red box)">
+            One button that hides <b>every old news article</b> from Google —
+            drops them from the sitemap and tags them &quot;noindex.&quot; Your
+            guides &amp; lists stay visible. Use it once to wipe the slate. Once
+            all news is hidden it says &quot;All news already hidden&quot; and
+            greys out. Nothing is deleted — readers can still open the pages,
+            they just won&apos;t show in Google.
+          </HelpItem>
+
+          <HelpItem title="📋 Today's batch (the URL list)">
+            Up to 10 pages a day that Google is <b>allowed</b> to index (guides,
+            lists, and new articles) and hasn&apos;t been asked about yet. This
+            list rebuilds itself every time you open the tab, so anything
+            you&apos;ve hidden drops off automatically. Hit <b>Copy</b> on each
+            one. If the list is short or empty, that&apos;s fine — it just means
+            there&apos;s little new to push right now.
+          </HelpItem>
+
+          <HelpItem title="🔍 The 4 steps / “Request Indexing”">
+            &quot;Request Indexing&quot; in Google Search Console is you telling
+            Google <b>&quot;come crawl this page now&quot;</b> — it jumps the
+            line and usually gets crawled in a day or two instead of weeks. For
+            each URL: open Search Console → paste it in the top bar → Enter →
+            click <b>Request Indexing</b>.
+          </HelpItem>
+
+          <HelpItem title="✅ Mark today done + Streak">
+            After you&apos;ve requested today&apos;s URLs, hit{" "}
+            <b>Mark today done</b>. The <b>streak</b> and{" "}
+            <b>total URLs requested</b> just track how consistently you&apos;ve
+            done it — doing a little every day beats doing a lot once.
+          </HelpItem>
+
+          <HelpItem title="📊 Scoreboard — is it working?">
+            Once it appears, it shows how many of the URLs you&apos;ve requested
+            Google has <b>actually indexed</b>. That number going up over the
+            weeks is the whole goal.
+          </HelpItem>
+
+          <HelpItem title="What shows in Google going forward">
+            <b>Visible:</b> new news articles you publish (unless they&apos;re
+            deals or patch notes), plus all guides, lists, and reviews.
+            <br />
+            <b>Hidden:</b> all your old news, plus deals, patch notes, and
+            Rewind pages (those hide automatically, always).
+          </HelpItem>
+
+          <HelpItem title="How long until old pages disappear from Google">
+            Hiding is instant on your side, but Google only drops a page the
+            next time it recrawls it — a few days to a few weeks. To force it
+            fast, Request-Index that page (same steps as above); Google
+            recrawls, sees the &quot;noindex,&quot; and drops it, often within a
+            day.
+          </HelpItem>
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
+
+function HelpItem({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Box>
+      <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={1}>
+        {title}
+      </Text>
+      <Text color="nexzy.gray.100" fontSize="sm" lineHeight="1.6">
+        {children}
+      </Text>
+    </Box>
   );
 }
