@@ -8,6 +8,7 @@ import {
   Heading,
   Text,
   HStack,
+  Flex,
   SimpleGrid,
   Badge,
   Link,
@@ -426,6 +427,69 @@ export default async function BlogArticlePage({
           )}
         </Box>
 
+        {/* Games in this story — one internal link per confirmed game hub when an
+            article references more than one. Deeper crawl paths + reader value. */}
+        {post.games && post.games.length > 1 && (
+          <Box mt={8}>
+            <Heading as="h2" size="sm" color="white" mb={3}>
+              Games in this story
+            </Heading>
+            <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
+              {post.games.map((g) => (
+                <Link
+                  as={NextLink}
+                  key={g.id}
+                  href={`/games/${g.slug}`}
+                  _hover={{ textDecoration: "none" }}
+                >
+                  <Box
+                    position="relative"
+                    borderRadius="lg"
+                    overflow="hidden"
+                    h="88px"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    bg="whiteAlpha.50"
+                    _hover={{ borderColor: "nexzy.blue" }}
+                    transition="border-color 0.15s"
+                  >
+                    {g.backgroundImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={g.backgroundImage}
+                        alt={g.name}
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          opacity: 0.45,
+                        }}
+                      />
+                    )}
+                    <Box
+                      position="absolute"
+                      inset={0}
+                      bgGradient="linear(to-t, blackAlpha.800, blackAlpha.300)"
+                    />
+                    <Flex position="absolute" inset={0} align="flex-end" p={3}>
+                      <Text
+                        color="white"
+                        fontWeight="700"
+                        fontSize="sm"
+                        lineClamp={2}
+                      >
+                        {g.name}
+                      </Text>
+                    </Flex>
+                  </Box>
+                </Link>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
+
         <HStack
           justify="space-between"
           mt={10}
@@ -439,6 +503,11 @@ export default async function BlogArticlePage({
           <ShareRow url={shareUrl} title={post.title} />
         </HStack>
       </Container>
+
+      {/* Reader comments — placed right after the article (not buried under the
+          "more to read" rails) so the engagement moment lands while the reader
+          is still on the piece. Raises time-on-site + return visits. */}
+      <ContentComments slug={post.slug} />
 
       {/* Related news */}
       <MoreOnGame game={byGame.game} items={byGame.items} />
@@ -457,10 +526,6 @@ export default async function BlogArticlePage({
           </Container>
         </Box>
       )}
-
-      {/* Reader comments — reuses the same system as Rewind/home. Turns a solo
-          read into a scene: comments raise time-on-site and return visits. */}
-      <ContentComments slug={post.slug} />
 
       <ViewPing slug={post.slug} />
       <ArticleAnalytics slug={post.slug} type="article" author={post.author} />

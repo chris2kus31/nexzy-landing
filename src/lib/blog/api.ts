@@ -102,6 +102,15 @@ export interface PublicPost {
     platforms: string[];
     genres: string[];
   } | null;
+  // ALL confirmed linked games (primary first) — for the "games in this story"
+  // strip when an article references more than one game.
+  games?: {
+    id: string;
+    name: string;
+    slug: string;
+    backgroundImage: string | null;
+    isPrimary: boolean;
+  }[];
   faq?: { q: string; a: string }[] | null;
   // Reviews only: the score + what's reviewed (star UI + Review JSON-LD).
   review?: {
