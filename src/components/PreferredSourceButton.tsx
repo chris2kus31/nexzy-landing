@@ -44,26 +44,25 @@ export default function PreferredSourceButton({
       aria-label="Add Nexzy as a preferred source on Google"
       display="inline-flex"
       alignItems="center"
-      gap={2}
-      px={3}
-      py={2}
+      gap={2.5}
+      px={5}
+      py="11px"
       borderRadius="full"
-      border="1px solid"
-      borderColor="whiteAlpha.300"
-      bg="whiteAlpha.50"
-      color="gray.200"
+      bg="white"
+      color="nexzy.navy"
       fontSize="sm"
-      fontWeight="600"
+      fontWeight="700"
       lineHeight="1"
+      boxShadow="0 4px 16px rgba(77,163,255,0.30)"
       _hover={{
-        borderColor: "nexzy.lightBlue",
-        bg: "whiteAlpha.100",
-        color: "white",
+        bg: "nexzy.gray.100",
         textDecoration: "none",
+        transform: "translateY(-1px)",
+        boxShadow: "0 6px 22px rgba(77,163,255,0.45)",
       }}
       transition="all 0.2s"
     >
-      <FcGoogle size={16} aria-hidden />
+      <FcGoogle size={18} aria-hidden />
       {label}
     </Link>
   );
