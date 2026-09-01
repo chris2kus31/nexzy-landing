@@ -419,12 +419,18 @@ export default async function BlogArticlePage({
         {/* Make it yours — when the article is linked to a game, the funnel is
             game-specific (deep-links to that game in the app); otherwise the
             generic install band. */}
-        <Box mt={10}>
-          {post.game ? (
+        {/* Game-specific "Make it yours" card when the article links a game —
+            the per-article funnel to that game's hub. */}
+        {post.game && (
+          <Box mt={10}>
             <GameActionCard game={post.game} />
-          ) : (
-            <AppCta variant="inline" location="blog" />
-          )}
+          </Box>
+        )}
+
+        {/* App-download CTA — shown on EVERY article (App Store + Google Play),
+            even game-linked ones, so the download call-to-action is never lost. */}
+        <Box mt={post.game ? 6 : 10}>
+          <AppCta variant="inline" location="blog" />
         </Box>
 
         {/* Games in this story — one internal link per confirmed game hub when an
