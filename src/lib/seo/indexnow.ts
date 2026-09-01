@@ -28,8 +28,20 @@ export async function pingIndexNow(urls: string[]): Promise<number> {
         urlList: urls,
       }),
     });
+    // Surface a broken setup instead of failing silently: 200/202 = accepted,
+    // 400 = bad request, 403 = key not verified, 422 = host/key mismatch,
+    // 429 = rate-limited. A silent 403 is exactly how "we ping IndexNow" turns
+    // out to be doing nothing.
+    if (res.status >= 300) {
+      console.warn(
+        `IndexNow non-success ${res.status} for ${urls.length} URL(s) on ${host}`,
+      );
+    }
     return res.status;
-  } catch {
+  } catch (err) {
+    console.warn(
+      `IndexNow ping failed: ${err instanceof Error ? err.message : "unknown"}`,
+    );
     return 0;
   }
 }

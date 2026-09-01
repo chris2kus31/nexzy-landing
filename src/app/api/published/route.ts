@@ -22,6 +22,8 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   let slug = "";
   let type = "article";
+  // Default true: an omitted flag (older API, or a manual call) still gets pinged.
+  let indexable = true;
   try {
     const body = await req.json();
     slug = typeof body?.slug === "string" ? body.slug : "";
@@ -33,6 +35,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       body?.type === "rewind"
     )
       type = body.type;
+    if (body?.indexable === false) indexable = false;
   } catch {
     // no body / bad JSON — still refresh the index + feeds below
   }
@@ -48,10 +51,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   revalidatePath("/news-sitemap.xml");
   revalidatePath("/rss.xml");
 
-  // Nudge IndexNow (best-effort) with the correct URLs, and ping Google's
-  // WebSub hub that the RSS feed has fresh content (freshness discovery).
-  const urls = [`${SITE_URL}${base}`];
-  if (slug) urls.unshift(`${SITE_URL}${base}/${slug}`);
+  // IndexNow best practice: submit ONLY the specific URL that changed, and only
+  // if it's indexable. We deliberately do NOT ping the stable hub page (/blog,
+  // /guides) on every publish — re-submitting an unchanged URL is noise that can
+  // trigger rate-limiting; the hub is discovered via crawl + sitemap. Noindex
+  // pages (deals/patch beats) are skipped entirely — asking Bing to crawl a page
+  // we mark noindex is off-spec. WebSub still pings Google's feed hub regardless
+  // (a single feed-level freshness nudge, not per-URL spam).
+  const urls = slug && indexable ? [`${SITE_URL}${base}/${slug}`] : [];
   const [indexNowStatus, webSubStatus] = await Promise.all([
     pingIndexNow(urls),
     pingWebSub(),
