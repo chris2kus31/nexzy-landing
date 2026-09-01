@@ -1253,7 +1253,9 @@ export interface Lead {
   trendScore: number;
   sourceCount: number;
   latestSourceDate: string | null;
-  sources: { name: string; url: string }[] | null;
+  sources:
+    | { name: string; url: string; tier?: "primary" | "reporting" }[]
+    | null;
   // Phase 2 — competitive analysis, populated on demand via analyzeLead().
   ownable?: "data" | "expertise" | "connection" | "none" | null;
   differentiation?: {
