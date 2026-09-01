@@ -124,6 +124,20 @@ function LeadCard({
             >
               {beatLabel(lead.beat)}
             </Box>
+            {lead.origin === "email" && (
+              <Box
+                px={2}
+                py="1px"
+                borderRadius="md"
+                bg="#00E5D0"
+                color="#062b28"
+                fontSize="xs"
+                fontWeight="800"
+                title="First-party press alert — straight from the publisher, before the outlets rewrote it"
+              >
+                🎯 Primary source
+              </Box>
+            )}
             {lead.ownable === "none" && (
               <Box
                 px={2}
@@ -249,39 +263,74 @@ function LeadCard({
               </Link>
             );
           })()}
-          {lead.sources && lead.sources.length > 0 && (
-            <Box mt={2}>
-              <Button
-                size="xs"
-                variant="ghost"
-                color="nexzy.lightBlue"
-                px={0}
-                _hover={{ bg: "transparent", textDecoration: "underline" }}
-                onClick={() => setShowSources((s) => !s)}
-              >
-                {showSources
-                  ? "Hide sources"
-                  : `Sources (${lead.sources.length})`}
-              </Button>
-              {showSources && (
-                <VStack align="stretch" gap={1} mt={1}>
-                  {lead.sources.map((s, i) => (
+          {lead.origin === "email" &&
+            lead.sources &&
+            lead.sources.length > 0 && (
+              <HStack gap={2} mt={2} align="center" wrap="wrap">
+                <Text color="#00E5D0" fontSize="xs" fontWeight="700">
+                  Straight from the source:
+                </Text>
+                {lead.sources.map((s, i) =>
+                  s.url ? (
                     <Link
                       key={i}
                       href={s.url}
                       color="nexzy.lightBlue"
                       fontSize="xs"
-                      lineClamp={1}
+                      fontWeight="600"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
                       {s.name}
                     </Link>
-                  ))}
-                </VStack>
-              )}
-            </Box>
-          )}
+                  ) : (
+                    <Text
+                      key={i}
+                      color="nexzy.white"
+                      fontSize="xs"
+                      fontWeight="600"
+                    >
+                      {s.name}
+                    </Text>
+                  ),
+                )}
+              </HStack>
+            )}
+          {lead.origin !== "email" &&
+            lead.sources &&
+            lead.sources.length > 0 && (
+              <Box mt={2}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color="nexzy.lightBlue"
+                  px={0}
+                  _hover={{ bg: "transparent", textDecoration: "underline" }}
+                  onClick={() => setShowSources((s) => !s)}
+                >
+                  {showSources
+                    ? "Hide sources"
+                    : `Also reported by (${lead.sources.length})`}
+                </Button>
+                {showSources && (
+                  <VStack align="stretch" gap={1} mt={1}>
+                    {lead.sources.map((s, i) => (
+                      <Link
+                        key={i}
+                        href={s.url}
+                        color="nexzy.lightBlue"
+                        fontSize="xs"
+                        lineClamp={1}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {s.name}
+                      </Link>
+                    ))}
+                  </VStack>
+                )}
+              </Box>
+            )}
         </Box>
         <VStack
           gap={2}
