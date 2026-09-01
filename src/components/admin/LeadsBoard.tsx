@@ -17,6 +17,7 @@ import {
 import {
   getLeads,
   runDesk,
+  runEmailIngest,
   sendLeadDigest,
   analyzeLead,
   writeLead,
@@ -740,6 +741,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [scanningEmail, setScanningEmail] = useState(false);
   const [emailing, setEmailing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [beat, setBeat] = useState<string | null>(null);
@@ -777,6 +779,32 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
       setMsg((e as Error)?.message || "Could not start a scan.");
     } finally {
       setScanning(false);
+    }
+  };
+
+  const scanEmail = async () => {
+    setScanningEmail(true);
+    setMsg("");
+    try {
+      const r = await runEmailIngest();
+      if (r.error) {
+        setMsg(`Email scan couldn't run: ${r.error}`);
+      } else if (r.created > 0) {
+        setMsg(
+          `Email scan: ${r.created} new lead${r.created === 1 ? "" : "s"} from ${r.scanned} message${r.scanned === 1 ? "" : "s"}. Hit Refresh.`,
+        );
+      } else {
+        setMsg(
+          `Email scan: scanned ${r.scanned}, created 0, skipped ${r.skipped}. ` +
+            (r.scanned === 0
+              ? "Nothing new + unread in the last 48h (already-read mail is skipped)."
+              : "All seen messages were duplicates of existing leads."),
+        );
+      }
+    } catch (e) {
+      setMsg((e as Error)?.message || "Could not run the email scan.");
+    } finally {
+      setScanningEmail(false);
     }
   };
 
@@ -863,6 +891,20 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
           >
             Refresh
           </Button>
+          {isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={scanEmail}
+              loading={scanningEmail}
+              loadingText="Scanning…"
+            >
+              ✉ Scan email
+            </Button>
+          )}
           {isOwner && (
             <Button
               size="sm"

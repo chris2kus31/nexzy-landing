@@ -1288,6 +1288,25 @@ export async function runDesk(): Promise<{ queued: true }> {
   );
 }
 
+/**
+ * Run the email-ingest monitor once, on demand (owner-only). Reads the press
+ * mailbox now and returns how many messages it scanned, turned into leads, and
+ * skipped — plus an error string if it couldn't connect/configure. Bypasses the
+ * 10-min cron and its primary-instance gate, so it's the real test of the lane.
+ */
+export async function runEmailIngest(): Promise<{
+  scanned: number;
+  created: number;
+  skipped: number;
+  error?: string;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/newsroom/ingest-email/run", {
+      method: "POST",
+    }),
+  );
+}
+
 /** Email the current leads digest to the admin allowlist (both editors). */
 export async function sendLeadDigest(): Promise<{
   leads: number;
