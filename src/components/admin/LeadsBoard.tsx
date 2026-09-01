@@ -419,76 +419,216 @@ function LeadCard({
           >
             {/* Competing angles */}
             <Box flex={1} minW={0}>
-              <Text
-                fontSize="11px"
-                color="#FFD866"
-                fontWeight="700"
-                mb={2}
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Competing angles
-              </Text>
               {!analysis ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  color="nexzy.gray.100"
-                  borderColor="whiteAlpha.300"
-                  _hover={{ bg: "whiteAlpha.100" }}
-                  onClick={runAnalyze}
-                  loading={analyzing}
-                >
-                  See competing angles
-                </Button>
+                <>
+                  <Text
+                    fontSize="11px"
+                    color="#FFD866"
+                    fontWeight="700"
+                    mb={2}
+                    textTransform="uppercase"
+                    letterSpacing="wide"
+                  >
+                    Competing angles
+                  </Text>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={runAnalyze}
+                    loading={analyzing}
+                  >
+                    See competing angles
+                  </Button>
+                  <Text color="whiteAlpha.500" fontSize="xs" mt={2}>
+                    Uses one AI credit — reads the {lead.sourceCount} outlets
+                    and maps who took which angle + what's still unclaimed.
+                  </Text>
+                </>
               ) : (
-                <VStack
-                  align="stretch"
-                  gap={2}
-                  fontSize="sm"
-                  color="nexzy.gray.100"
-                  lineHeight="1.5"
-                >
-                  {(analysis.differentiation?.clusters ?? []).map((c, i) => (
-                    <Text key={i}>
-                      <Text as="span" color="nexzy.white" fontWeight="600">
-                        {c.angle}:
-                      </Text>{" "}
-                      {(c.outlets ?? []).map((o) => o.name).join(", ")}
+                <VStack align="stretch" gap={4}>
+                  {/* ── Section 1: how the outlets already cover it ── */}
+                  <Box>
+                    <Text
+                      fontSize="11px"
+                      color="whiteAlpha.600"
+                      fontWeight="700"
+                      mb={2}
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                    >
+                      1 · How the {lead.sourceCount} outlets already cover it
                     </Text>
-                  ))}
-                  {(analysis.differentiation?.gap ?? []).length > 0 && (
-                    <Text color="#FFD866">
-                      Unclaimed:{" "}
-                      {(analysis.differentiation?.gap ?? []).join("; ")}
-                    </Text>
-                  )}
-                  {(analysis.angleSuggestions ?? []).length > 0 ? (
-                    <VStack align="stretch" gap={2} mt={1}>
-                      {(analysis.angleSuggestions ?? []).map((s, i) => (
-                        <Box
-                          key={i}
-                          as="button"
-                          textAlign="left"
-                          onClick={() => setAngle(s.angle)}
-                          color="nexzy.lightBlue"
-                          _hover={{ textDecoration: "underline" }}
-                        >
-                          → {s.angle}{" "}
-                          <Text as="span" color="whiteAlpha.600">
-                            ({s.well}) — {s.whyDifferent}
-                          </Text>
-                        </Box>
-                      ))}
-                      <Text color="whiteAlpha.500" fontSize="xs">
-                        Click an angle to drop it into your take.
-                      </Text>
+                    <VStack align="stretch" gap={2}>
+                      {(analysis.differentiation?.clusters ?? []).length ===
+                      0 ? (
+                        <Text color="whiteAlpha.500" fontSize="sm">
+                          (no distinct angles found)
+                        </Text>
+                      ) : (
+                        (analysis.differentiation?.clusters ?? []).map(
+                          (c, i) => (
+                            <Box
+                              key={i}
+                              bg="whiteAlpha.50"
+                              borderRadius="md"
+                              px={3}
+                              py={2}
+                            >
+                              <Text
+                                color="nexzy.white"
+                                fontWeight="600"
+                                fontSize="sm"
+                                lineHeight="1.3"
+                              >
+                                {c.angle}
+                              </Text>
+                              <HStack gap={1} wrap="wrap" mt={1}>
+                                {(c.outlets ?? []).map((o, j) => (
+                                  <Box
+                                    key={j}
+                                    px={2}
+                                    py="1px"
+                                    borderRadius="full"
+                                    bg="whiteAlpha.100"
+                                    color="nexzy.gray.100"
+                                    fontSize="11px"
+                                    fontWeight="600"
+                                  >
+                                    {o.name}
+                                  </Box>
+                                ))}
+                              </HStack>
+                            </Box>
+                          ),
+                        )
+                      )}
                     </VStack>
-                  ) : (
-                    <Text color="whiteAlpha.600">
-                      No ownable angle — commodity (write for social / noindex).
-                    </Text>
+                  </Box>
+
+                  {/* ── Section 2: the unclaimed gap ── */}
+                  {(analysis.differentiation?.gap ?? []).length > 0 && (
+                    <Box>
+                      <Text
+                        fontSize="11px"
+                        color="whiteAlpha.600"
+                        fontWeight="700"
+                        mb={2}
+                        textTransform="uppercase"
+                        letterSpacing="wide"
+                      >
+                        2 · Nobody's covered this yet
+                      </Text>
+                      <VStack align="stretch" gap={1}>
+                        {(analysis.differentiation?.gap ?? []).map((g, i) => (
+                          <Text
+                            key={i}
+                            color="nexzy.gray.100"
+                            fontSize="sm"
+                            lineHeight="1.4"
+                          >
+                            • {g}
+                          </Text>
+                        ))}
+                      </VStack>
+                    </Box>
                   )}
+
+                  {/* ── Section 3: angles only Nexzy could own (clickable) ── */}
+                  <Box>
+                    <Text
+                      fontSize="11px"
+                      color="#FFD866"
+                      fontWeight="700"
+                      mb={2}
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                    >
+                      3 · Angles only Nexzy could own
+                    </Text>
+                    {(analysis.angleSuggestions ?? []).length > 0 ? (
+                      <VStack align="stretch" gap={2}>
+                        {(analysis.angleSuggestions ?? []).map((s, i) => {
+                          const wellLabel =
+                            s.well === "data"
+                              ? "OUR DATA"
+                              : s.well === "connection"
+                                ? "GAME TIE-IN"
+                                : "OUR EXPERTISE";
+                          const wellColor =
+                            s.well === "data"
+                              ? "blue.400"
+                              : s.well === "connection"
+                                ? "purple.400"
+                                : "green.400";
+                          return (
+                            <Box
+                              key={i}
+                              as="button"
+                              textAlign="left"
+                              onClick={() => setAngle(s.angle)}
+                              bg="whiteAlpha.50"
+                              border="1px solid"
+                              borderColor="whiteAlpha.200"
+                              borderRadius="md"
+                              px={3}
+                              py={2}
+                              _hover={{
+                                borderColor: "#FFD866",
+                                bg: "rgba(255,216,102,0.06)",
+                              }}
+                            >
+                              <HStack gap={2} mb={1}>
+                                <Box
+                                  px={2}
+                                  py="1px"
+                                  borderRadius="sm"
+                                  bg="whiteAlpha.100"
+                                  color={wellColor}
+                                  fontSize="10px"
+                                  fontWeight="700"
+                                  letterSpacing="wide"
+                                >
+                                  {wellLabel}
+                                </Box>
+                              </HStack>
+                              <Text
+                                color="nexzy.white"
+                                fontWeight="700"
+                                fontSize="sm"
+                                lineHeight="1.3"
+                              >
+                                {s.angle}
+                              </Text>
+                              <Text
+                                color="nexzy.gray.100"
+                                fontSize="xs"
+                                mt={1}
+                                lineHeight="1.4"
+                              >
+                                {s.whyDifferent}
+                              </Text>
+                              <Text
+                                color="nexzy.lightBlue"
+                                fontSize="xs"
+                                fontWeight="600"
+                                mt={1}
+                              >
+                                Use this angle →
+                              </Text>
+                            </Box>
+                          );
+                        })}
+                      </VStack>
+                    ) : (
+                      <Text color="whiteAlpha.600" fontSize="sm">
+                        No angle only Nexzy could own → this is commodity. Write
+                        it for social if you want, but it stays out of Google.
+                      </Text>
+                    )}
+                  </Box>
                 </VStack>
               )}
             </Box>
