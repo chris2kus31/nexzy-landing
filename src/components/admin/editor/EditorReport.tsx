@@ -44,6 +44,20 @@ export default function EditorReport({
 }) {
   if (!report) return null;
   const verdict = String(report.verdict ?? "—");
+  // The REAL gate outcome (set by the news editor): the LLM verdict is only its
+  // opinion of the copy, so we show gateResult as the primary badge and demote
+  // the verdict to a secondary chip. Absent on guides → fall back to verdict.
+  const gateResult =
+    typeof report.gateResult === "string" ? report.gateResult : null;
+  const gateMeta: Record<string, { label: string; palette: string }> = {
+    pass: { label: "Passed gate", palette: "green" },
+    held: { label: "Held for review", palette: "orange" },
+    forced: { label: "Forced to review", palette: "blue" },
+  };
+  const gate = gateResult ? (gateMeta[gateResult] ?? null) : null;
+  const uniquenessNotes = Array.isArray(report.uniquenessNotes)
+    ? (report.uniquenessNotes as string[])
+    : [];
   const factCheck = Array.isArray(report.factCheck)
     ? (report.factCheck as { claim: string; supported: boolean }[])
     : [];
@@ -96,9 +110,12 @@ export default function EditorReport({
   // Score chips: guides show Originality/Usefulness/Slop; news shows Style.
   const scoreChips: [string, unknown][] = isGuideEditor
     ? gScores
-    : report.styleScore != null
-      ? [["Style", report.styleScore]]
-      : [];
+    : ([
+        ...(report.styleScore != null ? [["Style", report.styleScore]] : []),
+        ...(report.uniquenessScore != null
+          ? [["Info gain", report.uniquenessScore]]
+          : []),
+      ] as [string, unknown][]);
 
   // Tone a score value: higher is better, except "slop" where lower is better.
   const scoreTone = (label: string, val: unknown): string => {
@@ -118,22 +135,40 @@ export default function EditorReport({
       borderRadius="lg"
       p={4}
     >
-      {/* Header: title + verdict badge */}
+      {/* Header: title + gate-result badge (real outcome). The LLM verdict is
+          shown as a smaller secondary chip so it can't be mistaken for the
+          gate. Guides have no gateResult → the verdict is the primary badge. */}
       <HStack justify="space-between" align="center" mb={4}>
         <Heading size="sm" color="nexzy.white">
           Editor report
         </Heading>
-        <Badge
-          colorPalette={verdictPalette}
-          variant="solid"
-          textTransform="capitalize"
-          px={2.5}
-          py={1}
-          borderRadius="md"
-          fontSize="xs"
-        >
-          {verdict}
-        </Badge>
+        <HStack gap={2}>
+          {gate && (
+            <Badge
+              colorPalette="gray"
+              variant="subtle"
+              textTransform="capitalize"
+              px={2}
+              py={1}
+              borderRadius="md"
+              fontSize="10px"
+              title="The AI editor's opinion of the copy — not the gate result"
+            >
+              AI: {verdict}
+            </Badge>
+          )}
+          <Badge
+            colorPalette={gate ? gate.palette : verdictPalette}
+            variant="solid"
+            textTransform="capitalize"
+            px={2.5}
+            py={1}
+            borderRadius="md"
+            fontSize="xs"
+          >
+            {gate ? gate.label : verdict}
+          </Badge>
+        </HStack>
       </HStack>
 
       {/* Score chips + games-DB status */}
@@ -316,6 +351,34 @@ export default function EditorReport({
               ))}
             </VStack>
           )}
+        </Box>
+      )}
+
+      {/* Information gain (SEO original value) — what the piece uniquely adds,
+          or (when the score is low) what to add to make it worth indexing. */}
+      {uniquenessNotes.length > 0 && (
+        <Box mb={4}>
+          <Text
+            fontSize="10px"
+            color="nexzy.gray.100"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            mb={1.5}
+          >
+            Information gain
+          </Text>
+          <VStack align="stretch" gap={1}>
+            {uniquenessNotes.map((n, i) => (
+              <Text
+                key={i}
+                fontSize="xs"
+                color="nexzy.gray.100"
+                lineHeight="1.45"
+              >
+                • {n}
+              </Text>
+            ))}
+          </VStack>
         </Box>
       )}
 
