@@ -35,7 +35,6 @@ import MediaGallery from "@/components/blog/MediaGallery";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import AnswerCapsule from "@/components/blog/AnswerCapsule";
-import AuthorTake from "@/components/blog/AuthorTake";
 import NewsletterSignup from "@/components/blog/NewsletterSignup";
 import ContentComments from "@/components/comments/ContentComments";
 import DealBlock from "@/components/blog/DealBlock";
@@ -294,7 +293,6 @@ export default async function BlogArticlePage({
         )}
 
         <AnswerCapsule text={post.answerCapsule} />
-        <AuthorTake text={post.authorTake} author={post.author} />
 
         <Box mb={6}>
           <Byline

@@ -1589,12 +1589,16 @@ async function action(
   id: string,
   verb: string,
   reason?: string,
+  take?: string,
 ): Promise<BlogPost> {
+  const body: { reason?: string; take?: string } = {};
+  if (reason) body.reason = reason;
+  if (take) body.take = take;
   return handle(
     await fetch(`/api/newsroom/admin/posts/${id}/${verb}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(reason ? { reason } : {}),
+      body: JSON.stringify(body),
     }),
   );
 }
@@ -1602,8 +1606,13 @@ async function action(
 export const approvePost = (id: string) => action(id, "approve");
 export const rejectPost = (id: string, reason?: string) =>
   action(id, "reject", reason);
-export const sendBackPost = (id: string, reason?: string) =>
-  action(id, "send-back", reason);
+/**
+ * Send back for an AI rewrite. `reason` = one-off fix notes for the writer.
+ * `take` = a NEW angle (free-form/messy — notes or pasted URLs) that replaces
+ * the brief's take so the whole article is re-drafted THROUGH that angle.
+ */
+export const sendBackPost = (id: string, reason?: string, take?: string) =>
+  action(id, "send-back", reason, take);
 export const unpublishPost = (id: string) => action(id, "unpublish");
 
 export async function regenerateImage(

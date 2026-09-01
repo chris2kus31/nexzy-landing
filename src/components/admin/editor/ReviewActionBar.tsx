@@ -116,6 +116,28 @@ export default function ReviewActionBar({ ed }: { ed: PostEditor }) {
           <Button
             size="sm"
             onClick={() => {
+              const take = window.prompt(
+                "New take / angle for the rewrite. The whole article gets re-written THROUGH this — it is never printed. Messy is fine: notes, half-sentences, or pasted URLs (links steer the angle; the writer can't open them).",
+              );
+              if (take === null) return; // cancelled
+              if (!take.trim()) return; // empty → nothing to re-steer
+              run("Sent back — rewriting", () =>
+                sendBackPost(id, undefined, take),
+              );
+            }}
+            loading={busy === "Sent back — rewriting"}
+            variant="outline"
+            color="purple.300"
+            borderColor="purple.400/40"
+            _hover={{ bg: "whiteAlpha.100" }}
+          >
+            New take → rewrite
+          </Button>
+        )}
+        {!isPublished && (
+          <Button
+            size="sm"
+            onClick={() => {
               const reason =
                 window.prompt(
                   "What should the writer fix? (guides the AI rewrite)",

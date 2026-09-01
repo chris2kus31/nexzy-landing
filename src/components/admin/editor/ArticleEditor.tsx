@@ -94,16 +94,6 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
               />
             </Box>
             <Box>
-              <Text {...labelProps}>Your take (original value)</Text>
-              <Textarea
-                value={form.authorTake}
-                onChange={(e) => set("authorTake", e.target.value)}
-                rows={3}
-                placeholder="Your genuine take / verdict — the angle a reader can't get from IGN. Renders as a bylined 'take' block. Leave empty for commodity pieces."
-                {...inputProps}
-              />
-            </Box>
-            <Box>
               <Text {...labelProps}>Search index</Text>
               <Flex gap={2}>
                 {[
