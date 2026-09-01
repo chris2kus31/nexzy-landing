@@ -3309,6 +3309,7 @@ export interface IndexingScoreboard {
 export interface IndexingRitual {
   day: string;
   urls: string[];
+  requestedUrls: string[];
   completedAt: string | null;
   completedBy: string | null;
   totalRequestedEver: number;
@@ -3322,7 +3323,21 @@ export async function getIndexingRitual(): Promise<IndexingRitual> {
   return handle(await fetch("/api/newsroom/admin/growth/indexing-ritual"));
 }
 
-/** Mark today's ritual done. */
+/** Mark (or unmark) a single URL as Request-Indexed. */
+export async function markIndexUrl(
+  url: string,
+  requested: boolean,
+): Promise<{ ok: boolean; day: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/growth/indexing-ritual/url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, requested }),
+    }),
+  );
+}
+
+/** Finalize today's ritual — mark every URL requested. */
 export async function completeIndexingRitual(): Promise<{
   ok: boolean;
   day: string;

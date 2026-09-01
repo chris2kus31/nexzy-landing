@@ -14,6 +14,7 @@ import {
   Box,
   Button,
   Flex,
+  HStack,
   Heading,
   Link,
   Spinner,
@@ -23,12 +24,21 @@ import {
 import {
   getIndexingRitual,
   completeIndexingRitual,
+  markIndexUrl,
   getBacklogNewsStatus,
   hideExistingNews,
   type IndexingRitual,
 } from "@/lib/admin/client";
 
-function UrlRow({ url }: { url: string }) {
+function UrlRow({
+  url,
+  requested,
+  onToggle,
+}: {
+  url: string;
+  requested: boolean;
+  onToggle: (url: string, requested: boolean) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(url).then(() => {
@@ -44,29 +54,42 @@ function UrlRow({ url }: { url: string }) {
       px={3}
       py={2}
       borderRadius="md"
-      bg="whiteAlpha.50"
+      bg={requested ? "rgba(72,187,120,0.08)" : "whiteAlpha.50"}
       border="1px solid"
-      borderColor="whiteAlpha.100"
+      borderColor={requested ? "rgba(72,187,120,0.35)" : "whiteAlpha.100"}
     >
       <Text
-        color="nexzy.white"
+        color={requested ? "whiteAlpha.600" : "nexzy.white"}
         fontSize="sm"
         fontFamily="mono"
         lineClamp={1}
         minW={0}
+        textDecoration={requested ? "line-through" : undefined}
       >
         {url}
       </Text>
-      <Button
-        size="xs"
-        variant="outline"
-        color={copied ? "green.300" : "nexzy.lightBlue"}
-        borderColor="whiteAlpha.300"
-        onClick={copy}
-        flexShrink={0}
-      >
-        {copied ? "Copied ✓" : "Copy"}
-      </Button>
+      <HStack gap={2} flexShrink={0}>
+        <Button
+          size="xs"
+          variant="outline"
+          color={copied ? "green.300" : "nexzy.lightBlue"}
+          borderColor="whiteAlpha.300"
+          onClick={copy}
+        >
+          {copied ? "Copied ✓" : "Copy"}
+        </Button>
+        <Button
+          size="xs"
+          variant={requested ? "solid" : "outline"}
+          bg={requested ? "green.600" : undefined}
+          color={requested ? "white" : "green.300"}
+          borderColor="rgba(72,187,120,0.5)"
+          _hover={{ bg: requested ? "green.700" : "rgba(72,187,120,0.12)" }}
+          onClick={() => onToggle(url, !requested)}
+        >
+          {requested ? "Requested ✓" : "Mark requested"}
+        </Button>
+      </HStack>
     </Flex>
   );
 }
@@ -136,6 +159,27 @@ export default function IndexingRitualPanel() {
     }
   };
 
+  const toggleUrl = async (url: string, requested: boolean) => {
+    // Optimistic — flip locally, then persist + refresh.
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            requestedUrls: requested
+              ? [...new Set([...d.requestedUrls, url])]
+              : d.requestedUrls.filter((u) => u !== url),
+          }
+        : d,
+    );
+    try {
+      await markIndexUrl(url, requested);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+      load();
+    }
+  };
+
   if (error)
     return (
       <Text color="red.300" fontSize="sm">
@@ -144,7 +188,9 @@ export default function IndexingRitualPanel() {
     );
   if (!data) return <Spinner color="nexzy.blue" />;
 
-  const done = !!data.completedAt;
+  const requestedSet = new Set(data.requestedUrls);
+  const requestedCount = data.urls.filter((u) => requestedSet.has(u)).length;
+  const done = data.urls.length > 0 && requestedCount === data.urls.length;
 
   return (
     <Stack gap={5} maxW="3xl">
@@ -293,10 +339,12 @@ export default function IndexingRitualPanel() {
             Enter.
           </Text>
           <Text color="nexzy.gray.100" fontSize="sm">
-            3. Click <b>Request Indexing</b>. Repeat for all {data.urls.length}.
+            3. Click <b>Request Indexing</b> in Search Console.
           </Text>
           <Text color="nexzy.gray.100" fontSize="sm">
-            4. Come back and hit <b>Mark today done</b>.
+            4. Back here, hit <b>Mark requested ✓</b> on that URL. Do each one
+            as you go — no need to finish them all at once. New articles you
+            publish today just get added to the list.
           </Text>
         </Stack>
       </Box>
@@ -347,34 +395,60 @@ export default function IndexingRitualPanel() {
       )}
 
       <Stack gap={2}>
-        <Text
-          color="nexzy.blue"
-          fontSize="xs"
-          fontWeight="800"
-          letterSpacing="0.1em"
-          textTransform="uppercase"
-        >
-          Today&apos;s batch — {data.day}
-        </Text>
-        {data.urls.map((u) => (
-          <UrlRow key={u} url={u} />
-        ))}
+        <Flex align="center" justify="space-between" gap={3} wrap="wrap">
+          <Text
+            color="nexzy.blue"
+            fontSize="xs"
+            fontWeight="800"
+            letterSpacing="0.1em"
+            textTransform="uppercase"
+          >
+            Today&apos;s batch — {data.day}
+          </Text>
+          {data.urls.length > 0 && (
+            <Text color="nexzy.gray.100" fontSize="xs">
+              {requestedCount}/{data.urls.length} requested
+            </Text>
+          )}
+        </Flex>
+        {data.urls.length === 0 ? (
+          <Text color="whiteAlpha.500" fontSize="sm">
+            Nothing to request right now. New articles you publish will appear
+            here.
+          </Text>
+        ) : (
+          data.urls.map((u) => (
+            <UrlRow
+              key={u}
+              url={u}
+              requested={requestedSet.has(u)}
+              onToggle={toggleUrl}
+            />
+          ))
+        )}
       </Stack>
 
-      <Box>
-        <Button
-          onClick={markDone}
-          loading={saving}
-          disabled={done}
-          bg={done ? "whiteAlpha.200" : "nexzy.gold"}
-          color={done ? "nexzy.gray.100" : "nexzy.navy"}
-          fontWeight="800"
-          borderRadius="full"
-          px={6}
-        >
-          {done ? `Done ✓ (${data.completedBy ?? ""})` : "Mark today done"}
-        </Button>
-      </Box>
+      {data.urls.length > 0 && (
+        <Box>
+          <Button
+            onClick={markDone}
+            loading={saving}
+            disabled={done}
+            variant="outline"
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: "whiteAlpha.100" }}
+            borderRadius="full"
+            px={6}
+          >
+            {done ? "All requested ✓" : "Mark all requested"}
+          </Button>
+          <Text color="whiteAlpha.500" fontSize="xs" mt={2}>
+            Only use this once you&apos;ve requested every URL above — it just
+            checks them all off at once.
+          </Text>
+        </Box>
+      )}
 
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </Stack>
@@ -460,11 +534,12 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             click <b>Request Indexing</b>.
           </HelpItem>
 
-          <HelpItem title="✅ Mark today done + Streak">
-            After you&apos;ve requested today&apos;s URLs, hit{" "}
-            <b>Mark today done</b>. The <b>streak</b> and{" "}
-            <b>total URLs requested</b> just track how consistently you&apos;ve
-            done it — doing a little every day beats doing a lot once.
+          <HelpItem title="✅ Mark requested (per URL) + Streak">
+            After you Request-Index a URL in Search Console, hit{" "}
+            <b>Mark requested ✓</b> on that row. Do them one at a time — the day
+            marks itself done once every URL is checked. Publish another article
+            later and it just gets added to the list. The <b>streak</b> and{" "}
+            <b>total requested</b> track how consistently you do it.
           </HelpItem>
 
           <HelpItem title="📊 Scoreboard — is it working?">
