@@ -3328,3 +3328,21 @@ export async function completeIndexingRitual(): Promise<{
     }),
   );
 }
+
+/** How many published news articles are still visible to Google vs hidden. */
+export async function getBacklogNewsStatus(): Promise<{
+  visible: number;
+  hidden: number;
+  total: number;
+}> {
+  return handle(await fetch("/api/newsroom/admin/growth/backlog-news-status"));
+}
+
+/** Clean slate — hide every existing published news article from Google. */
+export async function hideExistingNews(): Promise<{ hidden: number }> {
+  return handle(
+    await fetch("/api/newsroom/admin/growth/hide-existing-news", {
+      method: "POST",
+    }),
+  );
+}

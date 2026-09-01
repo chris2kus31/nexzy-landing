@@ -23,6 +23,8 @@ import {
 import {
   getIndexingRitual,
   completeIndexingRitual,
+  getBacklogNewsStatus,
+  hideExistingNews,
   type IndexingRitual,
 } from "@/lib/admin/client";
 
@@ -74,17 +76,49 @@ export default function IndexingRitualPanel() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Clean-slate ("hide all existing news from Google") — owner-only. Loads its
+  // own count; stays hidden for non-owners (the endpoint 403s → status null).
+  const [newsStatus, setNewsStatus] = useState<{
+    visible: number;
+    hidden: number;
+    total: number;
+  } | null>(null);
+  const [confirmHide, setConfirmHide] = useState(false);
+  const [hiding, setHiding] = useState(false);
+  const [hideMsg, setHideMsg] = useState("");
+
   const load = useCallback(() => {
     getIndexingRitual()
       .then(setData)
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
       );
+    getBacklogNewsStatus()
+      .then(setNewsStatus)
+      .catch(() => setNewsStatus(null)); // non-owner or error → hide the card
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const runHide = async () => {
+    setHiding(true);
+    setHideMsg("");
+    try {
+      const { hidden } = await hideExistingNews();
+      setHideMsg(
+        `Hid ${hidden} news article${hidden === 1 ? "" : "s"} from Google. They'll drop out of the sitemap within ~5 min and deindex on Google's next crawl.`,
+      );
+      setConfirmHide(false);
+      const s = await getBacklogNewsStatus().catch(() => null);
+      setNewsStatus(s);
+    } catch (e) {
+      setHideMsg(e instanceof Error ? e.message : "Failed to hide");
+    } finally {
+      setHiding(false);
+    }
+  };
 
   const markDone = async () => {
     setSaving(true);
@@ -127,6 +161,91 @@ export default function IndexingRitualPanel() {
           </Text>
         </Text>
       </Box>
+
+      {/* Clean slate — hide all existing news from Google (owner-only). */}
+      {newsStatus && (
+        <Box
+          bg="rgba(255,90,90,0.06)"
+          border="1px solid"
+          borderColor="rgba(255,90,90,0.35)"
+          borderRadius="lg"
+          p={4}
+        >
+          <Text
+            color="#FF8A8A"
+            fontSize="xs"
+            fontWeight="800"
+            letterSpacing="0.1em"
+            textTransform="uppercase"
+            mb={2}
+          >
+            Start fresh with Google
+          </Text>
+          <Text color="nexzy.gray.100" fontSize="sm" mb={3}>
+            Hides <b>every existing news article</b> from Google in one click —
+            drops them from the sitemap and adds a noindex tag so Google
+            deindexes them. Your guides &amp; lists stay visible, and anything
+            you publish from today on shows up normally. Right now{" "}
+            <Text as="span" color="nexzy.white" fontWeight="700">
+              {newsStatus.visible}
+            </Text>{" "}
+            news article{newsStatus.visible === 1 ? " is" : "s are"} visible
+            {newsStatus.hidden > 0
+              ? ` (${newsStatus.hidden} already hidden)`
+              : ""}
+            .
+          </Text>
+          {hideMsg && (
+            <Text color="nexzy.lightBlue" fontSize="sm" mb={3}>
+              {hideMsg}
+            </Text>
+          )}
+          {!confirmHide ? (
+            <Button
+              size="sm"
+              variant="outline"
+              color="#FF8A8A"
+              borderColor="rgba(255,90,90,0.5)"
+              _hover={{ bg: "rgba(255,90,90,0.1)" }}
+              onClick={() => {
+                setHideMsg("");
+                setConfirmHide(true);
+              }}
+              disabled={newsStatus.visible === 0}
+            >
+              {newsStatus.visible === 0
+                ? "All news already hidden ✓"
+                : `Hide all ${newsStatus.visible} news articles from Google`}
+            </Button>
+          ) : (
+            <Flex gap={2} align="center" wrap="wrap">
+              <Text color="nexzy.white" fontSize="sm" fontWeight="700">
+                Hide {newsStatus.visible} articles — sure?
+              </Text>
+              <Button
+                size="sm"
+                bg="#E24"
+                color="white"
+                _hover={{ bg: "#F35" }}
+                onClick={runHide}
+                loading={hiding}
+              >
+                Yes, hide them
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                onClick={() => setConfirmHide(false)}
+                disabled={hiding}
+              >
+                Cancel
+              </Button>
+            </Flex>
+          )}
+        </Box>
+      )}
 
       <Box
         bg="nexzy.blue/10"
