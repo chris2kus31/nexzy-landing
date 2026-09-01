@@ -1182,12 +1182,8 @@ function relTime(d: Date): string {
 /** Best posting time(s) for a SPECIFIC day — real data if we have it, else the
  *  general growth-guide windows. Returns null when neither applies. */
 // A single suggested posting time. `isReal` = derived from the owner's own post
-// history (highest confidence, carries a post count `n`); otherwise it's a
-// best-practice window used to TOP UP the list.
+// history (carries a post count `n`); otherwise it's a research-backed window.
 type PostTimeSlot = { label: string; isReal: boolean; n?: number };
-// Every platform always surfaces at least this many times. Real slots come
-// first; best-practice windows fill the remainder so the list never shrinks.
-const MIN_TIME_SLOTS = 3;
 
 function bestPracticeWindows(platform: string, target: Date): number[] {
   return (
@@ -1203,11 +1199,15 @@ function bestPracticeWindows(platform: string, target: Date): number[] {
   );
 }
 
-// Build the merged time list for one platform/day: the owner's real slots first
-// (ranked best→worst by reach, each with its post count), then best-practice
-// windows appended to top the list up to MIN_TIME_SLOTS. Real data is layered
-// ON TOP of the regular recommendations — it never replaces or shrinks them.
-function slotsForDay(
+function fmtHour(target: Date, h: number): string {
+  const at = new Date(target);
+  at.setHours(h, 0, 0, 0);
+  return at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+// The owner's OWN best slots for this platform/day, ranked best→worst by reach,
+// each with its post count. Empty when that platform has no history yet.
+function realSlotsForDay(
   platform: string,
   target: Date,
   real?: Record<string, { hour: number; n: number; source: string }[]>,
@@ -1220,27 +1220,24 @@ function slotsForDay(
     | { hour: number; n: number; source: string }[]
     | undefined;
   const ranked = Array.isArray(rawReal) ? rawReal : rawReal ? [rawReal] : [];
-  const fmt = (h: number) => {
-    const at = new Date(target);
-    at.setHours(h, 0, 0, 0);
-    return at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  };
-  const usedHours = new Set<number>();
+  const used = new Set<number>();
   const slots: PostTimeSlot[] = [];
-  // Real slots first (top 5), highest confidence.
   for (const rd of ranked.slice(0, 5)) {
-    if (usedHours.has(rd.hour)) continue;
-    usedHours.add(rd.hour);
-    slots.push({ label: fmt(rd.hour), isReal: true, n: rd.n });
-  }
-  // Top up with best-practice windows (deduped by hour) until we hit the floor.
-  for (const h of bestPracticeWindows(platform, target)) {
-    if (slots.length >= MIN_TIME_SLOTS) break;
-    if (usedHours.has(h)) continue;
-    usedHours.add(h);
-    slots.push({ label: fmt(h), isReal: false });
+    if (used.has(rd.hour)) continue;
+    used.add(rd.hour);
+    slots.push({ label: fmtHour(target, rd.hour), isReal: true, n: rd.n });
   }
   return slots;
+}
+
+// The FULL research-backed recommended windows for this platform/day — always
+// shown complete and untrimmed, independent of the owner's own data, so he can
+// choose to trust the research when his own history is still thin.
+function generalSlotsForDay(platform: string, target: Date): PostTimeSlot[] {
+  return bestPracticeWindows(platform, target).map((h) => ({
+    label: fmtHour(target, h),
+    isReal: false,
+  }));
 }
 
 /** Rich, day-selectable audience + best-times stats hub for the Leads header. */
@@ -1285,30 +1282,35 @@ export function AudiencePanel({
   const updated = audience?.fetchedAt
     ? relTime(new Date(audience.fetchedAt))
     : "";
-  const rows = PLATFORMS_SHOWN.flatMap((p) => {
-    const slots = slotsForDay(p, sel.date, byPlat?.[p]);
+  // TWO independent lists, shown as two sections:
+  //  • realRows — the owner's own best slots (only platforms that have history)
+  //  • generalRows — the FULL research windows for EVERY platform, always, so the
+  //    complete recommendation is always available for a judgment call.
+  const realRows = PLATFORMS_SHOWN.flatMap((p) => {
+    const slots = realSlotsForDay(p, sel.date, byPlat?.[p]);
     if (!slots.length) return [];
-    // YouTube splits into Shorts (its main row) + a separate Long-form row,
-    // because the two formats peak at opposite times (Shorts midday/evening,
-    // long-form mornings). Long-form is always the research window (our post
-    // history doesn't distinguish format).
+    const label = p === "youtube" ? "YT Shorts" : (PLATFORM_LABEL[p] ?? p);
+    return [{ p, label, slots }];
+  });
+  const generalRows = PLATFORMS_SHOWN.flatMap((p) => {
+    // YouTube splits into Shorts + a separate Long-form row, because the two
+    // formats peak at opposite times (Shorts midday/evening, long-form mornings).
     if (p === "youtube") {
-      const longSlots: PostTimeSlot[] = ytLongWindows(sel.date).map((h) => {
-        const c = new Date(sel.date);
-        c.setHours(h, 0, 0, 0);
-        return {
-          label: c.toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-          isReal: false,
-        };
-      });
+      const longSlots: PostTimeSlot[] = ytLongWindows(sel.date).map((h) => ({
+        label: fmtHour(sel.date, h),
+        isReal: false,
+      }));
       return [
-        { p, label: "YT Shorts", slots },
+        {
+          p,
+          label: "YT Shorts",
+          slots: generalSlotsForDay("youtube", sel.date),
+        },
         { p: "youtube-long", label: "YT Long", slots: longSlots },
       ];
     }
+    const slots = generalSlotsForDay(p, sel.date);
+    if (!slots.length) return [];
     return [{ p, label: PLATFORM_LABEL[p] ?? p, slots }];
   });
   const renderRow = (r: {
@@ -1421,26 +1423,37 @@ export function AudiencePanel({
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
             BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
           </Text>
-          <VStack align="stretch" gap={1} mb={2}>
-            {rows.map(renderRow)}
-          </VStack>
-          <Flex gap={3} wrap="wrap" mb={2}>
-            <Text fontSize="10px" fontWeight="700" color="green.300">
-              green = your data (n = posts)
-            </Text>
-            <Text fontSize="10px" fontWeight="700" color="whiteAlpha.500">
-              gray = recommended
-            </Text>
-          </Flex>
+          {realRows.length > 0 && (
+            <Box mb={2}>
+              <Text color="green.300" fontSize="10px" fontWeight="700" mb={1}>
+                FROM YOUR REAL DATA (n = posts)
+              </Text>
+              <VStack align="stretch" gap={1}>
+                {realRows.map(renderRow)}
+              </VStack>
+            </Box>
+          )}
           <Box mb={3}>
-            <Text color="whiteAlpha.400" fontSize="10px">
-              Your real slots (green) lead each row; recommended windows fill
-              the rest so every platform always shows at least {MIN_TIME_SLOTS}
-              times. YouTube, Facebook, Instagram &amp; Threads are day-specific
-              in CST, combined across all 2026 studies (gaming rows weighted 3x
-              for YT/FB). YT Shorts, Facebook &amp; Instagram: afternoon +
-              evening. YT long-form: mornings. Threads: mornings (8–11am,
-              text-first), Tue–Thu best. Others (X, TikTok) use flat windows.
+            <Text
+              color="whiteAlpha.500"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              RECOMMENDED · FROM OUR RESEARCH
+            </Text>
+            <VStack align="stretch" gap={1}>
+              {generalRows.map(renderRow)}
+            </VStack>
+            <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
+              Two independent reads: your own data (green, above) and the full
+              research-backed windows (below) — always shown complete so you can
+              make the call on which to trust. YouTube, Facebook, Instagram
+              &amp; Threads are day-specific in CST, combined across all 2026
+              studies (gaming rows weighted 3x for YT/FB). YT Shorts, Facebook
+              &amp; Instagram: afternoon + evening. YT long-form: mornings.
+              Threads: mornings (8–11am, text-first), Tue–Thu best. Others (X,
+              TikTok) use flat windows.
             </Text>
           </Box>
 
