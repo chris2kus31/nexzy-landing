@@ -62,7 +62,7 @@ function LeadCard({
     author: string,
     generateImage: boolean,
     treatment: "news" | "review",
-    opts?: { angle?: string; take?: string },
+    opts?: { angle?: string; take?: string; sourceText?: string },
   ) => void;
   onSkip: (id: string) => void;
   busy: boolean;
@@ -81,6 +81,11 @@ function LeadCard({
   const [showTake, setShowTake] = useState(false);
   const [take, setTake] = useState("");
   const [angle, setAngle] = useState("");
+  // Email leads only: pasted press-release / article text (the source page is
+  // behind a login, so it can't be fetched). Becomes the lead's facts so the
+  // writer + editor work from real content. Kept SEPARATE from the take.
+  const isEmailLead = lead.origin === "email";
+  const [sourceText, setSourceText] = useState("");
   // Pre-load the angle map if this lead was already analyzed (it's saved on the
   // brief + returned in the list), so a refresh doesn't hide it behind the button.
   const [analysis, setAnalysis] = useState<Lead | null>(
@@ -451,7 +456,11 @@ function LeadCard({
             size="sm"
             colorPalette={treatment === "review" ? "purple" : "blue"}
             onClick={() =>
-              onWrite(lead.id, author, genImage, treatment, { angle, take })
+              onWrite(lead.id, author, genImage, treatment, {
+                angle,
+                take,
+                sourceText,
+              })
             }
             loading={busy}
           >
@@ -470,6 +479,38 @@ function LeadCard({
           </Button>
         </VStack>
       </Flex>
+      {isEmailLead && (
+        <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Text
+            fontSize="xs"
+            color="nexzy.lightBlue"
+            fontWeight="700"
+            mb={1}
+            textTransform="uppercase"
+            letterSpacing="wide"
+          >
+            Paste source text — do this before Write this
+          </Text>
+          <Text fontSize="xs" color="nexzy.gray.100" mb={2} lineHeight="1.5">
+            The source is behind a login, so paste the full press release /
+            article body here. It becomes the facts the writer and fact-check
+            use — without it the writer only has the subject line and will
+            guess.
+          </Text>
+          <Textarea
+            value={sourceText}
+            onChange={(e) => setSourceText(e.target.value)}
+            rows={6}
+            placeholder="Paste the full email / press-release text here…"
+            bg="whiteAlpha.50"
+            color="nexzy.white"
+            borderColor={
+              sourceText.trim() ? "green.400/50" : "rgba(255,159,64,0.5)"
+            }
+            fontSize="sm"
+          />
+        </Box>
+      )}
       {showTake && (
         <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Flex
@@ -830,7 +871,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     author: string,
     generateImage: boolean,
     treatment: "news" | "review",
-    opts?: { angle?: string; take?: string },
+    opts?: { angle?: string; take?: string; sourceText?: string },
   ) => {
     setBusyId(id);
     try {

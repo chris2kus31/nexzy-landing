@@ -1335,7 +1335,7 @@ export async function writeLead(
   id: string,
   author?: string,
   generateImage?: boolean,
-  opts?: { angle?: string; take?: string },
+  opts?: { angle?: string; take?: string; sourceText?: string },
 ): Promise<Lead> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/write`, {
@@ -1347,6 +1347,11 @@ export async function writeLead(
         // the writer; the raw take gets voice-matched into the article.
         ...(opts?.angle?.trim() ? { angle: opts.angle.trim() } : {}),
         ...(opts?.take?.trim() ? { take: opts.take.trim() } : {}),
+        // Email leads: pasted press-release/article text → becomes the lead's
+        // facts so the writer + editor work from real content, not a subject line.
+        ...(opts?.sourceText?.trim()
+          ? { sourceText: opts.sourceText.trim() }
+          : {}),
         // Positive opt-in — the server defaults to NO image when absent.
         generateImage: !!generateImage,
       }),
