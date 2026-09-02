@@ -1264,10 +1264,20 @@ function bestPracticeWindows(platform: string, target: Date): number[] {
   );
 }
 
-function fmtHour(target: Date, h: number): string {
-  const at = new Date(target);
-  at.setHours(h, 0, 0, 0);
-  return at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+// Render an hour as a 1-hour RANGE label, best→worst per slot:
+// 9 -> "9–10 AM", 11 -> "11 AM–12 PM", 12 -> "12–1 PM", 19 -> "7–8 PM".
+function fmtHour(_target: Date, h: number): string {
+  const lab = (x: number) => {
+    const hr = ((x % 24) + 24) % 24;
+    const mer = hr < 12 ? "AM" : "PM";
+    const h12 = hr % 12 === 0 ? 12 : hr % 12;
+    return { h12, mer };
+  };
+  const a = lab(h);
+  const b = lab(h + 1);
+  return a.mer === b.mer
+    ? `${a.h12}–${b.h12} ${b.mer}`
+    : `${a.h12} ${a.mer}–${b.h12} ${b.mer}`;
 }
 
 // The owner's OWN best slots for this platform/day, ranked best→worst by reach,
