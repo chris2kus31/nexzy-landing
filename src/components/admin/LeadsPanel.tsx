@@ -1315,6 +1315,23 @@ function generalSlotsForDay(platform: string, target: Date): PostTimeSlot[] {
   }));
 }
 
+// Chris's OWN YouTube Studio "When your viewers are on YouTube" chart, hand-read
+// 2026-09-02 (Analytics → Audience; all viewers, not just subs; last 28d; already
+// in CT/GMT-0500). This is a THIRD layer — real per-channel YouTube audience-online
+// data — shown ALONGSIDE (not replacing) the research windows. YouTube's active-hours
+// aren't API-pullable (Studio UI only), so re-transcribe this when the chart shifts.
+// Best→worst by weekday (0=Sun). Peaks: midday ~1pm every day + a 5–7pm wing (Fri
+// strongest evening); mornings are weak.
+const YT_AUDIENCE_CHART: Record<number, number[]> = {
+  0: [13, 10, 12], // Sun
+  1: [13, 12, 18], // Mon
+  2: [13, 17, 15], // Tue
+  3: [13, 12, 14], // Wed
+  4: [13, 14, 12], // Thu
+  5: [18, 17, 13], // Fri — evening strongest
+  6: [13, 17, 14], // Sat
+};
+
 /** Rich, day-selectable audience + best-times stats hub for the Leads header. */
 export function AudiencePanel({
   audience,
@@ -1357,6 +1374,13 @@ export function AudiencePanel({
   const updated = audience?.fetchedAt
     ? relTime(new Date(audience.fetchedAt))
     : "";
+  // Chris's own YouTube Studio audience-online chart for the selected day (3rd layer).
+  const ytChartSlots = (YT_AUDIENCE_CHART[sel.date.getDay()] ?? []).map(
+    (h) => ({
+      label: fmtHour(sel.date, h),
+      isReal: false,
+    }),
+  );
   // TWO independent lists, shown as two sections:
   //  • realRows — the owner's own best slots (only platforms that have history)
   //  • generalRows — the FULL research windows for EVERY platform, always, so the
@@ -1508,6 +1532,42 @@ export function AudiencePanel({
               </VStack>
             </Box>
           )}
+          {ytChartSlots.length > 0 && (
+            <Box mb={2}>
+              <Text color="purple.300" fontSize="10px" fontWeight="700" mb={1}>
+                FROM YOUR YOUTUBE · viewers online (Studio · 28d, all viewers)
+              </Text>
+              <Flex align="center" gap={2}>
+                <Text
+                  fontSize="xs"
+                  color="nexzy.white"
+                  fontWeight="600"
+                  w="72px"
+                  flexShrink={0}
+                >
+                  YouTube
+                </Text>
+                <Flex flex="1" minW={0} wrap="wrap" gap={1}>
+                  {ytChartSlots.map((s, i) => (
+                    <Flex
+                      key={i}
+                      align="center"
+                      px={2}
+                      py="1px"
+                      borderRadius="md"
+                      bg="purple.900"
+                      border="1px solid"
+                      borderColor="purple.400"
+                    >
+                      <Text fontSize="xs" fontWeight="700" color="purple.200">
+                        {s.label}
+                      </Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              </Flex>
+            </Box>
+          )}
           <Box mb={3}>
             <Text
               color="whiteAlpha.500"
@@ -1521,14 +1581,14 @@ export function AudiencePanel({
               {generalRows.map(renderRow)}
             </VStack>
             <Text color="whiteAlpha.400" fontSize="10px" mt={1.5}>
-              Two independent reads: your own data (green, above) and the full
-              research-backed windows (below) — always shown complete so you can
-              make the call on which to trust. YouTube, Facebook, Instagram
-              &amp; Threads are day-specific in CST, combined across all 2026
-              studies (gaming rows weighted 3x for YT/FB). YT Shorts, Facebook
-              &amp; Instagram: afternoon + evening. YT long-form: mornings.
-              Threads: mornings (8–11am, text-first), Tue–Thu best. Others (X,
-              TikTok) use flat windows.
+              Three reads, most-trusted first: your post data (green) · your
+              YouTube viewers-online chart (purple) · and the research-backed
+              windows (below) — all shown so you can make the call. YouTube,
+              Facebook, Instagram &amp; Threads are day-specific in CST,
+              combined across all 2026 studies (gaming rows weighted 3x for
+              YT/FB). YT Shorts, Facebook &amp; Instagram: afternoon + evening.
+              YT long-form: mornings. Threads: mornings (8–11am, text-first),
+              Tue–Thu best. Others (X, TikTok) use flat windows.
             </Text>
           </Box>
 
