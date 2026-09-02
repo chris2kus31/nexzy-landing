@@ -135,13 +135,13 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // General best posting windows per platform (grounded in our growth guides),
 // as local-clock target hours. The fallback when we have no real data yet.
 const GUIDE_WINDOWS: Record<string, number[]> = {
-  x: [9, 12, 19],
+  x: [9, 12, 15], // 2026: morning→afternoon (evenings underperform on X); day-specific map overrides
   threads: [9, 12],
   instagram: [12, 19],
   reels: [12, 19],
-  facebook: [13, 19],
-  youtube: [15],
-  tiktok: [8, 13, 19],
+  facebook: [12, 19], // 2026: midday-anchored per Sprout
+  youtube: [18], // 2026: Shorts evening; day-specific maps override
+  tiktok: [19, 20, 13], // 2026: evening peak; day-specific map overrides
 };
 
 // YouTube SHORTS best-practice windows PER WEEKDAY, in the owner's local time
@@ -152,28 +152,34 @@ const GUIDE_WINDOWS: Record<string, number[]> = {
 // (8–9am) and an evening (6–8pm) wing. Your own post data (≥3 posts in a slot)
 // still overrides these. 0 = Sun … 6 = Sat.
 const YT_SHORTS_BY_DAY: Record<number, number[]> = {
-  // Cross-source VOTE COUNT with the GAMING-industry rows weighted 3x
-  // (SocialPilot gaming 3-4pm+7-10pm Thu-Fri; Viraly gaming/ent 5-8pm wk,
-  // 10-12 wknd). CST, best->worst. Gaming pulls weekdays to eve+afternoon.
-  0: [19, 10, 16], // Sun — eve · late-morning · afternoon
-  1: [19, 13, 16], // Mon — eve · midday · afternoon
-  2: [19, 13, 16], // Tue — eve · midday · afternoon
-  3: [19, 13, 16], // Wed — eve · midday · afternoon
-  4: [19, 13, 16], // Thu — eve · midday · afternoon (gaming strongest)
-  5: [19, 13, 16], // Fri — eve · midday · afternoon (gaming strongest)
-  6: [10, 19, 16], // Sat — late-morning · eve · afternoon (weekend)
+  // MULTI-SOURCE 2026 (Buffer 1.8M format-specific + Metricool + SocialPilot +
+  // Hopper). Tier 1 = afternoon 1pm + evening 7pm (the union Buffer[evening] and
+  // Metricool/SocialPilot/Hopper[2–6pm] both support); Tier 2 fills midday/late-
+  // afternoon. Fri 4pm is uniquely strong (Buffer). Never mornings. CST, best->worst.
+  // MEDIUM confidence (afternoon-vs-evening genuinely splits across studies).
+  0: [17, 13, 19], // Sun
+  1: [13, 19, 12], // Mon
+  2: [12, 19, 15], // Tue
+  3: [13, 19, 12], // Wed
+  4: [13, 18, 20], // Thu
+  5: [16, 18, 12], // Fri — 4pm single best slot (Buffer)
+  6: [14, 17, 19], // Sat
 };
 // YouTube LONG-FORM windows PER WEEKDAY (CST). Long-form peaks OPPOSITE to Shorts
 // — mornings + early-afternoon (Buffer: Sun 10am / Tue / Mon mornings; Viraly &
 // Hollyland: weekdays 12–4pm, weekends 9–11am; SocialPilot gaming: 2–4pm).
 const YT_LONGFORM_BY_DAY: Record<number, number[]> = {
-  0: [10], // Sun — Buffer's #1 long-form slot
-  1: [9, 14], // Mon
-  2: [9, 14], // Tue
-  3: [8, 15], // Wed
-  4: [9, 17], // Thu
-  5: [11, 13], // Fri
-  6: [10], // Sat
+  // MULTI-SOURCE 2026 (Buffer 1.8M[AM 8–11] + Metricool[10am–4pm] + SocialPilot
+  // [1–3pm] + Sprout[publish-to-mature]). Tier 1 = late-morning→early-afternoon
+  // (11am–1pm) publish so the video matures before evening/weekend viewing; Tier 2
+  // = 9am / 3pm. Weekends strong (Sun/Sat AM). CST, best->worst. MEDIUM-HIGH.
+  0: [11, 9, 13], // Sun — strong day
+  1: [12, 10, 15], // Mon
+  2: [11, 13, 9], // Tue
+  3: [12, 10, 15], // Wed
+  4: [11, 13, 9], // Thu
+  5: [11, 9, 13], // Fri
+  6: [10, 13, 9], // Sat
 };
 function ytShortsWindows(target: Date): number[] {
   return YT_SHORTS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
@@ -186,15 +192,18 @@ function ytShortsWindows(target: Date): number[] {
 // FB has broad all-day engagement; these are the strongest overlapping clusters
 // per day: a morning, a midday, and an evening. Your post data still overrides.
 const FB_BY_DAY: Record<number, number[]> = {
-  // Cross-source VOTE COUNT with the GAMING row weighted 3x (SocialPilot gaming
-  // = 3pm/7pm/9pm all days). Buffer + Sprout + SocialPilot gen/USA. CST, best->worst.
-  0: [16, 10, 8], // Sun — afternoon · late-morning · morning [weak day]
-  1: [19, 16, 13], // Mon — eve · afternoon · midday
-  2: [19, 16, 8], // Tue — eve · afternoon · morning
-  3: [16, 19, 8], // Wed — afternoon · eve · morning
-  4: [19, 16, 8], // Thu — eve · afternoon · morning
-  5: [16, 8, 13], // Fri — afternoon · morning · midday
-  6: [16, 19, 8], // Sat — afternoon · eve · morning [weak day]
+  // MULTI-SOURCE 2026, HEDGED (Buffer 14M[mornings 6–11am] + Sprout 2B[midday 9am–3pm]
+  // + SocialPilot[9am–3pm] for feed; Buffer[Reels evening 7–9pm]). Studies conflict on
+  // feed AM-vs-midday and feed differs from Reels, so each day carries a morning, a
+  // midday, and an evening (Reels) slot to test. Best day mid-week (Wed/Thu). Weekends
+  // weak. CST, best->worst. MED confidence — let your own Insights break the tie.
+  0: [13, 19, 11], // Sun — weak day
+  1: [10, 13, 19], // Mon
+  2: [10, 13, 19], // Tue
+  3: [9, 12, 19], // Wed — best day
+  4: [9, 12, 20], // Thu — Buffer's week peak = 9am; +evening Reels
+  5: [11, 13, 19], // Fri
+  6: [11, 20, 13], // Sat — weak day
 };
 function fbWindows(target: Date): number[] {
   return FB_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.facebook;
@@ -208,15 +217,18 @@ function fbWindows(target: Date): number[] {
 // audience. Consensus clusters: midday (12–2pm) + evening (6–8pm); Thursday is
 // the morning exception. Your post data still overrides. 0=Sun … 6=Sat.
 const IG_BY_DAY: Record<number, number[]> = {
-  // Cross-source VOTE COUNT (Buffer + Sprout + Hopper EST->CST) + a light gaming
-  // PROXY = evening (x2), since NO IG source split out gaming. CST, best->worst.
-  0: [19, 10, 16], // Sun — eve · late-morning · afternoon [weak day]
-  1: [19, 13, 16], // Mon — eve · midday · afternoon
-  2: [19, 16, 13], // Tue — eve · afternoon · midday
-  3: [19, 13, 8], // Wed — eve · midday · morning
-  4: [19, 8, 13], // Thu — eve · morning (Buffer exception) · midday
-  5: [19, 8, 10], // Fri — eve · morning · late-morning [weak day]
-  6: [19, 10, 16], // Sat — eve · late-morning · afternoon [weak day]
+  // MULTI-SOURCE 2026 (Buffer 9.6M + Sprout 2B + Later + Metricool 24.4M). Three
+  // large studies converge: Tier 1 = midweek EVENING 6–8pm (Wed/Thu lead); Tier 2
+  // = midday 12pm + Buffer's Thu/Wed 9am. NOTE: this is the study fallback — IG's
+  // real online_followers pull overrides it once the account clears 100 followers.
+  // CST, best->worst. HIGH confidence.
+  0: [19, 12, 11], // Sun
+  1: [19, 12, 9], // Mon
+  2: [18, 12, 9], // Tue
+  3: [18, 12, 9], // Wed
+  4: [18, 9, 12], // Thu — 9am is Buffer's overall #1 IG slot
+  5: [12, 18, 9], // Fri
+  6: [11, 19, 12], // Sat
 };
 function igWindows(target: Date): number[] {
   return IG_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.instagram;
@@ -227,16 +239,61 @@ function igWindows(target: Date): number[] {
 // 8-11am Tue-Thu, tapering after noon; weekends weak). No gaming-industry split
 // exists for Threads, so no gaming weighting. Your post data still overrides.
 const THREADS_BY_DAY: Record<number, number[]> = {
-  0: [10, 8], // Sun — morning only [weak day]
-  1: [9, 11, 8], // Mon — morning
-  2: [9, 10, 8], // Tue — best day (8-11am darkest)
-  3: [9, 10, 11], // Wed — 2nd best (9-10am darkest)
-  4: [9, 10, 8], // Thu — 3rd best
-  5: [9, 10, 8], // Fri — morning
-  6: [10, 8], // Sat — morning only [weak day]
+  // MULTI-SOURCE 2026 (Buffer 2.5M primary + Later + MeetEdgar/Postory corroborate).
+  // Tier 1 = weekday mornings 9–11am, midweek (Wed/Thu); Tier 2 = noon + 8am.
+  // Evenings disputed (Buffer says avoid, Later says 6–8pm) → a single cautious
+  // Sun 6pm test slot only. CST, best->worst. MEDIUM (no independent large 2nd study).
+  0: [11, 9, 18], // Sun — morning; lone evening test (Later)
+  1: [9, 12, 8], // Mon
+  2: [9, 11, 12], // Tue
+  3: [9, 12, 15], // Wed — best day
+  4: [9, 11, 12], // Thu — single best slot 9am
+  5: [9, 12, 8], // Fri
+  6: [10, 12, 8], // Sat — weak day
 };
 function threadsWindows(target: Date): number[] {
   return THREADS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.threads;
+}
+// X (Twitter) — Buffer (mornings 9–11am) + Sprout 2026 (midday/afternoon 12–6pm)
+// blend. Both agree Tue–Thu are best days and weekends are weak; they disagree on
+// hour-of-day, so this spreads morning→afternoon. Dropped the old flat 7pm
+// (evenings underperform on X per both). CST, best->worst. (2026 — now day-specific.)
+const X_BY_DAY: Record<number, number[]> = {
+  // MULTI-SOURCE 2026 (Buffer 8.7M[AM 9–11] + Sprout 2B[12–6pm] + Metricool[9pm]).
+  // Least-converged platform — three studies, three peaks. Tier 1 = midweek late-
+  // AM→noon (Buffer↔Sprout overlap); Tier 2 = 3pm (Sprout) + a 8pm news slot
+  // (Metricool, defensible for a news brand). Tue–Thu best, Sat worst. CST, best->worst.
+  // MEDIUM. NOTE: for breaking news, post reactively regardless of the clock.
+  0: [11, 20, 14], // Sun
+  1: [10, 12, 15], // Mon
+  2: [9, 12, 15], // Tue — best day
+  3: [9, 11, 15], // Wed — best day
+  4: [10, 12, 20], // Thu — +evening news slot
+  5: [9, 12, 15], // Fri
+  6: [11, 20, 14], // Sat — weak day
+};
+function xWindows(target: Date): number[] {
+  return X_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.x;
+}
+// TikTok — Metricool 2026 (2.3M posts, 8pm peak) + Buffer (evenings 6–11pm).
+// Weekend-FRIENDLY (unlike the others): Metricool's peak day is Sunday, Buffer's
+// is Saturday — keep weekend evening slots live. Dropped the old flat 8am (early
+// morning is a dead zone). CST, best->worst. (2026 — now day-specific.)
+const TIKTOK_BY_DAY: Record<number, number[]> = {
+  // MULTI-SOURCE 2026 (Buffer 7.1M + Metricool 2.3M + Sprout 2B + Later + SocialPilot).
+  // Strong convergence: Tier 1 = evening 6–8pm + weekend afternoons; Tier 2 = 2–4pm
+  // (Sprout/Later) + noon. Weekends (Sat/Sun) are STRONG here (the exception vs other
+  // platforms) — matches the 25–34 male gamer audience. CST, best->worst. HIGH.
+  0: [13, 18], // Sun — weekend afternoon + evening
+  1: [18, 13, 20], // Mon
+  2: [18, 15, 12], // Tue
+  3: [19, 15, 12], // Wed
+  4: [18, 15, 11], // Thu
+  5: [18, 20, 15], // Fri
+  6: [16, 18], // Sat — strong day; weekend afternoon→evening
+};
+function tiktokWindows(target: Date): number[] {
+  return TIKTOK_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.tiktok;
 }
 function ytLongWindows(target: Date): number[] {
   return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
@@ -308,7 +365,11 @@ function nextPostSlot(
             ? igWindows(day)
             : platform === "threads"
               ? threadsWindows(day)
-              : flatWindows;
+              : platform === "x"
+                ? xWindows(day)
+                : platform === "tiktok"
+                  ? tiktokWindows(day)
+                  : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
         const c = new Date(day);
@@ -1195,7 +1256,11 @@ function bestPracticeWindows(platform: string, target: Date): number[] {
           ? igWindows(target)
           : platform === "threads"
             ? threadsWindows(target)
-            : GUIDE_WINDOWS[platform]) as number[] | undefined) ?? []
+            : platform === "x"
+              ? xWindows(target)
+              : platform === "tiktok"
+                ? tiktokWindows(target)
+                : GUIDE_WINDOWS[platform]) as number[] | undefined) ?? []
   );
 }
 
