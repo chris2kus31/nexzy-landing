@@ -86,21 +86,12 @@ function LeadCard({
   // writer + editor work from real content. Kept SEPARATE from the take.
   const isEmailLead = lead.origin === "email";
   const [sourceText, setSourceText] = useState("");
-  // The paste box shows ONLY where the writer can't reliably auto-read the
-  // source: email (behind a login), page-monitor leads (publisher pages that
-  // don't auto-read well), and the AI-opt-out publishers we deliberately never
-  // auto-read (Nintendo, EA). Everything else — the RSS/desk firehose — auto-reads
-  // its public URL, so it gets no box (unchanged).
-  const OPT_OUT_HOSTS = ["nintendo.com", "ea.com"];
-  const isOptOutSource = (lead.sources ?? []).some((s) => {
-    try {
-      const h = new URL(s.url).host.toLowerCase();
-      return OPT_OUT_HOSTS.some((d) => h === d || h.endsWith("." + d));
-    } catch {
-      return false;
-    }
-  });
-  const needsPasteBox = isEmailLead || lead.origin === "page" || isOptOutSource;
+  // Whether to show the manual "paste source text" box. The backend computes this
+  // (email + page-monitor + the Nintendo/EA opt-out publishers we never auto-read)
+  // and returns it as `needsSourcePaste`, so the rule lives in ONE place and the
+  // opt-out host list is never duplicated here. Falls back to email-only if an
+  // older API response doesn't carry the flag yet.
+  const needsPasteBox = lead.needsSourcePaste ?? isEmailLead;
   // Pre-load the angle map if this lead was already analyzed (it's saved on the
   // brief + returned in the list), so a refresh doesn't hide it behind the button.
   const [analysis, setAnalysis] = useState<Lead | null>(

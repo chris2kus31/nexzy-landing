@@ -1284,6 +1284,9 @@ export interface Lead {
    *  a login); 'page' = a monitored publisher page; 'rss' = a first-party feed;
    *  'desk'/null = the RSS firehose scan (aggregated reporting). */
   origin?: "desk" | "email" | "page" | "rss" | null;
+  /** Backend-computed: show the manual "paste source text" box for this lead
+   *  (email / page-monitor / Nintendo-EA opt-out sources). Single source of truth. */
+  needsSourcePaste?: boolean;
   youtubeUrl: string | null;
   createdAt: string;
 }
