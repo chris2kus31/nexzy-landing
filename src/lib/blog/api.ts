@@ -19,6 +19,15 @@ export interface ArticleMedia {
   order?: number;
 }
 
+/** One image in an article's IMAGE gallery (own field — not videos, not rewind). */
+export interface ArticleImage {
+  url: string;
+  alt?: string | null;
+  caption?: string | null;
+  credit?: string | null;
+  order?: number;
+}
+
 export interface PublicPost {
   slug: string;
   title: string;
@@ -81,6 +90,8 @@ export interface PublicPost {
   youtubeUrl: string | null;
   // Full video list (detail views); falls back to a single youtubeUrl item.
   media?: ArticleMedia[];
+  // The article's IMAGE gallery (its own field — not videos, not rewind shots).
+  images?: ArticleImage[];
   beat: string;
   type?: string;
   tags: string[];

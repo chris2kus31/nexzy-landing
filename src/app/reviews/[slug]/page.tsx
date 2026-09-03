@@ -20,6 +20,7 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import { slugifyTag } from "@/lib/blog/tags";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import ArticleBody from "@/components/blog/ArticleBody";
+import ArticleGallery from "@/components/blog/ArticleGallery";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
 import { authorJsonLd } from "@/lib/blog/authors";
@@ -327,6 +328,9 @@ export default async function ReviewPage({
         {post.bodyMarkdown && (
           <ArticleBody body={post.bodyMarkdown} location="reviews" />
         )}
+
+        {/* Article image gallery — its own thing; renders nothing when empty. */}
+        <ArticleGallery images={post.images} />
 
         {videoEmbed && (
           <Box mt={10}>

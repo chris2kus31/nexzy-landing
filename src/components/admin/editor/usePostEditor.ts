@@ -9,6 +9,7 @@ import {
   getWriterNames,
   type BlogPost,
   type ArticleMedia,
+  type ArticleImage,
   type RewindFacts,
   type ArticleFormatData,
 } from "@/lib/admin/client";
@@ -60,6 +61,7 @@ export function usePostEditor(id: string) {
   const [post, setPost] = useState<BlogPost | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [media, setMedia] = useState<ArticleMedia[]>([]);
+  const [images, setImages] = useState<ArticleImage[]>([]);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [facts, setFacts] = useState<RewindFacts>({});
   const [poll, setPoll] = useState<PollDraft>({ question: "", options: [] });
@@ -84,6 +86,7 @@ export function usePostEditor(id: string) {
         setPost(p);
         setForm(toForm(p));
         setMedia(mediaFromPost(p));
+        setImages(p.images ?? []);
         setScreenshots(p.screenshots ?? []);
         setFacts(p.rewindFacts ?? {});
         setPoll(pollFromPost(p));
@@ -109,6 +112,7 @@ export function usePostEditor(id: string) {
       setPost(updated);
       setForm(toForm(updated));
       setMedia(mediaFromPost(updated));
+      setImages(updated.images ?? []);
       setScreenshots(updated.screenshots ?? []);
       setFacts(updated.rewindFacts ?? {});
       setPoll(pollFromPost(updated));
@@ -146,7 +150,11 @@ export function usePostEditor(id: string) {
     return t ? t : null;
   };
 
-  const buildUpdate = (bodyMarkdown: string, shotsOverride?: string[]) => ({
+  const buildUpdate = (
+    bodyMarkdown: string,
+    shotsOverride?: string[],
+    imagesOverride?: ArticleImage[],
+  ) => ({
     title: form!.title,
     seoTitle: form!.seoTitle,
     excerpt: form!.excerpt,
@@ -180,6 +188,8 @@ export function usePostEditor(id: string) {
     // The media gallery is the source of truth; the API re-syncs youtubeUrl to
     // the starred item. Send order by current position.
     media: media.map((m, i) => ({ ...m, order: i })),
+    // Article image gallery — its own field, ordered by current position.
+    images: (imagesOverride ?? images).map((im, i) => ({ ...im, order: i })),
     screenshots: shotsOverride ?? screenshots,
     // Rewind-only: the spec-sheet facts. News/guide posts never include this, so
     // the newsroom save path is untouched.
@@ -232,6 +242,16 @@ export function usePostEditor(id: string) {
     );
   };
 
+  // Article IMAGE gallery: persist immediately (like the hero/screenshot flows)
+  // so add/remove/reorder/caption edits don't silently need a manual Save. Its
+  // own list — never touches media (videos) or the rewind screenshots.
+  const saveImages = (next: ArticleImage[]) => {
+    setImages(next);
+    return run("Images saved", () =>
+      updatePost(id, buildUpdate(form!.bodyMarkdown, undefined, next)),
+    );
+  };
+
   const suggestAltText = async () => {
     setBusy("Suggesting alt");
     setNotice("");
@@ -259,6 +279,9 @@ export function usePostEditor(id: string) {
     form,
     media,
     setMedia,
+    images,
+    setImages,
+    saveImages,
     screenshots,
     setScreenshots,
     saveScreenshots,

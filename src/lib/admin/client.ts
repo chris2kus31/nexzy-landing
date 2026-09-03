@@ -16,6 +16,15 @@ export interface ArticleMedia {
   order?: number;
 }
 
+/** One image in an article's IMAGE gallery — its own thing (not videos, not rewind). */
+export interface ArticleImage {
+  url: string;
+  alt?: string | null;
+  caption?: string | null;
+  credit?: string | null;
+  order?: number;
+}
+
 /** Rewind episode spec-sheet facts, editable in the review editor (rewind only). */
 export interface RewindFacts {
   publisher?: string | null;
@@ -107,6 +116,7 @@ export interface BlogPost {
   imageCredit: string | null;
   youtubeUrl: string | null;
   media?: ArticleMedia[] | null;
+  images?: ArticleImage[] | null;
   screenshots?: string[] | null;
   rewindFacts?: RewindFacts | null;
   beat: string;

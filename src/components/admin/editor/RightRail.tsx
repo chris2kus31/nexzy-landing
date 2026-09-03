@@ -27,6 +27,7 @@ import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewVerdictEditor from "./ReviewVerdictEditor";
 import CollageBuilder from "./CollageBuilder";
+import ArticleImages from "./ArticleImages";
 
 /**
  * The shared right rail: byline, linked games, hero image + alt/credit, video,
@@ -450,6 +451,14 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
           article); the rest show as thumbnails. Save to apply.
         </Text>
       </Box>
+
+      {/* Article image gallery — its own thing (not the rewind screenshot
+          gallery below, not the videos above). Shown only for the article types
+          whose public pages render the gallery: news, guides, reviews. Rewind
+          (its own screenshots), walkthroughs and lists use other render shapes. */}
+      {!["rewind", "walkthrough", "list"].includes(post.type ?? "") && (
+        <ArticleImages ed={ed} />
+      )}
 
       {post.type === "rewind" && (
         <Box>

@@ -32,6 +32,7 @@ import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
 import MediaGallery from "@/components/blog/MediaGallery";
+import ArticleGallery from "@/components/blog/ArticleGallery";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import AnswerCapsule from "@/components/blog/AnswerCapsule";
@@ -371,6 +372,10 @@ export default async function BlogArticlePage({
         {post.bodyMarkdown && (
           <ArticleBody body={post.bodyMarkdown} location="blog" />
         )}
+
+        {/* Article image gallery — its own thing (photos), below the body.
+            Renders nothing for articles without images. */}
+        <ArticleGallery images={post.images} />
 
         {/* Reader poll — Nexzy reports, you deliver the verdict. One tap. */}
         {post.poll && <PollBlock slug={post.slug} poll={post.poll} />}

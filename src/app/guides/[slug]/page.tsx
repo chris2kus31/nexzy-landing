@@ -20,6 +20,7 @@ import { imageObjectLd } from "@/lib/blog/imageLd";
 import { slugifyTag } from "@/lib/blog/tags";
 import { youtubeEmbedUrl, isYoutubeShort } from "@/lib/blog/youtube";
 import GuideBody from "@/components/guides/GuideBody";
+import ArticleGallery from "@/components/blog/ArticleGallery";
 import AppCta from "@/components/blog/AppCta";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
@@ -316,6 +317,9 @@ export default async function GuidePage({
         {post.bodyMarkdown && (
           <GuideBody body={post.bodyMarkdown} location="guides" />
         )}
+
+        {/* Article image gallery — its own thing; renders nothing when empty. */}
+        <ArticleGallery images={post.images} />
 
         {post.faq && post.faq.length > 0 && (
           <Box mt={10}>
