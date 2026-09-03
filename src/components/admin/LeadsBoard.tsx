@@ -479,38 +479,45 @@ function LeadCard({
           </Button>
         </VStack>
       </Flex>
-      {isEmailLead && (
-        <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
-          <Text
-            fontSize="xs"
-            color="nexzy.lightBlue"
-            fontWeight="700"
-            mb={1}
-            textTransform="uppercase"
-            letterSpacing="wide"
-          >
-            Paste source text — do this before Write this
-          </Text>
-          <Text fontSize="xs" color="nexzy.gray.100" mb={2} lineHeight="1.5">
-            The source is behind a login, so paste the full press release /
-            article body here. It becomes the facts the writer and fact-check
-            use — without it the writer only has the subject line and will
-            guess.
-          </Text>
-          <Textarea
-            value={sourceText}
-            onChange={(e) => setSourceText(e.target.value)}
-            rows={6}
-            placeholder="Paste the full email / press-release text here…"
-            bg="whiteAlpha.50"
-            color="nexzy.white"
-            borderColor={
-              sourceText.trim() ? "green.400/50" : "rgba(255,159,64,0.5)"
-            }
-            fontSize="sm"
-          />
-        </Box>
-      )}
+      <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
+        <Text
+          fontSize="xs"
+          color="nexzy.lightBlue"
+          fontWeight="700"
+          mb={1}
+          textTransform="uppercase"
+          letterSpacing="wide"
+        >
+          {isEmailLead
+            ? "Paste source text — do this before Write this"
+            : "Paste source text (optional override)"}
+        </Text>
+        <Text fontSize="xs" color="nexzy.gray.100" mb={2} lineHeight="1.5">
+          {isEmailLead
+            ? "The source is behind a login, so paste the full press release / article body here. It becomes the facts the writer and fact-check use — without it the writer only has the subject line and will guess."
+            : "When you hit Write this, we auto-read the source URL and ground the writer on it. Only paste here if the source is behind a login, or the auto-read misses the real content — this overrides it."}
+        </Text>
+        <Textarea
+          value={sourceText}
+          onChange={(e) => setSourceText(e.target.value)}
+          rows={6}
+          placeholder={
+            isEmailLead
+              ? "Paste the full email / press-release text here…"
+              : "Optional — paste the full page text only if the source is gated or the auto-read misses…"
+          }
+          bg="whiteAlpha.50"
+          color="nexzy.white"
+          borderColor={
+            sourceText.trim()
+              ? "green.400/50"
+              : isEmailLead
+                ? "rgba(255,159,64,0.5)"
+                : "whiteAlpha.300"
+          }
+          fontSize="sm"
+        />
+      </Box>
       {showTake && (
         <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Flex
