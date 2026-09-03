@@ -1280,9 +1280,10 @@ export interface Lead {
   suggestedAuthor?: string;
   /** Desk's News vs Review suggestion for this lead (editor overrides it). */
   suggestedTreatment?: "news" | "review";
-  /** Where the lead came from: 'email' = first-party press alert (PRIMARY
-   *  source, seen at the origin); 'desk'/null = the RSS firehose scan. */
-  origin?: "desk" | "email" | null;
+  /** Where the lead came from: 'email' = first-party press alert (source behind
+   *  a login); 'page' = a monitored publisher page; 'rss' = a first-party feed;
+   *  'desk'/null = the RSS firehose scan (aggregated reporting). */
+  origin?: "desk" | "email" | "page" | "rss" | null;
   youtubeUrl: string | null;
   createdAt: string;
 }

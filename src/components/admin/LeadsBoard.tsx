@@ -86,6 +86,21 @@ function LeadCard({
   // writer + editor work from real content. Kept SEPARATE from the take.
   const isEmailLead = lead.origin === "email";
   const [sourceText, setSourceText] = useState("");
+  // The paste box shows ONLY where the writer can't reliably auto-read the
+  // source: email (behind a login), page-monitor leads (publisher pages that
+  // don't auto-read well), and the AI-opt-out publishers we deliberately never
+  // auto-read (Nintendo, EA). Everything else — the RSS/desk firehose — auto-reads
+  // its public URL, so it gets no box (unchanged).
+  const OPT_OUT_HOSTS = ["nintendo.com", "ea.com"];
+  const isOptOutSource = (lead.sources ?? []).some((s) => {
+    try {
+      const h = new URL(s.url).host.toLowerCase();
+      return OPT_OUT_HOSTS.some((d) => h === d || h.endsWith("." + d));
+    } catch {
+      return false;
+    }
+  });
+  const needsPasteBox = isEmailLead || lead.origin === "page" || isOptOutSource;
   // Pre-load the angle map if this lead was already analyzed (it's saved on the
   // brief + returned in the list), so a refresh doesn't hide it behind the button.
   const [analysis, setAnalysis] = useState<Lead | null>(
@@ -479,45 +494,38 @@ function LeadCard({
           </Button>
         </VStack>
       </Flex>
-      <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
-        <Text
-          fontSize="xs"
-          color="nexzy.lightBlue"
-          fontWeight="700"
-          mb={1}
-          textTransform="uppercase"
-          letterSpacing="wide"
-        >
-          {isEmailLead
-            ? "Paste source text — do this before Write this"
-            : "Paste source text (optional override)"}
-        </Text>
-        <Text fontSize="xs" color="nexzy.gray.100" mb={2} lineHeight="1.5">
-          {isEmailLead
-            ? "The source is behind a login, so paste the full press release / article body here. It becomes the facts the writer and fact-check use — without it the writer only has the subject line and will guess."
-            : "When you hit Write this, we auto-read the source URL and ground the writer on it. Only paste here if the source is behind a login, or the auto-read misses the real content — this overrides it."}
-        </Text>
-        <Textarea
-          value={sourceText}
-          onChange={(e) => setSourceText(e.target.value)}
-          rows={6}
-          placeholder={
-            isEmailLead
-              ? "Paste the full email / press-release text here…"
-              : "Optional — paste the full page text only if the source is gated or the auto-read misses…"
-          }
-          bg="whiteAlpha.50"
-          color="nexzy.white"
-          borderColor={
-            sourceText.trim()
-              ? "green.400/50"
-              : isEmailLead
-                ? "rgba(255,159,64,0.5)"
-                : "whiteAlpha.300"
-          }
-          fontSize="sm"
-        />
-      </Box>
+      {needsPasteBox && (
+        <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
+          <Text
+            fontSize="xs"
+            color="nexzy.lightBlue"
+            fontWeight="700"
+            mb={1}
+            textTransform="uppercase"
+            letterSpacing="wide"
+          >
+            Paste source text — do this before Write this
+          </Text>
+          <Text fontSize="xs" color="nexzy.gray.100" mb={2} lineHeight="1.5">
+            We can&rsquo;t reliably auto-read this source (behind a login, a
+            page monitor, or a publisher we don&rsquo;t auto-read). Paste the
+            full article / page text here so the writer works from real content
+            — without it, it only has the headline and will guess.
+          </Text>
+          <Textarea
+            value={sourceText}
+            onChange={(e) => setSourceText(e.target.value)}
+            rows={6}
+            placeholder="Paste the full email / press-release text here…"
+            bg="whiteAlpha.50"
+            color="nexzy.white"
+            borderColor={
+              sourceText.trim() ? "green.400/50" : "rgba(255,159,64,0.5)"
+            }
+            fontSize="sm"
+          />
+        </Box>
+      )}
       {showTake && (
         <Box mt={4} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Flex
