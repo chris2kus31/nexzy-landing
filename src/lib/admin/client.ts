@@ -674,6 +674,14 @@ export interface ContentSuggestion {
        * decision layer — should this become a long-form video, why, a proposed
        * chapter timeline, and the grounding readout. Absent → nothing renders. */
       longForm?: LongFormVerdict;
+      /** QUICK ANNOUNCEMENT verdict — when true, an X + Threads text update is
+       * enough (no video/kit). xAngle/threadsAngle pre-fill the two steer boxes. */
+      quickAnnouncement?: {
+        recommended: boolean;
+        why: string;
+        xAngle?: string;
+        threadsAngle?: string;
+      };
     };
     // Suggested posting time carried from the lead onto the generated card.
     postTiming?: { when?: string; timing?: string };

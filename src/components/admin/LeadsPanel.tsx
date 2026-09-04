@@ -959,11 +959,17 @@ function LeadCard({
             <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
               ⚡ Quick Announce (X + Threads)
             </Text>
-            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-              Fast text update — skips long-form and the per-platform cards. Two
-              distinct takes, each with its own steer. Upload any media on the
-              card before publishing.
-            </Text>
+            {lead?.quickAnnouncement?.recommended ? (
+              <Text color="teal.300" fontSize="xs" fontWeight="600" mb={2}>
+                ⚡ Recommended: {lead.quickAnnouncement.why}
+              </Text>
+            ) : (
+              <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                Fast text update — skips long-form and the per-platform cards.
+                Two distinct takes, each with its own steer. Upload any media on
+                the card before publishing.
+              </Text>
+            )}
             <Text
               color="whiteAlpha.600"
               fontSize="10px"
@@ -975,7 +981,10 @@ function LeadCard({
             <Textarea
               value={xSteer}
               onChange={(e) => setXSteer(e.target.value)}
-              placeholder="e.g. make it a debate; lead with the price"
+              placeholder={
+                lead?.quickAnnouncement?.xAngle ||
+                "e.g. make it a debate; lead with the price"
+              }
               size="sm"
               rows={2}
               mb={2}
@@ -993,7 +1002,10 @@ function LeadCard({
             <Textarea
               value={threadsSteer}
               onChange={(e) => setThreadsSteer(e.target.value)}
-              placeholder="e.g. ask if it's worth it; keep it warm"
+              placeholder={
+                lead?.quickAnnouncement?.threadsAngle ||
+                "e.g. ask if it's worth it; keep it warm"
+              }
               size="sm"
               rows={2}
               mb={2}
