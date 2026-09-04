@@ -62,7 +62,7 @@ export default function PostGamesEditor({
   // palette. Clicking a thumb opens a PREVIEW with actions; nothing here changes
   // the normal add-new-video / add-new-image / hero-upload flows.
   onReuseVideo?: (url: string) => void;
-  onReuseImage?: (url: string) => void;
+  onReuseImage?: (url: string, meta?: { alt?: string }) => void;
   onSetHero?: (url: string) => Promise<void> | void;
 }) {
   const [links, setLinks] = useState<PostGameLink[]>([]);
@@ -79,6 +79,7 @@ export default function PostGamesEditor({
     url: string;
     youtubeId?: string;
     title?: string;
+    gameName?: string;
   } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [heroing, setHeroing] = useState(false);
@@ -377,7 +378,11 @@ export default function PostGamesEditor({
                                       title="Preview screenshot"
                                       onClick={() => {
                                         setFlash(null);
-                                        setPreview({ kind: "image", url: s });
+                                        setPreview({
+                                          kind: "image",
+                                          url: s,
+                                          gameName: l.game?.name ?? undefined,
+                                        });
                                       }}
                                     />
                                   ))}
@@ -559,7 +564,11 @@ export default function PostGamesEditor({
                       size="sm"
                       {...primaryBtn}
                       onClick={() => {
-                        onReuseImage(preview.url);
+                        onReuseImage(preview.url, {
+                          alt: preview.gameName
+                            ? `${preview.gameName} screenshot`
+                            : undefined,
+                        });
                         setFlash("Added to image gallery ✓");
                       }}
                     >

@@ -71,12 +71,17 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
   };
   // Append a reused game screenshot into the article IMAGE gallery (dedup by URL).
   // Additive: the normal upload/paste-image flows in ArticleImages are untouched.
-  const addGalleryImage = (url: string) => {
+  const addGalleryImage = (url: string, meta?: { alt?: string }) => {
     const u = url.trim();
     if (!u) return;
     const imgs = ed.images ?? [];
     if (imgs.some((im) => im.url === u)) return;
-    ed.saveImages([...imgs, { url: u, alt: "", order: imgs.length }]);
+    // Default the alt to an article-relevant value (the linked game) so a reused
+    // screenshot ships SEO-meaningful, not blank. Editable in the gallery.
+    ed.saveImages([
+      ...imgs,
+      { url: u, alt: meta?.alt ?? "", order: imgs.length },
+    ]);
   };
   // Set the hero from an existing (already-hosted) URL — e.g. a game screenshot.
   // Uses the same PATCH the editor already uses; `run` refreshes post state so
