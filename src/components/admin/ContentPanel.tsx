@@ -32,6 +32,9 @@ import {
   attachContentYoutube,
   getWriterNames,
   getTtsBudget,
+  searchGamesForLink,
+  setContentCardGame,
+  type GameLite,
   type ContentSuggestion,
   type PlatformKit,
   type PublishResult,
@@ -418,6 +421,153 @@ function firstTopicTag(kit?: PlatformKit): string {
 function xCharCount(text: string): number {
   const urls = text.match(/https?:\/\/\S+/g) ?? [];
   return text.replace(/https?:\/\/\S+/g, "").length + urls.length * 23;
+}
+
+/**
+ * 🎮 Game chip — links the card to a game (payload.game). Auto-resolved on the
+ * fast routes (quick announce / make-a-short) and copied from the article on
+ * post-backed quick cards; editable here. The video produced from the card
+ * links to THIS game, so it lands on the game's public hub.
+ */
+function CardGameChip({ s }: { s: ContentSuggestion }) {
+  const [game, setGame] = useState(s.payload?.gameLink ?? null);
+  const [editing, setEditing] = useState(false);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<GameLite[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const search = async (term: string) => {
+    setQ(term);
+    if (term.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    try {
+      setResults(await searchGamesForLink(term.trim()));
+    } catch {
+      setResults([]);
+    }
+  };
+  const pick = async (g: GameLite) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await setContentCardGame(s.id, g.id);
+      setGame(
+        r.card?.payload?.gameLink ?? {
+          id: g.id,
+          name: g.name,
+          slug: g.slug,
+          source: "manual",
+        },
+      );
+      setEditing(false);
+      setQ("");
+      setResults([]);
+    } catch (e) {
+      setErr((e as Error)?.message || "Could not set the game.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const clear = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await setContentCardGame(s.id, null);
+      setGame(null);
+    } catch (e) {
+      setErr((e as Error)?.message || "Could not clear the game.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Box mb={3}>
+      <HStack gap={2} wrap="wrap">
+        <Text fontSize="xs" color="whiteAlpha.600" fontWeight="700">
+          🎮 GAME
+        </Text>
+        {game ? (
+          <>
+            <Badge colorPalette="purple" variant="subtle">
+              {game.name}
+              {game.source === "resolver"
+                ? " · auto"
+                : game.source === "article"
+                  ? " · from article"
+                  : ""}
+            </Badge>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              onClick={() => setEditing((v) => !v)}
+              disabled={busy}
+            >
+              Change
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              _hover={{ color: "red.300" }}
+              onClick={clear}
+              loading={busy}
+              title="Unlink the game"
+            >
+              ✕
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="xs"
+            variant="outline"
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            onClick={() => setEditing((v) => !v)}
+          >
+            + Set game
+          </Button>
+        )}
+        {err && (
+          <Text fontSize="xs" color="red.300">
+            {err}
+          </Text>
+        )}
+      </HStack>
+      {editing && (
+        <Box mt={1} maxW="360px">
+          <Input
+            size="sm"
+            bg="whiteAlpha.50"
+            color="nexzy.white"
+            borderColor="whiteAlpha.300"
+            placeholder="Search games…"
+            value={q}
+            onChange={(e) => search(e.target.value)}
+          />
+          {results.slice(0, 6).map((g) => (
+            <Box
+              as="button"
+              key={g.id}
+              w="full"
+              textAlign="left"
+              px={2}
+              py={1}
+              fontSize="sm"
+              color="nexzy.white"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={() => pick(g)}
+            >
+              {g.name}
+              {g.released ? ` (${g.released.slice(0, 4)})` : ""}
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 /**
@@ -1651,6 +1801,7 @@ function SuggestionCard({
           with it (forcing a re-upload of the finished file). */}
       <Box display={collapsed ? "none" : "block"}>
         <>
+          {s.kind === "video" && <CardGameChip s={view} />}
           {produced && (
             <Box
               mb={3}

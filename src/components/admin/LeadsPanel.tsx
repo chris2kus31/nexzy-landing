@@ -953,6 +953,17 @@ function LeadCard({
             />
           )}
 
+          {/* 🎮 Game chip (read-only here): auto-resolved on brief-backed leads;
+              every card generated from this lead carries it, and the produced
+              video links to it (game hub). Correct it on the card if wrong. */}
+          {s.payload?.gameLink && (
+            <Text color="#B98CFF" fontSize="xs" fontWeight="700" mb={2}>
+              🎮 Linked game: {s.payload.gameLink.name}
+              {s.payload.gameLink.source === "resolver" ? " (auto)" : ""} —
+              carried onto every generated card; change it there if wrong.
+            </Text>
+          )}
+
           {/* Quick Announcement (X + Threads only) — independent path; skips the
               per-platform and long-form generation entirely. */}
           <Box

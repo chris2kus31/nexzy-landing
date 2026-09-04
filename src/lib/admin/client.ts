@@ -603,6 +603,17 @@ export interface ContentSuggestion {
     // Last publish image uploaded for this card (persisted so the attach
     // survives reopening the panel; X + Threads post with it).
     publishImageUrl?: string;
+    // Game chip — links the card (and the video produced from it) to a game.
+    // Auto-resolved on the fast routes; editable on the card. null = cleared.
+    // (Named gameLink because payload.game is already the guide-lead's game NAME.)
+    gameLink?: {
+      id: string;
+      name: string;
+      slug?: string;
+      confidence?: number;
+      method?: string;
+      source?: "resolver" | "article" | "manual";
+    } | null;
     // Video format: "short" (default), "long" (guide/walkthrough → YouTube
     // long-form + teasers), or a non-video format from the format brain.
     format?:
@@ -2139,6 +2150,23 @@ export async function getUnresolvedGames(
 export async function searchGamesForLink(q: string): Promise<GameLite[]> {
   return handle(
     await fetch(`/api/newsroom/admin/games/search?q=${encodeURIComponent(q)}`),
+  );
+}
+
+/**
+ * Set / clear the game chip on a Content Studio card (payload.game). The video
+ * produced from the card links to this game, so it lands on the game's hub.
+ */
+export async function setContentCardGame(
+  id: string,
+  gameId: string | null,
+): Promise<{ ok: boolean; card: ContentSuggestion | null }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/game`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    }),
   );
 }
 
