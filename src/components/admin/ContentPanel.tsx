@@ -25,6 +25,7 @@ import {
   regenerateScript,
   updateContentScript,
   uploadContentVideo,
+  uploadContentImage,
   publishContentCard,
   getPublishConfig,
   refreshContentInsights,
@@ -419,6 +420,10 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const p = s.payload?.platforms;
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Optional publish image — attaches to the X + Threads posts (JPEG/PNG ≤5MB).
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [imageErr, setImageErr] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [results, setResults] = useState<PublishResult[] | null>(null);
   const [insights, setInsights] = useState<PlatformInsights[]>(
@@ -520,6 +525,19 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     }
   };
 
+  const uploadImg = async (file: File) => {
+    setUploadingImg(true);
+    setImageErr(null);
+    try {
+      const r = await uploadContentImage(s.id, file);
+      setImageUrl(r.url);
+    } catch (e) {
+      setImageErr((e as Error)?.message || "Image upload failed.");
+    } finally {
+      setUploadingImg(false);
+    }
+  };
+
   const publish = async () => {
     setPublishing(true);
     try {
@@ -538,6 +556,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         x: xOn,
         xPost,
         xReply,
+        imageUrl: imageUrl ?? undefined,
       });
       setResults(r.results);
     } catch {
@@ -625,6 +644,66 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 ? "✓ Video uploaded"
                 : "Upload the finished video (Facebook + Instagram need it)."}
           </Text>
+        </Box>
+      )}
+
+      {/* Optional image — attaches to the X + Threads posts (an image post
+          reliably out-reaches bare text on both). JPEG/PNG, ≤5MB; kept in its
+          original format (NO AVIF — X/Threads would reject it). */}
+      {(th || xOn) && (
+        <Box mb={2}>
+          <Text
+            color="whiteAlpha.600"
+            fontSize="10px"
+            fontWeight="700"
+            mb={0.5}
+          >
+            IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS
+          </Text>
+          <Input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            size="sm"
+            p={1}
+            color="nexzy.gray.100"
+            borderColor="whiteAlpha.300"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadImg(f);
+            }}
+          />
+          <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
+            {uploadingImg
+              ? "Uploading…"
+              : imageErr
+                ? `✗ ${imageErr}`
+                : imageUrl
+                  ? "✓ Image attached — it will post with X and Threads."
+                  : "JPEG/PNG up to 5MB. Leave empty for a text-only post."}
+          </Text>
+          {imageUrl && !uploadingImg && (
+            <HStack gap={2} mt={1} align="center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt="publish preview"
+                style={{
+                  height: 56,
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}
+              />
+              <Button
+                size="xs"
+                variant="outline"
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                onClick={() => setImageUrl(null)}
+              >
+                ✕ Remove image
+              </Button>
+            </HStack>
+          )}
         </Box>
       )}
 
@@ -936,8 +1015,13 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                   fontWeight="700"
                   mb={1}
                 >
-                  ▸ Threads — text post (no video)
+                  ▸ Threads — {imageUrl ? "image post" : "text post (no video)"}
                 </Text>
+                {imageUrl && (
+                  <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                    🖼 Image attached
+                  </Text>
+                )}
                 <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
                   TEXT (posts exactly as shown)
                 </Text>
@@ -985,6 +1069,14 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 >
                   ▸ X{cfg?.x ? "" : " (disabled — needs API keys)"}
                 </Text>
+                {imageUrl && (
+                  <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                    🖼 Image attached
+                    {(p?.x?.poll?.options?.length ?? 0) > 0
+                      ? " — the poll will be DROPPED (X can't combine them)"
+                      : ""}
+                  </Text>
+                )}
                 <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
                   POST (posts exactly as shown)
                 </Text>

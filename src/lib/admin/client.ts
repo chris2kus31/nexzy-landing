@@ -855,6 +855,21 @@ export async function uploadContentVideo(
   );
 }
 
+/** Upload a publish IMAGE for a card (JPEG/PNG, ≤5MB) — attaches to X + Threads. */
+export async function uploadContentImage(
+  id: string,
+  file: File,
+): Promise<{ url: string }> {
+  const fd = new FormData();
+  fd.append("image", file);
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/upload-image`, {
+      method: "POST",
+      body: fd, // no Content-Type — browser sets the multipart boundary
+    }),
+  );
+}
+
 export interface PublishResult {
   platform: "facebook" | "instagram" | "threads" | "youtube" | "x";
   ok: boolean;
@@ -881,6 +896,7 @@ export async function publishContentCard(
     x?: boolean;
     xPost?: string;
     xReply?: string;
+    imageUrl?: string;
   },
 ): Promise<{ results: PublishResult[] }> {
   return handle(
@@ -1419,7 +1435,7 @@ export async function quickAnnounceFromLead(
   context?: string,
   xSteer?: string,
   threadsSteer?: string,
-): Promise<{ id: string } | null> {
+): Promise<{ ok: boolean; card: { id: string } | null }> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/quick-announce`, {
       method: "POST",

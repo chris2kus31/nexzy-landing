@@ -1028,15 +1028,17 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   ) => {
     setBusyId(id);
     try {
-      const row = await quickAnnounceFromLead(
+      const res = await quickAnnounceFromLead(
         id,
         author,
         context,
         xSteer,
         threadsSteer,
       );
-      if (!row) {
-        setMsg("Quick announce produced no copy — try again or add a steer.");
+      if (!res?.ok) {
+        setMsg(
+          "Quick announce produced no copy — try again or add context/steer.",
+        );
         return;
       }
       // Consumed on the server → drop it from the board. The ⚡ QUICK card is now
