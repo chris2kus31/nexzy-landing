@@ -19,6 +19,7 @@ import {
   regenerateImage,
   setPostAuthor,
   uploadBodyImage,
+  updatePost,
 } from "@/lib/admin/client";
 import { isYoutubeShort } from "@/lib/blog/youtube";
 import { parseVideoUrl, mediaPoster } from "@/lib/blog/media";
@@ -77,6 +78,11 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     if (imgs.some((im) => im.url === u)) return;
     ed.saveImages([...imgs, { url: u, alt: "", order: imgs.length }]);
   };
+  // Set the hero from an existing (already-hosted) URL — e.g. a game screenshot.
+  // Uses the same PATCH the editor already uses; `run` refreshes post state so
+  // the hero thumbnail updates live. No re-upload.
+  const setHeroFromUrl = (url: string) =>
+    run("Hero image set", () => updatePost(id, { heroImageUrl: url }));
   const addShotFromInput = () => {
     addShot(shotInput);
     setShotInput("");
@@ -221,6 +227,7 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
           postId={id}
           onReuseVideo={addVideo}
           onReuseImage={addGalleryImage}
+          onSetHero={setHeroFromUrl}
         />
       </Box>
 

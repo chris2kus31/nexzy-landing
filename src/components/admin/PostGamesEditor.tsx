@@ -55,13 +55,15 @@ export default function PostGamesEditor({
   postId,
   onReuseVideo,
   onReuseImage,
+  onSetHero,
 }: {
   postId: string;
   // Optional: when provided, each CONFIRMED game shows a "reuse its media"
-  // palette. Clicking appends to the article (the editor + save-path dedupe),
-  // so nothing here changes the normal add-new-video / add-new-image flows.
+  // palette. Clicking a thumb opens a PREVIEW with actions; nothing here changes
+  // the normal add-new-video / add-new-image / hero-upload flows.
   onReuseVideo?: (url: string) => void;
   onReuseImage?: (url: string) => void;
+  onSetHero?: (url: string) => Promise<void> | void;
 }) {
   const [links, setLinks] = useState<PostGameLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,14 @@ export default function PostGamesEditor({
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [assets, setAssets] = useState<Record<string, GameAssets>>({});
+  const [preview, setPreview] = useState<{
+    kind: "image" | "video";
+    url: string;
+    youtubeId?: string;
+    title?: string;
+  } | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [heroing, setHeroing] = useState(false);
   const canReuse = !!(onReuseVideo || onReuseImage);
 
   async function toggleAssets(gameId: string) {
@@ -323,11 +333,16 @@ export default function PostGamesEditor({
                                       borderColor="whiteAlpha.300"
                                       cursor="pointer"
                                       _hover={{ borderColor: "nexzy.blue" }}
-                                      title={v.title ?? "Add this video"}
-                                      onClick={() =>
-                                        v.youtubeUrl &&
-                                        onReuseVideo(v.youtubeUrl)
-                                      }
+                                      title={v.title ?? "Preview video"}
+                                      onClick={() => {
+                                        setFlash(null);
+                                        setPreview({
+                                          kind: "video",
+                                          url: v.youtubeUrl ?? "",
+                                          youtubeId: v.youtubeId ?? undefined,
+                                          title: v.title ?? undefined,
+                                        });
+                                      }}
                                     />
                                   ))}
                                 </Flex>
@@ -359,8 +374,11 @@ export default function PostGamesEditor({
                                       borderColor="whiteAlpha.300"
                                       cursor="pointer"
                                       _hover={{ borderColor: "nexzy.blue" }}
-                                      title="Add this screenshot to the gallery"
-                                      onClick={() => onReuseImage(s)}
+                                      title="Preview screenshot"
+                                      onClick={() => {
+                                        setFlash(null);
+                                        setPreview({ kind: "image", url: s });
+                                      }}
                                     />
                                   ))}
                                 </Flex>
@@ -373,8 +391,8 @@ export default function PostGamesEditor({
                               </Text>
                             )}
                           <Text fontSize="2xs" color="whiteAlpha.400" mt={2}>
-                            Click to add to this article — duplicates are
-                            skipped automatically.
+                            Click to preview, then add — duplicates are skipped
+                            automatically.
                           </Text>
                         </>
                       )}
@@ -450,6 +468,153 @@ export default function PostGamesEditor({
             </Flex>
           ))}
         </VStack>
+      )}
+
+      {preview && (
+        <Box
+          position="fixed"
+          inset="0"
+          zIndex={2000}
+          bg="blackAlpha.800"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={4}
+          onClick={() => {
+            setPreview(null);
+            setFlash(null);
+          }}
+        >
+          <Box
+            maxW="760px"
+            w="100%"
+            bg="gray.900"
+            borderRadius="lg"
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            p={4}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {preview.kind === "image" ? (
+              <Image
+                src={preview.url}
+                alt=""
+                w="100%"
+                maxH="60vh"
+                objectFit="contain"
+                borderRadius="md"
+                bg="black"
+              />
+            ) : preview.youtubeId ? (
+              <Box
+                position="relative"
+                w="100%"
+                pt="56.25%"
+                borderRadius="md"
+                overflow="hidden"
+                bg="black"
+              >
+                <iframe
+                  src={`https://www.youtube.com/embed/${preview.youtubeId}`}
+                  title={preview.title ?? "video"}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    border: 0,
+                  }}
+                />
+              </Box>
+            ) : (
+              <Text color="whiteAlpha.700" fontSize="sm">
+                No inline preview for this video.{" "}
+                {preview.url && (
+                  <a
+                    href={preview.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#4aa8ff" }}
+                  >
+                    Open in a new tab
+                  </a>
+                )}
+              </Text>
+            )}
+
+            {flash && (
+              <Text fontSize="sm" color="green.300" mt={2}>
+                {flash}
+              </Text>
+            )}
+
+            <Flex gap={2} mt={3} justify="flex-end" wrap="wrap">
+              {preview.kind === "image" ? (
+                <>
+                  {onReuseImage && (
+                    <Button
+                      size="sm"
+                      {...primaryBtn}
+                      onClick={() => {
+                        onReuseImage(preview.url);
+                        setFlash("Added to image gallery ✓");
+                      }}
+                    >
+                      Add to gallery
+                    </Button>
+                  )}
+                  {onSetHero && (
+                    <Button
+                      size="sm"
+                      {...outlineBtn}
+                      loading={heroing}
+                      onClick={async () => {
+                        setHeroing(true);
+                        try {
+                          await onSetHero(preview.url);
+                          setFlash("Set as hero image ✓");
+                        } catch (e) {
+                          setFlash((e as Error).message || "Hero set failed.");
+                        } finally {
+                          setHeroing(false);
+                        }
+                      }}
+                    >
+                      Set as hero
+                    </Button>
+                  )}
+                </>
+              ) : (
+                onReuseVideo &&
+                preview.url && (
+                  <Button
+                    size="sm"
+                    {...primaryBtn}
+                    onClick={() => {
+                      onReuseVideo(preview.url);
+                      setFlash("Added to video gallery ✓");
+                    }}
+                  >
+                    Add to videos
+                  </Button>
+                )
+              )}
+              <Button
+                size="sm"
+                {...outlineBtn}
+                onClick={() => {
+                  setPreview(null);
+                  setFlash(null);
+                }}
+              >
+                Close
+              </Button>
+            </Flex>
+          </Box>
+        </Box>
       )}
     </Box>
   );
