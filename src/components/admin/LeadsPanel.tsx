@@ -648,6 +648,8 @@ function LeadCard({
   // Quick Announcement (X + Threads only) — its own per-platform steers.
   const [xSteer, setXSteer] = useState("");
   const [threadsSteer, setThreadsSteer] = useState("");
+  const [quickErr, setQuickErr] = useState<string | null>(null);
+  const [quickOk, setQuickOk] = useState(false);
 
   // The analyst's recommended plan (platformFormats + xFormat), normalized to
   // valid per-surface options — this pre-fills the pickers and marks "changed".
@@ -764,6 +766,8 @@ function LeadCard({
   // per-platform and long-form paths — skips both, each platform its own steer.
   const generateQuick = async () => {
     setBusy("gen");
+    setQuickErr(null);
+    setQuickOk(false);
     try {
       await generateQuickAnnounce(
         s.id,
@@ -771,9 +775,12 @@ function LeadCard({
         xSteer.trim() || undefined,
         threadsSteer.trim() || undefined,
       );
+      setQuickOk(true);
       await reload();
-    } catch {
-      /* leave the lead in place so you can retry */
+    } catch (e) {
+      setQuickErr(
+        e instanceof Error ? e.message : "Quick announcement request failed.",
+      );
     } finally {
       setBusy(null);
     }
@@ -1025,6 +1032,17 @@ function LeadCard({
             >
               Generate quick announcement
             </Button>
+            {quickErr && (
+              <Text color="red.300" fontSize="xs" mt={2}>
+                {quickErr}
+              </Text>
+            )}
+            {quickOk && !quickErr && (
+              <Text color="teal.300" fontSize="xs" mt={2}>
+                Queued — your X + Threads takes will appear in the Suggestions
+                tab (⚡ QUICK) in a moment.
+              </Text>
+            )}
           </Box>
 
           {lastError && (
