@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@chakra-ui/react"],
   },
   images: {
+    // Serve AVIF first (smaller + sharper), webp as the fallback. Next 16
+    // defaults to webp-ONLY (image-config.js: formats: ['image/webp']), so
+    // without this our AVIF masters were re-encoded down to webp for every
+    // browser. Order matters: the first supported format wins.
+    formats: ["image/avif", "image/webp"],
+    // Next 16 requires every `quality` used on <Image> to be allow-listed here
+    // (default is [75]). 90 lets hero images render near-lossless on retina.
+    qualities: [75, 90],
     // Newsroom hero images live in the public S3 bucket; allow next/image to
     // optimize (resize + webp/avif) them.
     remotePatterns: [

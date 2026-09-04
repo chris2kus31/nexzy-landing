@@ -328,6 +328,7 @@ export default async function BlogArticlePage({
               alt={post.imageAlt || post.title}
               fill
               priority
+              quality={90}
               sizes="(max-width: 768px) 100vw, 768px"
               style={{ objectFit: "cover" }}
             />
