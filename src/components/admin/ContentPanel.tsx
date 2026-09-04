@@ -601,13 +601,23 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     publishBlockers.push("Instagram caption is empty.");
   if (th && !threadsText.trim()) publishBlockers.push("Threads text is empty.");
   if (xOn && !xPost.trim()) publishBlockers.push("X post is empty.");
-  if (xOn && xCharCount(xPost) > 280)
+  // Only the PLATFORMS' own limits block: X Premium = 25,000 (URLs count 23);
+  // Threads = 500 for everyone. Nothing is ever cut silently.
+  if (xOn && xCharCount(xPost) > 25000)
     publishBlockers.push(
-      `X post is ${xCharCount(xPost)}/280 characters — trim it (X rejects over-length posts; nothing gets cut silently).`,
+      `X post is ${xCharCount(xPost)} characters — over X's 25,000 limit.`,
     );
-  if (xOn && xCharCount(xReply) > 280)
+  if (xOn && xCharCount(xReply) > 25000)
     publishBlockers.push(
-      `X first reply is ${xCharCount(xReply)}/280 characters — trim it.`,
+      `X first reply is ${xCharCount(xReply)} characters — over X's 25,000 limit.`,
+    );
+  if (th && threadsText.length > 500)
+    publishBlockers.push(
+      `Threads text is ${threadsText.length}/500 characters — over Threads' limit, trim it.`,
+    );
+  if (th && threadsPinned.length > 500)
+    publishBlockers.push(
+      `Threads first reply is ${threadsPinned.length}/500 characters — over Threads' limit, trim it.`,
     );
   const canPublish = publishBlockers.length === 0;
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
@@ -830,14 +840,24 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               fontWeight="700"
               mb={0.5}
             >
-              THREADS TEXT (≤500 chars)
+              THREADS TEXT (Threads&apos; limit: 500)
             </Text>
             <Textarea
               {...ta}
               value={threadsText}
-              maxLength={500}
               onChange={(e) => setThreadsText(e.target.value)}
             />
+            <Text
+              fontSize="10px"
+              fontWeight="700"
+              mt={0.5}
+              color={threadsText.length > 500 ? "red.300" : "whiteAlpha.600"}
+            >
+              {threadsText.length}/500
+              {threadsText.length > 500
+                ? " — over Threads' limit, trim it"
+                : ""}
+            </Text>
             <Text
               color="whiteAlpha.600"
               fontSize="10px"
@@ -874,10 +894,20 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             <Textarea
               {...ta}
               rows={2}
-              maxLength={500}
               value={threadsPinned}
               onChange={(e) => setThreadsPinned(e.target.value)}
             />
+            <Text
+              fontSize="10px"
+              fontWeight="700"
+              mt={0.5}
+              color={threadsPinned.length > 500 ? "red.300" : "whiteAlpha.600"}
+            >
+              {threadsPinned.length}/500
+              {threadsPinned.length > 500
+                ? " — over Threads' limit, trim it"
+                : ""}
+            </Text>
           </Box>
         )}
         {xOn && p?.x && (
@@ -888,7 +918,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               fontWeight="700"
               mb={0.5}
             >
-              X POST (≤280 — the link is fine in the post)
+              X POST (the link is fine in the post)
             </Text>
             <Textarea
               {...ta}
@@ -899,11 +929,20 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               fontSize="10px"
               fontWeight="700"
               mt={0.5}
-              color={xCharCount(xPost) > 280 ? "red.300" : "whiteAlpha.600"}
+              color={
+                xCharCount(xPost) > 25000
+                  ? "red.300"
+                  : xCharCount(xPost) > 280
+                    ? "#FFD866"
+                    : "whiteAlpha.600"
+              }
             >
-              {xCharCount(xPost)}/280
-              {xCharCount(xPost) > 280 ? " — too long, trim to publish" : ""}
-              {" (links count as 23)"}
+              {xCharCount(xPost)} chars (links count as 23)
+              {xCharCount(xPost) > 25000
+                ? " — over X's 25,000 limit, trim to publish"
+                : xCharCount(xPost) > 280
+                  ? " — long post: X shows the first ~280 with a Show more fold"
+                  : ""}
             </Text>
             <Text
               color="whiteAlpha.600"
@@ -923,10 +962,20 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               fontSize="10px"
               fontWeight="700"
               mt={0.5}
-              color={xCharCount(xReply) > 280 ? "red.300" : "whiteAlpha.600"}
+              color={
+                xCharCount(xReply) > 25000
+                  ? "red.300"
+                  : xCharCount(xReply) > 280
+                    ? "#FFD866"
+                    : "whiteAlpha.600"
+              }
             >
-              {xCharCount(xReply)}/280
-              {xCharCount(xReply) > 280 ? " — too long, trim to publish" : ""}
+              {xCharCount(xReply)} chars
+              {xCharCount(xReply) > 25000
+                ? " — over X's 25,000 limit, trim to publish"
+                : xCharCount(xReply) > 280
+                  ? " — long reply: shows a Show more fold past ~280"
+                  : ""}
             </Text>
           </Box>
         )}
