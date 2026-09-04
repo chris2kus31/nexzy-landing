@@ -30,6 +30,7 @@ export default function ArticleImages({ ed }: { ed: PostEditor }) {
   const { images, saveImages, id, busy } = ed;
   const [urlInput, setUrlInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const add = (img: ArticleImage) => {
@@ -67,12 +68,18 @@ export default function ArticleImages({ ed }: { ed: PostEditor }) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!file) return;
-    if (file.size > 20 * 1024 * 1024) return;
+    if (file.size > 20 * 1024 * 1024) {
+      setErr("Image is too large (max 20 MB).");
+      return;
+    }
+    setErr("");
     setUploading(true);
     prepareImageDataUrl(file)
       .then((dataUrl) => uploadBodyImage(id, dataUrl))
       .then(({ url }) => add({ url }))
-      .catch(() => {})
+      // Surface the server's rejection (e.g. "too small — min 640×360px") so the
+      // editor knows why the upload was refused instead of it silently failing.
+      .catch((e) => setErr((e as Error)?.message || "Upload failed."))
       .finally(() => setUploading(false));
   };
 
@@ -121,6 +128,12 @@ export default function ArticleImages({ ed }: { ed: PostEditor }) {
           Add
         </Button>
       </HStack>
+
+      {err && (
+        <Text fontSize="xs" color="red.300" mb={3}>
+          {err}
+        </Text>
+      )}
 
       {images.length === 0 ? (
         <Text fontSize="xs" color="nexzy.gray.100">
