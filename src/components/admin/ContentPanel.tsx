@@ -1430,7 +1430,8 @@ function SuggestionCard({
             !produced &&
             !isNonVideo &&
             !isImage &&
-            !isBriefCard && (
+            !isBriefCard &&
+            !isQuick && (
               <Button
                 size="xs"
                 colorPalette="green"
@@ -1500,7 +1501,8 @@ function SuggestionCard({
             !produced &&
             !isNonVideo &&
             !isImage &&
-            !isBriefCard && (
+            !isBriefCard &&
+            !isQuick && (
               <Box
                 mb={3}
                 p={3}
@@ -2313,277 +2315,286 @@ function SuggestionCard({
                   </Box>
                 )}
               </Section>
-              <Section title="Voiceover &amp; production">
-                {/* ElevenLabs shorts script + production notes */}
-                <Box>
-                  {isOwner && (
-                    <Flex gap={2} align="center" wrap="wrap">
-                      {writers.length > 1 && (
-                        <HStack gap={1}>
-                          <Text color="nexzy.gray.100" fontSize="xs">
-                            Voice:
-                          </Text>
-                          {writers.map((w) => {
-                            const active = persona === w;
-                            return (
-                              <Button
-                                key={w}
-                                size="xs"
-                                onClick={() => setPersona(w)}
-                                bg={active ? "nexzy.blue" : "transparent"}
-                                color={active ? "white" : "nexzy.gray.100"}
-                                borderWidth="1px"
-                                borderColor={
-                                  active ? "nexzy.blue" : "whiteAlpha.300"
-                                }
-                                _hover={{
-                                  bg: active ? "nexzy.blue" : "whiteAlpha.100",
-                                }}
-                              >
-                                {w}
-                              </Button>
-                            );
-                          })}
-                        </HStack>
-                      )}
-                      <Button
-                        size="xs"
-                        colorPalette="purple"
-                        variant={view.ttsScript ? "outline" : "solid"}
-                        onClick={regen}
-                        loading={busy === "script"}
-                        loadingText="Regenerating…"
-                      >
-                        {view.ttsScript
-                          ? "↻ Regenerate in " + persona + "\u2019s voice"
-                          : "🎙 Generate in " + persona + "\u2019s voice"}
-                      </Button>
-                      {view.ttsScript && (
-                        <HStack gap={1} flex={1} minW="220px">
-                          <Input
-                            size="xs"
-                            bg="whiteAlpha.50"
-                            color="nexzy.white"
-                            borderColor="whiteAlpha.300"
-                            fontSize="xs"
-                            placeholder="steer the script (e.g. more excited, less sarcastic)"
-                            value={scriptSteer}
-                            onChange={(e) => setScriptSteer(e.target.value)}
-                          />
-                          <Button
-                            size="xs"
-                            colorPalette="purple"
-                            variant="solid"
-                            onClick={regenScript}
-                            loading={busy === "rescript"}
-                            loadingText="Rewriting…"
-                            disabled={!scriptSteer.trim()}
-                          >
-                            ↻ Script only
-                          </Button>
-                        </HStack>
-                      )}
-                    </Flex>
-                  )}
-                  {view.ttsScript && (
-                    <VStack align="stretch" gap={2} mt={2}>
-                      <Box
-                        bg="whiteAlpha.50"
-                        border="1px solid"
-                        borderColor="whiteAlpha.200"
-                        borderRadius="lg"
-                        p={3}
-                      >
-                        <Flex
-                          justify="space-between"
-                          align="center"
-                          mb={1}
-                          gap={2}
-                        >
-                          <Text
-                            color="nexzy.lightBlue"
-                            fontSize="xs"
-                            fontWeight="700"
-                          >
-                            ElevenLabs · Core cut ·{" "}
-                            {view.payload?.ttsScripts?.extended
-                              ? "TikTok · Shorts · X"
-                              : "all video platforms"}{" "}
-                            · {draft.length.toLocaleString()} credits · ~
-                            {Math.max(1, Math.round(draft.length / 15))}s
-                          </Text>
+              {!isQuick && (
+                <Section title="Voiceover &amp; production">
+                  {/* ElevenLabs shorts script + production notes */}
+                  <Box>
+                    {isOwner && (
+                      <Flex gap={2} align="center" wrap="wrap">
+                        {writers.length > 1 && (
                           <HStack gap={1}>
-                            {isOwner && dirty && (
-                              <Button
-                                size="xs"
-                                colorPalette="green"
-                                variant="outline"
-                                onClick={saveScript}
-                                loading={saving}
-                                loadingText="Saving…"
-                              >
-                                Save
-                              </Button>
-                            )}
-                            <CopyBtn text={draft} label="Copy script" />
+                            <Text color="nexzy.gray.100" fontSize="xs">
+                              Voice:
+                            </Text>
+                            {writers.map((w) => {
+                              const active = persona === w;
+                              return (
+                                <Button
+                                  key={w}
+                                  size="xs"
+                                  onClick={() => setPersona(w)}
+                                  bg={active ? "nexzy.blue" : "transparent"}
+                                  color={active ? "white" : "nexzy.gray.100"}
+                                  borderWidth="1px"
+                                  borderColor={
+                                    active ? "nexzy.blue" : "whiteAlpha.300"
+                                  }
+                                  _hover={{
+                                    bg: active
+                                      ? "nexzy.blue"
+                                      : "whiteAlpha.100",
+                                  }}
+                                >
+                                  {w}
+                                </Button>
+                              );
+                            })}
                           </HStack>
-                        </Flex>
-                        {isOwner ? (
-                          <Textarea
-                            value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
-                            rows={8}
-                            bg="whiteAlpha.50"
-                            color="nexzy.white"
-                            borderColor="whiteAlpha.300"
-                            fontSize="sm"
-                          />
-                        ) : (
-                          <Text
-                            color="nexzy.gray.100"
-                            fontSize="sm"
-                            whiteSpace="pre-wrap"
-                          >
-                            {view.ttsScript}
-                          </Text>
                         )}
-                      </Box>
-                      {/* Optional longer cut — only when the article supported it.
-                    (tight/long are legacy fields kept for older cards.) */}
-                      {(
-                        [
-                          ["extended", "Extended cut", "Instagram · Facebook"],
-                          ["tight", "Tight cut", "TikTok / Shorts"],
-                          ["long", "Long cut", "Facebook"],
-                        ] as const
-                      ).map(([key, label, plat]) => {
-                        const txt = view.payload?.ttsScripts?.[key];
-                        if (!txt) return null;
-                        return (
-                          <Box
-                            key={key}
-                            bg="whiteAlpha.50"
-                            border="1px solid"
-                            borderColor="whiteAlpha.200"
-                            borderRadius="lg"
-                            p={3}
-                          >
-                            <Flex
-                              justify="space-between"
-                              align="center"
-                              mb={1}
-                              gap={2}
+                        <Button
+                          size="xs"
+                          colorPalette="purple"
+                          variant={view.ttsScript ? "outline" : "solid"}
+                          onClick={regen}
+                          loading={busy === "script"}
+                          loadingText="Regenerating…"
+                        >
+                          {view.ttsScript
+                            ? "↻ Regenerate in " + persona + "\u2019s voice"
+                            : "🎙 Generate in " + persona + "\u2019s voice"}
+                        </Button>
+                        {view.ttsScript && (
+                          <HStack gap={1} flex={1} minW="220px">
+                            <Input
+                              size="xs"
+                              bg="whiteAlpha.50"
+                              color="nexzy.white"
+                              borderColor="whiteAlpha.300"
+                              fontSize="xs"
+                              placeholder="steer the script (e.g. more excited, less sarcastic)"
+                              value={scriptSteer}
+                              onChange={(e) => setScriptSteer(e.target.value)}
+                            />
+                            <Button
+                              size="xs"
+                              colorPalette="purple"
+                              variant="solid"
+                              onClick={regenScript}
+                              loading={busy === "rescript"}
+                              loadingText="Rewriting…"
+                              disabled={!scriptSteer.trim()}
                             >
-                              <Text
-                                color="nexzy.lightBlue"
-                                fontSize="xs"
-                                fontWeight="700"
-                              >
-                                {label} · {plat} · ~
-                                {Math.max(1, Math.round(txt.length / 15))}s
-                              </Text>
-                              <CopyBtn text={txt} label="Copy" />
-                            </Flex>
+                              ↻ Script only
+                            </Button>
+                          </HStack>
+                        )}
+                      </Flex>
+                    )}
+                    {view.ttsScript && (
+                      <VStack align="stretch" gap={2} mt={2}>
+                        <Box
+                          bg="whiteAlpha.50"
+                          border="1px solid"
+                          borderColor="whiteAlpha.200"
+                          borderRadius="lg"
+                          p={3}
+                        >
+                          <Flex
+                            justify="space-between"
+                            align="center"
+                            mb={1}
+                            gap={2}
+                          >
+                            <Text
+                              color="nexzy.lightBlue"
+                              fontSize="xs"
+                              fontWeight="700"
+                            >
+                              ElevenLabs · Core cut ·{" "}
+                              {view.payload?.ttsScripts?.extended
+                                ? "TikTok · Shorts · X"
+                                : "all video platforms"}{" "}
+                              · {draft.length.toLocaleString()} credits · ~
+                              {Math.max(1, Math.round(draft.length / 15))}s
+                            </Text>
+                            <HStack gap={1}>
+                              {isOwner && dirty && (
+                                <Button
+                                  size="xs"
+                                  colorPalette="green"
+                                  variant="outline"
+                                  onClick={saveScript}
+                                  loading={saving}
+                                  loadingText="Saving…"
+                                >
+                                  Save
+                                </Button>
+                              )}
+                              <CopyBtn text={draft} label="Copy script" />
+                            </HStack>
+                          </Flex>
+                          {isOwner ? (
+                            <Textarea
+                              value={draft}
+                              onChange={(e) => setDraft(e.target.value)}
+                              rows={8}
+                              bg="whiteAlpha.50"
+                              color="nexzy.white"
+                              borderColor="whiteAlpha.300"
+                              fontSize="sm"
+                            />
+                          ) : (
                             <Text
                               color="nexzy.gray.100"
                               fontSize="sm"
                               whiteSpace="pre-wrap"
                             >
-                              {txt}
-                            </Text>
-                          </Box>
-                        );
-                      })}
-                      {/* One production block: everything you hand the editor to
-                    actually cut the video — delivery, music, footage, captions. */}
-                      <Box
-                        bg="whiteAlpha.50"
-                        border="1px solid"
-                        borderColor="whiteAlpha.200"
-                        borderRadius="lg"
-                        p={3}
-                      >
-                        <Text
-                          color="nexzy.lightBlue"
-                          fontSize="xs"
-                          fontWeight="700"
-                          mb={1.5}
-                        >
-                          🎬 Production notes
-                        </Text>
-                        <VStack align="stretch" gap={1.5}>
-                          {view.payload?.voicePersona && (
-                            <Text color="nexzy.gray.100" fontSize="xs">
-                              🗣 <b>Delivery:</b> {view.payload.voicePersona}
+                              {view.ttsScript}
                             </Text>
                           )}
-                          {view.payload?.music && (
-                            <Text color="nexzy.gray.100" fontSize="xs">
-                              🎵 <b>Music:</b> {view.payload.music}
-                            </Text>
-                          )}
-                          {(view.payload?.backgroundVideo?.length ?? 0) > 0 && (
-                            <Text color="nexzy.gray.100" fontSize="xs">
-                              🎞 <b>Background footage:</b>{" "}
-                              {(view.payload?.backgroundVideo ?? []).join(
-                                " · ",
-                              )}
-                            </Text>
-                          )}
-                          {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
-                            <Text color="nexzy.gray.100" fontSize="xs">
-                              🎬 <b>B-roll / SFX:</b>{" "}
-                              {(view.payload?.brollSfx ?? []).join(" · ")}
-                            </Text>
-                          ) : (
-                            view.payload?.broll && (
-                              <Text color="nexzy.gray.100" fontSize="xs">
-                                🎬 <b>B-roll / SFX:</b> {view.payload.broll}
-                              </Text>
-                            )
-                          )}
-                          {(view.payload?.onScreenText?.length ?? 0) > 0 && (
-                            <Text color="nexzy.gray.100" fontSize="xs">
-                              💬 <b>On-screen text</b> (captions to overlay):{" "}
-                              {(view.payload?.onScreenText ?? []).join(" · ")}
-                            </Text>
-                          )}
-                          {(view.payload?.postingTips?.length ?? 0) > 0 && (
+                        </Box>
+                        {/* Optional longer cut — only when the article supported it.
+                    (tight/long are legacy fields kept for older cards.) */}
+                        {(
+                          [
+                            [
+                              "extended",
+                              "Extended cut",
+                              "Instagram · Facebook",
+                            ],
+                            ["tight", "Tight cut", "TikTok / Shorts"],
+                            ["long", "Long cut", "Facebook"],
+                          ] as const
+                        ).map(([key, label, plat]) => {
+                          const txt = view.payload?.ttsScripts?.[key];
+                          if (!txt) return null;
+                          return (
                             <Box
-                              mt={1}
-                              pt={1.5}
-                              borderTop="1px solid"
-                              borderColor="whiteAlpha.100"
+                              key={key}
+                              bg="whiteAlpha.50"
+                              border="1px solid"
+                              borderColor="whiteAlpha.200"
+                              borderRadius="lg"
+                              p={3}
                             >
-                              <Text
-                                color="nexzy.lightBlue"
-                                fontSize="10px"
-                                fontWeight="700"
-                                mb={0.5}
+                              <Flex
+                                justify="space-between"
+                                align="center"
+                                mb={1}
+                                gap={2}
                               >
-                                WHEN YOU POST
+                                <Text
+                                  color="nexzy.lightBlue"
+                                  fontSize="xs"
+                                  fontWeight="700"
+                                >
+                                  {label} · {plat} · ~
+                                  {Math.max(1, Math.round(txt.length / 15))}s
+                                </Text>
+                                <CopyBtn text={txt} label="Copy" />
+                              </Flex>
+                              <Text
+                                color="nexzy.gray.100"
+                                fontSize="sm"
+                                whiteSpace="pre-wrap"
+                              >
+                                {txt}
                               </Text>
-                              <VStack align="stretch" gap={0.5}>
-                                {(view.payload?.postingTips ?? []).map(
-                                  (t, i) => (
-                                    <Text
-                                      key={i}
-                                      color="nexzy.gray.100"
-                                      fontSize="xs"
-                                    >
-                                      • {t}
-                                    </Text>
-                                  ),
-                                )}
-                              </VStack>
                             </Box>
-                          )}
-                        </VStack>
-                      </Box>
-                    </VStack>
-                  )}
-                </Box>
-              </Section>
+                          );
+                        })}
+                        {/* One production block: everything you hand the editor to
+                    actually cut the video — delivery, music, footage, captions. */}
+                        <Box
+                          bg="whiteAlpha.50"
+                          border="1px solid"
+                          borderColor="whiteAlpha.200"
+                          borderRadius="lg"
+                          p={3}
+                        >
+                          <Text
+                            color="nexzy.lightBlue"
+                            fontSize="xs"
+                            fontWeight="700"
+                            mb={1.5}
+                          >
+                            🎬 Production notes
+                          </Text>
+                          <VStack align="stretch" gap={1.5}>
+                            {view.payload?.voicePersona && (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                🗣 <b>Delivery:</b> {view.payload.voicePersona}
+                              </Text>
+                            )}
+                            {view.payload?.music && (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                🎵 <b>Music:</b> {view.payload.music}
+                              </Text>
+                            )}
+                            {(view.payload?.backgroundVideo?.length ?? 0) >
+                              0 && (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                🎞 <b>Background footage:</b>{" "}
+                                {(view.payload?.backgroundVideo ?? []).join(
+                                  " · ",
+                                )}
+                              </Text>
+                            )}
+                            {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                🎬 <b>B-roll / SFX:</b>{" "}
+                                {(view.payload?.brollSfx ?? []).join(" · ")}
+                              </Text>
+                            ) : (
+                              view.payload?.broll && (
+                                <Text color="nexzy.gray.100" fontSize="xs">
+                                  🎬 <b>B-roll / SFX:</b> {view.payload.broll}
+                                </Text>
+                              )
+                            )}
+                            {(view.payload?.onScreenText?.length ?? 0) > 0 && (
+                              <Text color="nexzy.gray.100" fontSize="xs">
+                                💬 <b>On-screen text</b> (captions to overlay):{" "}
+                                {(view.payload?.onScreenText ?? []).join(" · ")}
+                              </Text>
+                            )}
+                            {(view.payload?.postingTips?.length ?? 0) > 0 && (
+                              <Box
+                                mt={1}
+                                pt={1.5}
+                                borderTop="1px solid"
+                                borderColor="whiteAlpha.100"
+                              >
+                                <Text
+                                  color="nexzy.lightBlue"
+                                  fontSize="10px"
+                                  fontWeight="700"
+                                  mb={0.5}
+                                >
+                                  WHEN YOU POST
+                                </Text>
+                                <VStack align="stretch" gap={0.5}>
+                                  {(view.payload?.postingTips ?? []).map(
+                                    (t, i) => (
+                                      <Text
+                                        key={i}
+                                        color="nexzy.gray.100"
+                                        fontSize="xs"
+                                      >
+                                        • {t}
+                                      </Text>
+                                    ),
+                                  )}
+                                </VStack>
+                              </Box>
+                            )}
+                          </VStack>
+                        </Box>
+                      </VStack>
+                    )}
+                  </Box>
+                </Section>
+              )}
             </>
           )}
 
