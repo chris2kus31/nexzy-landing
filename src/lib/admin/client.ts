@@ -600,6 +600,9 @@ export interface ContentSuggestion {
     publishResults?: PublishResult[];
     insights?: PlatformInsights[];
     insightsFetchedAt?: string;
+    // Last publish image uploaded for this card (persisted so the attach
+    // survives reopening the panel; X + Threads post with it).
+    publishImageUrl?: string;
     // Video format: "short" (default), "long" (guide/walkthrough → YouTube
     // long-form + teasers), or a non-video format from the format brain.
     format?:

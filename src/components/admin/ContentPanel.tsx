@@ -421,7 +421,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   // Optional publish image — attaches to the X + Threads posts (JPEG/PNG ≤5MB).
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  // Rehydrates from the card (the upload persists it), so an image attached in
+  // an earlier session survives reopening the panel instead of silently
+  // dropping off the next publish.
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    s.payload?.publishImageUrl ?? null,
+  );
   const [uploadingImg, setUploadingImg] = useState(false);
   const [imageErr, setImageErr] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -510,6 +515,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     setThreadsPinned(p?.threads?.pinnedComment ?? "");
     setXPost(p?.x?.post ?? "");
     setXReply(p?.x?.firstReply ?? "");
+    setImageUrl(s.payload?.publishImageUrl ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [srcKey]);
 

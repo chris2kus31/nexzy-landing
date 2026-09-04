@@ -38,15 +38,22 @@ async function proxy(req: NextRequest, ctx: Ctx) {
 
   const token = req.cookies.get(ADMIN_COOKIE)?.value;
 
+  // Forward the caller's OWN Content-Type — hard-coding application/json broke
+  // multipart uploads (the boundary header was stripped, so nexzy-api's JSON
+  // parser choked on the raw multipart body: "Unexpected token - in JSON").
+  // Normal admin JSON calls are unchanged (their content-type IS json).
+  const contentType = req.headers.get("content-type") || "application/json";
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "Content-Type": contentType,
     "x-forwarded-for": clientIp(req),
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const method = req.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
-  const body = hasBody ? await req.text() : undefined;
+  // Raw bytes, not req.text() — a lossy UTF-8 decode corrupts binary bodies
+  // (file uploads). Identical bytes for JSON bodies.
+  const body = hasBody ? await req.arrayBuffer() : undefined;
 
   let apiRes: Response;
   try {
