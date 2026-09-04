@@ -2606,21 +2606,32 @@ export interface BackfillDetail {
   reason?: string;
 }
 
-export async function backfillGameLinks(): Promise<{
+export async function backfillGameLinks(cursor?: string): Promise<{
   scanned: number;
   linked: number;
   errors: number;
   remaining: number;
+  /** Pass back on the next call to scan OLDER posts (null = done). */
+  nextCursor?: string | null;
   details: BackfillDetail[];
 }> {
   return handle(
-    await fetch(`/api/newsroom/admin/backfill/game-links`, { method: "POST" }),
+    await fetch(`/api/newsroom/admin/backfill/game-links`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cursor ? { cursor } : {}),
+    }),
   );
 }
 
 export interface ImportDetail {
   rawName: string;
-  result: "imported" | "already in DB" | "no_rawg_match" | "error";
+  result:
+    | "imported"
+    | "already in DB"
+    | "no_rawg_match"
+    | "no_exact_match"
+    | "error";
   gameName?: string;
 }
 

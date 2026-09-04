@@ -532,8 +532,8 @@ function ManualGameForm({
             onToggle={(s) => toggleSel(setConsoleSel, s)}
           />
           <Text fontSize="10px" color="whiteAlpha.500" mt={-1}>
-            Pick the specific consoles the game runs on — the platform family
-            (e.g. PlayStation) is added automatically.
+            Pick the specific consoles the game runs on — family-level filters
+            (e.g. PlayStation) are derived from these when the game is stamped.
           </Text>
           <TaxPicker
             label="Stores"
@@ -699,9 +699,11 @@ function MissingGameCard({
         setMsg(
           res?.reason === "no_rawg_match"
             ? "No RAWG match — try mapping to an existing game."
-            : res?.reason === "no_api_key"
-              ? "RAWG_API_KEY is not set on the API."
-              : "Import failed — try again or map manually.",
+            : res?.reason === "no_exact_match"
+              ? "RAWG has similar titles but no exact match — importing blind risks the wrong game. Search + Link, or Add manually (candidates are in Import issues)."
+              : res?.reason === "no_api_key"
+                ? "RAWG_API_KEY is not set on the API."
+                : "Import failed — try again or map manually.",
         );
         setBusy(null);
       }
@@ -1089,15 +1091,18 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
                 ? "blue"
                 : "orange",
       });
-      // Small server batches (each returns fast); loop client-side until the
-      // queue is empty so a large backfill never trips a request timeout.
+      // Small server batches (each returns fast); loop client-side with the
+      // server's cursor so each batch scans OLDER posts. Without the cursor,
+      // no-match posts stayed at the top and every batch re-scanned the same
+      // 100 posts — thousands of duplicate resolver queries per click.
       let linked = 0;
       let scanned = 0;
       let errCount = 0;
       let remaining = 0;
+      let cursor: string | undefined;
       const rows: OpRow[] = [];
       for (let i = 0; i < 100; i++) {
-        const r = await backfillGameLinks();
+        const r = await backfillGameLinks(cursor);
         linked += r.linked;
         scanned += r.scanned;
         errCount += r.errors;
@@ -1107,7 +1112,10 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
           title: `Backfill: linked ${linked} of ${scanned} scanned${remaining ? ` · ${remaining} to go…` : ""}${errCount ? ` · ${errCount} error${errCount === 1 ? "" : "s"}` : ""}`,
           rows,
         });
-        if (r.scanned === 0 || remaining === 0) break;
+        // Stop at the end of the walk — or immediately if the server didn't
+        // return a cursor (older API), which would otherwise loop in place.
+        if (r.scanned === 0 || remaining === 0 || !r.nextCursor) break;
+        cursor = r.nextCursor;
       }
     } catch (e) {
       setNotice((e as Error).message);
@@ -1171,8 +1179,16 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   }, []);
 
   const remove = (id: string) => {
-    setRows((r) => r.filter((x) => x.id !== id));
-    setQueueTotal((t) => Math.max(0, t - 1));
+    const next = rows.filter((x) => x.id !== id);
+    const nextTotal = Math.max(0, queueTotal - 1);
+    setRows(next);
+    setQueueTotal(nextTotal);
+    // Page emptied but more remain (e.g. cleared all 25 one by one) — pull the
+    // next page in instead of stranding the user on an empty screen.
+    if (next.length === 0 && nextTotal > 0) {
+      const lastPage = Math.max(0, Math.ceil(nextTotal / PAGE_SIZE) - 1);
+      void load(Math.min(queuePage, lastPage));
+    }
   };
   const removeDiag = (id: string) => {
     setDiags((d) => d.filter((x) => x.id !== id));
@@ -1260,11 +1276,8 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
       <HStack gap={2} mb={4}>
         {(
           [
-            ["queue", `Queue${rows.length ? ` (${rows.length})` : ""}`],
-            [
-              "issues",
-              `Import issues${diags.length ? ` (${diags.length})` : ""}`,
-            ],
+            ["queue", `Queue${queueTotal ? ` (${queueTotal})` : ""}`],
+            ["issues", `Import issues${diagsTotal ? ` (${diagsTotal})` : ""}`],
           ] as const
         ).map(([key, label]) => {
           const active = view === key;
