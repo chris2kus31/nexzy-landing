@@ -1450,6 +1450,28 @@ export async function quickAnnounceFromLead(
   );
 }
 
+/**
+ * "Make a short" from a lead: SKIP the article and create a full short-video
+ * lead in Content Studio → Leads (per-platform kit + voiceover + production).
+ * Owner-only; consumes the lead. Returns the created card (or null).
+ */
+export async function makeShortFromLead(
+  id: string,
+  writer?: string,
+  context?: string,
+): Promise<{ ok: boolean; card: { id: string } | null }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/make-short`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(writer ? { writer } : {}),
+        ...(context?.trim() ? { context: context.trim() } : {}),
+      }),
+    }),
+  );
+}
+
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,

@@ -24,6 +24,7 @@ import {
   writeLeadReview,
   skipLead,
   quickAnnounceFromLead,
+  makeShortFromLead,
   getWriterNames,
   type Lead,
 } from "@/lib/admin/client";
@@ -55,6 +56,7 @@ function LeadCard({
   onWrite,
   onSkip,
   onQuickAnnounce,
+  onMakeShort,
   busy,
   authors,
   isOwner,
@@ -75,6 +77,7 @@ function LeadCard({
     xSteer: string,
     threadsSteer: string,
   ) => void;
+  onMakeShort: (id: string, author: string, context: string) => void;
   busy: boolean;
   authors: string[];
   isOwner: boolean;
@@ -98,6 +101,10 @@ function LeadCard({
   const [quickContext, setQuickContext] = useState("");
   const [xSteer, setXSteer] = useState("");
   const [threadsSteer, setThreadsSteer] = useState("");
+  // 🎬 Make a short — skip the article, create a full short-video lead in
+  // Content Studio. Context box (lead is thin). Owner-only.
+  const [showShort, setShowShort] = useState(false);
+  const [shortContext, setShortContext] = useState("");
   // Email leads only: pasted press-release / article text (the source page is
   // behind a login, so it can't be fetched). Becomes the lead's facts so the
   // writer + editor work from real content. Kept SEPARATE from the take.
@@ -585,6 +592,66 @@ function LeadCard({
               </Button>
             </Box>
           )}
+          {isOwner && (
+            <Box
+              as="button"
+              onClick={() => setShowShort((v) => !v)}
+              w="full"
+              textAlign="center"
+              fontSize="xs"
+              fontWeight="700"
+              color="#B98CFF"
+              borderWidth="1px"
+              borderColor="rgba(185,140,255,0.4)"
+              borderRadius="md"
+              py="6px"
+              _hover={{ bg: "rgba(185,140,255,0.08)" }}
+            >
+              {showShort
+                ? "▾ Hide make a short"
+                : "🎬 Make a short (skip article)"}
+            </Box>
+          )}
+          {isOwner && showShort && (
+            <Box
+              borderWidth="1px"
+              borderColor="rgba(185,140,255,0.25)"
+              borderRadius="md"
+              p={2}
+              bg="rgba(185,140,255,0.04)"
+            >
+              <Text fontSize="10px" color="nexzy.gray.100" mb={1}>
+                Skips the article and creates a full short-video lead (per-
+                platform kit + voiceover + production) in Content Studio →
+                Leads, where you pick formats and Generate as usual.
+              </Text>
+              <Text fontSize="10px" color="#B98CFF" fontWeight="700" mb={1}>
+                Context (the raw lead is thin — paste any extra facts / details
+                to ground the script):
+              </Text>
+              <Textarea
+                value={shortContext}
+                onChange={(e) => setShortContext(e.target.value)}
+                placeholder="e.g. what happened, the exact date/price, the angle, key beats to hit…"
+                size="xs"
+                rows={3}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="rgba(185,140,255,0.3)"
+                color="white"
+                fontSize="xs"
+              />
+              <Button
+                size="xs"
+                w="full"
+                colorPalette="purple"
+                onClick={() => onMakeShort(lead.id, author, shortContext)}
+                loading={busy}
+              >
+                🎬 Create short lead
+              </Button>
+            </Box>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -1054,6 +1121,27 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     }
   };
 
+  const doMakeShort = async (id: string, author: string, context: string) => {
+    setBusyId(id);
+    try {
+      const res = await makeShortFromLead(id, author, context);
+      if (!res?.ok) {
+        setMsg("Could not create the short lead — try again or add context.");
+        return;
+      }
+      // Consumed on the server → drop it from the board. The short lead is now in
+      // Content Studio → Leads (pick formats + Generate for the full kit).
+      setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
+      setMsg(
+        "🎬 Short lead created — find it in Content Studio → Leads to generate.",
+      );
+    } catch (e) {
+      setMsg((e as Error)?.message || "Could not create the short lead.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const filtered = useMemo(
     () =>
       (leads || []).filter(
@@ -1318,6 +1406,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
                   onWrite={doWrite}
                   onSkip={doSkip}
                   onQuickAnnounce={doQuickAnnounce}
+                  onMakeShort={doMakeShort}
                   busy={busyId === lead.id}
                   authors={authors}
                   isOwner={isOwner}
