@@ -23,6 +23,7 @@ import {
   writeLead,
   writeLeadReview,
   skipLead,
+  quickAnnounceFromLead,
   getWriterNames,
   type Lead,
 } from "@/lib/admin/client";
@@ -53,8 +54,10 @@ function LeadCard({
   lead,
   onWrite,
   onSkip,
+  onQuickAnnounce,
   busy,
   authors,
+  isOwner,
 }: {
   lead: Lead;
   onWrite: (
@@ -65,8 +68,16 @@ function LeadCard({
     opts?: { angle?: string; take?: string; sourceText?: string },
   ) => void;
   onSkip: (id: string) => void;
+  onQuickAnnounce: (
+    id: string,
+    author: string,
+    context: string,
+    xSteer: string,
+    threadsSteer: string,
+  ) => void;
   busy: boolean;
   authors: string[];
+  isOwner: boolean;
 }) {
   const [showSources, setShowSources] = useState(false);
   const [author, setAuthor] = useState(lead.suggestedAuthor || "Chuy");
@@ -81,6 +92,12 @@ function LeadCard({
   const [showTake, setShowTake] = useState(false);
   const [take, setTake] = useState("");
   const [angle, setAngle] = useState("");
+  // ⚡ Quick announce — skip the article entirely, fire an X + Threads take
+  // straight off this lead. Optional per-platform steer, owner-only.
+  const [showQuick, setShowQuick] = useState(false);
+  const [quickContext, setQuickContext] = useState("");
+  const [xSteer, setXSteer] = useState("");
+  const [threadsSteer, setThreadsSteer] = useState("");
   // Email leads only: pasted press-release / article text (the source page is
   // behind a login, so it can't be fetched). Becomes the lead's facts so the
   // writer + editor work from real content. Kept SEPARATE from the take.
@@ -472,6 +489,107 @@ function LeadCard({
           >
             {treatment === "review" ? "Write as review" : "Write this"}
           </Button>
+          {isOwner && (
+            <Box
+              as="button"
+              onClick={() => setShowQuick((v) => !v)}
+              w="full"
+              textAlign="center"
+              fontSize="xs"
+              fontWeight="700"
+              color="#00E5D0"
+              borderWidth="1px"
+              borderColor="rgba(0,229,208,0.4)"
+              borderRadius="md"
+              py="6px"
+              _hover={{ bg: "rgba(0,229,208,0.08)" }}
+            >
+              {showQuick
+                ? "▾ Hide quick announce"
+                : "⚡ Quick announce (X + Threads)"}
+            </Box>
+          )}
+          {isOwner && showQuick && (
+            <Box
+              borderWidth="1px"
+              borderColor="rgba(0,229,208,0.25)"
+              borderRadius="md"
+              p={2}
+              bg="rgba(0,229,208,0.04)"
+            >
+              <Text fontSize="10px" color="nexzy.gray.100" mb={1}>
+                Skips the article — writes a fast X + Threads take straight from
+                this lead (link-free). Lands in Content Studio → Suggestions as
+                a ⚡ QUICK card.
+              </Text>
+              <Text
+                fontSize="10px"
+                color="#00E5D0"
+                fontWeight="700"
+                mb={1}
+              >
+                Context (grounds BOTH takes — the raw lead is thin, so paste any
+                extra facts / details here):
+              </Text>
+              <Textarea
+                value={quickContext}
+                onChange={(e) => setQuickContext(e.target.value)}
+                placeholder="e.g. what happened, the exact date/price, why it matters, your angle…"
+                size="xs"
+                rows={3}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="rgba(0,229,208,0.3)"
+                color="white"
+                fontSize="xs"
+              />
+              <Text fontSize="10px" color="nexzy.gray.100" mb={1}>
+                Optional steer for each (a distinct take is written per
+                platform):
+              </Text>
+              <Textarea
+                value={xSteer}
+                onChange={(e) => setXSteer(e.target.value)}
+                placeholder="Steer the X take (optional)…"
+                size="xs"
+                rows={2}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="whiteAlpha.200"
+                color="white"
+                fontSize="xs"
+              />
+              <Textarea
+                value={threadsSteer}
+                onChange={(e) => setThreadsSteer(e.target.value)}
+                placeholder="Steer the Threads take (optional)…"
+                size="xs"
+                rows={2}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="whiteAlpha.200"
+                color="white"
+                fontSize="xs"
+              />
+              <Button
+                size="xs"
+                w="full"
+                colorPalette="teal"
+                onClick={() =>
+                  onQuickAnnounce(
+                    lead.id,
+                    author,
+                    quickContext,
+                    xSteer,
+                    threadsSteer,
+                  )
+                }
+                loading={busy}
+              >
+                ⚡ Generate quick announce
+              </Button>
+            </Box>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -906,6 +1024,39 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     }
   };
 
+  const doQuickAnnounce = async (
+    id: string,
+    author: string,
+    context: string,
+    xSteer: string,
+    threadsSteer: string,
+  ) => {
+    setBusyId(id);
+    try {
+      const row = await quickAnnounceFromLead(
+        id,
+        author,
+        context,
+        xSteer,
+        threadsSteer,
+      );
+      if (!row) {
+        setMsg("Quick announce produced no copy — try again or add a steer.");
+        return;
+      }
+      // Consumed on the server → drop it from the board. The ⚡ QUICK card is now
+      // in Content Studio → Suggestions (upload media there, then publish).
+      setLeads((ls) => (ls ? ls.filter((l) => l.id !== id) : ls));
+      setMsg(
+        "⚡ Quick announce created — find it in Content Studio → Suggestions.",
+      );
+    } catch (e) {
+      setMsg((e as Error)?.message || "Could not create the quick announce.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const filtered = useMemo(
     () =>
       (leads || []).filter(
@@ -1169,8 +1320,10 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
                   lead={lead}
                   onWrite={doWrite}
                   onSkip={doSkip}
+                  onQuickAnnounce={doQuickAnnounce}
                   busy={busyId === lead.id}
                   authors={authors}
+                  isOwner={isOwner}
                 />
               ))}
             </VStack>

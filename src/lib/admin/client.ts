@@ -1407,6 +1407,33 @@ export async function skipLead(id: string): Promise<Lead> {
   );
 }
 
+/**
+ * "Quick announce" from a lead: SKIP the article and generate an X + Threads
+ * take straight off the raw lead → lands as a ⚡ QUICK card in Content Studio →
+ * Suggestions. Runs inline (owner-only), consumes the lead. Returns the created
+ * card (or null if nothing was produced).
+ */
+export async function quickAnnounceFromLead(
+  id: string,
+  writer?: string,
+  context?: string,
+  xSteer?: string,
+  threadsSteer?: string,
+): Promise<{ id: string } | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/leads/${id}/quick-announce`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(writer ? { writer } : {}),
+        ...(context?.trim() ? { context: context.trim() } : {}),
+        ...(xSteer ? { xSteer } : {}),
+        ...(threadsSteer ? { threadsSteer } : {}),
+      }),
+    }),
+  );
+}
+
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,
