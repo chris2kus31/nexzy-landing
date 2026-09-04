@@ -1248,6 +1248,8 @@ function SuggestionCard({
   // Deal IMAGE card: a static graphic + overlay text + captions — no video,
   // no ElevenLabs, no Produce-to-/videos.
   const isImage = fmt === "image";
+  // Quick Announcement: X + Threads-only social card (fast text update, no video).
+  const isQuick = fmt === "quick";
   const dealImageUrl = view.payload?.dealImageUrl ?? null;
   const onScreen = view.payload?.onScreenText ?? [];
   // IMAGE CARD (DIY, format === "image_card"): copy-only — shared image title +
@@ -1384,6 +1386,11 @@ function SuggestionCard({
           {isImage && (
             <Badge colorPalette="pink" variant="solid">
               IMAGE
+            </Badge>
+          )}
+          {isQuick && (
+            <Badge colorPalette="teal" variant="solid">
+              ⚡ QUICK
             </Badge>
           )}
           {isNonVideo && (

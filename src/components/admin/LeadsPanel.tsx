@@ -18,6 +18,7 @@ import {
 import {
   getVideoLeads,
   generateFromLead,
+  generateQuickAnnounce,
   skipContentSuggestion,
   getWriterNames,
   getAudienceProfile,
@@ -644,6 +645,9 @@ function LeadCard({
   );
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
   const [steer, setSteer] = useState("");
+  // Quick Announcement (X + Threads only) — its own per-platform steers.
+  const [xSteer, setXSteer] = useState("");
+  const [threadsSteer, setThreadsSteer] = useState("");
 
   // The analyst's recommended plan (platformFormats + xFormat), normalized to
   // valid per-surface options — this pre-fills the pickers and marks "changed".
@@ -748,6 +752,24 @@ function LeadCard({
         undefined,
         undefined,
         lfChapters,
+      );
+      await reload();
+    } catch {
+      /* leave the lead in place so you can retry */
+    } finally {
+      setBusy(null);
+    }
+  };
+  // Generate a QUICK ANNOUNCEMENT (X + Threads only). Independent of the
+  // per-platform and long-form paths — skips both, each platform its own steer.
+  const generateQuick = async () => {
+    setBusy("gen");
+    try {
+      await generateQuickAnnounce(
+        s.id,
+        writer,
+        xSteer.trim() || undefined,
+        threadsSteer.trim() || undefined,
       );
       await reload();
     } catch {
@@ -923,6 +945,75 @@ function LeadCard({
               generating={generating}
             />
           )}
+
+          {/* Quick Announcement (X + Threads only) — independent path; skips the
+              per-platform and long-form generation entirely. */}
+          <Box
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="md"
+            p={3}
+            mb={3}
+          >
+            <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
+              ⚡ Quick Announce (X + Threads)
+            </Text>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              Fast text update — skips long-form and the per-platform cards. Two
+              distinct takes, each with its own steer. Upload any media on the
+              card before publishing.
+            </Text>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              X STEER (optional)
+            </Text>
+            <Textarea
+              value={xSteer}
+              onChange={(e) => setXSteer(e.target.value)}
+              placeholder="e.g. make it a debate; lead with the price"
+              size="sm"
+              rows={2}
+              mb={2}
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              THREADS STEER (optional)
+            </Text>
+            <Textarea
+              value={threadsSteer}
+              onChange={(e) => setThreadsSteer(e.target.value)}
+              placeholder="e.g. ask if it's worth it; keep it warm"
+              size="sm"
+              rows={2}
+              mb={2}
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            />
+            <Button
+              size="sm"
+              bg="nexzy.blue"
+              color="white"
+              fontWeight="700"
+              _hover={{ bg: "nexzy.lightBlue" }}
+              onClick={generateQuick}
+              loading={busy === "gen"}
+              loadingText="Generating…"
+              disabled={generating}
+            >
+              Generate quick announcement
+            </Button>
+          </Box>
 
           {lastError && (
             <Text color="red.300" fontSize="xs" mb={3}>

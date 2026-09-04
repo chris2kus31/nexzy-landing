@@ -613,6 +613,7 @@ export interface ContentSuggestion {
       | "poll"
       | "pinned_comment"
       | "text_post"
+      | "quick"
       | "none";
     // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
     longform?: {
@@ -3228,6 +3229,29 @@ export async function generateFromLead(
         ...(longFormChapters && longFormChapters.length
           ? { longFormChapters }
           : {}),
+      }),
+    }),
+  );
+}
+
+/**
+ * Quick Announcement — generate ONLY an X take + a Threads take from a lead,
+ * each with its own steer. Independent of the long-form / per-platform paths.
+ */
+export async function generateQuickAnnounce(
+  id: string,
+  writer?: string,
+  xSteer?: string,
+  threadsSteer?: string,
+): Promise<{ queued: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/quick-announce`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(writer ? { writer } : {}),
+        ...(xSteer ? { xSteer } : {}),
+        ...(threadsSteer ? { threadsSteer } : {}),
       }),
     }),
   );
