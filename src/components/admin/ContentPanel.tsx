@@ -412,6 +412,15 @@ function firstTopicTag(kit?: PlatformKit): string {
 }
 
 /**
+ * X's effective character count: every URL counts as 23 (t.co) regardless of
+ * real length; everything else as-is. Mirrors the API's pre-flight check.
+ */
+function xCharCount(text: string): number {
+  const urls = text.match(/https?:\/\/\S+/g) ?? [];
+  return text.replace(/https?:\/\/\S+/g, "").length + urls.length * 23;
+}
+
+/**
  * Publish a finished video card straight to Facebook + Instagram Reels (upload
  * the video) and a Threads text post. Calls the publish endpoints; shows each
  * platform's result. Threads doesn't need the video (it's a text take).
@@ -592,6 +601,14 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     publishBlockers.push("Instagram caption is empty.");
   if (th && !threadsText.trim()) publishBlockers.push("Threads text is empty.");
   if (xOn && !xPost.trim()) publishBlockers.push("X post is empty.");
+  if (xOn && xCharCount(xPost) > 280)
+    publishBlockers.push(
+      `X post is ${xCharCount(xPost)}/280 characters — trim it (X rejects over-length posts; nothing gets cut silently).`,
+    );
+  if (xOn && xCharCount(xReply) > 280)
+    publishBlockers.push(
+      `X first reply is ${xCharCount(xReply)}/280 characters — trim it.`,
+    );
   const canPublish = publishBlockers.length === 0;
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
     <Button
@@ -876,9 +893,18 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             <Textarea
               {...ta}
               value={xPost}
-              maxLength={280}
               onChange={(e) => setXPost(e.target.value)}
             />
+            <Text
+              fontSize="10px"
+              fontWeight="700"
+              mt={0.5}
+              color={xCharCount(xPost) > 280 ? "red.300" : "whiteAlpha.600"}
+            >
+              {xCharCount(xPost)}/280
+              {xCharCount(xPost) > 280 ? " — too long, trim to publish" : ""}
+              {" (links count as 23)"}
+            </Text>
             <Text
               color="whiteAlpha.600"
               fontSize="10px"
@@ -891,9 +917,17 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             <Textarea
               {...ta}
               value={xReply}
-              maxLength={280}
               onChange={(e) => setXReply(e.target.value)}
             />
+            <Text
+              fontSize="10px"
+              fontWeight="700"
+              mt={0.5}
+              color={xCharCount(xReply) > 280 ? "red.300" : "whiteAlpha.600"}
+            >
+              {xCharCount(xReply)}/280
+              {xCharCount(xReply) > 280 ? " — too long, trim to publish" : ""}
+            </Text>
           </Box>
         )}
       </VStack>
