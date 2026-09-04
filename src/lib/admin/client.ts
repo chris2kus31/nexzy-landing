@@ -3094,6 +3094,13 @@ export async function getGameVideos(gameId: string): Promise<GameVideoItem[]> {
   return handle(await fetch(`/api/newsroom/admin/videos/by-game/${gameId}`));
 }
 
+/** A linked game's existing screenshots, for the editor's reuse palette. */
+export async function getGameScreenshots(gameId: string): Promise<string[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/by-game/${gameId}/screenshots`),
+  );
+}
+
 export async function attachVideoGame(
   videoId: string,
   gameId: string,

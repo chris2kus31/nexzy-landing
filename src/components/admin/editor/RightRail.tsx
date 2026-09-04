@@ -68,6 +68,15 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     if (!u || screenshots.includes(u)) return;
     saveScreenshots([...screenshots, u].slice(0, 12));
   };
+  // Append a reused game screenshot into the article IMAGE gallery (dedup by URL).
+  // Additive: the normal upload/paste-image flows in ArticleImages are untouched.
+  const addGalleryImage = (url: string) => {
+    const u = url.trim();
+    if (!u) return;
+    const imgs = ed.images ?? [];
+    if (imgs.some((im) => im.url === u)) return;
+    ed.saveImages([...imgs, { url: u, alt: "", order: imgs.length }]);
+  };
   const addShotFromInput = () => {
     addShot(shotInput);
     setShotInput("");
@@ -208,7 +217,11 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
       </Box>
 
       <Box>
-        <PostGamesEditor postId={id} />
+        <PostGamesEditor
+          postId={id}
+          onReuseVideo={addVideo}
+          onReuseImage={addGalleryImage}
+        />
       </Box>
 
       <CollageBuilder ed={ed} />

@@ -20,9 +20,20 @@ import {
   confirmPostGame,
   removePostGame,
   searchGamesForLink,
+  getGameVideos,
+  getGameScreenshots,
   type PostGameLink,
   type GameLite,
+  type GameVideoItem,
 } from "@/lib/admin/client";
+
+type GameAssets = {
+  open: boolean;
+  loading: boolean;
+  loaded: boolean;
+  videos: GameVideoItem[];
+  shots: string[];
+};
 
 const outlineBtn = {
   variant: "outline" as const,
@@ -40,7 +51,18 @@ const primaryBtn = {
  * Post <-> game link editor (sidebar section). Shows confirmed + AI-suggested
  * links; confirm or remove suggestions, and add a game via search.
  */
-export default function PostGamesEditor({ postId }: { postId: string }) {
+export default function PostGamesEditor({
+  postId,
+  onReuseVideo,
+  onReuseImage,
+}: {
+  postId: string;
+  // Optional: when provided, each CONFIRMED game shows a "reuse its media"
+  // palette. Clicking appends to the article (the editor + save-path dedupe),
+  // so nothing here changes the normal add-new-video / add-new-image flows.
+  onReuseVideo?: (url: string) => void;
+  onReuseImage?: (url: string) => void;
+}) {
   const [links, setLinks] = useState<PostGameLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -49,6 +71,56 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
   const [searched, setSearched] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [assets, setAssets] = useState<Record<string, GameAssets>>({});
+  const canReuse = !!(onReuseVideo || onReuseImage);
+
+  async function toggleAssets(gameId: string) {
+    const cur = assets[gameId];
+    if (cur?.open) {
+      setAssets((a) => ({ ...a, [gameId]: { ...cur, open: false } }));
+      return;
+    }
+    if (cur?.loaded) {
+      setAssets((a) => ({ ...a, [gameId]: { ...cur, open: true } }));
+      return;
+    }
+    setAssets((a) => ({
+      ...a,
+      [gameId]: {
+        open: true,
+        loading: true,
+        loaded: false,
+        videos: [],
+        shots: [],
+      },
+    }));
+    try {
+      const [videos, shots] = await Promise.all([
+        onReuseVideo
+          ? getGameVideos(gameId)
+          : Promise.resolve<GameVideoItem[]>([]),
+        onReuseImage
+          ? getGameScreenshots(gameId)
+          : Promise.resolve<string[]>([]),
+      ]);
+      setAssets((a) => ({
+        ...a,
+        [gameId]: { open: true, loading: false, loaded: true, videos, shots },
+      }));
+    } catch (e) {
+      setMsg((e as Error).message);
+      setAssets((a) => ({
+        ...a,
+        [gameId]: {
+          open: true,
+          loading: false,
+          loaded: true,
+          videos: [],
+          shots: [],
+        },
+      }));
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -144,69 +216,173 @@ export default function PostGamesEditor({ postId }: { postId: string }) {
       ) : (
         <VStack align="stretch" gap={2} mb={3}>
           {links.map((l) => (
-            <Flex
+            <Box
               key={l.gameId}
-              align="center"
-              gap={2}
-              p={2}
               borderWidth="1px"
               borderColor="whiteAlpha.200"
               borderRadius="md"
             >
-              {l.game?.backgroundImage && (
-                <Image
-                  src={l.game.backgroundImage}
-                  alt=""
-                  boxSize="28px"
-                  borderRadius="sm"
-                  objectFit="cover"
-                />
-              )}
-              <Box flex="1" minW="0">
-                <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
-                  {l.game?.name ?? l.gameId}
-                </Text>
-                <HStack gap={1} mt={1}>
-                  {l.isPrimary && (
-                    <Badge colorPalette="blue" variant="subtle">
-                      <FiStar /> primary
+              <Flex align="center" gap={2} p={2}>
+                {l.game?.backgroundImage && (
+                  <Image
+                    src={l.game.backgroundImage}
+                    alt=""
+                    boxSize="28px"
+                    borderRadius="sm"
+                    objectFit="cover"
+                  />
+                )}
+                <Box flex="1" minW="0">
+                  <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                    {l.game?.name ?? l.gameId}
+                  </Text>
+                  <HStack gap={1} mt={1}>
+                    {l.isPrimary && (
+                      <Badge colorPalette="blue" variant="subtle">
+                        <FiStar /> primary
+                      </Badge>
+                    )}
+                    <Badge
+                      colorPalette={
+                        l.status === "confirmed"
+                          ? "green"
+                          : l.status === "suggested"
+                            ? "orange"
+                            : "gray"
+                      }
+                      variant="subtle"
+                    >
+                      {l.status}
                     </Badge>
-                  )}
-                  <Badge
-                    colorPalette={
-                      l.status === "confirmed"
-                        ? "green"
-                        : l.status === "suggested"
-                          ? "orange"
-                          : "gray"
-                    }
-                    variant="subtle"
+                  </HStack>
+                </Box>
+                {l.status === "suggested" && (
+                  <Button
+                    size="xs"
+                    {...primaryBtn}
+                    onClick={() => confirm(l.gameId)}
+                    loading={busy === l.gameId}
+                    title="Confirm"
                   >
-                    {l.status}
-                  </Badge>
-                </HStack>
-              </Box>
-              {l.status === "suggested" && (
+                    <FiCheck />
+                  </Button>
+                )}
                 <Button
                   size="xs"
-                  {...primaryBtn}
-                  onClick={() => confirm(l.gameId)}
+                  {...outlineBtn}
+                  onClick={() => remove(l.gameId)}
                   loading={busy === l.gameId}
-                  title="Confirm"
+                  title="Remove"
                 >
-                  <FiCheck />
+                  <FiX />
                 </Button>
+              </Flex>
+
+              {l.status === "confirmed" && canReuse && (
+                <Box borderTopWidth="1px" borderColor="whiteAlpha.200" p={2}>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="nexzy.blue"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() => toggleAssets(l.gameId)}
+                  >
+                    {assets[l.gameId]?.open
+                      ? "Hide game media"
+                      : "Reuse this game's media"}
+                  </Button>
+                  {assets[l.gameId]?.open && (
+                    <Box mt={2}>
+                      {assets[l.gameId]?.loading ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <>
+                          {onReuseVideo &&
+                            (assets[l.gameId]?.videos.length ?? 0) > 0 && (
+                              <>
+                                <Text
+                                  fontSize="2xs"
+                                  color="whiteAlpha.600"
+                                  textTransform="uppercase"
+                                  letterSpacing="wide"
+                                  mb={1}
+                                >
+                                  Videos
+                                </Text>
+                                <Flex wrap="wrap" gap={2} mb={2}>
+                                  {assets[l.gameId]!.videos.map((v, i) => (
+                                    <Image
+                                      key={`v${i}`}
+                                      src={v.thumbnailUrl ?? ""}
+                                      alt={v.title ?? "video"}
+                                      w="72px"
+                                      h="41px"
+                                      objectFit="cover"
+                                      borderRadius="sm"
+                                      borderWidth="1px"
+                                      borderColor="whiteAlpha.300"
+                                      cursor="pointer"
+                                      _hover={{ borderColor: "nexzy.blue" }}
+                                      title={v.title ?? "Add this video"}
+                                      onClick={() =>
+                                        v.youtubeUrl &&
+                                        onReuseVideo(v.youtubeUrl)
+                                      }
+                                    />
+                                  ))}
+                                </Flex>
+                              </>
+                            )}
+                          {onReuseImage &&
+                            (assets[l.gameId]?.shots.length ?? 0) > 0 && (
+                              <>
+                                <Text
+                                  fontSize="2xs"
+                                  color="whiteAlpha.600"
+                                  textTransform="uppercase"
+                                  letterSpacing="wide"
+                                  mb={1}
+                                >
+                                  Screenshots
+                                </Text>
+                                <Flex wrap="wrap" gap={2}>
+                                  {assets[l.gameId]!.shots.map((s, i) => (
+                                    <Image
+                                      key={`s${i}`}
+                                      src={s}
+                                      alt="screenshot"
+                                      w="72px"
+                                      h="41px"
+                                      objectFit="cover"
+                                      borderRadius="sm"
+                                      borderWidth="1px"
+                                      borderColor="whiteAlpha.300"
+                                      cursor="pointer"
+                                      _hover={{ borderColor: "nexzy.blue" }}
+                                      title="Add this screenshot to the gallery"
+                                      onClick={() => onReuseImage(s)}
+                                    />
+                                  ))}
+                                </Flex>
+                              </>
+                            )}
+                          {(assets[l.gameId]?.videos.length ?? 0) === 0 &&
+                            (assets[l.gameId]?.shots.length ?? 0) === 0 && (
+                              <Text fontSize="xs" color="whiteAlpha.500">
+                                No reusable media on this game yet.
+                              </Text>
+                            )}
+                          <Text fontSize="2xs" color="whiteAlpha.400" mt={2}>
+                            Click to add to this article — duplicates are
+                            skipped automatically.
+                          </Text>
+                        </>
+                      )}
+                    </Box>
+                  )}
+                </Box>
               )}
-              <Button
-                size="xs"
-                {...outlineBtn}
-                onClick={() => remove(l.gameId)}
-                loading={busy === l.gameId}
-                title="Remove"
-              >
-                <FiX />
-              </Button>
-            </Flex>
+            </Box>
           ))}
         </VStack>
       )}
