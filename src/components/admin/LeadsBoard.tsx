@@ -522,12 +522,7 @@ function LeadCard({
                 this lead (link-free). Lands in Content Studio → Suggestions as
                 a ⚡ QUICK card.
               </Text>
-              <Text
-                fontSize="10px"
-                color="#00E5D0"
-                fontWeight="700"
-                mb={1}
-              >
+              <Text fontSize="10px" color="#00E5D0" fontWeight="700" mb={1}>
                 Context (grounds BOTH takes — the raw lead is thin, so paste any
                 extra facts / details here):
               </Text>
