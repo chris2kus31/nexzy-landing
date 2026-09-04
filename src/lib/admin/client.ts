@@ -2146,6 +2146,50 @@ export async function searchTags(q: string): Promise<TagOption[]> {
   );
 }
 
+/** Import a missing game from IGDB (owner-only, exact-match gated). */
+export async function importUnresolvedGameIgdb(id: string): Promise<{
+  result: {
+    imported: boolean;
+    updated: boolean;
+    reason?: string;
+    candidates?: string[];
+  } | null;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/${id}/import-igdb`, {
+      method: "POST",
+    }),
+  );
+}
+
+/** Create a genre / platform / store / tag by hand (owner-only). Duplicate
+ *  names return the existing entry with existing: true. */
+export async function createTaxonomyEntry(input: {
+  kind: "genre" | "platform" | "store" | "tag";
+  name: string;
+  parentPlatformId?: string;
+}): Promise<{
+  ok: boolean;
+  entry?: { id: string; name: string; slug: string };
+  existing?: boolean;
+  error?: string;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/taxonomy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+/** Parent platform families (for the new-platform picker). */
+export async function getPlatformFamilies(): Promise<
+  { id: string; name: string; slug: string }[]
+> {
+  return handle(await fetch(`/api/newsroom/admin/games/platform-families`));
+}
+
 export async function mapUnresolvedGame(
   id: string,
   gameId: string,
@@ -2512,6 +2556,8 @@ export interface ManualGamePayload {
   website?: string;
   esrbRating?: string;
   isMature?: boolean;
+  /** YouTube trailer — full URL or bare 11-char video id. */
+  youtube?: string;
   coverImage?: string; // https URL or base64 data URL
   screenshots?: string[]; // https URLs or base64 data URLs
   genreSlugs?: string[];

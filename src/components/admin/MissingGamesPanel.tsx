@@ -36,6 +36,9 @@ import {
   getGameTaxonomy,
   type GameTaxonomy,
   searchTags,
+  importUnresolvedGameIgdb,
+  createTaxonomyEntry,
+  getPlatformFamilies,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -110,14 +113,39 @@ function TaxPicker({
   groups,
   selected,
   onToggle,
+  creatable,
 }: {
   label: string;
   groups: TaxGroup[];
   selected: Set<string>;
   onToggle: (slug: string) => void;
+  /** Owner-only inline "create new" — returns the created slug (auto-selected)
+   *  or null on failure. `parents` enables the platform-family select. */
+  creatable?: {
+    noun: string;
+    parents?: { id: string; name: string }[];
+    onCreate: (name: string, parentId?: string) => Promise<string | null>;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newParent, setNewParent] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const doCreate = async () => {
+    if (!newName.trim() || !creatable) return;
+    setCreating(true);
+    const slug = await creatable.onCreate(
+      newName.trim(),
+      newParent || undefined,
+    );
+    setCreating(false);
+    if (slug) {
+      setNewName("");
+      setNewParent("");
+    }
+  };
   const nameBySlug = new Map<string, string>();
   groups.forEach((g) =>
     g.options.forEach((o) => nameBySlug.set(o.slug, o.name)),
@@ -207,6 +235,53 @@ function TaxPicker({
                 );
               })}
             </Box>
+            {creatable && (
+              <Flex gap={2} mt={2} align="center" wrap="wrap">
+                <Input
+                  {...inputProps}
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={`New ${creatable.noun} name…`}
+                  maxW="200px"
+                />
+                {creatable.parents && (
+                  <select
+                    value={newParent}
+                    onChange={(e) => setNewParent(e.target.value)}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      color: "white",
+                      border: "1px solid rgba(255,255,255,0.3)",
+                      borderRadius: 6,
+                      padding: "6px 8px",
+                      fontSize: 12,
+                    }}
+                  >
+                    <option value="" style={{ color: "black" }}>
+                      No family
+                    </option>
+                    {creatable.parents.map((p) => (
+                      <option
+                        key={p.id}
+                        value={p.id}
+                        style={{ color: "black" }}
+                      >
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <Button
+                  size="xs"
+                  {...primaryBtn}
+                  onClick={doCreate}
+                  loading={creating}
+                  disabled={!newName.trim()}
+                >
+                  + Create {creatable.noun}
+                </Button>
+              </Flex>
+            )}
           </Box>
         )}
       </Box>
@@ -221,9 +296,12 @@ function TaxPicker({
 function TagPicker({
   selected,
   onChange,
+  onCreate,
 }: {
   selected: { slug: string; name: string }[];
   onChange: (v: { slug: string; name: string }[]) => void;
+  /** Owner-only: create a brand-new tag from the current query. */
+  onCreate?: (name: string) => Promise<{ slug: string; name: string } | null>;
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<
@@ -326,6 +404,27 @@ function TagPicker({
             Optional. Showing most-used tags; type to search all.
           </Text>
         )}
+        {onCreate &&
+          q.trim().length >= 2 &&
+          !loading &&
+          !results.some(
+            (r) => r.name.toLowerCase() === q.trim().toLowerCase(),
+          ) && (
+            <Button
+              size="xs"
+              {...outlineBtn}
+              mt={2}
+              onClick={async () => {
+                const t = await onCreate(q.trim());
+                if (t) {
+                  add(t);
+                  setQ("");
+                }
+              }}
+            >
+              + Create tag &ldquo;{q.trim()}&rdquo;
+            </Button>
+          )}
       </Box>
     </Box>
   );
@@ -356,7 +455,9 @@ function ManualGameForm({
   const [description, setDescription] = useState("");
   const [released, setReleased] = useState("");
   const [website, setWebsite] = useState("");
+  const [youtube, setYoutube] = useState("");
   const [isMature, setIsMature] = useState(false);
+  const [families, setFamilies] = useState<{ id: string; name: string }[]>([]);
   const [tagSel, setTagSel] = useState<{ slug: string; name: string }[]>([]);
   // Taxonomy pickers (Phase 2): loaded once from the DB, selected by slug.
   const [tax, setTax] = useState<GameTaxonomy | null>(null);
@@ -373,7 +474,59 @@ function ManualGameForm({
     getGameTaxonomy()
       .then(setTax)
       .catch((e) => setTaxErr((e as Error).message));
+    getPlatformFamilies()
+      .then(setFamilies)
+      .catch(() => setFamilies([]));
   }, []);
+
+  /** Create a taxonomy row, refresh the pickers, and auto-select it. */
+  const createTax = async (
+    kind: "genre" | "platform" | "store",
+    taxName: string,
+    parentId?: string,
+  ): Promise<string | null> => {
+    try {
+      const r = await createTaxonomyEntry({
+        kind,
+        name: taxName,
+        parentPlatformId: parentId,
+      });
+      if (!r.ok || !r.entry) {
+        setMsg(r.error || "Create failed");
+        return null;
+      }
+      setTax(await getGameTaxonomy());
+      const slug = r.entry.slug;
+      const setter =
+        kind === "genre"
+          ? setGenreSel
+          : kind === "platform"
+            ? setConsoleSel
+            : setStoreSel;
+      setter((prev) => new Set(prev).add(slug));
+      if (r.existing) setMsg(`"${r.entry.name}" already existed — selected.`);
+      return slug;
+    } catch (e) {
+      setMsg((e as Error).message);
+      return null;
+    }
+  };
+
+  const createTag = async (
+    tagName: string,
+  ): Promise<{ slug: string; name: string } | null> => {
+    try {
+      const r = await createTaxonomyEntry({ kind: "tag", name: tagName });
+      if (!r.ok || !r.entry) {
+        setMsg(r.error || "Create failed");
+        return null;
+      }
+      return { slug: r.entry.slug, name: r.entry.name };
+    } catch (e) {
+      setMsg((e as Error).message);
+      return null;
+    }
+  };
 
   const toggleSel = (
     setter: (fn: (prev: Set<string>) => Set<string>) => void,
@@ -419,6 +572,7 @@ function ManualGameForm({
         description: description.trim() || undefined,
         released: released || undefined,
         website: website.trim() || undefined,
+        youtube: youtube.trim() || undefined,
         isMature,
         coverImage: cover || undefined,
         screenshots: shots,
@@ -503,6 +657,19 @@ function ManualGameForm({
         </Box>
       </HStack>
 
+      <Box>
+        {label("YouTube trailer")}
+        <Input
+          {...inputProps}
+          value={youtube}
+          onChange={(e) => setYoutube(e.target.value)}
+          placeholder="Full YouTube URL or the 11-character video id"
+        />
+        <Text fontSize="10px" color="whiteAlpha.500" mt={1}>
+          Optional. Either works — the video id is extracted and stored.
+        </Text>
+      </Box>
+
       {taxErr && (
         <Text fontSize="xs" color="orange.300">
           Couldn&rsquo;t load taxonomy: {taxErr}
@@ -521,6 +688,10 @@ function ManualGameForm({
             groups={[{ group: null, options: tax.genres }]}
             selected={genreSel}
             onToggle={(s) => toggleSel(setGenreSel, s)}
+            creatable={{
+              noun: "genre",
+              onCreate: (n) => createTax("genre", n),
+            }}
           />
           <TaxPicker
             label="Platforms / consoles"
@@ -530,6 +701,11 @@ function ManualGameForm({
             }))}
             selected={consoleSel}
             onToggle={(s) => toggleSel(setConsoleSel, s)}
+            creatable={{
+              noun: "platform",
+              parents: families,
+              onCreate: (n, parentId) => createTax("platform", n, parentId),
+            }}
           />
           <Text fontSize="10px" color="whiteAlpha.500" mt={-1}>
             Pick the specific consoles the game runs on — family-level filters
@@ -540,11 +716,15 @@ function ManualGameForm({
             groups={[{ group: null, options: tax.stores }]}
             selected={storeSel}
             onToggle={(s) => toggleSel(setStoreSel, s)}
+            creatable={{
+              noun: "store",
+              onCreate: (n) => createTax("store", n),
+            }}
           />
         </>
       )}
 
-      <TagPicker selected={tagSel} onChange={setTagSel} />
+      <TagPicker selected={tagSel} onChange={setTagSel} onCreate={createTag} />
 
       <Button
         size="xs"
@@ -653,7 +833,7 @@ function MissingGameCard({
 }: {
   item: UnresolvedGameRef;
   isOwner: boolean;
-  onDone: (id: string) => void;
+  onDone: (id: string, notice?: string) => void;
 }) {
   const [q, setQ] = useState(item.rawName);
   const [results, setResults] = useState<GameLite[]>([]);
@@ -662,6 +842,9 @@ function MissingGameCard({
   const [msg, setMsg] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [manual, setManual] = useState(false);
+  // Two-step confirm for suggested matches — a single stray click used to
+  // silently learn an alias and vanish the card.
+  const [confirmSug, setConfirmSug] = useState<string | null>(null);
 
   async function doSearch() {
     setSearching(true);
@@ -676,11 +859,14 @@ function MissingGameCard({
     }
   }
 
-  async function doMap(gameId: string) {
+  async function doMap(gameId: string, gameName?: string) {
     setBusy("map");
     try {
       await mapUnresolvedGame(item.id, gameId);
-      onDone(item.id);
+      onDone(
+        item.id,
+        `Linked "${item.rawName}"${gameName ? ` → ${gameName}` : ""} — the resolver learned this name and future mentions link automatically.`,
+      );
     } catch (e) {
       setMsg((e as Error).message);
       setBusy(null);
@@ -694,16 +880,47 @@ function MissingGameCard({
       const r = await importUnresolvedGame(item.id);
       const res = r?.result;
       if (res?.imported || res?.reason === "already_exists") {
-        onDone(item.id);
+        onDone(item.id, `Imported "${item.rawName}" from RAWG.`);
       } else {
         setMsg(
           res?.reason === "no_rawg_match"
-            ? "No RAWG match — try mapping to an existing game."
+            ? "No RAWG match — try Import from IGDB, or map to an existing game."
             : res?.reason === "no_exact_match"
-              ? "RAWG has similar titles but no exact match — importing blind risks the wrong game. Search + Link, or Add manually (candidates are in Import issues)."
+              ? "RAWG has similar titles but no exact match — importing blind risks the wrong game. Try IGDB, Search + Link, or Add manually (candidates are in Import issues)."
               : res?.reason === "no_api_key"
                 ? "RAWG_API_KEY is not set on the API."
                 : "Import failed — try again or map manually.",
+        );
+        setBusy(null);
+      }
+    } catch (e) {
+      setMsg((e as Error).message);
+      setBusy(null);
+    }
+  }
+
+  async function doImportIgdb() {
+    setBusy("igdb");
+    setMsg(null);
+    try {
+      const r = await importUnresolvedGameIgdb(item.id);
+      const res = r?.result;
+      if (res?.imported || res?.updated) {
+        onDone(
+          item.id,
+          res.imported
+            ? `Imported "${item.rawName}" from IGDB.`
+            : `"${item.rawName}" was already in the catalog — enriched from IGDB and linked.`,
+        );
+      } else {
+        setMsg(
+          res?.reason === "not_found"
+            ? "IGDB has no match for this name either."
+            : res?.reason === "no_exact_match"
+              ? `No exact IGDB match — similar: ${(res.candidates ?? []).join(", ") || "(none)"}. Search + Link or Add manually.`
+              : res?.reason === "skipped_platform"
+                ? "IGDB lists this game only on excluded platforms (the console-only gate skipped it)."
+                : `IGDB import failed${res?.reason ? ` — ${res.reason}` : ""}.`,
         );
         setBusy(null);
       }
@@ -717,7 +934,7 @@ function MissingGameCard({
     setBusy("skip");
     try {
       await skipUnresolvedGame(item.id);
-      onDone(item.id);
+      onDone(item.id, `Skipped "${item.rawName}" — it won't be re-suggested.`);
     } catch (e) {
       setMsg((e as Error).message);
       setBusy(null);
@@ -762,6 +979,17 @@ function MissingGameCard({
             <Button
               size="sm"
               {...outlineBtn}
+              onClick={doImportIgdb}
+              loading={busy === "igdb"}
+              loadingText="Importing"
+            >
+              <FiDownloadCloud /> Import from IGDB
+            </Button>
+          )}
+          {isOwner && (
+            <Button
+              size="sm"
+              {...outlineBtn}
               onClick={() => setManual((v) => !v)}
             >
               <FiPlus /> Add manually
@@ -781,20 +1009,46 @@ function MissingGameCard({
       {(item.candidateGameIds?.length ?? 0) > 0 && (
         <VStack align="stretch" mt={3} gap={1}>
           <Text fontSize="xs" color="whiteAlpha.600">
-            Suggested matches
+            Suggested matches — fuzzy name matches from your library. Linking
+            one teaches the resolver this name (click twice to confirm).
           </Text>
-          {item.candidateGameIds!.map((c) => (
+          {item.candidateGameIds!.map((c) => {
+            const arming = confirmSug === c.gameId;
+            return (
+              <Button
+                key={c.gameId}
+                size="xs"
+                {...(arming
+                  ? {
+                      bg: "green.500",
+                      color: "white",
+                      _hover: { bg: "green.600" },
+                    }
+                  : outlineBtn)}
+                justifyContent="flex-start"
+                onClick={() =>
+                  arming ? doMap(c.gameId, c.name) : setConfirmSug(c.gameId)
+                }
+                loading={arming && busy === "map"}
+              >
+                <FiLink />{" "}
+                {arming
+                  ? `Confirm: link "${item.rawName}" → ${c.name}`
+                  : c.name}
+              </Button>
+            );
+          })}
+          {confirmSug && (
             <Button
-              key={c.gameId}
               size="xs"
-              {...outlineBtn}
-              justifyContent="flex-start"
-              onClick={() => doMap(c.gameId)}
-              loading={busy === "map"}
+              variant="ghost"
+              color="whiteAlpha.600"
+              alignSelf="flex-start"
+              onClick={() => setConfirmSug(null)}
             >
-              <FiLink /> {c.name}
+              Cancel
             </Button>
-          ))}
+          )}
         </VStack>
       )}
 
@@ -856,7 +1110,7 @@ function MissingGameCard({
                   bg="green.500"
                   color="white"
                   _hover={{ bg: "green.600" }}
-                  onClick={() => doMap(g.id)}
+                  onClick={() => doMap(g.id, g.name)}
                   loading={busy === "map"}
                 >
                   Link
@@ -885,7 +1139,9 @@ function MissingGameCard({
             refId={item.id}
             initialName={item.rawName}
             initialCover={(item.context?.icon as string) ?? ""}
-            onCreated={() => onDone(item.id)}
+            onCreated={(n) =>
+              onDone(item.id, `Created "${n}" manually and linked it.`)
+            }
             onCancel={() => setManual(false)}
           />
         </Box>
@@ -1178,7 +1434,8 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     loadDiags();
   }, []);
 
-  const remove = (id: string) => {
+  const remove = (id: string, doneNotice?: string) => {
+    if (doneNotice) setNotice(doneNotice);
     const next = rows.filter((x) => x.id !== id);
     const nextTotal = Math.max(0, queueTotal - 1);
     setRows(next);
