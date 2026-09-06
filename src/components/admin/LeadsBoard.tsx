@@ -1300,12 +1300,17 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
           borderRadius="lg"
           bg="whiteAlpha.50"
         >
-          <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
+          <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={1}>
             Feed health — {feedHealth.filter((f) => f.ok).length}/
             {feedHealth.length} OK
             {feedHealth.some((f) => f.ok && (f.newestAgeMins ?? 0) > 2880)
               ? " · some stale"
               : ""}
+          </Text>
+          <Text fontSize="xs" color="nexzy.gray.100" mb={2}>
+            🟢 fetches fine, fresh items · 🟡 fetches fine but STALE (nothing
+            newer than 48h — the site may have moved feeds or gone quiet) · 🔴
+            fetch FAILED (the error shows why) · 🎯 = first-party publisher
           </Text>
           <VStack align="stretch" gap={1}>
             {[...feedHealth]
