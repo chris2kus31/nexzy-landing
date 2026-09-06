@@ -27,6 +27,7 @@ import {
   makeShortFromLead,
   getWriterNames,
   getFeedsHealth,
+  getFeedIssues,
   type FeedHealthRow,
   type Lead,
 } from "@/lib/admin/client";
@@ -992,6 +993,11 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
       })
       .catch((e) => setError((e as Error)?.message || "Failed to load leads."))
       .finally(() => setRefreshing(false));
+    // Best-effort: the last scan's unfetchable feeds (429s etc.) — shown so
+    // the editor can open the source manually and paste anything worth a lead.
+    getFeedIssues()
+      .then(setFeedIssues)
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -1057,6 +1063,11 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   // 🩺 Feed health — live-test the firehose feeds on demand (no tokens).
   const [feedHealth, setFeedHealth] = useState<FeedHealthRow[] | null>(null);
   const [checkingFeeds, setCheckingFeeds] = useState(false);
+  // ⚠ Last scan's fetch failures (cheap, loaded with the board).
+  const [feedIssues, setFeedIssues] = useState<{
+    at: string | null;
+    issues: { name: string; url: string; error: string }[];
+  } | null>(null);
   const checkFeeds = async () => {
     setCheckingFeeds(true);
     try {
@@ -1245,6 +1256,38 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
           )}
         </HStack>
       </Flex>
+
+      {/* ⚠ Last scan's unfetchable feeds — click a name to open the source and
+          check it manually (paste anything worth a lead via the normal flows). */}
+      {(feedIssues?.issues?.length ?? 0) > 0 && (
+        <Box
+          mb={3}
+          p={2}
+          borderWidth="1px"
+          borderColor="orange.400"
+          borderRadius="md"
+          bg="orange.500/10"
+        >
+          <Text fontSize="xs" color="orange.200" fontWeight="700">
+            ⚠ Last scan couldn&apos;t fetch{" "}
+            {feedIssues!.issues.map((i, idx) => (
+              <Text as="span" key={i.name}>
+                {idx > 0 ? " · " : ""}
+                <Link
+                  href={i.url.replace(/\/?\.rss$/i, "")}
+                  target="_blank"
+                  color="orange.100"
+                  textDecoration="underline"
+                >
+                  {i.name}
+                </Link>{" "}
+                ({i.error})
+              </Text>
+            ))}
+            {" — open the source and eyeball it manually."}
+          </Text>
+        </Box>
+      )}
 
       {/* 🩺 Feed health — live per-feed status, so a dead/stale feed is visible
           instead of silently thinning the board. */}

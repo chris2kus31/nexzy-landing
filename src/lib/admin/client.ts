@@ -1448,6 +1448,14 @@ export async function getFeedsHealth(): Promise<FeedHealthRow[]> {
   return handle(await fetch(`/api/newsroom/admin/feeds/health`));
 }
 
+/** The LAST scan's fetch failures (cheap, in-memory) — shown on the board. */
+export async function getFeedIssues(): Promise<{
+  at: string | null;
+  issues: { name: string; url: string; error: string }[];
+}> {
+  return handle(await fetch(`/api/newsroom/admin/feeds/issues`));
+}
+
 /** "Skip": bury a lead. */
 export async function skipLead(id: string): Promise<Lead> {
   return handle(
