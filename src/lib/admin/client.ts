@@ -1456,6 +1456,13 @@ export async function getFeedIssues(): Promise<{
   return handle(await fetch(`/api/newsroom/admin/feeds/issues`));
 }
 
+/** The full firehose roster (names + URLs) — static, for spot-checking. */
+export async function getFeedRoster(): Promise<
+  { name: string; url: string; tier: "primary" | "reporting" }[]
+> {
+  return handle(await fetch(`/api/newsroom/admin/feeds/list`));
+}
+
 /** "Skip": bury a lead. */
 export async function skipLead(id: string): Promise<Lead> {
   return handle(

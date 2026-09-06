@@ -28,6 +28,7 @@ import {
   getWriterNames,
   getFeedsHealth,
   getFeedIssues,
+  getFeedRoster,
   type FeedHealthRow,
   type Lead,
 } from "@/lib/admin/client";
@@ -1068,6 +1069,22 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     at: string | null;
     issues: { name: string; url: string; error: string }[];
   } | null>(null);
+  // 📡 Full feed roster (static list, lazy-loaded on first expand).
+  const [roster, setRoster] = useState<
+    { name: string; url: string; tier: "primary" | "reporting" }[] | null
+  >(null);
+  const [showRoster, setShowRoster] = useState(false);
+  const toggleRoster = async () => {
+    const next = !showRoster;
+    setShowRoster(next);
+    if (next && !roster) {
+      try {
+        setRoster(await getFeedRoster());
+      } catch {
+        /* leave null; toggle again to retry */
+      }
+    }
+  };
   const checkFeeds = async () => {
     setCheckingFeeds(true);
     try {
@@ -1349,6 +1366,62 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
           </VStack>
         </Box>
       )}
+
+      {/* 📡 Feed roster — the full firehose URL list for spot-checking.
+          Collapsed by default; a quiet text toggle, nothing intrusive. */}
+      <Box mb={3}>
+        <Box
+          as="button"
+          onClick={toggleRoster}
+          fontSize="xs"
+          color="nexzy.gray.100"
+          _hover={{ color: "nexzy.white" }}
+        >
+          {showRoster ? "▾" : "▸"} 📡 Feed roster
+          {roster ? ` (${roster.length})` : ""}
+        </Box>
+        {showRoster && (
+          <Box
+            mt={1}
+            p={2}
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            borderRadius="md"
+            bg="whiteAlpha.50"
+            maxH="260px"
+            overflowY="auto"
+          >
+            {!roster ? (
+              <Spinner size="sm" color="nexzy.blue" />
+            ) : (
+              <VStack align="stretch" gap={0.5}>
+                {roster.map((f) => (
+                  <Flex key={f.url} gap={2} fontSize="xs" align="center">
+                    <Text
+                      color="nexzy.white"
+                      fontWeight="600"
+                      minW="150px"
+                      lineClamp={1}
+                    >
+                      {f.name}
+                      {f.tier === "primary" ? " ·🎯" : ""}
+                    </Text>
+                    <Link
+                      href={f.url}
+                      target="_blank"
+                      color="nexzy.lightBlue"
+                      lineClamp={1}
+                      _hover={{ textDecoration: "underline" }}
+                    >
+                      {f.url}
+                    </Link>
+                  </Flex>
+                ))}
+              </VStack>
+            )}
+          </Box>
+        )}
+      </Box>
 
       {/* Beat filter */}
       <HStack gap={2} wrap="wrap" mb={4}>
