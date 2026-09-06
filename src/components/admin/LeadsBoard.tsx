@@ -26,6 +26,8 @@ import {
   quickAnnounceFromLead,
   makeShortFromLead,
   getWriterNames,
+  getFeedsHealth,
+  type FeedHealthRow,
   type Lead,
 } from "@/lib/admin/client";
 import { BEATS, beatLabel } from "@/lib/blog/beats";
@@ -1052,6 +1054,20 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     }
   };
 
+  // 🩺 Feed health — live-test the firehose feeds on demand (no tokens).
+  const [feedHealth, setFeedHealth] = useState<FeedHealthRow[] | null>(null);
+  const [checkingFeeds, setCheckingFeeds] = useState(false);
+  const checkFeeds = async () => {
+    setCheckingFeeds(true);
+    try {
+      setFeedHealth(await getFeedsHealth());
+    } catch (e) {
+      setMsg((e as Error)?.message || "Feed health check failed.");
+    } finally {
+      setCheckingFeeds(false);
+    }
+  };
+
   const doWrite = async (
     id: string,
     author: string,
@@ -1213,8 +1229,78 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
               Scan now
             </Button>
           )}
+          {isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: "whiteAlpha.100" }}
+              onClick={feedHealth ? () => setFeedHealth(null) : checkFeeds}
+              loading={checkingFeeds}
+              loadingText="Checking…"
+            >
+              🩺 Feed health
+            </Button>
+          )}
         </HStack>
       </Flex>
+
+      {/* 🩺 Feed health — live per-feed status, so a dead/stale feed is visible
+          instead of silently thinning the board. */}
+      {feedHealth && (
+        <Box
+          mb={4}
+          p={3}
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          bg="whiteAlpha.50"
+        >
+          <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
+            Feed health — {feedHealth.filter((f) => f.ok).length}/
+            {feedHealth.length} OK
+            {feedHealth.some((f) => f.ok && (f.newestAgeMins ?? 0) > 2880)
+              ? " · some stale"
+              : ""}
+          </Text>
+          <VStack align="stretch" gap={1}>
+            {[...feedHealth]
+              .sort(
+                (a, b) =>
+                  Number(a.ok) - Number(b.ok) ||
+                  (b.newestAgeMins ?? 0) - (a.newestAgeMins ?? 0),
+              )
+              .map((f) => {
+                const staleHrs =
+                  f.newestAgeMins != null
+                    ? Math.round(f.newestAgeMins / 60)
+                    : null;
+                const stale = f.ok && (f.newestAgeMins ?? 0) > 2880; // >48h
+                return (
+                  <Flex key={f.name} align="center" gap={2} fontSize="xs">
+                    <Text w="16px">{f.ok ? (stale ? "🟡" : "🟢") : "🔴"}</Text>
+                    <Text color="nexzy.white" fontWeight="600" minW="150px">
+                      {f.name}
+                      {f.tier === "primary" ? " ·🎯" : ""}
+                    </Text>
+                    <Text color="nexzy.gray.100" flex={1} lineClamp={1}>
+                      {f.ok
+                        ? `${f.items} items · newest ${
+                            staleHrs == null
+                              ? "undated"
+                              : staleHrs < 1
+                                ? "<1h"
+                                : `${staleHrs}h`
+                          } ago · ${f.ms}ms`
+                        : f.error}
+                    </Text>
+                  </Flex>
+                );
+              })}
+          </VStack>
+        </Box>
+      )}
 
       {/* Beat filter */}
       <HStack gap={2} wrap="wrap" mb={4}>

@@ -1430,6 +1430,24 @@ export async function writeLeadReview(
   );
 }
 
+// --- Feed health (firehose observability) ---
+
+export interface FeedHealthRow {
+  name: string;
+  url: string;
+  tier: "primary" | "reporting";
+  ok: boolean;
+  error?: string;
+  items: number;
+  newestAgeMins: number | null;
+  ms: number;
+}
+
+/** Live-test every firehose feed — surfaces dead/moved/stale feeds. */
+export async function getFeedsHealth(): Promise<FeedHealthRow[]> {
+  return handle(await fetch(`/api/newsroom/admin/feeds/health`));
+}
+
 /** "Skip": bury a lead. */
 export async function skipLead(id: string): Promise<Lead> {
   return handle(
