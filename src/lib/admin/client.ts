@@ -2153,6 +2153,42 @@ export async function searchGamesForLink(q: string): Promise<GameLite[]> {
   );
 }
 
+// --- In-editor IGDB import (game not in our catalog yet) ---
+
+export interface IgdbSearchHit {
+  id: number;
+  name: string;
+  slug?: string;
+  // Unix seconds (IGDB convention).
+  first_release_date?: number;
+}
+
+/** Owner-only: search IGDB by name (candidates for the in-editor import). */
+export async function searchIgdb(q: string): Promise<IgdbSearchHit[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/search?q=${encodeURIComponent(q)}`),
+  );
+}
+
+/**
+ * Owner-only: import an IGDB game into the catalog AND link it to the post in
+ * one step (the article editor's "Import from IGDB" — same shared processor as
+ * the Missing-games tab).
+ */
+export async function importIgdbGameToPost(
+  postId: string,
+  igdbId: number,
+  isPrimary = false,
+): Promise<{ imported: boolean; updated: boolean; game: GameLite | null }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${postId}/games/import-igdb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ igdbId, isPrimary }),
+    }),
+  );
+}
+
 /**
  * Set / clear the game chip on a Content Studio card (payload.game). The video
  * produced from the card links to this game, so it lands on the game's hub.

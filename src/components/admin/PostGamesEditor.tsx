@@ -20,11 +20,14 @@ import {
   confirmPostGame,
   removePostGame,
   searchGamesForLink,
+  searchIgdb,
+  importIgdbGameToPost,
   getGameVideos,
   getGameScreenshots,
   type PostGameLink,
   type GameLite,
   type GameVideoItem,
+  type IgdbSearchHit,
 } from "@/lib/admin/client";
 
 type GameAssets = {
@@ -161,6 +164,45 @@ export default function PostGamesEditor({
       setSearched(true);
     }
   }
+  // In-editor IGDB import — for a game not in the catalog yet (a brand-new
+  // announcement). Same shared processor as the Missing-games tab, owner-only.
+  const [igdbResults, setIgdbResults] = useState<IgdbSearchHit[]>([]);
+  const [igdbSearching, setIgdbSearching] = useState(false);
+  const [igdbBusy, setIgdbBusy] = useState<number | null>(null);
+
+  async function searchIgdbNow() {
+    setIgdbSearching(true);
+    setMsg(null);
+    try {
+      setIgdbResults(await searchIgdb(q.trim()));
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setIgdbSearching(false);
+    }
+  }
+
+  async function importFromIgdb(igdbId: number) {
+    setIgdbBusy(igdbId);
+    setMsg(null);
+    try {
+      // First linked game becomes the primary (drives the game card/deep link).
+      const r = await importIgdbGameToPost(postId, igdbId, links.length === 0);
+      if (!r.game) {
+        setMsg("IGDB import failed — game not found on IGDB.");
+        return;
+      }
+      setIgdbResults([]);
+      setResults([]);
+      setQ("");
+      await load();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setIgdbBusy(null);
+    }
+  }
+
   async function add(gameId: string, isPrimary = false) {
     setBusy(gameId);
     setMsg(null);
@@ -430,10 +472,55 @@ export default function PostGamesEditor({
       </HStack>
 
       {searched && !searching && results.length === 0 && q.trim() !== "" && (
-        <Text fontSize="xs" color="nexzy.gray.100" mt={2}>
-          No games found for &ldquo;{q.trim()}&rdquo;. If it should exist,
-          import it from the Missing games tab.
-        </Text>
+        <Box mt={2}>
+          <Text fontSize="xs" color="nexzy.gray.100">
+            No games found for &ldquo;{q.trim()}&rdquo; — not in the catalog
+            yet.
+          </Text>
+          <Button
+            size="xs"
+            mt={1}
+            {...primaryBtn}
+            onClick={searchIgdbNow}
+            loading={igdbSearching}
+          >
+            Import from IGDB
+          </Button>
+        </Box>
+      )}
+
+      {igdbResults.length > 0 && (
+        <VStack align="stretch" gap={1} mt={2}>
+          <Text fontSize="10px" color="whiteAlpha.600" fontWeight="700">
+            IGDB RESULTS — click to import into the catalog + link to this post
+          </Text>
+          {igdbResults.slice(0, 6).map((g) => (
+            <Flex
+              key={g.id}
+              align="center"
+              gap={2}
+              p={2}
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="md"
+            >
+              <Text fontSize="sm" color="nexzy.white" flex={1} lineClamp={1}>
+                {g.name}
+                {g.first_release_date
+                  ? ` (${new Date(g.first_release_date * 1000).getFullYear()})`
+                  : ""}
+              </Text>
+              <Button
+                size="xs"
+                {...primaryBtn}
+                onClick={() => importFromIgdb(g.id)}
+                loading={igdbBusy === g.id}
+              >
+                Import + link
+              </Button>
+            </Flex>
+          ))}
+        </VStack>
       )}
 
       {results.length > 0 && (
