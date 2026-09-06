@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ChangeEvent } from "react";
+import NextLink from "next/link";
 import {
   Box,
   Flex,
@@ -37,6 +38,7 @@ import {
   type GameTaxonomy,
   searchTags,
   importUnresolvedGameIgdb,
+  renameUnresolvedGame,
   createTaxonomyEntry,
   getPlatformFamilies,
 } from "@/lib/admin/client";
@@ -842,6 +844,32 @@ function MissingGameCard({
   const [msg, setMsg] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [manual, setManual] = useState(false);
+  // Editable name: the scraped/LLM name isn't always the game's real title —
+  // correct it here and the RAWG/IGDB imports (which search by this name on
+  // the server) use the corrected one.
+  const [name, setName] = useState(item.rawName);
+  const [editingName, setEditingName] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+
+  async function saveName() {
+    const n = name.trim();
+    if (!n || n === item.rawName) {
+      setEditingName(false);
+      setName(n || item.rawName);
+      return;
+    }
+    setSavingName(true);
+    setMsg(null);
+    try {
+      await renameUnresolvedGame(item.id, n);
+      setQ(n); // the Search + Link box follows the corrected name
+      setEditingName(false);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setSavingName(false);
+    }
+  }
   // Two-step confirm for suggested matches — a single stray click used to
   // silently learn an alias and vanish the card.
   const [confirmSug, setConfirmSug] = useState<string | null>(null);
@@ -865,7 +893,7 @@ function MissingGameCard({
       await mapUnresolvedGame(item.id, gameId);
       onDone(
         item.id,
-        `Linked "${item.rawName}"${gameName ? ` → ${gameName}` : ""} — the resolver learned this name and future mentions link automatically.`,
+        `Linked "${name}"${gameName ? ` → ${gameName}` : ""} — the resolver learned this name and future mentions link automatically.`,
       );
     } catch (e) {
       setMsg((e as Error).message);
@@ -880,7 +908,7 @@ function MissingGameCard({
       const r = await importUnresolvedGame(item.id);
       const res = r?.result;
       if (res?.imported || res?.reason === "already_exists") {
-        onDone(item.id, `Imported "${item.rawName}" from RAWG.`);
+        onDone(item.id, `Imported "${name}" from RAWG.`);
       } else {
         setMsg(
           res?.reason === "no_rawg_match"
@@ -909,8 +937,8 @@ function MissingGameCard({
         onDone(
           item.id,
           res.imported
-            ? `Imported "${item.rawName}" from IGDB.`
-            : `"${item.rawName}" was already in the catalog — enriched from IGDB and linked.`,
+            ? `Imported "${name}" from IGDB.`
+            : `"${name}" was already in the catalog — enriched from IGDB and linked.`,
         );
       } else {
         setMsg(
@@ -934,7 +962,7 @@ function MissingGameCard({
     setBusy("skip");
     try {
       await skipUnresolvedGame(item.id);
-      onDone(item.id, `Skipped "${item.rawName}" — it won't be re-suggested.`);
+      onDone(item.id, `Skipped "${name}" — it won't be re-suggested.`);
     } catch (e) {
       setMsg((e as Error).message);
       setBusy(null);
@@ -951,16 +979,77 @@ function MissingGameCard({
     >
       <Flex justify="space-between" align="flex-start" gap={3} wrap="wrap">
         <Box>
-          <Heading size="sm" color="nexzy.white">
-            {item.rawName}
-          </Heading>
-          <HStack gap={2} mt={1}>
+          {editingName ? (
+            <HStack gap={2}>
+              <Input
+                {...inputProps}
+                value={name}
+                autoFocus
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") {
+                    setName(item.rawName);
+                    setEditingName(false);
+                  }
+                }}
+                maxW="360px"
+              />
+              <Button
+                size="sm"
+                {...primaryBtn}
+                onClick={saveName}
+                loading={savingName}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                {...outlineBtn}
+                onClick={() => {
+                  setName(item.rawName);
+                  setEditingName(false);
+                }}
+                disabled={savingName}
+              >
+                Cancel
+              </Button>
+            </HStack>
+          ) : (
+            <HStack gap={2}>
+              <Heading size="sm" color="nexzy.white">
+                {name}
+              </Heading>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="nexzy.gray.100"
+                _hover={{ bg: "whiteAlpha.100" }}
+                onClick={() => setEditingName(true)}
+                title="Fix the name (imports search by it)"
+              >
+                ✎
+              </Button>
+            </HStack>
+          )}
+          <HStack gap={2} mt={1} wrap="wrap">
             <Badge colorPalette="orange" variant="subtle">
               {item.sourceType}
             </Badge>
             <Text fontSize="xs" color="whiteAlpha.600">
               {timeAgo(item.createdAt)}
             </Text>
+            {item.source && (
+              <NextLink href={`/admin/posts/${item.source.id}`}>
+                <Text
+                  fontSize="xs"
+                  color="nexzy.lightBlue"
+                  _hover={{ textDecoration: "underline" }}
+                >
+                  from: {item.source.title} →
+                </Text>
+              </NextLink>
+            )}
           </HStack>
         </Box>
         <HStack gap={2}>
@@ -1032,9 +1121,7 @@ function MissingGameCard({
                 loading={arming && busy === "map"}
               >
                 <FiLink />{" "}
-                {arming
-                  ? `Confirm: link "${item.rawName}" → ${c.name}`
-                  : c.name}
+                {arming ? `Confirm: link "${name}" → ${c.name}` : c.name}
               </Button>
             );
           })}
@@ -1137,7 +1224,7 @@ function MissingGameCard({
         <Box mt={3} pt={3} borderTopWidth="1px" borderColor="whiteAlpha.200">
           <ManualGameForm
             refId={item.id}
-            initialName={item.rawName}
+            initialName={name}
             initialCover={(item.context?.icon as string) ?? ""}
             onCreated={(n) =>
               onDone(item.id, `Created "${n}" manually and linked it.`)

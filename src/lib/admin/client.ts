@@ -2126,6 +2126,26 @@ export interface UnresolvedGameRef {
   candidateGameIds: { gameId: string; name: string; score: number }[] | null;
   status: string;
   createdAt: string;
+  // The post that TRIGGERED this ref (article/guide refs only) — for the
+  // "open the source" link on the card.
+  source?: { id: string; title: string; slug: string; type: string };
+}
+
+/**
+ * Rename an open missing-game ref (the scraped name isn't always the real
+ * title) so the RAWG/IGDB imports — which search by this name — can find it.
+ */
+export async function renameUnresolvedGame(
+  id: string,
+  rawName: string,
+): Promise<UnresolvedGameRef | null> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/unresolved/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rawName }),
+    }),
+  );
 }
 
 export interface GameLite {
