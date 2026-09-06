@@ -498,6 +498,68 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
             src={(sources as Record<string, YtSource>).youtube}
           />
 
+          {/* Feed health — first-party Following-feed numbers (sources.feed). */}
+          {(() => {
+            const feed = (sources as Record<string, { data?: unknown }>).feed
+              ?.data as
+              | {
+                  follows?: {
+                    total?: number;
+                    users?: number;
+                    following1Plus?: number;
+                    following5Plus?: number;
+                    following10Plus?: number;
+                    new7d?: number;
+                  };
+                  hearts?: { total?: number; last7d?: number };
+                  comments?: { total?: number; last7d?: number };
+                  items?: { total?: number; byType?: Record<string, number> };
+                }
+              | undefined;
+            if (!feed) return null;
+            const f = feed.follows ?? {};
+            const h = feed.hearts ?? {};
+            const c = feed.comments ?? {};
+            const it = feed.items ?? {};
+            const types = Object.entries(it.byType ?? {});
+            return (
+              <Box
+                mb={6}
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                borderRadius="xl"
+                p={{ base: 4, md: 6 }}
+              >
+                <Heading size="sm" mb={4} color="nexzy.white">
+                  Feed health
+                </Heading>
+                <SimpleGrid
+                  columns={{ base: 2, md: 4, lg: 6 }}
+                  gap={3}
+                  mb={types.length ? 4 : 0}
+                >
+                  <Kpi label="Followers" value={fmt(f.users)} />
+                  <Kpi label="Total follows" value={fmt(f.total)} />
+                  <Kpi label="Following 5+" value={fmt(f.following5Plus)} />
+                  <Kpi label="New follows 7d" value={fmt(f.new7d)} />
+                  <Kpi label="Hearts" value={fmt(h.total)} />
+                  <Kpi label="Comments" value={fmt(c.total)} />
+                  <Kpi label="Feed items" value={fmt(it.total)} />
+                </SimpleGrid>
+                {types.length > 0 && (
+                  <HStack gap={2} wrap="wrap">
+                    {types.map(([type, n]) => (
+                      <Badge key={type} colorPalette="blue" variant="subtle">
+                        {type}: {fmt(n as number)}
+                      </Badge>
+                    ))}
+                  </HStack>
+                )}
+              </Box>
+            );
+          })()}
+
           {data?.briefMarkdown ? (
             <Box
               bg="whiteAlpha.50"
