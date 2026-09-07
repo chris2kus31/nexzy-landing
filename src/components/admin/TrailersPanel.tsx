@@ -1,16 +1,18 @@
 "use client";
 
-// Trailer monitor admin: a review INBOX of YouTube uploads the monitor caught
-// (approve → creates an external video linked to a game → it feeds; or dismiss),
-// plus the watched-CHANNEL registry (add/remove/enable). Nothing auto-publishes —
-// every trailer that reaches the feed is approved here by a human.
-import { useCallback, useEffect, useState } from "react";
+// Trailer monitor admin. Two views (kept separate so the daily review queue is
+// never crowded by a long channel list):
+//   • Inbox    — caught YouTube uploads waiting for approval. Approve links the
+//                trailer to a game (from the catalog, or imported from IGDB when
+//                the game isn't in our DB yet) → it becomes a video that feeds.
+//   • Channels — the watched-channel registry (add by URL/ID, enable, remove).
+// Nothing auto-publishes — every trailer that reaches the feed is approved here.
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Flex,
   HStack,
   VStack,
-  Heading,
   Text,
   Button,
   Input,
@@ -28,10 +30,13 @@ import {
   FiEye,
   FiEyeOff,
   FiAlertTriangle,
+  FiExternalLink,
+  FiDownloadCloud,
 } from "react-icons/fi";
 import {
   getTrailerInbox,
   approveTrailer,
+  approveTrailerViaIgdb,
   dismissTrailer,
   pollTrailers,
   getTrailerSources,
@@ -39,9 +44,11 @@ import {
   removeTrailerSource,
   toggleTrailerSource,
   searchGamesForLink,
+  searchTrailerIgdb,
   type TrailerCandidate,
   type TrailerSource,
   type GameLite,
+  type TrailerIgdbResult,
 } from "@/lib/admin/client";
 
 const primaryBtn = {
@@ -63,34 +70,46 @@ const inputStyle = {
   _placeholder: { color: "whiteAlpha.500" },
 };
 
-function TrailerRow({
-  c,
-  onDone,
-}: {
-  c: TrailerCandidate;
-  onDone: () => void;
-}) {
+// A resolved selection: either a catalog game (has id) or an IGDB game to import.
+type Picked =
+  | { kind: "catalog"; id: string; name: string }
+  | { kind: "igdb"; igdbId: number; name: string; year: number | null };
+
+// Strip common trailer-title noise so the default game search is useful.
+function cleanTitle(title: string): string {
+  return title
+    .replace(
+      /\b(official|reveal|announcement|launch|gameplay|cinematic|teaser|trailer|4k|hd|\| .*)\b/gi,
+      "",
+    )
+    .replace(/[-–|:].*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
-  const [picked, setPicked] = useState<GameLite | null>(
+  const [picked, setPicked] = useState<Picked | null>(
     c.resolvedGameId
-      ? ({
+      ? {
+          kind: "catalog",
           id: c.resolvedGameId,
           name: c.resolvedGameName ?? "Suggested game",
-          slug: "",
-          backgroundImage: null,
-          released: null,
-        } as GameLite)
+        }
       : null,
   );
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState<GameLite[]>([]);
+  const [mode, setMode] = useState<"catalog" | "igdb">("catalog");
+  const [q, setQ] = useState(cleanTitle(c.title));
+  const [catalog, setCatalog] = useState<GameLite[]>([]);
+  const [igdb, setIgdb] = useState<TrailerIgdbResult[]>([]);
   const [searching, setSearching] = useState(false);
 
   const search = async () => {
     if (!q.trim()) return;
     setSearching(true);
     try {
-      setResults(await searchGamesForLink(q.trim()));
+      if (mode === "catalog") setCatalog(await searchGamesForLink(q.trim()));
+      else setIgdb(await searchTrailerIgdb(q.trim()));
     } finally {
       setSearching(false);
     }
@@ -100,7 +119,8 @@ function TrailerRow({
     if (!picked) return;
     setBusy(true);
     try {
-      await approveTrailer(c.id, picked.id);
+      if (picked.kind === "catalog") await approveTrailer(c.id, picked.id);
+      else await approveTrailerViaIgdb(c.id, picked.igdbId);
       onDone();
     } finally {
       setBusy(false);
@@ -122,21 +142,45 @@ function TrailerRow({
       gap={3}
       p={3}
       bg="whiteAlpha.50"
-      borderRadius="md"
+      borderRadius="lg"
       borderWidth="1px"
       borderColor="whiteAlpha.200"
       direction={{ base: "column", md: "row" }}
     >
-      <Image
-        src={c.thumbnailUrl ?? undefined}
-        alt=""
-        w={{ base: "100%", md: "160px" }}
-        h={{ base: "auto", md: "90px" }}
-        objectFit="cover"
-        borderRadius="md"
-        bg="whiteAlpha.100"
-      />
-      <VStack align="stretch" flex="1" gap={2}>
+      <Box position="relative" flexShrink={0}>
+        <Image
+          src={c.thumbnailUrl ?? undefined}
+          alt=""
+          w={{ base: "100%", md: "168px" }}
+          h={{ base: "auto", md: "94px" }}
+          objectFit="cover"
+          borderRadius="md"
+          bg="whiteAlpha.100"
+        />
+        <a
+          href={`https://www.youtube.com/watch?v=${c.youtubeId}`}
+          target="_blank"
+          rel="noreferrer"
+          title="Watch on YouTube"
+          style={{
+            position: "absolute",
+            right: 6,
+            bottom: 6,
+            background: "rgba(0,0,0,0.65)",
+            borderRadius: 6,
+            padding: "3px 6px",
+            color: "#fff",
+            fontSize: 12,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <FiExternalLink /> Watch
+        </a>
+      </Box>
+
+      <VStack align="stretch" flex="1" gap={2} minW={0}>
         <Text color="nexzy.white" fontWeight="600" lineClamp={2}>
           {c.title}
         </Text>
@@ -145,81 +189,116 @@ function TrailerRow({
           {c.videoPublishedAt && (
             <Text>{new Date(c.videoPublishedAt).toLocaleDateString()}</Text>
           )}
-          <a
-            href={`https://www.youtube.com/watch?v=${c.youtubeId}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ textDecoration: "underline" }}
-          >
-            watch
-          </a>
         </HStack>
 
-        {/* Game selection — defaults to the resolver's guess; searchable to override. */}
-        <HStack gap={2} wrap="wrap">
-          <Text fontSize="sm" color="whiteAlpha.700">
-            Game:
-          </Text>
-          {picked ? (
-            <Badge colorPalette="blue" px={2} py={1}>
-              {picked.name}{" "}
-              <Box
-                as="span"
-                cursor="pointer"
-                onClick={() => setPicked(null)}
-                ml={1}
-              >
-                <FiX style={{ display: "inline" }} />
-              </Box>
-            </Badge>
-          ) : (
-            <Badge colorPalette="orange">
-              <FiAlertTriangle style={{ display: "inline", marginRight: 4 }} />
-              no match — pick one
-            </Badge>
-          )}
-        </HStack>
-
-        {!picked && (
+        {/* Game selection */}
+        {picked ? (
           <HStack gap={2}>
-            <Input
-              {...inputStyle}
-              placeholder="Search a game…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && search()}
-            />
-            <Button {...outlineBtn} size="sm" onClick={search}>
-              {searching ? <Spinner size="sm" /> : <FiSearch />}
+            <Text fontSize="sm" color="whiteAlpha.700">
+              Game:
+            </Text>
+            <Badge colorPalette={picked.kind === "igdb" ? "yellow" : "blue"}>
+              {picked.name}
+              {picked.kind === "igdb" ? " (import from IGDB)" : ""}
+            </Badge>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="whiteAlpha.700"
+              onClick={() => setPicked(null)}
+            >
+              <FiX /> change
             </Button>
           </HStack>
-        )}
-        {!picked && results.length > 0 && (
-          <VStack align="stretch" gap={1} maxH="160px" overflowY="auto">
-            {results.map((g) => (
-              <HStack
-                key={g.id}
-                p={1}
-                px={2}
-                borderRadius="md"
-                _hover={{ bg: "whiteAlpha.100" }}
-                cursor="pointer"
-                onClick={() => {
-                  setPicked(g);
-                  setResults([]);
-                  setQ("");
-                }}
-              >
-                <Text fontSize="sm" color="nexzy.white">
-                  {g.name}
-                </Text>
-                {g.released && (
-                  <Text fontSize="xs" color="whiteAlpha.500">
-                    {g.released.slice(0, 4)}
-                  </Text>
-                )}
-              </HStack>
-            ))}
+        ) : (
+          <VStack align="stretch" gap={2}>
+            {/* Catalog vs IGDB toggle */}
+            <HStack gap={1}>
+              {(["catalog", "igdb"] as const).map((m) => (
+                <Button
+                  key={m}
+                  size="xs"
+                  onClick={() => setMode(m)}
+                  {...(mode === m ? primaryBtn : outlineBtn)}
+                >
+                  {m === "catalog" ? "From catalog" : "Import from IGDB"}
+                </Button>
+              ))}
+            </HStack>
+            <HStack gap={2}>
+              <Input
+                {...inputStyle}
+                placeholder={
+                  mode === "catalog"
+                    ? "Search your games…"
+                    : "Search IGDB by game name…"
+                }
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && search()}
+              />
+              <Button {...outlineBtn} size="sm" onClick={search}>
+                {searching ? <Spinner size="sm" /> : <FiSearch />}
+              </Button>
+            </HStack>
+            {mode === "catalog" && catalog.length > 0 && (
+              <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+                {catalog.map((g) => (
+                  <HStack
+                    key={g.id}
+                    p={1}
+                    px={2}
+                    borderRadius="md"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    cursor="pointer"
+                    onClick={() =>
+                      setPicked({ kind: "catalog", id: g.id, name: g.name })
+                    }
+                  >
+                    <Text fontSize="sm" color="nexzy.white">
+                      {g.name}
+                    </Text>
+                    {g.released && (
+                      <Text fontSize="xs" color="whiteAlpha.500">
+                        {g.released.slice(0, 4)}
+                      </Text>
+                    )}
+                  </HStack>
+                ))}
+              </VStack>
+            )}
+            {mode === "igdb" && igdb.length > 0 && (
+              <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+                {igdb.map((g) => (
+                  <HStack
+                    key={g.igdbId}
+                    p={1}
+                    px={2}
+                    borderRadius="md"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    cursor="pointer"
+                    onClick={() =>
+                      setPicked({
+                        kind: "igdb",
+                        igdbId: g.igdbId,
+                        name: g.name,
+                        year: g.year,
+                      })
+                    }
+                  >
+                    <FiDownloadCloud color="#FFE14D" />
+                    <Text fontSize="sm" color="nexzy.white">
+                      {g.name}
+                    </Text>
+                    {g.year && (
+                      <Text fontSize="xs" color="whiteAlpha.500">
+                        {g.year}
+                      </Text>
+                    )}
+                  </HStack>
+                ))}
+              </VStack>
+            )}
           </VStack>
         )}
 
@@ -230,7 +309,7 @@ function TrailerRow({
             onClick={approve}
             disabled={!picked || busy}
           >
-            <FiCheck /> Approve
+            {busy ? <Spinner size="sm" /> : <FiCheck />} Approve
           </Button>
           <Button {...outlineBtn} size="sm" onClick={dismiss} disabled={busy}>
             <FiX /> Dismiss
@@ -241,13 +320,191 @@ function TrailerRow({
   );
 }
 
+function ChannelsView({
+  sources,
+  reload,
+}: {
+  sources: TrailerSource[];
+  reload: () => void;
+}) {
+  const [newInput, setNewInput] = useState("");
+  const [newName, setNewName] = useState("");
+  const [filter, setFilter] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  const add = async () => {
+    if (!newInput.trim() || !newName.trim()) return;
+    setAdding(true);
+    setErr(null);
+    try {
+      await addTrailerSource(newInput.trim(), newName.trim());
+      setNewInput("");
+      setNewName("");
+      reload();
+    } catch (e) {
+      setErr(
+        (e as Error)?.message ||
+          "Couldn't add — use a channel ID (UC…) or a youtube.com/channel/UC… URL.",
+      );
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const shown = useMemo(() => {
+    const f = filter.trim().toLowerCase();
+    return f
+      ? sources.filter(
+          (s) =>
+            s.name.toLowerCase().includes(f) ||
+            s.channelId.toLowerCase().includes(f),
+        )
+      : sources;
+  }, [sources, filter]);
+
+  return (
+    <VStack align="stretch" gap={4}>
+      {/* Add row */}
+      <Box
+        p={3}
+        bg="whiteAlpha.50"
+        borderRadius="lg"
+        borderWidth="1px"
+        borderColor="whiteAlpha.200"
+      >
+        <Text fontSize="sm" color="whiteAlpha.800" mb={2} fontWeight="600">
+          Add a channel
+        </Text>
+        <HStack gap={2} wrap="wrap">
+          <Input
+            {...inputStyle}
+            placeholder="Channel ID (UC…) or youtube.com/channel/UC… URL"
+            value={newInput}
+            onChange={(e) => setNewInput(e.target.value)}
+            flex="1"
+            minW="260px"
+          />
+          <Input
+            {...inputStyle}
+            placeholder="Label (e.g. PlayStation)"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            maxW="200px"
+          />
+          <Button {...primaryBtn} size="sm" onClick={add} disabled={adding}>
+            {adding ? <Spinner size="sm" /> : <FiPlus />} Add
+          </Button>
+        </HStack>
+        {err && (
+          <Text fontSize="xs" color="orange.300" mt={2}>
+            {err}
+          </Text>
+        )}
+        <Text fontSize="xs" color="whiteAlpha.500" mt={2}>
+          Tip: open a channel, Share → Copy channel ID, or use its
+          youtube.com/channel/UC… URL. @handle links aren&apos;t supported by
+          YouTube&apos;s feed.
+        </Text>
+      </Box>
+
+      {/* Filter + count */}
+      <HStack justify="space-between">
+        <Input
+          {...inputStyle}
+          placeholder="Filter channels…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          maxW="280px"
+        />
+        <Text fontSize="sm" color="whiteAlpha.600">
+          {shown.length} of {sources.length}
+        </Text>
+      </HStack>
+
+      {/* Dense table */}
+      <VStack align="stretch" gap={0}>
+        {shown.map((s, i) => (
+          <Flex
+            key={s.id}
+            align="center"
+            gap={3}
+            px={3}
+            py={2}
+            bg={i % 2 ? "whiteAlpha.50" : "transparent"}
+            borderRadius="md"
+            borderLeftWidth="3px"
+            borderLeftColor={
+              s.lastError
+                ? "orange.400"
+                : s.enabled
+                  ? "green.400"
+                  : "whiteAlpha.300"
+            }
+          >
+            <VStack align="start" gap={0} flex="1" minW={0}>
+              <HStack gap={2}>
+                <Text color="nexzy.white" fontWeight="600" lineClamp={1}>
+                  {s.name}
+                </Text>
+                {!s.enabled && <Badge colorPalette="gray">off</Badge>}
+                {s.lastError && (
+                  <Badge colorPalette="orange">
+                    <FiAlertTriangle
+                      style={{ display: "inline", marginRight: 3 }}
+                    />
+                    error
+                  </Badge>
+                )}
+              </HStack>
+              <Text fontSize="xs" color="whiteAlpha.500" lineClamp={1}>
+                {s.channelId}
+                {s.lastCheckedAt
+                  ? ` · checked ${new Date(s.lastCheckedAt).toLocaleDateString()}`
+                  : " · not checked yet"}
+                {s.lastError ? ` · ${s.lastError}` : ""}
+              </Text>
+            </VStack>
+            <Button
+              {...outlineBtn}
+              size="xs"
+              title={s.enabled ? "Disable" : "Enable"}
+              onClick={async () => {
+                await toggleTrailerSource(s.id, !s.enabled);
+                reload();
+              }}
+            >
+              {s.enabled ? <FiEyeOff /> : <FiEye />}
+            </Button>
+            <Button
+              {...outlineBtn}
+              size="xs"
+              title="Remove"
+              onClick={async () => {
+                await removeTrailerSource(s.id);
+                reload();
+              }}
+            >
+              <FiTrash2 />
+            </Button>
+          </Flex>
+        ))}
+        {shown.length === 0 && (
+          <Text fontSize="sm" color="whiteAlpha.500" py={4} textAlign="center">
+            No channels{filter ? " match that filter" : " yet — add one above"}.
+          </Text>
+        )}
+      </VStack>
+    </VStack>
+  );
+}
+
 export default function TrailersPanel() {
+  const [view, setView] = useState<"inbox" | "channels">("inbox");
   const [inbox, setInbox] = useState<TrailerCandidate[]>([]);
   const [sources, setSources] = useState<TrailerSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
-  const [newId, setNewId] = useState("");
-  const [newName, setNewName] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -277,139 +534,57 @@ export default function TrailersPanel() {
     }
   };
 
-  const addSource = async () => {
-    if (!newId.trim() || !newName.trim()) return;
-    await addTrailerSource(newId.trim(), newName.trim());
-    setNewId("");
-    setNewName("");
-    await load();
-  };
-
-  if (loading) {
-    return (
-      <Flex justify="center" py={12}>
-        <Spinner color="nexzy.blue" />
-      </Flex>
-    );
-  }
-
   return (
-    <VStack align="stretch" gap={8}>
-      {/* ── Inbox ── */}
-      <Box>
-        <Flex justify="space-between" align="center" mb={3}>
-          <Heading size="md" color="nexzy.white">
-            Trailer inbox{" "}
-            <Badge colorPalette="blue" ml={2}>
+    <VStack align="stretch" gap={5}>
+      {/* View switch + poll */}
+      <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
+        <HStack gap={1}>
+          <Button
+            size="sm"
+            onClick={() => setView("inbox")}
+            {...(view === "inbox" ? primaryBtn : outlineBtn)}
+          >
+            Inbox
+            <Badge ml={2} colorPalette="blue">
               {inbox.length}
             </Badge>
-          </Heading>
-          <Button {...outlineBtn} size="sm" onClick={poll} disabled={polling}>
-            {polling ? <Spinner size="sm" /> : <FiRefreshCw />} Poll now
           </Button>
+          <Button
+            size="sm"
+            onClick={() => setView("channels")}
+            {...(view === "channels" ? primaryBtn : outlineBtn)}
+          >
+            Channels
+            <Badge ml={2} colorPalette="gray">
+              {sources.length}
+            </Badge>
+          </Button>
+        </HStack>
+        <Button {...outlineBtn} size="sm" onClick={poll} disabled={polling}>
+          {polling ? <Spinner size="sm" /> : <FiRefreshCw />} Poll now
+        </Button>
+      </Flex>
+
+      {loading ? (
+        <Flex justify="center" py={12}>
+          <Spinner color="nexzy.blue" />
         </Flex>
-        {inbox.length === 0 ? (
-          <Text color="whiteAlpha.600" fontSize="sm">
-            No trailers waiting. New uploads from your watched channels show up
+      ) : view === "inbox" ? (
+        inbox.length === 0 ? (
+          <Text color="whiteAlpha.600" fontSize="sm" py={6} textAlign="center">
+            No trailers waiting. New uploads from your watched channels land
             here for approval.
           </Text>
         ) : (
           <VStack align="stretch" gap={3}>
             {inbox.map((c) => (
-              <TrailerRow key={c.id} c={c} onDone={load} />
+              <InboxRow key={c.id} c={c} onDone={load} />
             ))}
           </VStack>
-        )}
-      </Box>
-
-      {/* ── Watched channels ── */}
-      <Box>
-        <Heading size="md" color="nexzy.white" mb={3}>
-          Watched channels
-        </Heading>
-        <HStack gap={2} mb={3} wrap="wrap">
-          <Input
-            {...inputStyle}
-            placeholder="YouTube channel ID (UC…)"
-            value={newId}
-            onChange={(e) => setNewId(e.target.value)}
-            maxW="280px"
-          />
-          <Input
-            {...inputStyle}
-            placeholder="Label (e.g. PlayStation)"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            maxW="220px"
-          />
-          <Button {...primaryBtn} size="sm" onClick={addSource}>
-            <FiPlus /> Add
-          </Button>
-        </HStack>
-        <VStack align="stretch" gap={2}>
-          {sources.map((s) => (
-            <Flex
-              key={s.id}
-              justify="space-between"
-              align="center"
-              p={2}
-              px={3}
-              bg="whiteAlpha.50"
-              borderRadius="md"
-              borderWidth="1px"
-              borderColor={s.lastError ? "orange.400" : "whiteAlpha.200"}
-            >
-              <VStack align="start" gap={0}>
-                <HStack gap={2}>
-                  <Text color="nexzy.white" fontWeight="600">
-                    {s.name}
-                  </Text>
-                  {!s.enabled && <Badge colorPalette="gray">off</Badge>}
-                  {s.lastError && (
-                    <Badge colorPalette="orange">
-                      <FiAlertTriangle
-                        style={{ display: "inline", marginRight: 3 }}
-                      />
-                      error
-                    </Badge>
-                  )}
-                </HStack>
-                <Text fontSize="xs" color="whiteAlpha.500">
-                  {s.channelId}
-                  {s.lastError ? ` · ${s.lastError}` : ""}
-                </Text>
-              </VStack>
-              <HStack gap={1}>
-                <Button
-                  {...outlineBtn}
-                  size="xs"
-                  onClick={async () => {
-                    await toggleTrailerSource(s.id, !s.enabled);
-                    await load();
-                  }}
-                >
-                  {s.enabled ? <FiEyeOff /> : <FiEye />}
-                </Button>
-                <Button
-                  {...outlineBtn}
-                  size="xs"
-                  onClick={async () => {
-                    await removeTrailerSource(s.id);
-                    await load();
-                  }}
-                >
-                  <FiTrash2 />
-                </Button>
-              </HStack>
-            </Flex>
-          ))}
-        </VStack>
-        <Text fontSize="xs" color="whiteAlpha.500" mt={2}>
-          Tip: a channel&apos;s ID starts with “UC”. On a channel&apos;s YouTube
-          page, view source and search for “channelId”, or use a channel-ID
-          finder. Dead/wrong IDs show an error here.
-        </Text>
-      </Box>
+        )
+      ) : (
+        <ChannelsView sources={sources} reload={load} />
+      )}
     </VStack>
   );
 }

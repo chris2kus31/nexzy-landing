@@ -3750,6 +3750,37 @@ export async function dismissTrailer(id: string): Promise<void> {
   );
 }
 
+export interface TrailerIgdbResult {
+  igdbId: number;
+  name: string;
+  year: number | null;
+}
+
+/** Search IGDB by name to import a game not yet in the catalog. */
+export async function searchTrailerIgdb(
+  q: string,
+): Promise<TrailerIgdbResult[]> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/trailers/igdb/search?q=${encodeURIComponent(q)}`,
+    ),
+  );
+}
+
+/** Import the IGDB game into the catalog, then approve the candidate for it. */
+export async function approveTrailerViaIgdb(
+  id: string,
+  igdbId: number,
+): Promise<{ videoId: string; gameId: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/trailers/inbox/${id}/approve-igdb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ igdbId }),
+    }),
+  );
+}
+
 export async function pollTrailers(): Promise<{
   channels: number;
   created: number;
