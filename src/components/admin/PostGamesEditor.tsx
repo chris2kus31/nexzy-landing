@@ -155,6 +155,7 @@ export default function PostGamesEditor({
   async function search() {
     setSearching(true);
     setMsg(null);
+    setIgdbResults([]); // a fresh catalog search invalidates stale IGDB hits
     try {
       setResults(await searchGamesForLink(q));
     } catch (e) {
@@ -471,11 +472,54 @@ export default function PostGamesEditor({
         </Button>
       </HStack>
 
-      {searched && !searching && results.length === 0 && q.trim() !== "" && (
+      {results.length > 0 && (
+        <VStack align="stretch" gap={1} mt={2}>
+          {results.map((g) => (
+            <Flex
+              key={g.id}
+              align="center"
+              gap={2}
+              p={2}
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="md"
+            >
+              {g.backgroundImage && (
+                <Image
+                  src={g.backgroundImage}
+                  alt=""
+                  boxSize="24px"
+                  borderRadius="sm"
+                  objectFit="cover"
+                />
+              )}
+              <Text flex="1" fontSize="sm" color="nexzy.white" lineClamp={1}>
+                {g.name}
+              </Text>
+              <Button
+                size="xs"
+                bg="green.500"
+                color="white"
+                _hover={{ bg: "green.600" }}
+                onClick={() => add(g.id, links.length === 0)}
+                loading={busy === g.id}
+              >
+                Link
+              </Button>
+            </Flex>
+          ))}
+        </VStack>
+      )}
+
+      {/* IGDB import — ALWAYS offered after a search, results or not. Catalog
+          hits can all be the wrong game (e.g. "Persona 4 revival" returning
+          ten near-misses while the actual new game isn't imported yet). */}
+      {searched && !searching && q.trim() !== "" && (
         <Box mt={2}>
           <Text fontSize="xs" color="nexzy.gray.100">
-            No games found for &ldquo;{q.trim()}&rdquo; — not in the catalog
-            yet.
+            {results.length === 0
+              ? `No games found for “${q.trim()}” — not in the catalog yet.`
+              : "None of these it? It may not be in the catalog yet."}
           </Text>
           <Button
             size="xs"
@@ -517,45 +561,6 @@ export default function PostGamesEditor({
                 loading={igdbBusy === g.id}
               >
                 Import + link
-              </Button>
-            </Flex>
-          ))}
-        </VStack>
-      )}
-
-      {results.length > 0 && (
-        <VStack align="stretch" gap={1} mt={2}>
-          {results.map((g) => (
-            <Flex
-              key={g.id}
-              align="center"
-              gap={2}
-              p={2}
-              borderWidth="1px"
-              borderColor="whiteAlpha.200"
-              borderRadius="md"
-            >
-              {g.backgroundImage && (
-                <Image
-                  src={g.backgroundImage}
-                  alt=""
-                  boxSize="24px"
-                  borderRadius="sm"
-                  objectFit="cover"
-                />
-              )}
-              <Text flex="1" fontSize="sm" color="nexzy.white" lineClamp={1}>
-                {g.name}
-              </Text>
-              <Button
-                size="xs"
-                bg="green.500"
-                color="white"
-                _hover={{ bg: "green.600" }}
-                onClick={() => add(g.id, links.length === 0)}
-                loading={busy === g.id}
-              >
-                Link
               </Button>
             </Flex>
           ))}
