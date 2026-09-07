@@ -3694,3 +3694,105 @@ export async function hideExistingNews(): Promise<{ hidden: number }> {
     }),
   );
 }
+
+// ── Trailer monitor (YouTube channel watch → review inbox) ───────────────────
+
+export interface TrailerCandidate {
+  id: string;
+  youtubeId: string;
+  title: string;
+  channelId: string | null;
+  channelName: string | null;
+  thumbnailUrl: string | null;
+  videoPublishedAt: string | null;
+  status: "pending" | "approved" | "dismissed";
+  resolvedGameId: string | null;
+  resolvedGameName?: string | null;
+  candidateGames: { gameId: string; name: string; score: number }[] | null;
+}
+
+export interface TrailerSource {
+  id: string;
+  channelId: string;
+  name: string;
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  lastVideoAt: string | null;
+  lastError: string | null;
+}
+
+export async function getTrailerInbox(
+  limit = 100,
+): Promise<TrailerCandidate[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/trailers/inbox?limit=${limit}`),
+  );
+}
+
+export async function approveTrailer(
+  id: string,
+  gameId: string,
+): Promise<{ videoId: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/trailers/inbox/${id}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId }),
+    }),
+  );
+}
+
+export async function dismissTrailer(id: string): Promise<void> {
+  await handle(
+    await fetch(`/api/newsroom/admin/trailers/inbox/${id}/dismiss`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function pollTrailers(): Promise<{
+  channels: number;
+  created: number;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/trailers/poll", { method: "POST" }),
+  );
+}
+
+export async function getTrailerSources(): Promise<TrailerSource[]> {
+  return handle(await fetch("/api/newsroom/admin/trailers/sources"));
+}
+
+export async function addTrailerSource(
+  channelId: string,
+  name: string,
+): Promise<TrailerSource> {
+  return handle(
+    await fetch("/api/newsroom/admin/trailers/sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelId, name }),
+    }),
+  );
+}
+
+export async function removeTrailerSource(id: string): Promise<void> {
+  await handle(
+    await fetch(`/api/newsroom/admin/trailers/sources/${id}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+export async function toggleTrailerSource(
+  id: string,
+  enabled: boolean,
+): Promise<void> {
+  await handle(
+    await fetch(`/api/newsroom/admin/trailers/sources/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    }),
+  );
+}
