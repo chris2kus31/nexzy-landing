@@ -45,6 +45,7 @@ import HardwareSpecBlock from "@/components/blog/HardwareSpecBlock";
 import EssentialsBlock from "@/components/blog/EssentialsBlock";
 import PollBlock from "@/components/blog/PollBlock";
 import SourcesBlock from "@/components/blog/SourcesBlock";
+import GamesRail from "@/components/blog/GamesRail";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 300;
@@ -437,62 +438,12 @@ export default async function BlogArticlePage({
           <AppCta variant="inline" location="blog" />
         </Box>
 
-        {/* Games in this story — one internal link per confirmed game hub when an
-            article references more than one. Deeper crawl paths + reader value. */}
+        {/* Games in this story — a scroll-snap rail of real game cards (art +
+            release date) when an article references more than one game. Same
+            crawlable per-hub links, presentation that survives a 17-game
+            weekly roundup. */}
         {post.games && post.games.length > 1 && (
-          <Box mt={8}>
-            <Heading as="h2" size="sm" color="white" mb={3}>
-              Games in this story
-            </Heading>
-            <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
-              {post.games.map((g) => (
-                <NextLink
-                  key={g.id}
-                  href={`/games/${g.slug}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <Box
-                    position="relative"
-                    borderRadius="lg"
-                    overflow="hidden"
-                    h="88px"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    bg="whiteAlpha.50"
-                    _hover={{ borderColor: "nexzy.blue" }}
-                    transition="border-color 0.15s"
-                  >
-                    {g.backgroundImage && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={g.backgroundImage}
-                        alt={g.name}
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          opacity: 0.4,
-                        }}
-                      />
-                    )}
-                    <Box position="absolute" inset={0} bg="blackAlpha.600" />
-                    <Flex position="absolute" inset={0} align="flex-end" p={3}>
-                      <Text
-                        color="white"
-                        fontWeight="700"
-                        fontSize="sm"
-                        lineClamp={2}
-                      >
-                        {g.name}
-                      </Text>
-                    </Flex>
-                  </Box>
-                </NextLink>
-              ))}
-            </SimpleGrid>
-          </Box>
+          <GamesRail games={post.games} />
         )}
 
         <HStack

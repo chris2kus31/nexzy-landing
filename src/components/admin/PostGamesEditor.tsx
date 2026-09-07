@@ -86,7 +86,12 @@ export default function PostGamesEditor({
   } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [heroing, setHeroing] = useState(false);
+  // Long lists (17-game weekly roundups) collapse to the first 6 rows.
+  const [showAllLinks, setShowAllLinks] = useState(false);
+  // Two-step remove — 17 stacked ✕ buttons made silent misclicks too easy.
+  const [armRemove, setArmRemove] = useState<string | null>(null);
   const canReuse = !!(onReuseVideo || onReuseImage);
+  const VISIBLE_LINKS = 6;
 
   async function toggleAssets(gameId: string) {
     const cur = assets[gameId];
@@ -268,188 +273,241 @@ export default function PostGamesEditor({
           No games linked yet.
         </Text>
       ) : (
-        <VStack align="stretch" gap={2} mb={3}>
-          {links.map((l) => (
+        <VStack align="stretch" gap={1} mb={3}>
+          {(showAllLinks ? links : links.slice(0, VISIBLE_LINKS)).map((l) => (
             <Box
               key={l.gameId}
               borderWidth="1px"
               borderColor="whiteAlpha.200"
               borderRadius="md"
             >
-              <Flex align="center" gap={2} p={2}>
+              {/* Compact row — dot for status, star for primary, actions as
+                  icons. A full card + badges per game made 17 links taller
+                  than the article. */}
+              <Flex align="center" gap={2} px={2} py={1.5}>
                 {l.game?.backgroundImage && (
                   <Image
                     src={l.game.backgroundImage}
                     alt=""
-                    boxSize="28px"
+                    boxSize="22px"
                     borderRadius="sm"
                     objectFit="cover"
                   />
                 )}
-                <Box flex="1" minW="0">
-                  <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
-                    {l.game?.name ?? l.gameId}
-                  </Text>
-                  <HStack gap={1} mt={1}>
-                    {l.isPrimary && (
-                      <Badge colorPalette="blue" variant="subtle">
-                        <FiStar /> primary
-                      </Badge>
-                    )}
-                    <Badge
-                      colorPalette={
-                        l.status === "confirmed"
-                          ? "green"
-                          : l.status === "suggested"
-                            ? "orange"
-                            : "gray"
-                      }
-                      variant="subtle"
-                    >
-                      {l.status}
-                    </Badge>
-                  </HStack>
-                </Box>
+                <Text
+                  flex="1"
+                  minW="0"
+                  fontSize="xs"
+                  color="nexzy.white"
+                  lineClamp={1}
+                >
+                  {l.game?.name ?? l.gameId}
+                </Text>
+                {l.isPrimary && (
+                  <Box
+                    as="span"
+                    color="yellow.300"
+                    fontSize="11px"
+                    title="Primary game — drives the article card + deep link"
+                  >
+                    <FiStar />
+                  </Box>
+                )}
+                <Box
+                  boxSize="7px"
+                  borderRadius="full"
+                  flexShrink={0}
+                  bg={
+                    l.status === "confirmed"
+                      ? "green.400"
+                      : l.status === "suggested"
+                        ? "orange.300"
+                        : "whiteAlpha.400"
+                  }
+                  title={l.status}
+                />
                 {l.status === "suggested" && (
                   <Button
                     size="xs"
                     {...primaryBtn}
                     onClick={() => confirm(l.gameId)}
                     loading={busy === l.gameId}
-                    title="Confirm"
+                    title="Confirm this link"
                   >
                     <FiCheck />
                   </Button>
                 )}
-                <Button
-                  size="xs"
-                  {...outlineBtn}
-                  onClick={() => remove(l.gameId)}
-                  loading={busy === l.gameId}
-                  title="Remove"
-                >
-                  <FiX />
-                </Button>
-              </Flex>
-
-              {l.status === "confirmed" && canReuse && (
-                <Box borderTopWidth="1px" borderColor="whiteAlpha.200" p={2}>
+                {l.status === "confirmed" && canReuse && (
                   <Button
                     size="xs"
                     variant="ghost"
-                    color="nexzy.blue"
-                    _hover={{ bg: "whiteAlpha.100" }}
+                    color={
+                      assets[l.gameId]?.open ? "nexzy.blue" : "whiteAlpha.600"
+                    }
+                    _hover={{ bg: "whiteAlpha.100", color: "nexzy.blue" }}
                     onClick={() => toggleAssets(l.gameId)}
+                    title="Reuse this game's media"
                   >
-                    {assets[l.gameId]?.open
-                      ? "Hide game media"
-                      : "Reuse this game's media"}
+                    ▦
                   </Button>
-                  {assets[l.gameId]?.open && (
-                    <Box mt={2}>
-                      {assets[l.gameId]?.loading ? (
-                        <Spinner size="sm" />
-                      ) : (
-                        <>
-                          {onReuseVideo &&
-                            (assets[l.gameId]?.videos.length ?? 0) > 0 && (
-                              <>
-                                <Text
-                                  fontSize="2xs"
-                                  color="whiteAlpha.600"
-                                  textTransform="uppercase"
-                                  letterSpacing="wide"
-                                  mb={1}
-                                >
-                                  Videos
+                )}
+                {armRemove === l.gameId ? (
+                  <Button
+                    size="xs"
+                    bg="red.500"
+                    color="white"
+                    _hover={{ bg: "red.600" }}
+                    onClick={() => {
+                      setArmRemove(null);
+                      remove(l.gameId);
+                    }}
+                    loading={busy === l.gameId}
+                  >
+                    Sure?
+                  </Button>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    color="whiteAlpha.500"
+                    _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+                    onClick={() => setArmRemove(l.gameId)}
+                    title="Remove link (click again to confirm)"
+                  >
+                    <FiX />
+                  </Button>
+                )}
+              </Flex>
+
+              {l.status === "confirmed" &&
+                canReuse &&
+                assets[l.gameId]?.open && (
+                  <Box borderTopWidth="1px" borderColor="whiteAlpha.200" p={2}>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      color="nexzy.blue"
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() => toggleAssets(l.gameId)}
+                    >
+                      {assets[l.gameId]?.open
+                        ? "Hide game media"
+                        : "Reuse this game's media"}
+                    </Button>
+                    {assets[l.gameId]?.open && (
+                      <Box mt={2}>
+                        {assets[l.gameId]?.loading ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <>
+                            {onReuseVideo &&
+                              (assets[l.gameId]?.videos.length ?? 0) > 0 && (
+                                <>
+                                  <Text
+                                    fontSize="2xs"
+                                    color="whiteAlpha.600"
+                                    textTransform="uppercase"
+                                    letterSpacing="wide"
+                                    mb={1}
+                                  >
+                                    Videos
+                                  </Text>
+                                  <Flex wrap="wrap" gap={2} mb={2}>
+                                    {assets[l.gameId]!.videos.map((v, i) => (
+                                      <Image
+                                        key={`v${i}`}
+                                        src={v.thumbnailUrl ?? ""}
+                                        alt={v.title ?? "video"}
+                                        w="72px"
+                                        h="41px"
+                                        objectFit="cover"
+                                        borderRadius="sm"
+                                        borderWidth="1px"
+                                        borderColor="whiteAlpha.300"
+                                        cursor="pointer"
+                                        _hover={{ borderColor: "nexzy.blue" }}
+                                        title={v.title ?? "Preview video"}
+                                        onClick={() => {
+                                          setFlash(null);
+                                          setPreview({
+                                            kind: "video",
+                                            url: v.youtubeUrl ?? "",
+                                            youtubeId: v.youtubeId ?? undefined,
+                                            title: v.title ?? undefined,
+                                          });
+                                        }}
+                                      />
+                                    ))}
+                                  </Flex>
+                                </>
+                              )}
+                            {onReuseImage &&
+                              (assets[l.gameId]?.shots.length ?? 0) > 0 && (
+                                <>
+                                  <Text
+                                    fontSize="2xs"
+                                    color="whiteAlpha.600"
+                                    textTransform="uppercase"
+                                    letterSpacing="wide"
+                                    mb={1}
+                                  >
+                                    Screenshots
+                                  </Text>
+                                  <Flex wrap="wrap" gap={2}>
+                                    {assets[l.gameId]!.shots.map((s, i) => (
+                                      <Image
+                                        key={`s${i}`}
+                                        src={s}
+                                        alt="screenshot"
+                                        w="72px"
+                                        h="41px"
+                                        objectFit="cover"
+                                        borderRadius="sm"
+                                        borderWidth="1px"
+                                        borderColor="whiteAlpha.300"
+                                        cursor="pointer"
+                                        _hover={{ borderColor: "nexzy.blue" }}
+                                        title="Preview screenshot"
+                                        onClick={() => {
+                                          setFlash(null);
+                                          setPreview({
+                                            kind: "image",
+                                            url: s,
+                                            gameName: l.game?.name ?? undefined,
+                                          });
+                                        }}
+                                      />
+                                    ))}
+                                  </Flex>
+                                </>
+                              )}
+                            {(assets[l.gameId]?.videos.length ?? 0) === 0 &&
+                              (assets[l.gameId]?.shots.length ?? 0) === 0 && (
+                                <Text fontSize="xs" color="whiteAlpha.500">
+                                  No reusable media on this game yet.
                                 </Text>
-                                <Flex wrap="wrap" gap={2} mb={2}>
-                                  {assets[l.gameId]!.videos.map((v, i) => (
-                                    <Image
-                                      key={`v${i}`}
-                                      src={v.thumbnailUrl ?? ""}
-                                      alt={v.title ?? "video"}
-                                      w="72px"
-                                      h="41px"
-                                      objectFit="cover"
-                                      borderRadius="sm"
-                                      borderWidth="1px"
-                                      borderColor="whiteAlpha.300"
-                                      cursor="pointer"
-                                      _hover={{ borderColor: "nexzy.blue" }}
-                                      title={v.title ?? "Preview video"}
-                                      onClick={() => {
-                                        setFlash(null);
-                                        setPreview({
-                                          kind: "video",
-                                          url: v.youtubeUrl ?? "",
-                                          youtubeId: v.youtubeId ?? undefined,
-                                          title: v.title ?? undefined,
-                                        });
-                                      }}
-                                    />
-                                  ))}
-                                </Flex>
-                              </>
-                            )}
-                          {onReuseImage &&
-                            (assets[l.gameId]?.shots.length ?? 0) > 0 && (
-                              <>
-                                <Text
-                                  fontSize="2xs"
-                                  color="whiteAlpha.600"
-                                  textTransform="uppercase"
-                                  letterSpacing="wide"
-                                  mb={1}
-                                >
-                                  Screenshots
-                                </Text>
-                                <Flex wrap="wrap" gap={2}>
-                                  {assets[l.gameId]!.shots.map((s, i) => (
-                                    <Image
-                                      key={`s${i}`}
-                                      src={s}
-                                      alt="screenshot"
-                                      w="72px"
-                                      h="41px"
-                                      objectFit="cover"
-                                      borderRadius="sm"
-                                      borderWidth="1px"
-                                      borderColor="whiteAlpha.300"
-                                      cursor="pointer"
-                                      _hover={{ borderColor: "nexzy.blue" }}
-                                      title="Preview screenshot"
-                                      onClick={() => {
-                                        setFlash(null);
-                                        setPreview({
-                                          kind: "image",
-                                          url: s,
-                                          gameName: l.game?.name ?? undefined,
-                                        });
-                                      }}
-                                    />
-                                  ))}
-                                </Flex>
-                              </>
-                            )}
-                          {(assets[l.gameId]?.videos.length ?? 0) === 0 &&
-                            (assets[l.gameId]?.shots.length ?? 0) === 0 && (
-                              <Text fontSize="xs" color="whiteAlpha.500">
-                                No reusable media on this game yet.
-                              </Text>
-                            )}
-                          <Text fontSize="2xs" color="whiteAlpha.400" mt={2}>
-                            Click to preview, then add — duplicates are skipped
-                            automatically.
-                          </Text>
-                        </>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              )}
+                              )}
+                            <Text fontSize="2xs" color="whiteAlpha.400" mt={2}>
+                              Click to preview, then add — duplicates are
+                              skipped automatically.
+                            </Text>
+                          </>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                )}
             </Box>
           ))}
+          {links.length > VISIBLE_LINKS && (
+            <Button
+              size="xs"
+              {...outlineBtn}
+              onClick={() => setShowAllLinks((v) => !v)}
+            >
+              {showAllLinks ? "Show fewer" : `Show all ${links.length} games`}
+            </Button>
+          )}
         </VStack>
       )}
 
