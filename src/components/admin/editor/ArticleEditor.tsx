@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -17,6 +18,7 @@ import { regeneratePost } from "@/lib/admin/client";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewActionBar from "./ReviewActionBar";
+import ArticlePreviewModal from "./ArticlePreviewModal";
 import RightRail from "./RightRail";
 import EditorReport from "./EditorReport";
 import PollEditor from "./PollEditor";
@@ -47,13 +49,37 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
     setPoll,
     formatData,
     setFormatData,
+    bodyRef,
+    insertBodyImageFile,
   } = ed;
   const isPublished = ed.isPublished;
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const [showFullPreview, setShowFullPreview] = useState(false);
   if (!post || !form) return null;
 
   return (
     <>
       <ReviewActionBar ed={ed} />
+
+      <Flex justify="flex-end" mb={3}>
+        <Button
+          size="sm"
+          variant="outline"
+          color="nexzy.lightBlue"
+          borderColor="whiteAlpha.300"
+          _hover={{ bg: "whiteAlpha.100" }}
+          onClick={() => setShowFullPreview(true)}
+        >
+          👁 Preview article
+        </Button>
+      </Flex>
+
+      {showFullPreview && (
+        <ArticlePreviewModal
+          ed={ed}
+          onClose={() => setShowFullPreview(false)}
+        />
+      )}
 
       {notice && (
         <Text color="green.300" fontSize="sm" mb={3}>
@@ -171,6 +197,21 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                       size="xs"
                       variant="ghost"
                       color="nexzy.lightBlue"
+                      loading={
+                        busy === "Uploading image" || busy === "Image inserted"
+                      }
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() => imgInputRef.current?.click()}
+                      title="Upload an image and drop it into the body at your cursor"
+                    >
+                      🖼 Insert image
+                    </Button>
+                  )}
+                  {!isPublished && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      color="nexzy.lightBlue"
                       loading={busy === "Body regenerated"}
                       _hover={{ bg: "whiteAlpha.100" }}
                       onClick={() =>
@@ -182,6 +223,17 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                       ↻ Regenerate
                     </Button>
                   )}
+                  <input
+                    ref={imgInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) insertBodyImageFile(f);
+                    }}
+                  />
                 </HStack>
               </Flex>
               {preview ? (
@@ -200,6 +252,7 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                 </Box>
               ) : (
                 <Textarea
+                  ref={bodyRef}
                   value={form.bodyMarkdown}
                   onChange={(e) => set("bodyMarkdown", e.target.value)}
                   flex="1"

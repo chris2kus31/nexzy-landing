@@ -233,6 +233,9 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
           onReuseVideo={addVideo}
           onReuseImage={addGalleryImage}
           onSetHero={setHeroFromUrl}
+          onInsertBody={(url, meta) =>
+            ed.insertIntoBody(`![${meta?.alt ?? ""}](${url})`)
+          }
         />
       </Box>
 

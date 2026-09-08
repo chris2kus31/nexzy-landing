@@ -59,6 +59,7 @@ export default function PostGamesEditor({
   onReuseVideo,
   onReuseImage,
   onSetHero,
+  onInsertBody,
 }: {
   postId: string;
   // Optional: when provided, each CONFIRMED game shows a "reuse its media"
@@ -67,6 +68,10 @@ export default function PostGamesEditor({
   onReuseVideo?: (url: string) => void;
   onReuseImage?: (url: string, meta?: { alt?: string }) => void;
   onSetHero?: (url: string) => Promise<void> | void;
+  // Insert the previewed screenshot into the article body (at the caret) as a
+  // markdown image — lets a linked game's shot be reused inline, not just in the
+  // gallery/hero.
+  onInsertBody?: (url: string, meta?: { alt?: string }) => void;
 }) {
   const [links, setLinks] = useState<PostGameLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +95,8 @@ export default function PostGamesEditor({
   const [showAllLinks, setShowAllLinks] = useState(false);
   // Two-step remove — 17 stacked ✕ buttons made silent misclicks too easy.
   const [armRemove, setArmRemove] = useState<string | null>(null);
-  const canReuse = !!(onReuseVideo || onReuseImage);
+  const canReuse = !!(onReuseVideo || onReuseImage || onInsertBody);
+  const canReuseImage = !!(onReuseImage || onInsertBody);
   const VISIBLE_LINKS = 6;
 
   async function toggleAssets(gameId: string) {
@@ -118,7 +124,7 @@ export default function PostGamesEditor({
         onReuseVideo
           ? getGameVideos(gameId)
           : Promise.resolve<GameVideoItem[]>([]),
-        onReuseImage
+        canReuseImage
           ? getGameScreenshots(gameId)
           : Promise.resolve<string[]>([]),
       ]);
@@ -441,7 +447,7 @@ export default function PostGamesEditor({
                                   </Flex>
                                 </>
                               )}
-                            {onReuseImage &&
+                            {canReuseImage &&
                               (assets[l.gameId]?.shots.length ?? 0) > 0 && (
                                 <>
                                   <Text
@@ -709,10 +715,26 @@ export default function PostGamesEditor({
             <Flex gap={2} mt={3} justify="flex-end" wrap="wrap">
               {preview.kind === "image" ? (
                 <>
-                  {onReuseImage && (
+                  {onInsertBody && (
                     <Button
                       size="sm"
                       {...primaryBtn}
+                      onClick={() => {
+                        onInsertBody(preview.url, {
+                          alt: preview.gameName
+                            ? `${preview.gameName} screenshot`
+                            : undefined,
+                        });
+                        setFlash("Inserted into the article body ✓");
+                      }}
+                    >
+                      Insert into article
+                    </Button>
+                  )}
+                  {onReuseImage && (
+                    <Button
+                      size="sm"
+                      {...outlineBtn}
                       onClick={() => {
                         onReuseImage(preview.url, {
                           alt: preview.gameName

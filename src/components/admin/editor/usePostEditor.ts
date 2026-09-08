@@ -6,6 +6,7 @@ import {
   updatePost,
   suggestAlt,
   uploadArticleImage,
+  uploadBodyImage,
   getWriterNames,
   type BlogPost,
   type ArticleMedia,
@@ -73,6 +74,8 @@ export function usePostEditor(id: string) {
   const [bylines, setBylines] = useState<string[]>(BYLINES);
   const [preview, setPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // The body <textarea> node — used to insert images at the caret position.
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   // Last picked hero (as a data URL) — kept so the editor can override the
   // minimum-size rejection with an explicit "use it anyway".
   const lastHeroDataUrl = useRef<string | null>(null);
@@ -265,8 +268,42 @@ export function usePostEditor(id: string) {
   // Persist a new body immediately — used by the screenshot uploader so a filled
   // shot behaves like the hero upload (saved on the spot), not a draft edit that
   // silently needs a manual Save.
-  const saveBody = (nextBody: string) =>
-    run("Screenshot added", () => updatePost(id, buildUpdate(nextBody)));
+  const saveBody = (nextBody: string, label = "Screenshot added") =>
+    run(label, () => updatePost(id, buildUpdate(nextBody)));
+
+  // Insert a markdown snippet (an image) into the body at the caret — wraps it
+  // in blank lines so it renders as its own block, then persists immediately
+  // (mirrors the screenshot/collage flows, so nothing needs a manual Save). If
+  // the textarea was never focused, it appends at the end.
+  const insertIntoBody = (snippet: string) => {
+    if (!form) return;
+    const body = form.bodyMarkdown ?? "";
+    const el = bodyRef.current;
+    const at = el && el.selectionStart > 0 ? el.selectionStart : body.length;
+    const before = body.slice(0, at).replace(/\s+$/, "");
+    const after = body.slice(at).replace(/^\s+/, "");
+    const next = [before, snippet, after].filter(Boolean).join("\n\n");
+    set("bodyMarkdown", next);
+    return saveBody(next, "Image inserted");
+  };
+
+  // Upload a file and drop it into the body as a markdown image at the caret.
+  // Reuses the body-image endpoint (AVIF-optimized + size-guarded server-side).
+  const insertBodyImageFile = (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Image is too large (max 20 MB).");
+      return;
+    }
+    setError("");
+    setBusy("Uploading image");
+    prepareImageDataUrl(file)
+      .then((dataUrl) => uploadBodyImage(id, dataUrl))
+      .then(({ url }) => insertIntoBody(`![](${url})`))
+      .catch((e) => {
+        setError((e as Error)?.message || "Upload failed.");
+        setBusy("");
+      });
+  };
 
   // Rewind screenshot gallery: persist the list immediately (like the hero
   // upload) so an added/removed/reordered shot doesn't silently need a Save.
@@ -335,6 +372,9 @@ export function usePostEditor(id: string) {
     preview,
     setPreview,
     fileRef,
+    bodyRef,
+    insertIntoBody,
+    insertBodyImageFile,
     load,
     set,
     run,
