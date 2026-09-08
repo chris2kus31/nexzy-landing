@@ -73,6 +73,9 @@ export function usePostEditor(id: string) {
   const [bylines, setBylines] = useState<string[]>(BYLINES);
   const [preview, setPreview] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Last picked hero (as a data URL) — kept so the editor can override the
+  // minimum-size rejection with an explicit "use it anyway".
+  const lastHeroDataUrl = useRef<string | null>(null);
 
   useEffect(() => {
     getWriterNames()
@@ -110,6 +113,7 @@ export function usePostEditor(id: string) {
     setError("");
     setNotice("");
     setPreview(false);
+    lastHeroDataUrl.current = null;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -152,10 +156,27 @@ export function usePostEditor(id: string) {
     // otherwise 413 on the Netlify proxy's ~6 MB body cap. The API re-encodes
     // to AVIF anyway, so nothing meaningful is lost.
     prepareImageDataUrl(file)
-      .then((dataUrl) =>
-        run("Image uploaded", () => uploadArticleImage(id, dataUrl)),
-      )
+      .then((dataUrl) => {
+        // Stash for the "use it anyway" override if the size guard rejects it.
+        lastHeroDataUrl.current = dataUrl;
+        return run("Image uploaded", () => uploadArticleImage(id, dataUrl));
+      })
       .catch(() => setError("Could not read that file."));
+  };
+
+  /** The size guard rejected the last pick — offer the explicit override. */
+  const heroTooSmall =
+    !!lastHeroDataUrl.current && /too small for a hero/i.test(error);
+
+  /** Re-upload the rejected image with force=true (accepting the upscale). */
+  const forceUploadHero = () => {
+    const dataUrl = lastHeroDataUrl.current;
+    if (!dataUrl) return;
+    void run("Image uploaded", () =>
+      uploadArticleImage(id, dataUrl, true),
+    ).then(() => {
+      lastHeroDataUrl.current = null;
+    });
   };
 
   // Empty/whitespace → null, so a cleared field falls back to a stub on the page.
@@ -320,6 +341,8 @@ export function usePostEditor(id: string) {
     save,
     saveBody,
     onPickImage,
+    heroTooSmall,
+    forceUploadHero,
     suggestAltText,
     isPublished,
   };

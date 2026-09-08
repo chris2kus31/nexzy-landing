@@ -1788,12 +1788,14 @@ export async function regenerateImage(
 export async function uploadArticleImage(
   id: string,
   dataUrl: string,
+  /** Bypass the hero minimum-size guard (explicit "use it anyway"). */
+  force = false,
 ): Promise<BlogPost> {
   return handle(
     await fetch(`/api/newsroom/admin/posts/${id}/image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataUrl }),
+      body: JSON.stringify({ dataUrl, ...(force ? { force: true } : {}) }),
     }),
   );
 }

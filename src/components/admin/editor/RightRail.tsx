@@ -297,6 +297,20 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
             </Button>
           )}
         </HStack>
+        {ed.heroTooSmall && (
+          <Button
+            size="xs"
+            mt={2}
+            w="100%"
+            bg="orange.500"
+            color="white"
+            _hover={{ bg: "orange.600" }}
+            loading={busy === "Image uploaded"}
+            onClick={ed.forceUploadHero}
+          >
+            Use it anyway (will be upscaled)
+          </Button>
+        )}
         <input
           ref={fileRef}
           type="file"
