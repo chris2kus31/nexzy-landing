@@ -96,6 +96,20 @@ export function usePostEditor(id: string) {
       .catch((e) => setError(e?.message || "Failed to load."));
 
   useEffect(() => {
+    // Reset FIRST: the App Router reuses this mounted page across /posts/[id]
+    // navigations, so without a clear the PREVIOUS post — hero image and all —
+    // keeps rendering in the new post's editor until the fresh fetch lands.
+    setPost(null);
+    setForm(null);
+    setMedia([]);
+    setImages([]);
+    setScreenshots([]);
+    setFacts({});
+    setPoll({ question: "", options: [] });
+    setFormatData({});
+    setError("");
+    setNotice("");
+    setPreview(false);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
