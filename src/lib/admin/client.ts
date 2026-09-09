@@ -3532,6 +3532,8 @@ export async function commissionReview(input: {
   angle?: string;
   /** Generate an AI hero image (opt-in — server defaults to none). */
   generateImage?: boolean;
+  /** 'game' (default) → game review on the Reviews beat; 'adaptation' → movie/TV. */
+  subject?: "game" | "adaptation";
 }): Promise<{ briefId: string }> {
   return handle(
     await fetch(`/api/newsroom/admin/commission-review`, {

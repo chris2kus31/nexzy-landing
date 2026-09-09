@@ -47,6 +47,11 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [authors, setAuthors] = useState<string[]>([]);
   // AI hero image is OPT-IN (default off) — checking it spends image tokens.
   const [genImage, setGenImage] = useState(false);
+  // Review subject: a straight game review (default) vs a movie/TV adaptation.
+  // Drives the beat + the writer's framing on the API side.
+  const [reviewSubject, setReviewSubject] = useState<"game" | "adaptation">(
+    "game",
+  );
 
   useEffect(() => {
     getWriterNames()
@@ -78,6 +83,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           rating,
           notes: instructions.trim(),
           generateImage: genImage,
+          subject: reviewSubject,
         });
         setMsg({
           ok: true,
@@ -257,10 +263,44 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           </Box>
         )}
 
+        {isReview && (
+          <Box>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              What are you reviewing?
+            </Text>
+            <HStack gap={2}>
+              {(
+                [
+                  ["game", "Game"],
+                  ["adaptation", "Movie / show"],
+                ] as const
+              ).map(([val, label]) => {
+                const active = reviewSubject === val;
+                return (
+                  <Button
+                    key={val}
+                    size="sm"
+                    onClick={() => setReviewSubject(val)}
+                    bg={active ? "purple.500" : "transparent"}
+                    color={active ? "white" : "nexzy.gray.100"}
+                    borderWidth="1px"
+                    borderColor={active ? "purple.500" : "whiteAlpha.300"}
+                    _hover={{ bg: active ? undefined : "whiteAlpha.100" }}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </HStack>
+          </Box>
+        )}
+
         <Box>
           <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
             {isReview
-              ? "What you're reviewing (movie or show)"
+              ? reviewSubject === "game"
+                ? "What game you're reviewing"
+                : "What you're reviewing (movie or show)"
               : "Working title (optional)"}
           </Text>
           <Input
@@ -268,7 +308,9 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
             onChange={(e) => setTitle(e.target.value)}
             placeholder={
               isReview
-                ? "e.g. Spider-Man: Brand New Day"
+                ? reviewSubject === "game"
+                  ? "e.g. Hazard Pay"
+                  : "e.g. Spider-Man: Brand New Day"
                 : "e.g. GTA 6 delayed again"
             }
             color="nexzy.white"
