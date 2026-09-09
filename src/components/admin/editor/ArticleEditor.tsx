@@ -51,6 +51,7 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
     setFormatData,
     bodyRef,
     insertBodyImageFile,
+    wrapBodySelection,
   } = ed;
   const isPublished = ed.isPublished;
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -205,6 +206,18 @@ export default function ArticleEditor({ ed }: { ed: PostEditor }) {
                       title="Upload an image and drop it into the body at your cursor"
                     >
                       🖼 Insert image
+                    </Button>
+                  )}
+                  {!isPublished && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      color="nexzy.lightBlue"
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() => wrapBodySelection("||", "||")}
+                      title="Select text in the body, then tap to hide it behind a click-to-reveal spoiler"
+                    >
+                      🙈 Spoiler
                     </Button>
                   )}
                   {!isPublished && (

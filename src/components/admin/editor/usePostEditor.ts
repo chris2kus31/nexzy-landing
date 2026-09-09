@@ -287,6 +287,33 @@ export function usePostEditor(id: string) {
     return saveBody(next, "Image inserted");
   };
 
+  // Wrap the current body selection in delimiters (e.g. ||spoiler||). Updates
+  // the field so the wrapped text stays selected; the normal Save persists it.
+  const wrapBodySelection = (open: string, close: string) => {
+    if (!form) return;
+    const el = bodyRef.current;
+    if (!el) return;
+    const body = form.bodyMarkdown ?? "";
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start === end) {
+      setError("Select the text you want to hide first, then tap Spoiler.");
+      return;
+    }
+    setError("");
+    const next =
+      body.slice(0, start) +
+      open +
+      body.slice(start, end) +
+      close +
+      body.slice(end);
+    set("bodyMarkdown", next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + open.length, end + open.length);
+    });
+  };
+
   // Upload a file and drop it into the body as a markdown image at the caret.
   // Reuses the body-image endpoint (AVIF-optimized + size-guarded server-side).
   const insertBodyImageFile = (file: File) => {
@@ -375,6 +402,7 @@ export function usePostEditor(id: string) {
     bodyRef,
     insertIntoBody,
     insertBodyImageFile,
+    wrapBodySelection,
     load,
     set,
     run,
