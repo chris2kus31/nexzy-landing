@@ -1,7 +1,60 @@
-import ReactMarkdown from "react-markdown";
+import type { ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import NextLink from "next/link";
 import { Heading, Text, Link, List, Box, Image } from "@chakra-ui/react";
+import Spoiler from "@/components/blog/Spoiler";
+
+// react-markdown's Components type has no slot for our custom `spoiler` element,
+// so widen it locally (a variable of this type is still assignable to the prop).
+type MdComponents = Components & {
+  spoiler?: (props: { children?: ReactNode }) => ReactNode;
+};
+
+/**
+ * Turns `||hidden text||` into a spoiler node (rendered by <Spoiler/>). A tiny
+ * inline remark transform — walks the parsed tree and splits any text node that
+ * contains a `||...||` pair. Plain-text spoilers only (formatting inside the
+ * bars isn't parsed); double-pipe never collides with GFM's single-pipe tables.
+ */
+type MdNode = {
+  type: string;
+  value?: string;
+  children?: MdNode[];
+  data?: Record<string, unknown>;
+};
+function splitSpoiler(value: string): MdNode[] {
+  const out: MdNode[] = [];
+  const re = /\|\|([\s\S]+?)\|\|/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(value))) {
+    if (m.index > last)
+      out.push({ type: "text", value: value.slice(last, m.index) });
+    out.push({
+      type: "spoiler",
+      data: { hName: "spoiler" },
+      children: [{ type: "text", value: m[1] }],
+    });
+    last = re.lastIndex;
+  }
+  if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+  return out;
+}
+function walkSpoilers(node: MdNode): void {
+  if (!node.children) return;
+  const next: MdNode[] = [];
+  for (const child of node.children) {
+    if (child.type === "text" && child.value && child.value.includes("||")) {
+      next.push(...splitSpoiler(child.value));
+    } else {
+      walkSpoilers(child);
+      next.push(child);
+    }
+  }
+  node.children = next;
+}
+const remarkSpoiler = () => (tree: unknown) => walkSpoilers(tree as MdNode);
 
 /**
  * Unfilled guide screenshot markers (`> 📷 SHOT: ...`) — placeholders the guide
@@ -55,108 +108,110 @@ export default function Markdown({
   tone?: "dark" | "paper";
 }) {
   const c = TONES[tone];
+  const components: MdComponents = {
+    h1: ({ children }) => (
+      <Heading as="h1" size="2xl" color={c.heading} mt={8} mb={4}>
+        {children}
+      </Heading>
+    ),
+    h2: ({ children }) => (
+      <Heading as="h2" size="xl" color={c.heading} mt={8} mb={3}>
+        {children}
+      </Heading>
+    ),
+    h3: ({ children }) => (
+      <Heading as="h3" size="lg" color={c.heading} mt={6} mb={2}>
+        {children}
+      </Heading>
+    ),
+    p: ({ children }) => <Text mb={4}>{children}</Text>,
+    a: ({ href, children }) => {
+      // Internal links (/blog/...) navigate in-tab via Next's router;
+      // external links open in a new tab.
+      const isInternal = typeof href === "string" && href.startsWith("/");
+      if (isInternal) {
+        return (
+          <Link asChild color={c.link} textDecoration="underline">
+            <NextLink href={href}>{children}</NextLink>
+          </Link>
+        );
+      }
+      return (
+        <Link
+          href={href}
+          color={c.link}
+          textDecoration="underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {children}
+        </Link>
+      );
+    },
+    ul: ({ children }) => (
+      <List.Root mb={4} pl={6}>
+        {children}
+      </List.Root>
+    ),
+    ol: ({ children }) => (
+      <List.Root as="ol" mb={4} pl={6}>
+        {children}
+      </List.Root>
+    ),
+    li: ({ children }) => <List.Item mb={2}>{children}</List.Item>,
+    strong: ({ children }) => (
+      <Text as="strong" color={c.strong} fontWeight="700">
+        {children}
+      </Text>
+    ),
+    em: ({ children }) => <Text as="em">{children}</Text>,
+    blockquote: ({ children }) => (
+      <Box
+        borderLeft="3px solid"
+        borderColor={c.quoteBorder}
+        pl={4}
+        my={4}
+        color={c.quoteText}
+        fontStyle="italic"
+      >
+        {children}
+      </Box>
+    ),
+    img: ({ src, alt }) =>
+      typeof src === "string" ? (
+        <Box as="figure" my={6}>
+          <Image
+            src={src}
+            alt={alt || ""}
+            w="full"
+            maxH="560px"
+            objectFit="contain"
+            borderRadius="lg"
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            bg="blackAlpha.400"
+            loading="lazy"
+          />
+          {alt ? (
+            <Text
+              as="figcaption"
+              fontSize="sm"
+              color="gray.400"
+              textAlign="center"
+              mt={2}
+            >
+              {alt}
+            </Text>
+          ) : null}
+        </Box>
+      ) : null,
+    spoiler: ({ children }) => <Spoiler>{children}</Spoiler>,
+  };
   return (
     <Box color={c.body} lineHeight="1.8" fontSize="lg">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          h1: ({ children }) => (
-            <Heading as="h1" size="2xl" color={c.heading} mt={8} mb={4}>
-              {children}
-            </Heading>
-          ),
-          h2: ({ children }) => (
-            <Heading as="h2" size="xl" color={c.heading} mt={8} mb={3}>
-              {children}
-            </Heading>
-          ),
-          h3: ({ children }) => (
-            <Heading as="h3" size="lg" color={c.heading} mt={6} mb={2}>
-              {children}
-            </Heading>
-          ),
-          p: ({ children }) => <Text mb={4}>{children}</Text>,
-          a: ({ href, children }) => {
-            // Internal links (/blog/...) navigate in-tab via Next's router;
-            // external links open in a new tab.
-            const isInternal = typeof href === "string" && href.startsWith("/");
-            if (isInternal) {
-              return (
-                <Link asChild color={c.link} textDecoration="underline">
-                  <NextLink href={href}>{children}</NextLink>
-                </Link>
-              );
-            }
-            return (
-              <Link
-                href={href}
-                color={c.link}
-                textDecoration="underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {children}
-              </Link>
-            );
-          },
-          ul: ({ children }) => (
-            <List.Root mb={4} pl={6}>
-              {children}
-            </List.Root>
-          ),
-          ol: ({ children }) => (
-            <List.Root as="ol" mb={4} pl={6}>
-              {children}
-            </List.Root>
-          ),
-          li: ({ children }) => <List.Item mb={2}>{children}</List.Item>,
-          strong: ({ children }) => (
-            <Text as="strong" color={c.strong} fontWeight="700">
-              {children}
-            </Text>
-          ),
-          em: ({ children }) => <Text as="em">{children}</Text>,
-          blockquote: ({ children }) => (
-            <Box
-              borderLeft="3px solid"
-              borderColor={c.quoteBorder}
-              pl={4}
-              my={4}
-              color={c.quoteText}
-              fontStyle="italic"
-            >
-              {children}
-            </Box>
-          ),
-          img: ({ src, alt }) =>
-            typeof src === "string" ? (
-              <Box as="figure" my={6}>
-                <Image
-                  src={src}
-                  alt={alt || ""}
-                  w="full"
-                  maxH="560px"
-                  objectFit="contain"
-                  borderRadius="lg"
-                  borderWidth="1px"
-                  borderColor="whiteAlpha.200"
-                  bg="blackAlpha.400"
-                  loading="lazy"
-                />
-                {alt ? (
-                  <Text
-                    as="figcaption"
-                    fontSize="sm"
-                    color="gray.400"
-                    textAlign="center"
-                    mt={2}
-                  >
-                    {alt}
-                  </Text>
-                ) : null}
-              </Box>
-            ) : null,
-        }}
+        remarkPlugins={[remarkGfm, remarkSpoiler]}
+        components={components as Components}
       >
         {stripUnfilledShotMarkers(children)}
       </ReactMarkdown>
