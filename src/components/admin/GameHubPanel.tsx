@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -14,23 +14,34 @@ import {
   Image,
   Badge,
   Spinner,
+  Textarea,
 } from "@chakra-ui/react";
 import {
-  FiSearch,
   FiTrash2,
   FiPlus,
   FiExternalLink,
   FiEdit2,
+  FiArrowLeft,
+  FiRefreshCw,
+  FiUpload,
 } from "react-icons/fi";
 import {
-  searchGamesForLink,
   getGameVideos,
   createVideo,
   updateVideo,
   detachVideoGame,
-  type GameLite,
+  listHubGames,
+  getHubGame,
+  updateHubGame,
+  uploadHubGameCover,
+  refreshHubGameIgdb,
+  getPlatformFamilies,
   type GameVideoItem,
+  type HubGameRow,
+  type HubGameDetail,
 } from "@/lib/admin/client";
+
+const PAGE_SIZE = 30;
 
 const primaryBtn = {
   bg: "nexzy.blue",
@@ -51,29 +62,70 @@ const inputStyle = {
   _placeholder: { color: "whiteAlpha.500" },
 };
 
+function chipProps(active: boolean) {
+  return active ? primaryBtn : outlineBtn;
+}
+
 function thumbFor(v: GameVideoItem): string | null {
   if (v.thumbnailUrl) return v.thumbnailUrl;
   if (v.youtubeId) return `https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`;
   return null;
 }
 
+const NEEDS_FILTERS: { key: string; label: string }[] = [
+  { key: "any", label: "Needs anything" },
+  { key: "description", label: "No description" },
+  { key: "cover", label: "No cover" },
+  { key: "screenshots", label: "No screenshots" },
+  { key: "videos", label: "No videos" },
+  { key: "content", label: "No content" },
+];
+
 /**
- * Game hub — manage the videos attached to a game. Search a game, see its
- * Nexzy + external videos, add / edit / remove. YouTube plays inline in-app;
- * TikTok / Reels are "also on" links. Talks to /newsroom/admin/videos.
+ * Game hub — the game workbench. Browse the catalog (latest / upcoming /
+ * recently imported, platform + health filters), then open a game to fix its
+ * description, cover, trailer, and manage its videos. Talks to
+ * /newsroom/admin/games/hub + /newsroom/admin/videos.
  */
 export default function GameHubPanel() {
+  // ── Browse state ──
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<GameLite[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [game, setGame] = useState<GameLite | null>(null);
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [win, setWin] = useState<"released" | "upcoming">("released");
+  const [sort, setSort] = useState<"released" | "imported">("released");
+  const [family, setFamily] = useState<string | null>(null);
+  const [needs, setNeeds] = useState<string | null>(null);
+  const [families, setFamilies] = useState<
+    { id: string; name: string; slug: string }[]
+  >([]);
+  const [page, setPage] = useState(0);
+  const [rows, setRows] = useState<HubGameRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [listLoading, setListLoading] = useState(true);
+  const requestSeq = useRef(0);
 
+  // ── Selected game (workbench) ──
+  const [game, setGame] = useState<HubGameDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Overview edit fields
+  const [desc, setDesc] = useState("");
+  const [website, setWebsite] = useState("");
+  const [releasedInput, setReleasedInput] = useState("");
+  const [youtubeInput, setYoutubeInput] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [metaMsg, setMetaMsg] = useState<string | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Videos (unchanged behavior)
   const [videos, setVideos] = useState<GameVideoItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [videosLoading, setVideosLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // add / edit form (editingId null = adding, set = editing that video)
+  // video add / edit form (editingId null = adding)
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -84,37 +136,162 @@ export default function GameHubPanel() {
   const [featured, setFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  async function search() {
-    if (q.trim().length < 2) return;
-    setSearching(true);
+  // ── Browse wiring ──
+  useEffect(() => {
+    getPlatformFamilies()
+      .then(setFamilies)
+      .catch(() => setFamilies([]));
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedQ(q.trim());
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
+    const seq = ++requestSeq.current;
+    setListLoading(true);
+    listHubGames({
+      q: debouncedQ || undefined,
+      sort,
+      window: win,
+      family: family || undefined,
+      needs: (needs as never) || undefined,
+      offset: page * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    })
+      .then((res) => {
+        if (seq !== requestSeq.current) return;
+        setRows(res.items);
+        setTotal(res.total);
+      })
+      .catch((e) => {
+        if (seq !== requestSeq.current) return;
+        setMsg((e as Error).message);
+      })
+      .finally(() => {
+        if (seq === requestSeq.current) setListLoading(false);
+      });
+  }, [debouncedQ, sort, win, family, needs, page]);
+
+  // ── Workbench wiring ──
+  function seedEditFields(d: HubGameDetail) {
+    setDesc(d.description ?? "");
+    setWebsite(d.website ?? "");
+    setReleasedInput(d.released ?? "");
+    setYoutubeInput(d.clipUrl ?? "");
+  }
+
+  async function pick(row: HubGameRow) {
+    setDetailLoading(true);
     setMsg(null);
+    setMetaMsg(null);
+    cancelEdit();
     try {
-      setResults(await searchGamesForLink(q));
+      const d = await getHubGame(row.id);
+      if (!d) throw new Error("Game not found");
+      setGame(d);
+      seedEditFields(d);
+      await loadVideos(d.id);
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
-      setSearching(false);
+      setDetailLoading(false);
     }
   }
 
+  function backToList() {
+    setGame(null);
+    setVideos([]);
+    setMetaMsg(null);
+    cancelEdit();
+  }
+
+  async function reloadDetail(id: string) {
+    const d = await getHubGame(id);
+    if (d) {
+      setGame(d);
+      seedEditFields(d);
+    }
+  }
+
+  async function saveMeta() {
+    if (!game) return;
+    setSavingMeta(true);
+    setMetaMsg(null);
+    try {
+      const d = await updateHubGame(game.id, {
+        description: desc,
+        website,
+        released: releasedInput,
+        youtube: youtubeInput,
+      });
+      setGame(d);
+      seedEditFields(d);
+      setMetaMsg("Saved.");
+    } catch (e) {
+      setMetaMsg((e as Error).message);
+    } finally {
+      setSavingMeta(false);
+    }
+  }
+
+  function onPickCover(file: File | null) {
+    if (!file || !game) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setCoverBusy(true);
+      setMetaMsg(null);
+      try {
+        await uploadHubGameCover(game.id, String(reader.result));
+        await reloadDetail(game.id);
+        setMetaMsg("Cover replaced.");
+      } catch (e) {
+        setMetaMsg((e as Error).message);
+      } finally {
+        setCoverBusy(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function repullIgdb() {
+    if (!game) return;
+    setRefreshing(true);
+    setMetaMsg(null);
+    try {
+      const res = await refreshHubGameIgdb(game.id);
+      if (res.ok) {
+        await reloadDetail(game.id);
+        setMetaMsg(
+          `Re-pulled from IGDB — cover ${res.coverUpdated ? "updated" : "unchanged"}` +
+            (res.screenshotsAdded
+              ? `, ${res.screenshotsAdded} screenshots added.`
+              : "."),
+        );
+      } else {
+        setMetaMsg(res.message || `Re-pull failed: ${res.reason}`);
+      }
+    } catch (e) {
+      setMetaMsg((e as Error).message);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  // ── Videos (existing behavior, unchanged endpoints) ──
   async function loadVideos(gameId: string) {
-    setLoading(true);
-    setMsg(null);
+    setVideosLoading(true);
     try {
       setVideos(await getGameVideos(gameId));
     } catch (e) {
       setMsg((e as Error).message);
     } finally {
-      setLoading(false);
+      setVideosLoading(false);
     }
-  }
-
-  async function pick(g: GameLite) {
-    setGame(g);
-    setResults([]);
-    setQ("");
-    cancelEdit();
-    await loadVideos(g.id);
   }
 
   function resetForm() {
@@ -126,12 +303,10 @@ export default function GameHubPanel() {
     setSource("nexzy");
     setFeatured(false);
   }
-
   function cancelEdit() {
     setEditingId(null);
     resetForm();
   }
-
   function startEdit(v: GameVideoItem) {
     if (!v.id) return;
     setEditingId(v.id);
@@ -143,11 +318,9 @@ export default function GameHubPanel() {
     setSource(v.source === "external" ? "external" : "nexzy");
     setFeatured(!!v.featured);
     setMsg(null);
-    if (typeof window !== "undefined")
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   }
 
-  async function save() {
+  async function saveVideo() {
     if (!game || title.trim().length < 1) return;
     setSaving(true);
     setMsg(null);
@@ -181,7 +354,7 @@ export default function GameHubPanel() {
     }
   }
 
-  async function remove(v: GameVideoItem) {
+  async function removeVideo(v: GameVideoItem) {
     if (!game || !v.id) return;
     setBusy(v.id);
     setMsg(null);
@@ -196,15 +369,17 @@ export default function GameHubPanel() {
     }
   }
 
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // ─────────────────────────── render ───────────────────────────
   return (
     <Box>
       <Heading size="md" color="nexzy.white" mb={1}>
-        Game hub — videos
+        Game hub
       </Heading>
       <Text color="nexzy.gray.100" fontSize="sm" mb={4}>
-        Attach videos to a game. The YouTube link plays inline in the app Media
-        tab; TikTok / Reels show as &ldquo;also on&rdquo; links. Nexzy videos
-        rank first; the RAWG trailer shows last.
+        The game workbench — browse the latest catalog, spot games that need
+        attention, and fix their description, cover, trailer, and videos.
       </Text>
 
       {msg && (
@@ -214,123 +389,492 @@ export default function GameHubPanel() {
       )}
 
       {!game ? (
-        <Box maxW="520px">
-          <HStack gap={2}>
-            <Input
-              {...inputStyle}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search a game…"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") search();
-              }}
-            />
+        <>
+          {/* ── Browse controls ── */}
+          <Input
+            {...inputStyle}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name…"
+            maxW={{ md: "360px" }}
+            mb={3}
+          />
+
+          <HStack gap={1.5} wrap="wrap" mb={2}>
+            <Text color="nexzy.gray.100" fontSize="xs" minW="44px">
+              Show
+            </Text>
             <Button
-              size="sm"
-              {...primaryBtn}
-              onClick={search}
-              loading={searching}
+              size="2xs"
+              onClick={() => {
+                setWin("released");
+                setSort("released");
+                setPage(0);
+              }}
+              {...chipProps(win === "released" && sort === "released")}
             >
-              <FiSearch />
+              Latest releases
+            </Button>
+            <Button
+              size="2xs"
+              onClick={() => {
+                setWin("upcoming");
+                setSort("released");
+                setPage(0);
+              }}
+              {...chipProps(win === "upcoming" && sort === "released")}
+            >
+              Upcoming
+            </Button>
+            <Button
+              size="2xs"
+              onClick={() => {
+                setSort("imported");
+                setWin("released");
+                setPage(0);
+              }}
+              {...chipProps(sort === "imported")}
+              title="What the nightly IGDB sync brought in, newest first"
+            >
+              Recently imported
             </Button>
           </HStack>
-          {results.length > 0 && (
-            <VStack align="stretch" gap={1} mt={2}>
-              {results.map((g) => (
-                <Flex
-                  key={g.id}
-                  align="center"
-                  gap={2}
-                  p={2}
-                  borderWidth="1px"
-                  borderColor="whiteAlpha.200"
-                  borderRadius="md"
-                  cursor="pointer"
-                  _hover={{ bg: "whiteAlpha.100" }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      pick(g);
-                    }
+
+          {families.length > 0 && (
+            <HStack gap={1.5} wrap="wrap" mb={2}>
+              <Text color="nexzy.gray.100" fontSize="xs" minW="44px">
+                Platform
+              </Text>
+              <Button
+                size="2xs"
+                onClick={() => {
+                  setFamily(null);
+                  setPage(0);
+                }}
+                {...chipProps(family === null)}
+              >
+                All
+              </Button>
+              {families.map((f) => (
+                <Button
+                  key={f.slug}
+                  size="2xs"
+                  onClick={() => {
+                    setFamily(family === f.slug ? null : f.slug);
+                    setPage(0);
                   }}
-                  onClick={() => pick(g)}
+                  {...chipProps(family === f.slug)}
                 >
-                  {g.backgroundImage && (
-                    <Image
-                      src={g.backgroundImage}
-                      alt=""
-                      boxSize="28px"
-                      borderRadius="sm"
-                      objectFit="cover"
-                    />
-                  )}
-                  <Text
-                    flex="1"
-                    fontSize="sm"
-                    color="nexzy.white"
-                    lineClamp={1}
-                  >
-                    {g.name}
-                  </Text>
-                  {g.released && (
-                    <Text fontSize="xs" color="whiteAlpha.500">
-                      {g.released.slice(0, 4)}
-                    </Text>
-                  )}
-                </Flex>
+                  {f.name}
+                </Button>
               ))}
-            </VStack>
+            </HStack>
           )}
-        </Box>
+
+          <HStack gap={1.5} wrap="wrap" mb={3}>
+            <Text color="nexzy.gray.100" fontSize="xs" minW="44px">
+              Health
+            </Text>
+            <Button
+              size="2xs"
+              onClick={() => {
+                setNeeds(null);
+                setPage(0);
+              }}
+              {...chipProps(needs === null)}
+            >
+              All games
+            </Button>
+            {NEEDS_FILTERS.map((n) => (
+              <Button
+                key={n.key}
+                size="2xs"
+                onClick={() => {
+                  setNeeds(needs === n.key ? null : n.key);
+                  setPage(0);
+                }}
+                {...(needs === n.key
+                  ? {
+                      bg: "orange.500",
+                      color: "white",
+                      _hover: { opacity: 0.9 },
+                    }
+                  : {
+                      ...outlineBtn,
+                      color: "orange.300",
+                      borderColor: "orange.700",
+                    })}
+              >
+                {n.label}
+              </Button>
+            ))}
+          </HStack>
+
+          {/* ── Browse list ── */}
+          {rows === null ? (
+            <Flex justify="center" py={8}>
+              <Spinner color="nexzy.blue" />
+            </Flex>
+          ) : rows.length === 0 ? (
+            <Text fontSize="sm" color="whiteAlpha.500">
+              No games match these filters.
+            </Text>
+          ) : (
+            <>
+              <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                Showing {page * PAGE_SIZE + 1}–
+                {Math.min(total, page * PAGE_SIZE + rows.length)} of {total}
+              </Text>
+              <VStack
+                align="stretch"
+                gap={2}
+                opacity={listLoading ? 0.6 : 1}
+                mb={4}
+              >
+                {rows.map((g) => (
+                  <Flex
+                    key={g.id}
+                    align="center"
+                    gap={3}
+                    p={2}
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="md"
+                    cursor="pointer"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() => pick(g)}
+                  >
+                    {g.backgroundImage ? (
+                      <Image
+                        src={g.backgroundImage}
+                        alt=""
+                        w="42px"
+                        h="56px"
+                        borderRadius="sm"
+                        objectFit="cover"
+                        flexShrink={0}
+                      />
+                    ) : (
+                      <Flex
+                        w="42px"
+                        h="56px"
+                        borderRadius="sm"
+                        bg="whiteAlpha.100"
+                        align="center"
+                        justify="center"
+                        flexShrink={0}
+                      >
+                        <Text fontSize="10px" color="whiteAlpha.500">
+                          n/a
+                        </Text>
+                      </Flex>
+                    )}
+                    <Box flex="1" minW="0">
+                      <HStack gap={2}>
+                        <Text
+                          fontSize="sm"
+                          fontWeight="600"
+                          color="nexzy.white"
+                          lineClamp={1}
+                        >
+                          {g.name}
+                        </Text>
+                      </HStack>
+                      <HStack gap={2} mt={0.5} wrap="wrap">
+                        <Text fontSize="xs" color="whiteAlpha.600">
+                          {g.released ?? "TBD"}
+                        </Text>
+                        {g.families.map((f) => (
+                          <Badge
+                            key={f}
+                            colorPalette="blue"
+                            variant="subtle"
+                            fontSize="10px"
+                          >
+                            {f}
+                          </Badge>
+                        ))}
+                        <Text fontSize="11px" color="whiteAlpha.500">
+                          {g.screenshotCount} shots · {g.videoCount} vids ·{" "}
+                          {g.contentCount} content
+                        </Text>
+                      </HStack>
+                      {/* Health: only what's MISSING screams */}
+                      <HStack gap={1} mt={1} wrap="wrap">
+                        {!g.hasDescription && (
+                          <Badge colorPalette="orange" variant="subtle">
+                            no description
+                          </Badge>
+                        )}
+                        {!g.hasCover && (
+                          <Badge colorPalette="red" variant="subtle">
+                            no cover
+                          </Badge>
+                        )}
+                        {g.screenshotCount === 0 && (
+                          <Badge colorPalette="orange" variant="subtle">
+                            no screenshots
+                          </Badge>
+                        )}
+                        {g.videoCount === 0 && (
+                          <Badge colorPalette="yellow" variant="subtle">
+                            no videos
+                          </Badge>
+                        )}
+                        {g.contentCount === 0 && (
+                          <Badge colorPalette="purple" variant="subtle">
+                            no content
+                          </Badge>
+                        )}
+                      </HStack>
+                    </Box>
+                    <Button size="xs" {...outlineBtn} flexShrink={0}>
+                      Open
+                    </Button>
+                  </Flex>
+                ))}
+              </VStack>
+              {pageCount > 1 && (
+                <Flex justify="center" align="center" gap={3} mb={4}>
+                  <Button
+                    size="sm"
+                    {...outlineBtn}
+                    disabled={page === 0 || listLoading}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  >
+                    ← Prev
+                  </Button>
+                  <Text color="nexzy.gray.100" fontSize="sm">
+                    Page {page + 1} of {pageCount}
+                  </Text>
+                  <Button
+                    size="sm"
+                    {...outlineBtn}
+                    disabled={page + 1 >= pageCount || listLoading}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next →
+                  </Button>
+                </Flex>
+              )}
+            </>
+          )}
+          {detailLoading && <Spinner size="sm" color="nexzy.blue" />}
+        </>
       ) : (
         <>
+          {/* ── Workbench header ── */}
+          <Button size="xs" {...outlineBtn} mb={3} onClick={backToList}>
+            <FiArrowLeft /> Back to list
+          </Button>
+
           <Flex
-            align="center"
-            gap={3}
+            gap={4}
             mb={4}
             p={3}
             borderWidth="1px"
             borderColor="whiteAlpha.200"
             borderRadius="md"
+            align="flex-start"
+            wrap={{ base: "wrap", md: "nowrap" }}
           >
-            {game.backgroundImage && (
-              <Image
-                src={game.backgroundImage}
-                alt=""
-                boxSize="40px"
-                borderRadius="md"
-                objectFit="cover"
-              />
-            )}
-            <Box flex="1" minW="0">
-              <Text
-                fontSize="md"
-                fontWeight="700"
-                color="nexzy.white"
-                lineClamp={1}
-              >
+            <Box flexShrink={0}>
+              {game.backgroundImage ? (
+                <Image
+                  src={game.backgroundImage}
+                  alt=""
+                  w="120px"
+                  h="160px"
+                  borderRadius="md"
+                  objectFit="cover"
+                />
+              ) : (
+                <Flex
+                  w="120px"
+                  h="160px"
+                  borderRadius="md"
+                  bg="whiteAlpha.100"
+                  align="center"
+                  justify="center"
+                >
+                  <Text fontSize="xs" color="whiteAlpha.500">
+                    no cover
+                  </Text>
+                </Flex>
+              )}
+              <VStack gap={1} mt={2} align="stretch">
+                <Button
+                  size="xs"
+                  {...outlineBtn}
+                  onClick={() => coverInputRef.current?.click()}
+                  loading={coverBusy}
+                >
+                  <FiUpload /> Replace cover
+                </Button>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/avif"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    onPickCover(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  size="xs"
+                  {...outlineBtn}
+                  onClick={repullIgdb}
+                  loading={refreshing}
+                  disabled={game.igdbId == null}
+                  title={
+                    game.igdbId == null
+                      ? "No IGDB id on this game"
+                      : "Re-download cover (box art) + metadata from IGDB"
+                  }
+                >
+                  <FiRefreshCw /> Re-pull from IGDB
+                </Button>
+              </VStack>
+            </Box>
+
+            <Box flex="1" minW="240px">
+              <Text fontSize="lg" fontWeight="700" color="nexzy.white">
                 {game.name}
               </Text>
-              <Text fontSize="xs" color="whiteAlpha.500">
-                {videos.length} video{videos.length === 1 ? "" : "s"}
-              </Text>
+              <HStack gap={2} mt={1} wrap="wrap">
+                <Text fontSize="xs" color="whiteAlpha.600">
+                  {game.released ?? "TBD"}
+                </Text>
+                {game.platforms.map((p) => (
+                  <Badge
+                    key={p}
+                    colorPalette="blue"
+                    variant="subtle"
+                    fontSize="10px"
+                  >
+                    {p}
+                  </Badge>
+                ))}
+                {game.igdbId != null && (
+                  <Badge colorPalette="gray" variant="outline" fontSize="10px">
+                    IGDB #{game.igdbId}
+                  </Badge>
+                )}
+                {game.isMature && (
+                  <Badge colorPalette="red" variant="subtle" fontSize="10px">
+                    Mature
+                  </Badge>
+                )}
+              </HStack>
+              {game.genres.length > 0 && (
+                <Text fontSize="xs" color="whiteAlpha.500" mt={1}>
+                  {game.genres.join(" · ")}
+                  {game.stores.length > 0 && `  —  ${game.stores.join(" · ")}`}
+                </Text>
+              )}
+
+              {/* Screenshots strip (read-only in Phase 1) */}
+              {game.screenshots.length > 0 && (
+                <HStack gap={1.5} mt={3} overflowX="auto">
+                  {game.screenshots.map((s) => (
+                    <Image
+                      key={s.id}
+                      src={s.url}
+                      alt=""
+                      h="52px"
+                      w="92px"
+                      borderRadius="sm"
+                      objectFit="cover"
+                      flexShrink={0}
+                    />
+                  ))}
+                </HStack>
+              )}
             </Box>
-            <Button
-              size="xs"
-              {...outlineBtn}
-              onClick={() => {
-                setGame(null);
-                setVideos([]);
-                cancelEdit();
-              }}
-            >
-              Change game
-            </Button>
           </Flex>
 
-          {loading ? (
+          {/* ── Overview editor ── */}
+          <Box
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            borderRadius="md"
+            p={4}
+            mb={5}
+          >
+            <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={1}>
+              Game details
+            </Text>
+            <Text fontSize="xs" color="whiteAlpha.500" mb={3}>
+              {game.descriptionSource === "nexzy"
+                ? "Description is Nexzy-authored (your words win everywhere)."
+                : game.description
+                  ? "Description is imported — editing it saves your version, which wins everywhere. Clearing your version falls back to the imported one."
+                  : "No description yet — write one and it shows in the app."}
+            </Text>
+            {metaMsg && (
+              <Text
+                fontSize="sm"
+                color={
+                  /Saved|replaced|Re-pulled/i.test(metaMsg)
+                    ? "green.300"
+                    : "red.400"
+                }
+                mb={2}
+              >
+                {metaMsg}
+              </Text>
+            )}
+            <VStack align="stretch" gap={2}>
+              <Textarea
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                placeholder="Description shown in the app…"
+                rows={5}
+                bg="whiteAlpha.50"
+                color="nexzy.white"
+                borderColor="whiteAlpha.300"
+                _placeholder={{ color: "whiteAlpha.500" }}
+                fontSize="sm"
+              />
+              <SimpleGrid columns={{ base: 1, md: 3 }} gap={2}>
+                <Input
+                  {...inputStyle}
+                  value={releasedInput}
+                  onChange={(e) => setReleasedInput(e.target.value)}
+                  placeholder="Release date (YYYY-MM-DD, empty = TBD)"
+                />
+                <Input
+                  {...inputStyle}
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="Official website (optional)"
+                />
+                <Input
+                  {...inputStyle}
+                  value={youtubeInput}
+                  onChange={(e) => setYoutubeInput(e.target.value)}
+                  placeholder="Trailer — YouTube URL or video id"
+                />
+              </SimpleGrid>
+              <HStack>
+                <Button
+                  size="sm"
+                  {...primaryBtn}
+                  onClick={saveMeta}
+                  loading={savingMeta}
+                >
+                  Save details
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+
+          {/* ── Videos (same behavior as before) ── */}
+          <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
+            Videos ({videos.length})
+          </Text>
+          {videosLoading ? (
             <Spinner size="sm" color="nexzy.blue" />
           ) : videos.length === 0 ? (
             <Text fontSize="sm" color="whiteAlpha.500" mb={4}>
@@ -428,7 +972,7 @@ export default function GameHubPanel() {
                     <Button
                       size="xs"
                       {...outlineBtn}
-                      onClick={() => remove(v)}
+                      onClick={() => removeVideo(v)}
                       loading={busy === v.id}
                       title="Remove from game"
                     >
@@ -524,7 +1068,7 @@ export default function GameHubPanel() {
                 <Button
                   size="sm"
                   {...primaryBtn}
-                  onClick={save}
+                  onClick={saveVideo}
                   loading={saving}
                   disabled={title.trim().length < 1}
                 >

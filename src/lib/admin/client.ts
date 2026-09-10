@@ -2377,6 +2377,124 @@ export async function getPlatformFamilies(): Promise<
   return handle(await fetch(`/api/newsroom/admin/games/platform-families`));
 }
 
+// ── Game hub (game workbench) ────────────────────────────────────────────────
+
+/** One catalog game as listed in the Game hub browse view, with health. */
+export interface HubGameRow {
+  id: string;
+  name: string;
+  slug: string;
+  released: string | null;
+  backgroundImage: string | null;
+  createdAt: string;
+  igdbId: number | null;
+  families: string[];
+  hasDescription: boolean;
+  hasCover: boolean;
+  screenshotCount: number;
+  videoCount: number;
+  contentCount: number;
+}
+
+export interface HubGameDetail {
+  id: string;
+  name: string;
+  slug: string;
+  released: string | null;
+  backgroundImage: string | null;
+  website: string | null;
+  clipUrl: string | null;
+  igdbId: number | null;
+  isMature: boolean;
+  description: string | null;
+  /** 'nexzy' = you wrote it; anything else = imported. */
+  descriptionSource: string | null;
+  screenshots: { id: string; url: string }[];
+  platforms: string[];
+  genres: string[];
+  stores: string[];
+  tags: string[];
+}
+
+export interface HubGamesQuery {
+  q?: string;
+  sort?: "released" | "imported";
+  window?: "released" | "upcoming" | "all";
+  family?: string;
+  needs?:
+    | "description"
+    | "cover"
+    | "screenshots"
+    | "videos"
+    | "content"
+    | "any";
+  offset?: number;
+  limit?: number;
+}
+
+export async function listHubGames(
+  params: HubGamesQuery = {},
+): Promise<{ items: HubGameRow[]; total: number }> {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.sort) qs.set("sort", params.sort);
+  if (params.window) qs.set("window", params.window);
+  if (params.family) qs.set("family", params.family);
+  if (params.needs) qs.set("needs", params.needs);
+  if (params.offset) qs.set("offset", String(params.offset));
+  if (params.limit) qs.set("limit", String(params.limit));
+  return handle(await fetch(`/api/newsroom/admin/games/hub?${qs.toString()}`));
+}
+
+export async function getHubGame(id: string): Promise<HubGameDetail | null> {
+  return handle(await fetch(`/api/newsroom/admin/games/hub/${id}`));
+}
+
+export async function updateHubGame(
+  id: string,
+  payload: {
+    description?: string;
+    website?: string;
+    released?: string;
+    youtube?: string;
+  },
+): Promise<HubGameDetail> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/hub/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function uploadHubGameCover(
+  id: string,
+  dataUrl: string,
+): Promise<{ ok: boolean; backgroundImage: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/hub/${id}/cover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    }),
+  );
+}
+
+export async function refreshHubGameIgdb(id: string): Promise<{
+  ok: boolean;
+  reason?: string;
+  message?: string;
+  coverUpdated?: boolean;
+  screenshotsAdded?: number;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/hub/${id}/igdb-refresh`, {
+      method: "POST",
+    }),
+  );
+}
+
 export async function mapUnresolvedGame(
   id: string,
   gameId: string,
