@@ -598,6 +598,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     null,
   );
   const [imageErr, setImageErr] = useState<string | null>(null);
+  // FB/IG publish format: Reel (video) vs image/quick post. Explicit operator
+  // choice; defaults follow the card type but never lock it in.
+  const [mediaMode, setMediaMode] = useState<"video" | "image">(
+    s.payload?.format === "quick" ? "image" : "video",
+  );
   const [publishing, setPublishing] = useState(false);
   const [results, setResults] = useState<PublishResult[] | null>(null);
   const [insights, setInsights] = useState<PlatformInsights[]>(
@@ -736,7 +741,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     setPublishing(true);
     try {
       const r = await publishContentCard(s.id, {
-        videoUrl: videoUrl ?? undefined,
+        // Image mode: withhold the video so FB/IG publish as photo/image posts
+        // (the API routes on media presence).
+        videoUrl: mediaMode === "video" ? (videoUrl ?? undefined) : undefined,
         facebook: fb,
         instagram: ig,
         threads: th,
@@ -766,11 +773,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     }
   };
 
-  // Quick announcements have no video by design: Facebook publishes as a
-  // text/photo post and Instagram as an image post (image REQUIRED — IG has no
-  // text-only posts). Video cards keep the original video requirement.
-  const isQuickCard = s.payload?.format === "quick";
-  const needsVideo = (fb || ig) && !isQuickCard;
+  // FB/IG can publish two ways: a REEL (video) or an IMAGE/quick post — the
+  // operator picks explicitly. Default follows the card (quick cards → image,
+  // video cards → reel), but either card can publish either way: a quick
+  // announcement can ship a clip as a Reel, and a video card can go out as an
+  // image post. X/Threads are unaffected (they attach the image either way).
+  const needsVideo = (fb || ig) && mediaMode === "video";
   // Human-readable reasons publishing is blocked (shown under the button so a
   // missing piece can't be published by accident).
   const publishBlockers: string[] = [];
@@ -779,12 +787,12 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   }
   if (needsVideo && !videoUrl) {
     publishBlockers.push(
-      "Upload the finished video — Facebook and Instagram need it.",
+      "Reel mode: upload the finished video — Facebook and Instagram need it (or switch to Image post).",
     );
   }
-  if (isQuickCard && ig && !(images.instagram ?? images.global)) {
+  if (mediaMode === "image" && ig && !(images.instagram ?? images.global)) {
     publishBlockers.push(
-      "Instagram needs an image for a quick announcement — upload one below.",
+      "Image mode: Instagram needs an image — upload one below (or switch to Reel).",
     );
   }
   if (fb && !fbCaption.trim())
@@ -847,7 +855,42 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         📣 Publish to social
       </Text>
 
-      {/* Video upload — needed for Facebook + Instagram */}
+      {/* FB/IG publish format — explicit Reel-vs-image choice. */}
+      {(fb || ig) && (
+        <HStack gap={2} mb={2} align="center">
+          <Text fontSize="xs" color="nexzy.gray.100" fontWeight="600">
+            FB / IG format:
+          </Text>
+          <Button
+            size="xs"
+            variant={mediaMode === "video" ? "solid" : "outline"}
+            bg={mediaMode === "video" ? "nexzy.blue" : "transparent"}
+            color={mediaMode === "video" ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{
+              bg: mediaMode === "video" ? "nexzy.blue" : "whiteAlpha.100",
+            }}
+            onClick={() => setMediaMode("video")}
+          >
+            🎬 Reel (video)
+          </Button>
+          <Button
+            size="xs"
+            variant={mediaMode === "image" ? "solid" : "outline"}
+            bg={mediaMode === "image" ? "nexzy.blue" : "transparent"}
+            color={mediaMode === "image" ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{
+              bg: mediaMode === "image" ? "nexzy.blue" : "whiteAlpha.100",
+            }}
+            onClick={() => setMediaMode("image")}
+          >
+            🖼 Image / quick post
+          </Button>
+        </HStack>
+      )}
+
+      {/* Video upload — needed for Facebook + Instagram in Reel mode */}
       {needsVideo && (
         <Box mb={2}>
           <Input
@@ -872,11 +915,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         </Box>
       )}
 
-      {/* Optional image — attaches to the X + Threads posts, and on quick
-          cards also becomes the Facebook photo post + the Instagram image post
+      {/* Optional image — attaches to the X + Threads posts, and in IMAGE
+          mode also becomes the Facebook photo post + the Instagram image post
           (IG REQUIRES it — no text-only posts). JPEG/PNG, ≤5MB; kept in its
           original format (NO AVIF — X/Threads would reject it). */}
-      {(th || xOn || (isQuickCard && (fb || ig))) && (
+      {(th || xOn || (mediaMode === "image" && (fb || ig))) && (
         <Box mb={2}>
           <Text
             color="whiteAlpha.600"
@@ -884,7 +927,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             fontWeight="700"
             mb={0.5}
           >
-            {isQuickCard
+            {mediaMode === "image" && (fb || ig)
               ? `IMAGE — ATTACHES TO X + THREADS${ig ? ", REQUIRED FOR INSTAGRAM" : ""}${fb ? ", MAKES FACEBOOK A PHOTO POST" : ""}`
               : "IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS"}
           </Text>
