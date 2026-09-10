@@ -7,7 +7,7 @@ import {
   HStack,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { fetchPosts, fetchTrending } from "@/lib/blog/api";
+import { fetchPosts, fetchTrending, fetchFeaturedAny } from "@/lib/blog/api";
 import { beatLabel } from "@/lib/blog/beats";
 import NewsControls from "@/components/blog/NewsControls";
 import NewsroomHero from "@/components/blog/NewsroomHero";
@@ -66,7 +66,7 @@ export default async function BlogIndexPage({
   const beat = sp.beat || "";
   const q = sp.q || "";
 
-  const [{ items, total }, hot, reads] = await Promise.all([
+  const [{ items, total }, hot, reads, heroAnyType] = await Promise.all([
     fetchPosts({
       beat: beat || undefined,
       q: q || undefined,
@@ -75,11 +75,17 @@ export default async function BlogIndexPage({
     }),
     fetchTrending(5, "hot"),
     fetchTrending(5, "reads"),
+    // The Top Story is the editor-featured post of ANY type (article, review,
+    // guide). Only on the unfiltered first page; the list below stays articles.
+    page === 1 && !beat && !q ? fetchFeaturedAny() : Promise.resolve(null),
   ]);
 
   const showHero = page === 1 && !beat && !q && items.length > 0;
-  const featured = showHero ? items[0] : null;
-  const grid = featured ? items.slice(1) : items;
+  // Prefer the featured (any-type) Top Story; fall back to the newest article.
+  const featured = showHero ? (heroAnyType ?? items[0]) : null;
+  // Grid = the articles list minus the hero (only matters when the hero is an
+  // article; a featured review isn't in the articles list, so nothing is cut).
+  const grid = featured ? items.filter((p) => p.slug !== featured.slug) : items;
 
   return (
     <Container maxW="container.xl" py={{ base: 8, md: 14 }}>

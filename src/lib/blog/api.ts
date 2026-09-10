@@ -175,6 +175,20 @@ export async function fetchPosts(params?: {
   return res.json();
 }
 
+/**
+ * The single editor-pinned Top Story, across ALL content types. `fetchPosts`
+ * always sends hero=1 (featured-first), so with type=all + pageSize=1 the top
+ * row is the featured post of any type (article, review, guide, …). Returned
+ * only when it's genuinely `featured`, so we never mislabel the newest post.
+ * Used for the /blog hero so a featured review/guide can be the Top Story, while
+ * the list below stays articles-only. Matches the mobile app's fetchFeaturedPost.
+ */
+export async function fetchFeaturedAny(): Promise<PublicPost | null> {
+  const { items } = await fetchPosts({ type: "all", pageSize: 1 });
+  const p = items?.[0];
+  return p && p.featured ? p : null;
+}
+
 /** Evergreen guides index ("how to beat X"). Newest first, paginated. */
 export async function fetchGuides(params?: {
   q?: string;

@@ -3,10 +3,14 @@ import NextImage from "next/image";
 import { Box, Heading, Text, HStack, Badge } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import { beatLabel, beatPalette } from "@/lib/blog/beats";
+import { publicPathForType } from "@/lib/blog/publicPath";
 
 export default function FeaturedCard({ post }: { post: PublicPost }) {
   return (
-    <NextLink href={`/blog/${post.slug}`} style={{ display: "block", height: "100%" }}>
+    <NextLink
+      href={`${publicPathForType(post.type)}/${post.slug}`}
+      style={{ display: "block", height: "100%" }}
+    >
       <Box
         className="group"
         position="relative"
