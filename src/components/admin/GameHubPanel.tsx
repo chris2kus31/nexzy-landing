@@ -688,7 +688,10 @@ export default function GameHubPanel() {
                               no screenshots
                             </Badge>
                           )}
-                          {g.videoCount === 0 && (
+                          {/* "no videos" = no trailer (clipUrl). Curated
+                              videos from the videos table are additive extras
+                              and don't clear this. */}
+                          {!g.hasTrailer && (
                             <Badge colorPalette="yellow" variant="subtle">
                               no videos
                             </Badge>
@@ -696,11 +699,6 @@ export default function GameHubPanel() {
                           {g.contentCount === 0 && (
                             <Badge colorPalette="purple" variant="subtle">
                               no content
-                            </Badge>
-                          )}
-                          {!g.hasTrailer && (
-                            <Badge colorPalette="cyan" variant="subtle">
-                              no trailer
                             </Badge>
                           )}
                         </HStack>
