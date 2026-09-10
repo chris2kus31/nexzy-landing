@@ -553,6 +553,7 @@ export default function GameHubPanel() {
                         borderRadius="sm"
                         objectFit="cover"
                         flexShrink={0}
+                        loading="lazy"
                       />
                     ) : (
                       <Flex
@@ -757,7 +758,11 @@ export default function GameHubPanel() {
                   </Badge>
                 ))}
                 {game.igdbId != null && (
-                  <Badge colorPalette="gray" variant="outline" fontSize="10px">
+                  <Badge
+                    bg="whiteAlpha.200"
+                    color="whiteAlpha.900"
+                    fontSize="10px"
+                  >
                     IGDB #{game.igdbId}
                   </Badge>
                 )}
@@ -787,6 +792,7 @@ export default function GameHubPanel() {
                       borderRadius="sm"
                       objectFit="cover"
                       flexShrink={0}
+                      loading="lazy"
                     />
                   ))}
                 </HStack>
