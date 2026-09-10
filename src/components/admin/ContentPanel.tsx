@@ -733,7 +733,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     }
   };
 
-  const needsVideo = fb || ig;
+  // Quick announcements have no video by design: Facebook publishes as a
+  // text/photo post and Instagram as an image post (image REQUIRED — IG has no
+  // text-only posts). Video cards keep the original video requirement.
+  const isQuickCard = s.payload?.format === "quick";
+  const needsVideo = (fb || ig) && !isQuickCard;
   // Human-readable reasons publishing is blocked (shown under the button so a
   // missing piece can't be published by accident).
   const publishBlockers: string[] = [];
@@ -743,6 +747,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   if (needsVideo && !videoUrl) {
     publishBlockers.push(
       "Upload the finished video — Facebook and Instagram need it.",
+    );
+  }
+  if (isQuickCard && ig && !imageUrl) {
+    publishBlockers.push(
+      "Instagram needs an image for a quick announcement — upload one below.",
     );
   }
   if (fb && !fbCaption.trim())
@@ -830,10 +839,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         </Box>
       )}
 
-      {/* Optional image — attaches to the X + Threads posts (an image post
-          reliably out-reaches bare text on both). JPEG/PNG, ≤5MB; kept in its
+      {/* Optional image — attaches to the X + Threads posts, and on quick
+          cards also becomes the Facebook photo post + the Instagram image post
+          (IG REQUIRES it — no text-only posts). JPEG/PNG, ≤5MB; kept in its
           original format (NO AVIF — X/Threads would reject it). */}
-      {(th || xOn) && (
+      {(th || xOn || (isQuickCard && (fb || ig))) && (
         <Box mb={2}>
           <Text
             color="whiteAlpha.600"
@@ -841,7 +851,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             fontWeight="700"
             mb={0.5}
           >
-            IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS
+            {isQuickCard
+              ? `IMAGE — ATTACHES TO X + THREADS${ig ? ", REQUIRED FOR INSTAGRAM" : ""}${fb ? ", MAKES FACEBOOK A PHOTO POST" : ""}`
+              : "IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS"}
           </Text>
           <Input
             type="file"

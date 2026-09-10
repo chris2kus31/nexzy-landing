@@ -80,6 +80,8 @@ function LeadCard({
     context: string,
     xSteer: string,
     threadsSteer: string,
+    fbSteer: string,
+    igSteer: string,
   ) => void;
   onMakeShort: (id: string, author: string, context: string) => void;
   busy: boolean;
@@ -105,6 +107,8 @@ function LeadCard({
   const [quickContext, setQuickContext] = useState("");
   const [xSteer, setXSteer] = useState("");
   const [threadsSteer, setThreadsSteer] = useState("");
+  const [fbSteer, setFbSteer] = useState("");
+  const [igSteer, setIgSteer] = useState("");
   // 🎬 Make a short — skip the article, create a full short-video lead in
   // Content Studio. Context box (lead is thin). Owner-only.
   const [showShort, setShowShort] = useState(false);
@@ -517,7 +521,7 @@ function LeadCard({
             >
               {showQuick
                 ? "▾ Hide quick announce"
-                : "⚡ Quick announce (X + Threads)"}
+                : "⚡ Quick announce (X · Threads · FB · IG)"}
             </Box>
           )}
           {isOwner && showQuick && (
@@ -529,9 +533,10 @@ function LeadCard({
               bg="rgba(0,229,208,0.04)"
             >
               <Text fontSize="10px" color="nexzy.gray.100" mb={1}>
-                Skips the article — writes a fast X + Threads take straight from
-                this lead (link-free). Lands in Content Studio → Suggestions as
-                a ⚡ QUICK card.
+                Skips the article — writes a fast X + Threads + Facebook +
+                Instagram take straight from this lead (link-free). Lands in
+                Content Studio → Suggestions as a ⚡ QUICK card; upload an image
+                there (Instagram needs one to publish).
               </Text>
               <Text fontSize="10px" color="#00E5D0" fontWeight="700" mb={1}>
                 Context (grounds BOTH takes — the raw lead is thin, so paste any
@@ -577,6 +582,30 @@ function LeadCard({
                 color="white"
                 fontSize="xs"
               />
+              <Textarea
+                value={fbSteer}
+                onChange={(e) => setFbSteer(e.target.value)}
+                placeholder="Steer the Facebook take (optional)…"
+                size="xs"
+                rows={2}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="whiteAlpha.200"
+                color="white"
+                fontSize="xs"
+              />
+              <Textarea
+                value={igSteer}
+                onChange={(e) => setIgSteer(e.target.value)}
+                placeholder="Steer the Instagram take (optional)…"
+                size="xs"
+                rows={2}
+                mb={2}
+                bg="whiteAlpha.50"
+                borderColor="whiteAlpha.200"
+                color="white"
+                fontSize="xs"
+              />
               <Button
                 size="xs"
                 w="full"
@@ -588,6 +617,8 @@ function LeadCard({
                     quickContext,
                     xSteer,
                     threadsSteer,
+                    fbSteer,
+                    igSteer,
                   )
                 }
                 loading={busy}
@@ -1136,6 +1167,8 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
     context: string,
     xSteer: string,
     threadsSteer: string,
+    fbSteer: string,
+    igSteer: string,
   ) => {
     setBusyId(id);
     try {
@@ -1145,6 +1178,8 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
         context,
         xSteer,
         threadsSteer,
+        fbSteer,
+        igSteer,
       );
       if (!res?.ok) {
         setMsg(

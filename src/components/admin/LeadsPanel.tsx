@@ -645,9 +645,11 @@ function LeadCard({
   );
   const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
   const [steer, setSteer] = useState("");
-  // Quick Announcement (X + Threads only) — its own per-platform steers.
+  // Quick Announcement (X + Threads + FB + IG) — its own per-platform steers.
   const [xSteer, setXSteer] = useState("");
   const [threadsSteer, setThreadsSteer] = useState("");
+  const [fbSteer, setFbSteer] = useState("");
+  const [igSteer, setIgSteer] = useState("");
   const [quickErr, setQuickErr] = useState<string | null>(null);
   const [quickOk, setQuickOk] = useState(false);
 
@@ -762,7 +764,7 @@ function LeadCard({
       setBusy(null);
     }
   };
-  // Generate a QUICK ANNOUNCEMENT (X + Threads only). Independent of the
+  // Generate a QUICK ANNOUNCEMENT (X + Threads + FB + IG). Independent of the
   // per-platform and long-form paths — skips both, each platform its own steer.
   const generateQuick = async () => {
     setBusy("gen");
@@ -774,6 +776,8 @@ function LeadCard({
         writer,
         xSteer.trim() || undefined,
         threadsSteer.trim() || undefined,
+        fbSteer.trim() || undefined,
+        igSteer.trim() || undefined,
       );
       setQuickOk(true);
       await reload();
@@ -964,8 +968,8 @@ function LeadCard({
             </Text>
           )}
 
-          {/* Quick Announcement (X + Threads only) — independent path; skips the
-              per-platform and long-form generation entirely. */}
+          {/* Quick Announcement (X + Threads + FB + IG) — independent path;
+              skips the per-platform and long-form generation entirely. */}
           <Box
             bg="whiteAlpha.50"
             border="1px solid"
@@ -975,7 +979,7 @@ function LeadCard({
             mb={3}
           >
             <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
-              ⚡ Quick Announce (X + Threads)
+              ⚡ Quick Announce (X · Threads · FB · IG)
             </Text>
             {lead?.quickAnnouncement?.recommended ? (
               <Text color="teal.300" fontSize="xs" fontWeight="600" mb={2}>
@@ -984,8 +988,9 @@ function LeadCard({
             ) : (
               <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
                 Fast text update — skips long-form and the per-platform cards.
-                Two distinct takes, each with its own steer. Upload any media on
-                the card before publishing.
+                Four distinct takes (X, Threads, Facebook, Instagram), each with
+                its own steer. Upload an image on the card before publishing
+                (Instagram requires one).
               </Text>
             )}
             <Text
@@ -1030,6 +1035,42 @@ function LeadCard({
               bg="whiteAlpha.100"
               borderColor="whiteAlpha.300"
             />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              FACEBOOK STEER (optional)
+            </Text>
+            <Textarea
+              value={fbSteer}
+              onChange={(e) => setFbSteer(e.target.value)}
+              placeholder="e.g. lead with the exact date; end on the debate"
+              size="sm"
+              rows={2}
+              mb={2}
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            />
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              INSTAGRAM STEER (optional)
+            </Text>
+            <Textarea
+              value={igSteer}
+              onChange={(e) => setIgSteer(e.target.value)}
+              placeholder="e.g. make the send-this line about squad mains"
+              size="sm"
+              rows={2}
+              mb={2}
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            />
             <Button
               size="sm"
               bg="nexzy.blue"
@@ -1050,8 +1091,8 @@ function LeadCard({
             )}
             {quickOk && !quickErr && (
               <Text color="teal.300" fontSize="xs" mt={2}>
-                Queued — your X + Threads takes will appear in the Suggestions
-                tab (⚡ QUICK) in a moment.
+                Queued — your X, Threads, Facebook &amp; Instagram takes will
+                appear in the Suggestions tab (⚡ QUICK) in a moment.
               </Text>
             )}
           </Box>

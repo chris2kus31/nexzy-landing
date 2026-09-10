@@ -1482,6 +1482,8 @@ export async function quickAnnounceFromLead(
   context?: string,
   xSteer?: string,
   threadsSteer?: string,
+  fbSteer?: string,
+  igSteer?: string,
 ): Promise<{ ok: boolean; card: { id: string } | null }> {
   return handle(
     await fetch(`/api/newsroom/admin/leads/${id}/quick-announce`, {
@@ -1492,6 +1494,8 @@ export async function quickAnnounceFromLead(
         ...(context?.trim() ? { context: context.trim() } : {}),
         ...(xSteer ? { xSteer } : {}),
         ...(threadsSteer ? { threadsSteer } : {}),
+        ...(fbSteer ? { fbSteer } : {}),
+        ...(igSteer ? { igSteer } : {}),
       }),
     }),
   );
@@ -3609,14 +3613,17 @@ export async function generateFromLead(
 }
 
 /**
- * Quick Announcement — generate ONLY an X take + a Threads take from a lead,
- * each with its own steer. Independent of the long-form / per-platform paths.
+ * Quick Announcement — generate X + Threads + Facebook + Instagram takes from
+ * a lead, each with its own steer. Independent of the long-form / per-platform
+ * paths.
  */
 export async function generateQuickAnnounce(
   id: string,
   writer?: string,
   xSteer?: string,
   threadsSteer?: string,
+  fbSteer?: string,
+  igSteer?: string,
 ): Promise<{ queued: boolean }> {
   return handle(
     await fetch(`/api/newsroom/admin/content/${id}/quick-announce`, {
@@ -3626,6 +3633,8 @@ export async function generateQuickAnnounce(
         ...(writer ? { writer } : {}),
         ...(xSteer ? { xSteer } : {}),
         ...(threadsSteer ? { threadsSteer } : {}),
+        ...(fbSteer ? { fbSteer } : {}),
+        ...(igSteer ? { igSteer } : {}),
       }),
     }),
   );
