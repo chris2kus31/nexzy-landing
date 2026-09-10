@@ -266,12 +266,16 @@ export default function GameHubPanel() {
       const res = await refreshHubGameIgdb(game.id);
       if (res.ok) {
         await reloadDetail(game.id);
-        setMetaMsg(
-          `Re-pulled from IGDB — cover ${res.coverUpdated ? "updated" : "unchanged"}` +
-            (res.screenshotsAdded
-              ? `, ${res.screenshotsAdded} screenshots added.`
-              : "."),
-        );
+        const parts = [
+          `cover ${res.coverUpdated ? "updated" : "unchanged"}`,
+          res.screenshotsAdded ? `+${res.screenshotsAdded} screenshots` : null,
+          res.descriptionRefreshed ? "description refreshed" : null,
+          res.websiteFilled ? "website filled" : null,
+          res.trailerFilled ? "trailer filled" : null,
+        ].filter(Boolean);
+        setMetaMsg(`Re-pulled from IGDB — ${parts.join(", ")}.`);
+      } else if (res.reason === "already_running") {
+        setMetaMsg("A re-pull is already running for this game — hang on.");
       } else {
         setMetaMsg(res.message || `Re-pull failed: ${res.reason}`);
       }

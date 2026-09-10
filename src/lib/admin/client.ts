@@ -2487,6 +2487,9 @@ export async function refreshHubGameIgdb(id: string): Promise<{
   message?: string;
   coverUpdated?: boolean;
   screenshotsAdded?: number;
+  descriptionRefreshed?: boolean;
+  websiteFilled?: boolean;
+  trailerFilled?: boolean;
 }> {
   return handle(
     await fetch(`/api/newsroom/admin/games/hub/${id}/igdb-refresh`, {
