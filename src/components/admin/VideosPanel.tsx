@@ -165,10 +165,10 @@ export default function VideosPanel() {
     setAddingNewSeries(false);
     setSource(v.source === "external" ? "external" : "nexzy");
     setFeatured(!!v.featured);
+    // The form opens as a MODAL over the list — no scroll-to-top, so editing
+    // video #180 doesn't lose your place in the library.
     setShowForm(true);
     setMsg(null);
-    if (typeof window !== "undefined")
-      window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function save() {
@@ -337,179 +337,239 @@ export default function VideosPanel() {
       )}
 
       {showForm && (
+        // Modal overlay: the edit/create form floats over the list so the
+        // library keeps its scroll position. Click the backdrop (or Cancel)
+        // to close without losing your place.
         <Box
-          borderWidth="1px"
-          borderColor={editingId ? "nexzy.blue" : "whiteAlpha.300"}
-          borderRadius="md"
+          position="fixed"
+          inset="0"
+          zIndex={1500}
+          bg="blackAlpha.800"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
           p={4}
-          mb={6}
+          onClick={() => {
+            if (!saving) {
+              setShowForm(false);
+              resetForm();
+            }
+          }}
         >
-          <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={3}>
-            {editingId ? "Edit video" : "New video"}
-          </Text>
-          <VStack align="stretch" gap={2}>
-            <Input
-              {...inputStyle}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title *"
-            />
-            <Input
-              {...inputStyle}
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Caption / description (optional)"
-            />
-            <Box>
-              <Text fontSize="xs" color="gray.400" mb={1}>
-                Series (optional) — groups this video into a rail on the Videos
-                tab
-              </Text>
-              <select
-                value={addingNewSeries ? "__new__" : series}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "__new__") {
-                    setAddingNewSeries(true);
-                    setSeries("");
-                  } else {
-                    setAddingNewSeries(false);
-                    setSeries(val);
-                  }
-                }}
-                style={{
-                  width: "100%",
-                  background: "#1a2036",
-                  color: "#e6e8f0",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 8,
-                  padding: "10px 12px",
-                  fontSize: 14,
-                }}
-              >
-                <option value="">— No series —</option>
-                {seriesOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-                <option value="__new__">+ New series…</option>
-              </select>
-              {addingNewSeries ? (
-                <Input
-                  {...inputStyle}
-                  mt={2}
-                  autoFocus
-                  value={series}
-                  onChange={(e) => setSeries(e.target.value)}
-                  placeholder="New series name (e.g. Rewind, Boss Rush)"
-                />
-              ) : null}
-            </Box>
-            <Input
-              {...inputStyle}
-              value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
-              placeholder="YouTube URL (plays inline)"
-            />
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={2}>
-              <Input
-                {...inputStyle}
-                value={tiktok}
-                onChange={(e) => setTiktok(e.target.value)}
-                placeholder="TikTok URL (optional)"
-              />
-              <Input
-                {...inputStyle}
-                value={reels}
-                onChange={(e) => setReels(e.target.value)}
-                placeholder="Instagram Reels URL (optional)"
-              />
-            </SimpleGrid>
-            <Input
-              {...inputStyle}
-              value={facebook}
-              onChange={(e) => setFacebook(e.target.value)}
-              placeholder="Facebook Reels URL (optional)"
-            />
-            <Input
-              {...inputStyle}
-              value={thumbnailUrl}
-              onChange={(e) => setThumbnailUrl(e.target.value)}
-              placeholder="Thumbnail URL (optional — YouTube auto-derives)"
-            />
-            <Box>
-              <Text fontSize="xs" color="gray.400" mb={1}>
-                Hosted video (optional) — upload an MP4 to play natively in the
-                app feed
-              </Text>
-              <input
-                type="file"
-                accept="video/mp4,video/quicktime"
-                onChange={(e) => setHostedFile(e.target.files?.[0] ?? null)}
-                style={{ color: "#cbd5e1", fontSize: 13 }}
-              />
-              {hostedFile ? (
-                <Text fontSize="xs" color="green.300" mt={1}>
-                  {hostedFile.name} — uploads on save
-                </Text>
-              ) : null}
-            </Box>
-            <HStack gap={2} wrap="wrap">
-              <Text fontSize="xs" color="nexzy.gray.100">
-                Source:
+          <Box
+            borderWidth="1px"
+            borderColor={editingId ? "nexzy.blue" : "whiteAlpha.300"}
+            borderRadius="lg"
+            p={4}
+            bg="#131a33"
+            w="100%"
+            maxW="640px"
+            maxH="88vh"
+            overflowY="auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Flex align="center" justify="space-between" mb={3}>
+              <Text fontSize="sm" fontWeight="700" color="nexzy.white">
+                {editingId ? `Edit video` : "New video"}
               </Text>
               <Button
                 size="xs"
-                onClick={() => setSource("nexzy")}
-                {...(source === "nexzy" ? primaryBtn : outlineBtn)}
-              >
-                Nexzy-made
-              </Button>
-              <Button
-                size="xs"
-                onClick={() => setSource("external")}
-                {...(source === "external" ? primaryBtn : outlineBtn)}
-              >
-                External
-              </Button>
-              <Box w="1px" h="18px" bg="whiteAlpha.300" mx={1} />
-              <Button
-                size="xs"
-                onClick={() => setFeatured((f) => !f)}
-                {...(featured ? primaryBtn : outlineBtn)}
-              >
-                <FiStar /> {featured ? "Featured" : "Not featured"}
-              </Button>
-            </HStack>
-            <HStack gap={2}>
-              <Button
-                size="sm"
-                {...primaryBtn}
-                onClick={save}
-                loading={saving}
-                disabled={title.trim().length < 1}
-              >
-                {editingId ? "Save changes" : "Create video"}
-              </Button>
-              <Button
-                size="sm"
-                {...outlineBtn}
+                variant="ghost"
+                color="whiteAlpha.600"
+                _hover={{ bg: "whiteAlpha.100" }}
                 onClick={() => {
                   setShowForm(false);
                   resetForm();
                 }}
+                title="Close"
               >
-                Cancel
+                <FiX />
               </Button>
-            </HStack>
-            {!editingId && (
-              <Text fontSize="xs" color="whiteAlpha.500">
-                After creating, use &ldquo;+ game&rdquo; on the row to attach it
-                to games.
+            </Flex>
+            {editingId && (
+              <Text
+                fontSize="xs"
+                color="whiteAlpha.500"
+                mt={-2}
+                mb={3}
+                lineClamp={1}
+              >
+                {title || "(untitled)"}
               </Text>
             )}
-          </VStack>
+            {msg && (
+              <Text
+                fontSize="sm"
+                color={msg.endsWith("…") ? "blue.300" : "red.400"}
+                mb={3}
+              >
+                {msg}
+              </Text>
+            )}
+            <VStack align="stretch" gap={2}>
+              <Input
+                {...inputStyle}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title *"
+              />
+              <Input
+                {...inputStyle}
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Caption / description (optional)"
+              />
+              <Box>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  Series (optional) — groups this video into a rail on the
+                  Videos tab
+                </Text>
+                <select
+                  value={addingNewSeries ? "__new__" : series}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__new__") {
+                      setAddingNewSeries(true);
+                      setSeries("");
+                    } else {
+                      setAddingNewSeries(false);
+                      setSeries(val);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    background: "#1a2036",
+                    color: "#e6e8f0",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 8,
+                    padding: "10px 12px",
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="">— No series —</option>
+                  {seriesOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  <option value="__new__">+ New series…</option>
+                </select>
+                {addingNewSeries ? (
+                  <Input
+                    {...inputStyle}
+                    mt={2}
+                    autoFocus
+                    value={series}
+                    onChange={(e) => setSeries(e.target.value)}
+                    placeholder="New series name (e.g. Rewind, Boss Rush)"
+                  />
+                ) : null}
+              </Box>
+              <Input
+                {...inputStyle}
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="YouTube URL (plays inline)"
+              />
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={2}>
+                <Input
+                  {...inputStyle}
+                  value={tiktok}
+                  onChange={(e) => setTiktok(e.target.value)}
+                  placeholder="TikTok URL (optional)"
+                />
+                <Input
+                  {...inputStyle}
+                  value={reels}
+                  onChange={(e) => setReels(e.target.value)}
+                  placeholder="Instagram Reels URL (optional)"
+                />
+              </SimpleGrid>
+              <Input
+                {...inputStyle}
+                value={facebook}
+                onChange={(e) => setFacebook(e.target.value)}
+                placeholder="Facebook Reels URL (optional)"
+              />
+              <Input
+                {...inputStyle}
+                value={thumbnailUrl}
+                onChange={(e) => setThumbnailUrl(e.target.value)}
+                placeholder="Thumbnail URL (optional — YouTube auto-derives)"
+              />
+              <Box>
+                <Text fontSize="xs" color="gray.400" mb={1}>
+                  Hosted video (optional) — upload an MP4 to play natively in
+                  the app feed
+                </Text>
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime"
+                  onChange={(e) => setHostedFile(e.target.files?.[0] ?? null)}
+                  style={{ color: "#cbd5e1", fontSize: 13 }}
+                />
+                {hostedFile ? (
+                  <Text fontSize="xs" color="green.300" mt={1}>
+                    {hostedFile.name} — uploads on save
+                  </Text>
+                ) : null}
+              </Box>
+              <HStack gap={2} wrap="wrap">
+                <Text fontSize="xs" color="nexzy.gray.100">
+                  Source:
+                </Text>
+                <Button
+                  size="xs"
+                  onClick={() => setSource("nexzy")}
+                  {...(source === "nexzy" ? primaryBtn : outlineBtn)}
+                >
+                  Nexzy-made
+                </Button>
+                <Button
+                  size="xs"
+                  onClick={() => setSource("external")}
+                  {...(source === "external" ? primaryBtn : outlineBtn)}
+                >
+                  External
+                </Button>
+                <Box w="1px" h="18px" bg="whiteAlpha.300" mx={1} />
+                <Button
+                  size="xs"
+                  onClick={() => setFeatured((f) => !f)}
+                  {...(featured ? primaryBtn : outlineBtn)}
+                >
+                  <FiStar /> {featured ? "Featured" : "Not featured"}
+                </Button>
+              </HStack>
+              <HStack gap={2}>
+                <Button
+                  size="sm"
+                  {...primaryBtn}
+                  onClick={save}
+                  loading={saving}
+                  disabled={title.trim().length < 1}
+                >
+                  {editingId ? "Save changes" : "Create video"}
+                </Button>
+                <Button
+                  size="sm"
+                  {...outlineBtn}
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                >
+                  Cancel
+                </Button>
+              </HStack>
+              {!editingId && (
+                <Text fontSize="xs" color="whiteAlpha.500">
+                  After creating, use &ldquo;+ game&rdquo; on the row to attach
+                  it to games.
+                </Text>
+              )}
+            </VStack>
+          </Box>
         </Box>
       )}
 
