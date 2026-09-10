@@ -90,6 +90,8 @@ export default function VideosPanel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // Series filter: null = All, "" = Uncategorized (no series), else the name.
+  const [seriesFilter, setSeriesFilter] = useState<string | null>(null);
 
   // form
   const [showForm, setShowForm] = useState(false);
@@ -307,6 +309,27 @@ export default function VideosPanel() {
     }
   }
 
+  // Series filter chips: every series present in the loaded list (plus any
+  // known series options that happen to have no videos loaded), with counts,
+  // and an "Uncategorized" bucket for videos with no series.
+  const seriesCounts = new Map<string, number>();
+  let uncategorizedCount = 0;
+  for (const v of videos) {
+    const s = (v.series ?? "").trim();
+    if (s) seriesCounts.set(s, (seriesCounts.get(s) ?? 0) + 1);
+    else uncategorizedCount++;
+  }
+  for (const s of seriesOptions) {
+    if (s && !seriesCounts.has(s)) seriesCounts.set(s, 0);
+  }
+  const seriesChips = [...seriesCounts.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+  const filteredVideos =
+    seriesFilter === null
+      ? videos
+      : videos.filter((v) => ((v.series ?? "").trim() || "") === seriesFilter);
+
   return (
     <Box>
       <Flex align="center" justify="space-between" mb={1} gap={3} wrap="wrap">
@@ -323,6 +346,47 @@ export default function VideosPanel() {
         &ldquo;★ Featured&rdquo; at a time — it headlines the /videos hub &amp;
         home rail. Use the Game hub to manage a single game&rsquo;s videos.
       </Text>
+
+      {/* Series filter chips — narrow the library to one series (or the
+          uncategorized bucket) without losing the list. */}
+      {!loading && videos.length > 0 && (
+        <HStack gap={1.5} mb={3} wrap="wrap">
+          <Button
+            size="2xs"
+            onClick={() => setSeriesFilter(null)}
+            {...(seriesFilter === null ? primaryBtn : outlineBtn)}
+          >
+            All ({videos.length})
+          </Button>
+          {seriesChips.map(([name, count]) => (
+            <Button
+              key={name}
+              size="2xs"
+              onClick={() =>
+                setSeriesFilter(seriesFilter === name ? null : name)
+              }
+              {...(seriesFilter === name ? primaryBtn : outlineBtn)}
+            >
+              {name} ({count})
+            </Button>
+          ))}
+          {uncategorizedCount > 0 && (
+            <Button
+              size="2xs"
+              onClick={() => setSeriesFilter(seriesFilter === "" ? null : "")}
+              {...(seriesFilter === ""
+                ? { bg: "orange.500", color: "white", _hover: { opacity: 0.9 } }
+                : {
+                    ...outlineBtn,
+                    color: "orange.300",
+                    borderColor: "orange.700",
+                  })}
+            >
+              Uncategorized ({uncategorizedCount})
+            </Button>
+          )}
+        </HStack>
+      )}
 
       {msg && (
         <Text
@@ -579,9 +643,23 @@ export default function VideosPanel() {
         <Text fontSize="sm" color="whiteAlpha.500">
           No videos yet. Click &ldquo;New video&rdquo; to add one.
         </Text>
+      ) : filteredVideos.length === 0 ? (
+        <Text fontSize="sm" color="whiteAlpha.500">
+          {seriesFilter === ""
+            ? "No uncategorized videos — everything has a series. 🎉"
+            : `No videos in “${seriesFilter}”.`}{" "}
+          <Box
+            as="button"
+            color="nexzy.lightBlue"
+            textDecoration="underline"
+            onClick={() => setSeriesFilter(null)}
+          >
+            Show all
+          </Box>
+        </Text>
       ) : (
         <VStack align="stretch" gap={2}>
-          {videos.map((v) => {
+          {filteredVideos.map((v) => {
             const thumb = thumbFor(v);
             const short = isShort(v.youtubeUrl);
             return (
@@ -629,6 +707,28 @@ export default function VideosPanel() {
                       )}
                     </HStack>
                     <HStack gap={1} mt={1} wrap="wrap">
+                      {/* Series tag — click to filter the library to it */}
+                      {(v.series ?? "").trim() ? (
+                        <Badge
+                          colorPalette="purple"
+                          variant="solid"
+                          cursor="pointer"
+                          title="Filter by this series"
+                          onClick={() => setSeriesFilter(v.series!.trim())}
+                        >
+                          {v.series!.trim()}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          colorPalette="orange"
+                          variant="outline"
+                          cursor="pointer"
+                          title="No series — click to see all uncategorized"
+                          onClick={() => setSeriesFilter("")}
+                        >
+                          No series
+                        </Badge>
+                      )}
                       <Badge
                         colorPalette={v.source === "nexzy" ? "blue" : "gray"}
                         variant="subtle"
