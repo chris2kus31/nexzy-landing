@@ -65,9 +65,17 @@ function PostRow({
         gap={4}
       >
         <Box flex={1} minW={0}>
-          <Text color="nexzy.white" fontWeight="600" lineClamp={1}>
-            {post.title || "(untitled)"}
-          </Text>
+          <HStack gap={2} minW={0}>
+            {/* Editor-pinned front-page hero — only one article at a time */}
+            {post.featured && (
+              <Badge colorPalette="yellow" variant="solid" flexShrink={0}>
+                ★ Hero
+              </Badge>
+            )}
+            <Text color="nexzy.white" fontWeight="600" lineClamp={1}>
+              {post.title || "(untitled)"}
+            </Text>
+          </HStack>
           <HStack gap={3} mt={1}>
             <Text color="nexzy.gray.100" fontSize="xs">
               {post.type === "walkthrough"
@@ -163,6 +171,11 @@ function WalkthroughGroup({
       <Flex align="center" justify="space-between" p={4} gap={4}>
         <Box flex={1} minW={0}>
           <HStack gap={2} mb={1}>
+            {parent.featured && (
+              <Badge colorPalette="yellow" variant="solid">
+                ★ Hero
+              </Badge>
+            )}
             <Badge colorPalette="purple" variant="subtle">
               Walkthrough
             </Badge>
