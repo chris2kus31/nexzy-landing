@@ -2391,6 +2391,7 @@ export interface HubGameRow {
   families: string[];
   hasDescription: boolean;
   hasCover: boolean;
+  hasTrailer: boolean;
   screenshotCount: number;
   videoCount: number;
   contentCount: number;

@@ -24,6 +24,7 @@ import {
   FiArrowLeft,
   FiRefreshCw,
   FiUpload,
+  FiYoutube,
 } from "react-icons/fi";
 import {
   getGameVideos,
@@ -102,7 +103,14 @@ export default function GameHubPanel() {
   const [rows, setRows] = useState<HubGameRow[] | null>(null);
   const [total, setTotal] = useState(0);
   const [listLoading, setListLoading] = useState(true);
+  const [reloadTick, setReloadTick] = useState(0);
   const requestSeq = useRef(0);
+
+  // Row quick actions (browse list)
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [trailerFor, setTrailerFor] = useState<string | null>(null);
+  const [trailerUrl, setTrailerUrl] = useState("");
+  const [trailerSaving, setTrailerSaving] = useState(false);
 
   // ── Selected game (workbench) ──
   const [game, setGame] = useState<HubGameDetail | null>(null);
@@ -175,7 +183,56 @@ export default function GameHubPanel() {
       .finally(() => {
         if (seq === requestSeq.current) setListLoading(false);
       });
-  }, [debouncedQ, sort, win, family, needs, page]);
+  }, [debouncedQ, sort, win, family, needs, page, reloadTick]);
+
+  // ── Row quick actions ──
+  async function repullRow(g: HubGameRow) {
+    if (rowBusy) return;
+    setRowBusy(g.id);
+    setMsg(null);
+    try {
+      const res = await refreshHubGameIgdb(g.id);
+      if (res.ok) {
+        const parts = [
+          `cover ${res.coverUpdated ? "updated" : "unchanged"}`,
+          res.screenshotsAdded ? `+${res.screenshotsAdded} screenshots` : null,
+          res.descriptionRefreshed ? "description refreshed" : null,
+          res.trailerFilled ? "trailer filled" : null,
+        ].filter(Boolean);
+        setMsg(`Re-pulled “${g.name}” — ${parts.join(", ")}.`);
+        setReloadTick((t) => t + 1); // refresh the page so the new cover shows
+      } else if (res.reason === "already_running") {
+        setMsg(`A re-pull is already running for “${g.name}”.`);
+      } else {
+        setMsg(res.message || `Re-pull failed: ${res.reason}`);
+      }
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  async function saveRowTrailer(g: HubGameRow) {
+    if (!trailerUrl.trim()) return;
+    setTrailerSaving(true);
+    setMsg(null);
+    try {
+      await updateHubGame(g.id, { youtube: trailerUrl.trim() });
+      setRows(
+        (prev) =>
+          prev?.map((r) => (r.id === g.id ? { ...r, hasTrailer: true } : r)) ??
+          prev,
+      );
+      setMsg(`Trailer added to “${g.name}”.`);
+      setTrailerFor(null);
+      setTrailerUrl("");
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setTrailerSaving(false);
+    }
+  }
 
   // ── Workbench wiring ──
   function seedEditFields(d: HubGameDetail) {
@@ -387,7 +444,15 @@ export default function GameHubPanel() {
       </Text>
 
       {msg && (
-        <Text fontSize="sm" color="red.400" mb={3}>
+        <Text
+          fontSize="sm"
+          color={
+            /^(Re-pulled|Trailer added|A re-pull)/.test(msg)
+              ? "green.300"
+              : "red.400"
+          }
+          mb={3}
+        >
           {msg}
         </Text>
       )}
@@ -536,107 +601,180 @@ export default function GameHubPanel() {
                 mb={4}
               >
                 {rows.map((g) => (
-                  <Flex
+                  <Box
                     key={g.id}
-                    align="center"
-                    gap={3}
-                    p={2}
                     borderWidth="1px"
                     borderColor="whiteAlpha.200"
                     borderRadius="md"
-                    cursor="pointer"
-                    _hover={{ bg: "whiteAlpha.100" }}
-                    onClick={() => pick(g)}
                   >
-                    {g.backgroundImage ? (
-                      <Image
-                        src={g.backgroundImage}
-                        alt=""
-                        w="42px"
-                        h="56px"
-                        borderRadius="sm"
-                        objectFit="cover"
-                        flexShrink={0}
-                        loading="lazy"
-                      />
-                    ) : (
+                    <Flex
+                      align="center"
+                      gap={3}
+                      p={2}
+                      cursor="pointer"
+                      _hover={{ bg: "whiteAlpha.100" }}
+                      onClick={() => pick(g)}
+                    >
+                      {g.backgroundImage ? (
+                        <Image
+                          src={g.backgroundImage}
+                          alt=""
+                          w="42px"
+                          h="56px"
+                          borderRadius="sm"
+                          objectFit="cover"
+                          flexShrink={0}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <Flex
+                          w="42px"
+                          h="56px"
+                          borderRadius="sm"
+                          bg="whiteAlpha.100"
+                          align="center"
+                          justify="center"
+                          flexShrink={0}
+                        >
+                          <Text fontSize="10px" color="whiteAlpha.500">
+                            n/a
+                          </Text>
+                        </Flex>
+                      )}
+                      <Box flex="1" minW="0">
+                        <HStack gap={2}>
+                          <Text
+                            fontSize="sm"
+                            fontWeight="600"
+                            color="nexzy.white"
+                            lineClamp={1}
+                          >
+                            {g.name}
+                          </Text>
+                        </HStack>
+                        <HStack gap={2} mt={0.5} wrap="wrap">
+                          <Text fontSize="xs" color="whiteAlpha.600">
+                            {g.released ?? "TBD"}
+                          </Text>
+                          {g.families.map((f) => (
+                            <Badge
+                              key={f}
+                              colorPalette="blue"
+                              variant="subtle"
+                              fontSize="10px"
+                            >
+                              {f}
+                            </Badge>
+                          ))}
+                          <Text fontSize="11px" color="whiteAlpha.500">
+                            {g.screenshotCount} shots · {g.videoCount} vids ·{" "}
+                            {g.contentCount} content
+                          </Text>
+                        </HStack>
+                        {/* Health: only what's MISSING screams */}
+                        <HStack gap={1} mt={1} wrap="wrap">
+                          {!g.hasDescription && (
+                            <Badge colorPalette="orange" variant="subtle">
+                              no description
+                            </Badge>
+                          )}
+                          {!g.hasCover && (
+                            <Badge colorPalette="red" variant="subtle">
+                              no cover
+                            </Badge>
+                          )}
+                          {g.screenshotCount === 0 && (
+                            <Badge colorPalette="orange" variant="subtle">
+                              no screenshots
+                            </Badge>
+                          )}
+                          {g.videoCount === 0 && (
+                            <Badge colorPalette="yellow" variant="subtle">
+                              no videos
+                            </Badge>
+                          )}
+                          {g.contentCount === 0 && (
+                            <Badge colorPalette="purple" variant="subtle">
+                              no content
+                            </Badge>
+                          )}
+                          {!g.hasTrailer && (
+                            <Badge colorPalette="cyan" variant="subtle">
+                              no trailer
+                            </Badge>
+                          )}
+                        </HStack>
+                      </Box>
+                      <HStack gap={1} flexShrink={0}>
+                        <Button
+                          size="xs"
+                          {...outlineBtn}
+                          loading={rowBusy === g.id}
+                          disabled={g.igdbId == null || !!rowBusy}
+                          title={
+                            g.igdbId == null
+                              ? "No IGDB id on this game"
+                              : "Re-pull cover + metadata from IGDB"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            repullRow(g);
+                          }}
+                        >
+                          <FiRefreshCw />
+                        </Button>
+                        <Button
+                          size="xs"
+                          {...(trailerFor === g.id ? primaryBtn : outlineBtn)}
+                          title={
+                            g.hasTrailer
+                              ? "Replace the trailer (YouTube URL)"
+                              : "Add a trailer (YouTube URL)"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTrailerFor(trailerFor === g.id ? null : g.id);
+                            setTrailerUrl("");
+                          }}
+                        >
+                          <FiYoutube />
+                        </Button>
+                        <Button size="xs" {...outlineBtn}>
+                          Open
+                        </Button>
+                      </HStack>
+                    </Flex>
+                    {/* Inline trailer quick-add */}
+                    {trailerFor === g.id && (
                       <Flex
-                        w="42px"
-                        h="56px"
-                        borderRadius="sm"
-                        bg="whiteAlpha.100"
-                        align="center"
-                        justify="center"
-                        flexShrink={0}
+                        gap={2}
+                        p={2}
+                        pt={0}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Text fontSize="10px" color="whiteAlpha.500">
-                          n/a
-                        </Text>
+                        <Input
+                          {...inputStyle}
+                          autoFocus
+                          value={trailerUrl}
+                          onChange={(e) => setTrailerUrl(e.target.value)}
+                          placeholder="YouTube trailer URL or 11-char video id"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveRowTrailer(g);
+                            if (e.key === "Escape") setTrailerFor(null);
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          {...primaryBtn}
+                          onClick={() => saveRowTrailer(g)}
+                          loading={trailerSaving}
+                          disabled={!trailerUrl.trim()}
+                        >
+                          Save
+                        </Button>
                       </Flex>
                     )}
-                    <Box flex="1" minW="0">
-                      <HStack gap={2}>
-                        <Text
-                          fontSize="sm"
-                          fontWeight="600"
-                          color="nexzy.white"
-                          lineClamp={1}
-                        >
-                          {g.name}
-                        </Text>
-                      </HStack>
-                      <HStack gap={2} mt={0.5} wrap="wrap">
-                        <Text fontSize="xs" color="whiteAlpha.600">
-                          {g.released ?? "TBD"}
-                        </Text>
-                        {g.families.map((f) => (
-                          <Badge
-                            key={f}
-                            colorPalette="blue"
-                            variant="subtle"
-                            fontSize="10px"
-                          >
-                            {f}
-                          </Badge>
-                        ))}
-                        <Text fontSize="11px" color="whiteAlpha.500">
-                          {g.screenshotCount} shots · {g.videoCount} vids ·{" "}
-                          {g.contentCount} content
-                        </Text>
-                      </HStack>
-                      {/* Health: only what's MISSING screams */}
-                      <HStack gap={1} mt={1} wrap="wrap">
-                        {!g.hasDescription && (
-                          <Badge colorPalette="orange" variant="subtle">
-                            no description
-                          </Badge>
-                        )}
-                        {!g.hasCover && (
-                          <Badge colorPalette="red" variant="subtle">
-                            no cover
-                          </Badge>
-                        )}
-                        {g.screenshotCount === 0 && (
-                          <Badge colorPalette="orange" variant="subtle">
-                            no screenshots
-                          </Badge>
-                        )}
-                        {g.videoCount === 0 && (
-                          <Badge colorPalette="yellow" variant="subtle">
-                            no videos
-                          </Badge>
-                        )}
-                        {g.contentCount === 0 && (
-                          <Badge colorPalette="purple" variant="subtle">
-                            no content
-                          </Badge>
-                        )}
-                      </HStack>
-                    </Box>
-                    <Button size="xs" {...outlineBtn} flexShrink={0}>
-                      Open
-                    </Button>
-                  </Flex>
+                  </Box>
                 ))}
               </VStack>
               {pageCount > 1 && (
