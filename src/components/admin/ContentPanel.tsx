@@ -26,6 +26,8 @@ import {
   updateContentScript,
   uploadContentVideo,
   uploadContentImage,
+  clearContentImage,
+  type PublishImageSlot,
   publishContentCard,
   getPublishConfig,
   refreshContentInsights,
@@ -579,14 +581,22 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const p = s.payload?.platforms;
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  // Optional publish image — attaches to the X + Threads posts (JPEG/PNG ≤5MB).
-  // Rehydrates from the card (the upload persists it), so an image attached in
-  // an earlier session survives reopening the panel instead of silently
-  // dropping off the next publish.
-  const [imageUrl, setImageUrl] = useState<string | null>(
-    s.payload?.publishImageUrl ?? null,
+  // Publish images — a GLOBAL image plus optional per-platform overrides, so
+  // X+Threads can ship one image, Facebook another, Instagram a third
+  // (publish-in-waves). Rehydrates from the card (uploads persist per slot);
+  // older cards fall back to their single publishImageUrl as the global.
+  const [images, setImages] = useState<
+    Partial<Record<PublishImageSlot, string>>
+  >(() => {
+    const map = s.payload?.publishImages;
+    if (map && Object.keys(map).length) return map;
+    return s.payload?.publishImageUrl
+      ? { global: s.payload.publishImageUrl }
+      : {};
+  });
+  const [uploadingImg, setUploadingImg] = useState<PublishImageSlot | null>(
+    null,
   );
-  const [uploadingImg, setUploadingImg] = useState(false);
   const [imageErr, setImageErr] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [results, setResults] = useState<PublishResult[] | null>(null);
@@ -674,7 +684,13 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     setThreadsPinned(p?.threads?.pinnedComment ?? "");
     setXPost(p?.x?.post ?? "");
     setXReply(p?.x?.firstReply ?? "");
-    setImageUrl(s.payload?.publishImageUrl ?? null);
+    setImages(
+      s.payload?.publishImages && Object.keys(s.payload.publishImages).length
+        ? s.payload.publishImages
+        : s.payload?.publishImageUrl
+          ? { global: s.payload.publishImageUrl }
+          : {},
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [srcKey]);
 
@@ -690,16 +706,29 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     }
   };
 
-  const uploadImg = async (file: File) => {
-    setUploadingImg(true);
+  const uploadImg = async (file: File, slot: PublishImageSlot) => {
+    setUploadingImg(slot);
     setImageErr(null);
     try {
-      const r = await uploadContentImage(s.id, file);
-      setImageUrl(r.url);
+      const r = await uploadContentImage(s.id, file, slot);
+      setImages((m) => ({ ...m, [slot]: r.url }));
     } catch (e) {
       setImageErr((e as Error)?.message || "Image upload failed.");
     } finally {
-      setUploadingImg(false);
+      setUploadingImg(null);
+    }
+  };
+
+  const clearImg = async (slot: PublishImageSlot) => {
+    setImages((m) => {
+      const next = { ...m };
+      delete next[slot];
+      return next;
+    });
+    try {
+      await clearContentImage(s.id, slot);
+    } catch {
+      /* local state already cleared; persistence is best-effort */
     }
   };
 
@@ -721,7 +750,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         x: xOn,
         xPost,
         xReply,
-        imageUrl: imageUrl ?? undefined,
+        imageUrl: images.global,
+        xImageUrl: images.x,
+        threadsImageUrl: images.threads,
+        fbImageUrl: images.facebook,
+        igImageUrl: images.instagram,
       });
       setResults(r.results);
     } catch {
@@ -749,7 +782,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       "Upload the finished video — Facebook and Instagram need it.",
     );
   }
-  if (isQuickCard && ig && !imageUrl) {
+  if (isQuickCard && ig && !(images.instagram ?? images.global)) {
     publishBlockers.push(
       "Instagram needs an image for a quick announcement — upload one below.",
     );
@@ -864,23 +897,23 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             borderColor="whiteAlpha.300"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadImg(f);
+              if (f) uploadImg(f, "global");
             }}
           />
           <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
-            {uploadingImg
+            {uploadingImg === "global"
               ? "Uploading…"
               : imageErr
                 ? `✗ ${imageErr}`
-                : imageUrl
-                  ? "✓ Image attached — it will post with X and Threads."
-                  : "JPEG/PNG up to 5MB. Leave empty for a text-only post."}
+                : images.global
+                  ? "✓ Global image attached — used by every platform unless overridden below."
+                  : "JPEG/PNG up to 5MB. This is the GLOBAL image (all platforms); override per platform below."}
           </Text>
-          {imageUrl && !uploadingImg && (
+          {images.global && uploadingImg !== "global" && (
             <HStack gap={2} mt={1} align="center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={imageUrl}
+                src={images.global}
                 alt="publish preview"
                 style={{
                   height: 56,
@@ -893,12 +926,87 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 variant="outline"
                 color="nexzy.gray.100"
                 borderColor="whiteAlpha.300"
-                onClick={() => setImageUrl(null)}
+                onClick={() => clearImg("global")}
               >
                 ✕ Remove image
               </Button>
             </HStack>
           )}
+
+          {/* Per-platform overrides — a slot's image beats the global for
+              that platform only, so each publish wave can carry its own art. */}
+          <Text
+            color="whiteAlpha.600"
+            fontSize="10px"
+            fontWeight="700"
+            mt={2}
+            mb={0.5}
+          >
+            PER-PLATFORM IMAGE OVERRIDES (OPTIONAL)
+          </Text>
+          {(
+            [
+              ["x", "X", xOn],
+              ["threads", "Threads", th],
+              ["facebook", "Facebook", fb],
+              ["instagram", "Instagram", ig],
+            ] as [PublishImageSlot, string, boolean][]
+          )
+            .filter(([, , on]) => on)
+            .map(([slot, label]) => (
+              <HStack key={slot} gap={2} mt={1} align="center">
+                <Text
+                  fontSize="xs"
+                  color="nexzy.gray.100"
+                  minW="72px"
+                  fontWeight="600"
+                >
+                  {label}
+                </Text>
+                {images[slot] ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={images[slot]}
+                      alt={`${label} image`}
+                      style={{
+                        height: 36,
+                        borderRadius: 4,
+                        border: "1px solid rgba(255,255,255,0.25)",
+                      }}
+                    />
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="nexzy.gray.100"
+                      borderColor="whiteAlpha.300"
+                      onClick={() => clearImg(slot)}
+                      title="Revert to the global image"
+                    >
+                      ✕ Use global
+                    </Button>
+                  </>
+                ) : uploadingImg === slot ? (
+                  <Text fontSize="xs" color="nexzy.gray.100">
+                    Uploading…
+                  </Text>
+                ) : (
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    size="xs"
+                    p={0.5}
+                    maxW="260px"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadImg(f, slot);
+                    }}
+                  />
+                )}
+              </HStack>
+            ))}
         </Box>
       )}
 
@@ -1266,11 +1374,15 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                   fontWeight="700"
                   mb={1}
                 >
-                  ▸ Threads — {imageUrl ? "image post" : "text post (no video)"}
+                  ▸ Threads —{" "}
+                  {(images.threads ?? images.global)
+                    ? "image post"
+                    : "text post (no video)"}
                 </Text>
-                {imageUrl && (
+                {(images.threads ?? images.global) && (
                   <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
                     🖼 Image attached
+                    {images.threads ? " (Threads-specific)" : ""}
                   </Text>
                 )}
                 <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
@@ -1320,9 +1432,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 >
                   ▸ X{cfg?.x ? "" : " (disabled — needs API keys)"}
                 </Text>
-                {imageUrl && (
+                {(images.x ?? images.global) && (
                   <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-                    🖼 Image attached
+                    🖼 Image attached{images.x ? " (X-specific)" : ""}
                     {(p?.x?.poll?.options?.length ?? 0) > 0
                       ? " — the poll will be DROPPED (X can't combine them)"
                       : ""}

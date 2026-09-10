@@ -603,6 +603,10 @@ export interface ContentSuggestion {
     // Last publish image uploaded for this card (persisted so the attach
     // survives reopening the panel; X + Threads post with it).
     publishImageUrl?: string;
+    // Per-slot publish images: global + optional per-platform overrides.
+    publishImages?: Partial<
+      Record<"global" | "x" | "threads" | "facebook" | "instagram", string>
+    >;
     // Game chip — links the card (and the video produced from it) to a game.
     // Auto-resolved on the fast routes; editable on the card. null = cleared.
     // (Named gameLink because payload.game is already the guide-lead's game NAME.)
@@ -869,17 +873,41 @@ export async function uploadContentVideo(
   );
 }
 
-/** Upload a publish IMAGE for a card (JPEG/PNG, ≤5MB) — attaches to X + Threads. */
+/** One publish-image slot: 'global' = every platform; a platform slot
+ *  overrides the global for that platform only. */
+export type PublishImageSlot =
+  | "global"
+  | "x"
+  | "threads"
+  | "facebook"
+  | "instagram";
+
+/** Upload a publish IMAGE for a card (JPEG/PNG, ≤5MB). Default slot = global. */
 export async function uploadContentImage(
   id: string,
   file: File,
+  slot: PublishImageSlot = "global",
 ): Promise<{ url: string }> {
   const fd = new FormData();
   fd.append("image", file);
   return handle(
-    await fetch(`/api/newsroom/admin/content/${id}/upload-image`, {
+    await fetch(`/api/newsroom/admin/content/${id}/upload-image?slot=${slot}`, {
       method: "POST",
       body: fd, // no Content-Type — browser sets the multipart boundary
+    }),
+  );
+}
+
+/** Clear one publish-image slot (platform reverts to the global image). */
+export async function clearContentImage(
+  id: string,
+  slot: PublishImageSlot,
+): Promise<{ ok: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/clear-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slot }),
     }),
   );
 }
@@ -911,6 +939,10 @@ export async function publishContentCard(
     xPost?: string;
     xReply?: string;
     imageUrl?: string;
+    xImageUrl?: string;
+    threadsImageUrl?: string;
+    fbImageUrl?: string;
+    igImageUrl?: string;
   },
 ): Promise<{ results: PublishResult[] }> {
   return handle(
