@@ -33,6 +33,7 @@ import LeadsBoard from "@/components/admin/LeadsBoard";
 import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
+import PostReviewsPanel from "@/components/admin/PostReviewsPanel";
 import CommentsModerationPanel from "@/components/admin/CommentsModerationPanel";
 import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
@@ -182,7 +183,7 @@ function AdminContent() {
     return () => window.removeEventListener("popstate", readTab);
   }, []);
   const [forumView, setForumView] = useState<
-    "seeds" | "moderation" | "comments"
+    "seeds" | "moderation" | "comments" | "posts"
   >("seeds");
   // Owner = the account allowed to trigger token-spending actions (scans,
   // pipeline runs, content generation). A second admin (editor) sees a
@@ -466,11 +467,26 @@ function AdminContent() {
             >
               Reported comments
             </Button>
+            <Button
+              size="sm"
+              variant={forumView === "posts" ? "solid" : "outline"}
+              bg={forumView === "posts" ? "nexzy.blue" : "transparent"}
+              color={forumView === "posts" ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              _hover={{
+                bg: forumView === "posts" ? "nexzy.blue" : "whiteAlpha.100",
+              }}
+              onClick={() => setForumView("posts")}
+            >
+              Posts to review
+            </Button>
           </HStack>
           {forumView === "seeds" ? (
             <ForumSeedsPanel />
           ) : forumView === "comments" ? (
             <CommentsModerationPanel />
+          ) : forumView === "posts" ? (
+            <PostReviewsPanel />
           ) : (
             <ForumModerationPanel />
           )}

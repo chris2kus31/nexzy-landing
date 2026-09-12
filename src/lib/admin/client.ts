@@ -2029,6 +2029,49 @@ export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
   );
 }
 
+// ---- Post reviews (1H-a: SOFT topicality queue — off-topic feed posts) ----
+
+export interface PostReview {
+  id: string;
+  postId: string;
+  reason: string;
+  score: number | null;
+  createdAt: string;
+  post: {
+    content: string | null;
+    type: string;
+    gameId: string | null;
+    offTopic: boolean;
+    flaggedForModeration: boolean;
+    createdAt: string;
+  } | null;
+  author: { id: string; username: string } | null;
+}
+
+export async function getPostReviews(): Promise<PostReview[]> {
+  return handle(await fetch("/api/newsroom/admin/posts/reviews"));
+}
+
+export async function removePostReview(id: string): Promise<{ ok: true }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/reviews/${id}/remove`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }),
+  );
+}
+
+export async function dismissPostReview(id: string): Promise<{ ok: true }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/reviews/${id}/dismiss`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }),
+  );
+}
+
 // ---- Comment moderation (reported / auto-hidden reader comments) ----
 
 export interface ReportedComment {
