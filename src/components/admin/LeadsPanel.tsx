@@ -870,6 +870,24 @@ function LeadCard({
         >
           {summaryChip}
         </Text>
+        {/* Quick skip — right on the header so you never have to expand a
+            lead just to dismiss it. Buries only this lead (no topic muzzle). */}
+        <Button
+          size="xs"
+          variant="outline"
+          color="nexzy.gray.100"
+          borderColor="whiteAlpha.300"
+          _hover={{ bg: "whiteAlpha.100", color: "red.300" }}
+          flexShrink={0}
+          loading={busy === "skip"}
+          title="Skip this lead"
+          onClick={(e) => {
+            e.stopPropagation();
+            void skip();
+          }}
+        >
+          ✕ Skip
+        </Button>
       </Flex>
 
       {open && (
