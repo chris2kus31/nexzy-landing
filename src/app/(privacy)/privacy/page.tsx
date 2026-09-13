@@ -36,7 +36,7 @@ export default function PrivacyPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: January 2025
+              Last updated: September 2026
             </Text>
           </HStack>
         </Container>
@@ -78,6 +78,18 @@ export default function PrivacyPage() {
                   <strong>Device Information:</strong> Device type, operating
                   system, and app version for technical support and
                   optimization.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Age &amp; Demographic Information:</strong> Your date
+                  of birth, which we collect at sign-up to confirm you meet our
+                  16+ age requirement and to keep age-appropriate content
+                  settings. With your consent, we also collect optional profile
+                  details such as gender and an approximate location (country
+                  and, where available, city) derived from your IP address —
+                  never precise GPS. We use these to understand our community and
+                  to improve and, in future, support relevant advertising. You
+                  can decline the optional details and still use Nexzy, and you
+                  can update or remove them at any time in the app.
                 </Text>
               </Stack>
             </Box>
@@ -197,13 +209,15 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                7. Children's Privacy
+                7. Age Requirement &amp; Children's Privacy
               </Heading>
               <Text color="gray.700">
-                Our service is not directed to children under 13. We do not
-                knowingly collect personal information from children under 13.
-                If you believe we have collected information from a child under
-                13, please contact us immediately.
+                Nexzy is rated 16+ and is intended for users aged 16 and older.
+                We ask for your date of birth at sign-up to confirm you meet this
+                requirement, and we do not permit accounts for anyone under 16.
+                We do not knowingly collect personal information from anyone
+                under 16; if you believe someone under 16 has provided us
+                information, please contact us and we will remove it.
               </Text>
             </Box>
 

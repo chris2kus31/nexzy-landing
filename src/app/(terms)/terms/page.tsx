@@ -35,7 +35,7 @@ export default function TermsPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: April 2026
+              Last updated: September 2026
             </Text>
           </HStack>
         </Container>
@@ -62,7 +62,9 @@ export default function TermsPage() {
               <Text color="gray.700">
                 By downloading, installing, or using Nexzy, you agree to be
                 bound by these Terms. If you do not agree to these Terms, do not
-                use our service. You must be at least 13 years old to use Nexzy.
+                use our service. Nexzy is rated 16+ and you must be at least 16
+                years old to create an account or use Nexzy. We ask for your date
+                of birth at sign-up to confirm this.
               </Text>
             </Box>
 
