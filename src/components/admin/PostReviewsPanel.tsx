@@ -93,10 +93,12 @@ export default function PostReviewsPanel() {
         )}
       </HStack>
       <Text fontSize="sm" color="nexzy.gray.100" mb={5}>
-        Feed posts our topicality check judged likely off-topic (not gaming).
-        They&apos;re still visible to the author&apos;s followers but hidden
-        from discovery. Remove takes the post down and warns the author; Dismiss
-        clears the flag (false positive) so it rejoins discovery.
+        Feed posts that need a look: ones the topicality check judged likely
+        off-topic, and ones a user <b>reported</b> (image posts included — the
+        screenshot shows here). They&apos;re still visible to the author&apos;s
+        followers but hidden from discovery. Remove takes the post down and
+        warns the author; Dismiss clears the flag (false positive) so it rejoins
+        discovery.
       </Text>
 
       {error && (
@@ -137,12 +139,24 @@ export default function PostReviewsPanel() {
                 p={4}
               >
                 <HStack gap={2} mb={2} wrap="wrap">
-                  <Badge colorPalette="orange" variant="subtle">
-                    Off-topic
-                  </Badge>
+                  {r.reason === "reported" ? (
+                    <Badge colorPalette="red" variant="subtle">
+                      Reported
+                      {r.post?.reportCount ? ` ×${r.post.reportCount}` : ""}
+                    </Badge>
+                  ) : (
+                    <Badge colorPalette="orange" variant="subtle">
+                      Off-topic
+                    </Badge>
+                  )}
                   {confidence && (
                     <Badge colorPalette="gray" variant="subtle">
                       {confidence} confidence
+                    </Badge>
+                  )}
+                  {r.post?.imageUrl && (
+                    <Badge colorPalette="purple" variant="subtle">
+                      Has image
                     </Badge>
                   )}
                   {r.post?.flaggedForModeration && (
@@ -168,6 +182,24 @@ export default function PostReviewsPanel() {
                     {r.post?.content?.trim() || "(no text)"}
                   </Text>
                 </Box>
+
+                {/* 1D-c — the attached screenshot, so the reviewer sees exactly
+                    what was posted before deciding remove vs dismiss. */}
+                {r.post?.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.post.imageUrl}
+                    alt="post attachment"
+                    style={{
+                      maxHeight: 240,
+                      maxWidth: "100%",
+                      borderRadius: 8,
+                      marginBottom: 12,
+                      objectFit: "contain",
+                      background: "rgba(255,255,255,0.04)",
+                    }}
+                  />
+                )}
 
                 <Flex justify="flex-end">
                   <HStack gap={2}>

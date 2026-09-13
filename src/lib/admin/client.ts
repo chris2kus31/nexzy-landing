@@ -2066,8 +2066,10 @@ export interface PostReview {
     content: string | null;
     type: string;
     gameId: string | null;
+    imageUrl: string | null;
     offTopic: boolean;
     flaggedForModeration: boolean;
+    reportCount: number;
     createdAt: string;
   } | null;
   author: { id: string; username: string } | null;
