@@ -13,18 +13,29 @@ import {
   SimpleGrid,
   Badge,
 } from "@chakra-ui/react";
-import { FiBarChart2, FiRefreshCw } from "react-icons/fi";
+import { FiBarChart2, FiRefreshCw, FiHeart, FiEye } from "react-icons/fi";
 import {
   getFeedImpressions,
   type FeedImpressionsReport,
 } from "@/lib/admin/client";
 
 /**
- * Feed insights (1H-b) — admin-only monitoring for the impression counter. There
- * is NO user-facing display yet (Chris's call: track now, display later); this
- * is where he watches the numbers + volume the aggregate table is absorbing, and
- * can spot if impressions ever misbehave (kill-switch: FEED_IMPRESSIONS_ENABLED).
+ * Feed insights (1H-b) — admin-only analytics for the impression counter. Not a
+ * raw dump: headline totals, the type MIX people are actually seeing, and a
+ * bounded top-10 where each item shows its title + hearts + engagement rate so
+ * the number means something ("seen a lot, no hearts" is the signal to act on).
  */
+
+// Friendly labels + colors per feed content type.
+const TYPE_META: Record<string, { label: string; color: string }> = {
+  community_post: { label: "Posts", color: "teal" },
+  blog_post: { label: "Articles", color: "blue" },
+  video: { label: "Videos", color: "purple" },
+  announcement: { label: "Announcements", color: "orange" },
+};
+const meta = (t: string) =>
+  TYPE_META[t] ?? { label: t.replace(/_/g, " "), color: "gray" };
+
 export default function FeedInsightsPanel() {
   const [data, setData] = useState<FeedImpressionsReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +44,7 @@ export default function FeedInsightsPanel() {
   const load = () => {
     setLoading(true);
     setError("");
-    getFeedImpressions(100)
+    getFeedImpressions(10)
       .then(setData)
       .catch((e) => setError(e?.message || "Failed to load."))
       .finally(() => setLoading(false));
@@ -44,6 +55,8 @@ export default function FeedInsightsPanel() {
   }, []);
 
   const nf = (n: number) => n.toLocaleString();
+  const engagement = (hearts: number, impressions: number) =>
+    impressions > 0 ? `${Math.round((hearts / impressions) * 100)}%` : "—";
 
   return (
     <Box>
@@ -67,10 +80,10 @@ export default function FeedInsightsPanel() {
         </Button>
       </HStack>
       <Text fontSize="sm" color="nexzy.gray.100" mb={5}>
-        First-party feed impressions (how many times items were shown in the
-        feed). Admin-only — not shown to users yet. An impression = shown on
-        screen; the same item seen again in a later session counts again
-        (X-style total impressions, not unique reach).
+        How much of the feed people actually see, and which items land. An
+        impression = shown on screen (re-counts across sessions, not unique
+        reach). Read it against hearts: high views + low hearts = seen but not
+        landing.
       </Text>
 
       {error && (
@@ -83,77 +96,113 @@ export default function FeedInsightsPanel() {
         <Flex justify="center" py={12}>
           <Spinner color="nexzy.lightBlue" />
         </Flex>
-      ) : !data ? null : (
-        <VStack align="stretch" gap={5}>
-          <SimpleGrid columns={{ base: 2 }} gap={4}>
-            <Box
-              bg="whiteAlpha.50"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              borderRadius="lg"
-              p={4}
-            >
-              <Text fontSize="xs" color="nexzy.gray.100" mb={1}>
-                Total impressions
-              </Text>
-              <Text
-                fontSize="2xl"
-                color="nexzy.white"
-                fontFamily="title"
-                fontWeight="700"
+      ) : !data ? null : data.total === 0 ? (
+        <Box
+          border="1px dashed"
+          borderColor="whiteAlpha.300"
+          borderRadius="xl"
+          p={10}
+          textAlign="center"
+        >
+          <Text color="nexzy.gray.100">
+            No impressions yet. They accrue as users scroll the feed (once the
+            1.1.10 app is live).
+          </Text>
+        </Box>
+      ) : (
+        <VStack align="stretch" gap={6}>
+          {/* Headline numbers */}
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+            {[
+              { label: "Total impressions", value: nf(data.total) },
+              { label: "Items seen", value: nf(data.distinctItems) },
+              { label: "Avg views / item", value: nf(data.avgPerItem) },
+            ].map((s) => (
+              <Box
+                key={s.label}
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                borderRadius="lg"
+                p={4}
               >
-                {nf(data.total)}
-              </Text>
-            </Box>
-            <Box
-              bg="whiteAlpha.50"
-              border="1px solid"
-              borderColor="whiteAlpha.200"
-              borderRadius="lg"
-              p={4}
-            >
-              <Text fontSize="xs" color="nexzy.gray.100" mb={1}>
-                Distinct items tracked
-              </Text>
-              <Text
-                fontSize="2xl"
-                color="nexzy.white"
-                fontFamily="title"
-                fontWeight="700"
-              >
-                {nf(data.distinctItems)}
-              </Text>
-            </Box>
+                <Text fontSize="xs" color="nexzy.gray.100" mb={1}>
+                  {s.label}
+                </Text>
+                <Text fontSize="2xl" color="nexzy.white" fontFamily="title">
+                  {s.value}
+                </Text>
+              </Box>
+            ))}
           </SimpleGrid>
 
+          {/* What people are seeing — type mix */}
           <Box>
             <Text
               fontSize="xs"
               color="nexzy.gray.100"
               textTransform="uppercase"
               letterSpacing="wide"
-              mb={2}
+              mb={3}
             >
-              Most-seen items
+              What people are seeing
             </Text>
-            {data.rows.length === 0 ? (
-              <Box
-                border="1px dashed"
-                borderColor="whiteAlpha.300"
-                borderRadius="xl"
-                p={10}
-                textAlign="center"
-              >
-                <Text color="nexzy.gray.100">
-                  No impressions recorded yet. They accrue as users scroll the
-                  feed (once the API + 1.1.10 app are live).
-                </Text>
-              </Box>
-            ) : (
-              <VStack align="stretch" gap={2}>
-                {data.rows.map((r) => (
+            <VStack align="stretch" gap={3}>
+              {data.byType.map((t) => {
+                const m = meta(t.refType);
+                const pct =
+                  data.total > 0
+                    ? Math.round((t.impressions / data.total) * 100)
+                    : 0;
+                return (
+                  <Box key={t.refType}>
+                    <Flex justify="space-between" mb={1} align="baseline">
+                      <HStack gap={2}>
+                        <Text color="nexzy.white" fontSize="sm">
+                          {m.label}
+                        </Text>
+                        <Text color="nexzy.gray.100" fontSize="xs">
+                          {t.items} item{t.items === 1 ? "" : "s"}
+                        </Text>
+                      </HStack>
+                      <Text color="nexzy.gray.100" fontSize="xs">
+                        {nf(t.impressions)} · {pct}%
+                      </Text>
+                    </Flex>
+                    <Box bg="whiteAlpha.100" borderRadius="full" h="8px">
+                      <Box
+                        bg={`${m.color}.400`}
+                        borderRadius="full"
+                        h="8px"
+                        w={`${pct}%`}
+                        minW={pct > 0 ? "6px" : "0"}
+                      />
+                    </Box>
+                  </Box>
+                );
+              })}
+            </VStack>
+          </Box>
+
+          {/* Top items — capped leaderboard */}
+          <Box>
+            <Text
+              fontSize="xs"
+              color="nexzy.gray.100"
+              textTransform="uppercase"
+              letterSpacing="wide"
+              mb={3}
+            >
+              Top {data.top.length} most-seen
+            </Text>
+            <VStack align="stretch" gap={2}>
+              {data.top.map((r, i) => {
+                const m = meta(r.refType);
+                const label =
+                  r.title?.trim() ||
+                  `${m.label.replace(/s$/, "")} · ${r.refId.slice(0, 8)}`;
+                const inner = (
                   <Flex
-                    key={`${r.refType}:${r.refId}`}
                     bg="whiteAlpha.50"
                     border="1px solid"
                     borderColor="whiteAlpha.200"
@@ -163,31 +212,59 @@ export default function FeedInsightsPanel() {
                     align="center"
                     gap={3}
                   >
-                    <Badge colorPalette="purple" variant="subtle">
-                      {r.refType}
-                    </Badge>
-                    <Box flex={1} minW={0}>
-                      <Text color="nexzy.white" fontSize="sm" lineClamp={1}>
-                        {r.label ||
-                          (r.author ? `@${r.author}` : r.refId.slice(0, 8))}
-                      </Text>
-                      {r.author && r.label && (
-                        <Text color="nexzy.gray.100" fontSize="xs">
-                          @{r.author}
-                        </Text>
-                      )}
-                    </Box>
                     <Text
-                      color="nexzy.lightBlue"
-                      fontSize="sm"
-                      fontWeight="700"
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      w="18px"
+                      textAlign="right"
                     >
-                      {nf(r.impressions)}
+                      {i + 1}
                     </Text>
+                    <Badge colorPalette={m.color} variant="subtle">
+                      {m.label.replace(/s$/, "")}
+                    </Badge>
+                    <Text
+                      flex={1}
+                      minW={0}
+                      color="nexzy.white"
+                      fontSize="sm"
+                      lineClamp={1}
+                    >
+                      {label}
+                    </Text>
+                    <HStack gap={1} color="nexzy.gray.100">
+                      <FiEye size={13} />
+                      <Text fontSize="sm" color="nexzy.white" fontWeight="500">
+                        {nf(r.impressions)}
+                      </Text>
+                    </HStack>
+                    <HStack gap={1} color="nexzy.gray.100" minW="70px">
+                      <FiHeart size={13} />
+                      <Text fontSize="sm">
+                        {nf(r.hearts)}
+                        <Text as="span" color="nexzy.gray.100" fontSize="xs">
+                          {" "}
+                          ({engagement(r.hearts, r.impressions)})
+                        </Text>
+                      </Text>
+                    </HStack>
                   </Flex>
-                ))}
-              </VStack>
-            )}
+                );
+                return r.slug ? (
+                  <a
+                    key={`${r.refType}:${r.refId}`}
+                    href={`/blog/${r.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textDecoration: "none" }}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <Box key={`${r.refType}:${r.refId}`}>{inner}</Box>
+                );
+              })}
+            </VStack>
           </Box>
         </VStack>
       )}

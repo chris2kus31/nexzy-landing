@@ -2031,19 +2031,21 @@ export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
 
 // ---- Feed impressions (1H-b: admin monitoring — no user-facing display) ----
 
-export interface FeedImpressionRow {
+export interface FeedImpressionTopRow {
   refType: string;
   refId: string;
   impressions: number;
-  updatedAt: string;
-  label: string | null;
-  author: string | null;
+  hearts: number;
+  title: string | null;
+  slug: string | null;
 }
 
 export interface FeedImpressionsReport {
   total: number;
   distinctItems: number;
-  rows: FeedImpressionRow[];
+  avgPerItem: number;
+  byType: { refType: string; impressions: number; items: number }[];
+  top: FeedImpressionTopRow[];
 }
 
 export async function getFeedImpressions(
