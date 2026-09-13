@@ -2029,6 +2029,31 @@ export async function skipForumSeed(id: string): Promise<ForumSeed | null> {
   );
 }
 
+// ---- Feed impressions (1H-b: admin monitoring — no user-facing display) ----
+
+export interface FeedImpressionRow {
+  refType: string;
+  refId: string;
+  impressions: number;
+  updatedAt: string;
+  label: string | null;
+  author: string | null;
+}
+
+export interface FeedImpressionsReport {
+  total: number;
+  distinctItems: number;
+  rows: FeedImpressionRow[];
+}
+
+export async function getFeedImpressions(
+  limit = 50,
+): Promise<FeedImpressionsReport> {
+  return handle(
+    await fetch(`/api/newsroom/admin/feed/impressions?limit=${limit}`),
+  );
+}
+
 // ---- Post reviews (1H-a: SOFT topicality queue — off-topic feed posts) ----
 
 export interface PostReview {

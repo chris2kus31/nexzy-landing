@@ -34,6 +34,7 @@ import PostBrowser from "@/components/admin/PostBrowser";
 import ForumModerationPanel from "@/components/admin/ForumModerationPanel";
 import ForumSeedsPanel from "@/components/admin/ForumSeedsPanel";
 import PostReviewsPanel from "@/components/admin/PostReviewsPanel";
+import FeedInsightsPanel from "@/components/admin/FeedInsightsPanel";
 import CommentsModerationPanel from "@/components/admin/CommentsModerationPanel";
 import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
@@ -59,6 +60,7 @@ type Tab =
   | "tools"
   | "notify"
   | "trending"
+  | "insights"
   | "rewind";
 
 function StatCard({
@@ -304,6 +306,11 @@ function AdminContent() {
             onClick={() => setTab("analytics")}
           />
           <TabButton
+            label="Insights"
+            active={tab === "insights"}
+            onClick={() => setTab("insights")}
+          />
+          <TabButton
             label="Growth"
             active={tab === "growth"}
             onClick={() => setTab("growth")}
@@ -494,6 +501,8 @@ function AdminContent() {
       )}
 
       {tab === "analytics" && <AnalyticsPanel />}
+
+      {tab === "insights" && <FeedInsightsPanel />}
       {tab === "growth" && <GrowthPanel isOwner={isOwner} />}
 
       {tab === "indexing" && <IndexingRitualPanel />}
