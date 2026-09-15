@@ -35,6 +35,9 @@ import {
   detachVideoGame,
   searchGamesForLink,
   getVideoSeries,
+  getVideoSeriesMeta,
+  setVideoSeriesFormat,
+  type VideoSeriesMetaRow,
   type AdminVideo,
   type GameLite,
 } from "@/lib/admin/client";
@@ -106,6 +109,11 @@ export default function VideosPanel() {
   const [series, setSeries] = useState("");
   const [addingNewSeries, setAddingNewSeries] = useState(false);
   const [seriesOptions, setSeriesOptions] = useState<string[]>([]);
+  // Per-series format map (the "playlist format": 9:16 vs 16:9). Mobile rails
+  // follow whatever is saved here — server-driven, no app release.
+  const [seriesFormats, setSeriesFormats] = useState<
+    Record<string, VideoSeriesMetaRow>
+  >({});
   const [hostedFile, setHostedFile] = useState<File | null>(null);
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
   const [featured, setFeatured] = useState(false);
@@ -123,6 +131,13 @@ export default function VideosPanel() {
       setVideos(await listVideos(200));
       getVideoSeries()
         .then(setSeriesOptions)
+        .catch(() => {});
+      getVideoSeriesMeta()
+        .then((rows) => {
+          const map: Record<string, VideoSeriesMetaRow> = {};
+          for (const r of rows) map[r.name] = r;
+          setSeriesFormats(map);
+        })
         .catch(() => {});
     } catch (e) {
       setMsg((e as Error).message);
@@ -527,6 +542,51 @@ export default function VideosPanel() {
                     onChange={(e) => setSeries(e.target.value)}
                     placeholder="New series name (e.g. Rewind, Boss Rush)"
                   />
+                ) : null}
+                {series.trim() ? (
+                  <Flex mt={2} align="center" gap={2}>
+                    <Text fontSize="xs" color="gray.400">
+                      List format
+                    </Text>
+                    {(
+                      [
+                        ["portrait", "9:16 Shorts"],
+                        ["landscape", "16:9 Videos"],
+                      ] as const
+                    ).map(([fmt, label]) => {
+                      const active =
+                        (seriesFormats[series.trim()]?.format ?? "portrait") ===
+                        fmt;
+                      return (
+                        <Button
+                          key={fmt}
+                          size="xs"
+                          variant={active ? "solid" : "outline"}
+                          colorPalette={active ? "yellow" : "gray"}
+                          color={active ? "black" : "gray.300"}
+                          onClick={() => {
+                            const name = series.trim();
+                            setSeriesFormats((prev) => ({
+                              ...prev,
+                              [name]: { name, format: fmt, stored: true },
+                            }));
+                            setVideoSeriesFormat(name, fmt).catch(() =>
+                              setMsg(
+                                "Could not save the list format (is the video_series migration run?)",
+                              ),
+                            );
+                          }}
+                        >
+                          {label}
+                        </Button>
+                      );
+                    })}
+                    {!seriesFormats[series.trim()]?.stored ? (
+                      <Text fontSize="xs" color="gray.500">
+                        auto-detected — click to lock
+                      </Text>
+                    ) : null}
+                  </Flex>
                 ) : null}
               </Box>
               <Input

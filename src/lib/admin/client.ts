@@ -3540,6 +3540,32 @@ export async function getVideoSeries(): Promise<string[]> {
   return handle(await fetch("/api/newsroom/admin/videos/series"));
 }
 
+/** Series ("playlists") with their effective rail format. `stored` = an admin
+ *  explicitly set it; otherwise the format shown is the derived default. */
+export type VideoSeriesMetaRow = {
+  name: string;
+  format: "portrait" | "landscape";
+  stored: boolean;
+};
+export async function getVideoSeriesMeta(): Promise<VideoSeriesMetaRow[]> {
+  return handle(await fetch("/api/newsroom/admin/videos/series-meta"));
+}
+
+/** Mark a series/playlist 9:16 (portrait) or 16:9 (landscape) — mobile rails
+ *  follow via videos-series?meta=1 with no app release. */
+export async function setVideoSeriesFormat(
+  name: string,
+  format: "portrait" | "landscape",
+): Promise<{ name: string; format: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/videos/series-meta", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, format }),
+    }),
+  );
+}
+
 /** Presigned S3 PUT URL for uploading a hosted MP4 for this video. */
 export async function getHostedUploadUrl(
   id: string,
