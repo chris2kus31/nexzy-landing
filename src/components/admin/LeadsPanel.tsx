@@ -812,16 +812,26 @@ function LeadCard({
       border="1px solid"
       borderColor="whiteAlpha.200"
       borderRadius="xl"
-      overflow="hidden"
+      // NOTE: no overflow="hidden" — it would break the sticky header below.
     >
-      {/* Header — always visible; click to expand/collapse */}
+      {/* Header — always visible; click to expand/collapse. STICKY while the
+          card is open: an expanded lead is huge, and without this the ✕ Skip
+          (and collapse) scroll off-screen — the exact "I have to collapse just
+          to reach Skip" complaint. Solid bg so content doesn't ghost through. */}
       <Flex
         align="center"
         gap={3}
         p={4}
         cursor="pointer"
         onClick={onToggle}
-        _hover={{ bg: "whiteAlpha.50" }}
+        position={open ? "sticky" : undefined}
+        top={open ? 0 : undefined}
+        zIndex={open ? 5 : undefined}
+        bg={open ? "#161c38" : undefined}
+        borderTopRadius="xl"
+        borderBottom={open ? "1px solid" : undefined}
+        borderBottomColor={open ? "whiteAlpha.200" : undefined}
+        _hover={{ bg: open ? "#1c2244" : "whiteAlpha.50" }}
       >
         <Text
           color="nexzy.gray.100"
