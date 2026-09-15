@@ -30,7 +30,7 @@ export default function VideoTile({
         <Box
           position="relative"
           w="full"
-          aspectRatio={9 / 16}
+          aspectRatio={video.isShort ? 9 / 16 : 16 / 9}
           borderRadius="xl"
           overflow="hidden"
           bg="black"
