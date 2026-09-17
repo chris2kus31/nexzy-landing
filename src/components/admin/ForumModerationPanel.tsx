@@ -10,6 +10,7 @@ import {
   Text,
   Button,
   Spinner,
+  Image,
 } from "@chakra-ui/react";
 import { FiShield, FiCheckCircle, FiAlertTriangle } from "react-icons/fi";
 import {
@@ -178,7 +179,12 @@ function StateBox({
       <Heading size="sm" color="nexzy.white">
         {title}
       </Heading>
-      <Text color="nexzy.gray.100" fontSize="sm" textAlign="center" maxW="380px">
+      <Text
+        color="nexzy.gray.100"
+        fontSize="sm"
+        textAlign="center"
+        maxW="380px"
+      >
         {children}
       </Text>
     </VStack>
@@ -342,7 +348,12 @@ export default function ForumModerationPanel() {
           {/* Posts — only shown when there's something to review */}
           {data.posts.length > 0 && (
             <Box>
-              <Heading size="sm" color="nexzy.gray.100" mb={3} letterSpacing="0.03em">
+              <Heading
+                size="sm"
+                color="nexzy.gray.100"
+                mb={3}
+                letterSpacing="0.03em"
+              >
                 POSTS · {data.posts.length}
               </Heading>
               <VStack align="stretch" gap={3}>
@@ -350,7 +361,11 @@ export default function ForumModerationPanel() {
                   <Card key={p.id}>
                     <Flex justify="space-between" gap={3} wrap="wrap">
                       <HStack gap={2} wrap="wrap">
-                        <Text color="nexzy.white" fontWeight="600" fontSize="sm">
+                        <Text
+                          color="nexzy.white"
+                          fontWeight="600"
+                          fontSize="sm"
+                        >
                           {p.author?.username || "Anonymous"}
                         </Text>
                         <Text color="whiteAlpha.500" fontSize="xs">
@@ -393,6 +408,18 @@ export default function ForumModerationPanel() {
                     >
                       {p.content}
                     </Text>
+                    {p.imageUrl || p.gif?.posterUrl ? (
+                      <Image
+                        src={(p.imageUrl || p.gif?.posterUrl) ?? undefined}
+                        alt="Reported post image"
+                        mt={2}
+                        maxH="220px"
+                        maxW="100%"
+                        borderRadius="md"
+                        objectFit="contain"
+                        bg="blackAlpha.400"
+                      />
+                    ) : null}
                     <Reports reports={p.reports} />
                   </Card>
                 ))}
@@ -403,7 +430,12 @@ export default function ForumModerationPanel() {
           {/* Comments — only shown when there's something to review */}
           {data.comments.length > 0 && (
             <Box>
-              <Heading size="sm" color="nexzy.gray.100" mb={3} letterSpacing="0.03em">
+              <Heading
+                size="sm"
+                color="nexzy.gray.100"
+                mb={3}
+                letterSpacing="0.03em"
+              >
                 COMMENTS · {data.comments.length}
               </Heading>
               <VStack align="stretch" gap={3}>
@@ -411,7 +443,11 @@ export default function ForumModerationPanel() {
                   <Card key={c.id}>
                     <Flex justify="space-between" gap={3} wrap="wrap">
                       <HStack gap={2} wrap="wrap">
-                        <Text color="nexzy.white" fontWeight="600" fontSize="sm">
+                        <Text
+                          color="nexzy.white"
+                          fontWeight="600"
+                          fontSize="sm"
+                        >
                           {c.author?.username || "Anonymous"}
                         </Text>
                         <Text color="whiteAlpha.500" fontSize="xs">

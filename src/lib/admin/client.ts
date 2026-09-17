@@ -1940,6 +1940,8 @@ export interface ForumQueuePost {
   content: string;
   platform: string | null;
   console: string | null;
+  imageUrl: string | null;
+  gif: { webpUrl: string | null; posterUrl: string | null } | null;
   author: { id: string; username: string } | null;
   flagged: boolean;
   reportCount: number;
