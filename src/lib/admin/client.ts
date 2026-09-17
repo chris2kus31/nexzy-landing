@@ -40,6 +40,8 @@ export interface ArticlePoll {
   question: string;
   options: { label: string }[];
   allowMultiple?: boolean;
+  // Editorial opt-out from the feed projection. Absent/false = shown in feed.
+  feedHidden?: boolean;
 }
 
 /** Deals beat: the price box + store link. */

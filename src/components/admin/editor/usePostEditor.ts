@@ -22,11 +22,17 @@ import { BYLINES, type FormState, toForm } from "./shared";
 export interface PollDraft {
   question: string;
   options: string[];
+  // Editorial opt-out: hide this poll from the feed card. Default false (shown).
+  feedHidden?: boolean;
 }
 
 function pollFromPost(p: BlogPost): PollDraft {
   const opts = (p.poll?.options ?? []).map((o) => o.label);
-  return { question: p.poll?.question ?? "", options: opts };
+  return {
+    question: p.poll?.question ?? "",
+    options: opts,
+    feedHidden: p.poll?.feedHidden ?? false,
+  };
 }
 
 /**
@@ -65,7 +71,11 @@ export function usePostEditor(id: string) {
   const [images, setImages] = useState<ArticleImage[]>([]);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [facts, setFacts] = useState<RewindFacts>({});
-  const [poll, setPoll] = useState<PollDraft>({ question: "", options: [] });
+  const [poll, setPoll] = useState<PollDraft>({
+    question: "",
+    options: [],
+    feedHidden: false,
+  });
   const [formatData, setFormatData] = useState<ArticleFormatData>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string>("");
@@ -210,7 +220,9 @@ export function usePostEditor(id: string) {
         .filter(Boolean)
         .slice(0, 4)
         .map((label) => ({ label }));
-      return q && options.length >= 2 ? { question: q, options } : null;
+      return q && options.length >= 2
+        ? { question: q, options, feedHidden: !!poll.feedHidden }
+        : null;
     })(),
     // Beat core module. Only sent for the beats that have one so other posts
     // never touch formatData.

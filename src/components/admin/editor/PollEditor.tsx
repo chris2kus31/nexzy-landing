@@ -8,6 +8,7 @@ import {
   Button,
   HStack,
   VStack,
+  Checkbox,
 } from "@chakra-ui/react";
 import { labelProps, inputProps } from "./shared";
 import type { PollDraft } from "./usePostEditor";
@@ -89,6 +90,22 @@ export default function PollEditor({
           </Button>
         )}
       </VStack>
+      <Box mt={3}>
+        <Checkbox.Root
+          checked={!poll.feedHidden}
+          onCheckedChange={(d) => setPoll({ ...poll, feedHidden: !d.checked })}
+        >
+          <Checkbox.HiddenInput />
+          <Checkbox.Control />
+          <Checkbox.Label color="gray.300" fontSize="sm">
+            Show this poll in the feed
+          </Checkbox.Label>
+        </Checkbox.Root>
+        <Text fontSize="11px" color="whiteAlpha.500" mt={1}>
+          On by default. Uncheck to keep the poll on the article only, off the
+          For You / Following / Discover feeds.
+        </Text>
+      </Box>
     </Box>
   );
 }
