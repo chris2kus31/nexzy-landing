@@ -3547,6 +3547,7 @@ export async function getVideoSeries(): Promise<string[]> {
 export type VideoSeriesMetaRow = {
   name: string;
   format: "portrait" | "landscape";
+  order: number;
   stored: boolean;
 };
 export async function getVideoSeriesMeta(): Promise<VideoSeriesMetaRow[]> {
@@ -3564,6 +3565,20 @@ export async function setVideoSeriesFormat(
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, format }),
+    }),
+  );
+}
+
+/** Reorder the Videos-tab sections. Pass the series names in display order —
+ *  the app follows via videos-sections with no app release. */
+export async function setVideoSeriesOrder(
+  names: string[],
+): Promise<{ ok: true }> {
+  return handle(
+    await fetch("/api/newsroom/admin/videos/series-order", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ names }),
     }),
   );
 }

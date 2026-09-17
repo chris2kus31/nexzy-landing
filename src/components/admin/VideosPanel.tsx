@@ -25,6 +25,7 @@ import {
   FiEye,
   FiEyeOff,
   FiX,
+  FiMenu,
 } from "react-icons/fi";
 import {
   listVideos,
@@ -37,6 +38,7 @@ import {
   getVideoSeries,
   getVideoSeriesMeta,
   setVideoSeriesFormat,
+  setVideoSeriesOrder,
   type VideoSeriesMetaRow,
   type AdminVideo,
   type GameLite,
@@ -114,6 +116,11 @@ export default function VideosPanel() {
   const [seriesFormats, setSeriesFormats] = useState<
     Record<string, VideoSeriesMetaRow>
   >({});
+  // Section order (drag-to-reorder) for the Videos tab. Names in display order.
+  const [orderedSections, setOrderedSections] = useState<string[]>([]);
+  const [orderDirty, setOrderDirty] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [hostedFile, setHostedFile] = useState<File | null>(null);
   const [source, setSource] = useState<"nexzy" | "external">("nexzy");
   const [featured, setFeatured] = useState(false);
@@ -137,6 +144,12 @@ export default function VideosPanel() {
           const map: Record<string, VideoSeriesMetaRow> = {};
           for (const r of rows) map[r.name] = r;
           setSeriesFormats(map);
+          setOrderedSections(
+            [...rows]
+              .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+              .map((r) => r.name),
+          );
+          setOrderDirty(false);
         })
         .catch(() => {});
     } catch (e) {
@@ -345,6 +358,31 @@ export default function VideosPanel() {
       ? videos
       : videos.filter((v) => ((v.series ?? "").trim() || "") === seriesFilter);
 
+  const moveSection = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    setOrderedSections((prev) => {
+      const next = [...prev];
+      const [m] = next.splice(from, 1);
+      next.splice(Math.min(to, next.length), 0, m);
+      return next;
+    });
+    setOrderDirty(true);
+  };
+  const saveSectionOrder = async () => {
+    setSavingOrder(true);
+    try {
+      await setVideoSeriesOrder(orderedSections);
+      setOrderDirty(false);
+      setMsg("Section order saved.");
+    } catch {
+      setMsg(
+        "Could not save section order (is the video_series migration run?)",
+      );
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
   return (
     <Box>
       <Flex align="center" justify="space-between" mb={1} gap={3} wrap="wrap">
@@ -361,6 +399,84 @@ export default function VideosPanel() {
         &ldquo;★ Featured&rdquo; at a time — it headlines the /videos hub &amp;
         home rail. Use the Game hub to manage a single game&rsquo;s videos.
       </Text>
+
+      {/* Section order — drag to reorder the Videos-tab rails. Server-driven:
+          the app follows via videos-sections with no app release. */}
+      {orderedSections.length > 1 && (
+        <Box
+          mb={4}
+          p={3}
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          borderRadius="lg"
+          bg="whiteAlpha.50"
+        >
+          <Flex align="center" justify="space-between" mb={2} gap={2}>
+            <Text fontSize="sm" fontWeight="600" color="nexzy.white">
+              Section order (Videos tab)
+            </Text>
+            <Button
+              size="2xs"
+              {...(orderDirty ? primaryBtn : outlineBtn)}
+              disabled={!orderDirty || savingOrder}
+              onClick={saveSectionOrder}
+            >
+              {savingOrder ? "Saving…" : "Save order"}
+            </Button>
+          </Flex>
+          <VStack align="stretch" gap={1.5}>
+            {orderedSections.map((name, i) => (
+              <Flex
+                key={name}
+                align="center"
+                gap={2}
+                px={3}
+                py={2}
+                borderWidth="1px"
+                borderColor={
+                  dragIdx === i ? "nexzy.lightBlue" : "whiteAlpha.200"
+                }
+                borderRadius="md"
+                bg="whiteAlpha.100"
+                cursor="grab"
+                draggable
+                onDragStart={() => setDragIdx(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (dragIdx !== null) moveSection(dragIdx, i);
+                  setDragIdx(null);
+                }}
+                onDragEnd={() => setDragIdx(null)}
+              >
+                <Box color="nexzy.gray.100" aria-hidden>
+                  <FiMenu />
+                </Box>
+                <Text fontSize="sm" color="nexzy.white">
+                  {i + 1}. {name}
+                </Text>
+                <Badge
+                  ml="auto"
+                  colorPalette={
+                    seriesFormats[name]?.format === "landscape"
+                      ? "blue"
+                      : "purple"
+                  }
+                  variant="subtle"
+                  fontSize="10px"
+                >
+                  {seriesFormats[name]?.format === "landscape"
+                    ? "16:9"
+                    : "9:16"}
+                </Badge>
+              </Flex>
+            ))}
+          </VStack>
+          <Text fontSize="11px" color="whiteAlpha.500" mt={2}>
+            Drag to reorder. Top to bottom = the rail order readers see. The
+            featured video always headlines the tab.
+          </Text>
+        </Box>
+      )}
 
       {/* Series filter chips — narrow the library to one series (or the
           uncategorized bucket) without losing the list. */}
@@ -568,7 +684,12 @@ export default function VideosPanel() {
                             const name = series.trim();
                             setSeriesFormats((prev) => ({
                               ...prev,
-                              [name]: { name, format: fmt, stored: true },
+                              [name]: {
+                                name,
+                                format: fmt,
+                                order: prev[name]?.order ?? 0,
+                                stored: true,
+                              },
                             }));
                             setVideoSeriesFormat(name, fmt).catch(() =>
                               setMsg(
