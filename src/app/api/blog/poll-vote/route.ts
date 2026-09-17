@@ -3,6 +3,7 @@
 // per-vote row with geo + a hashed-IP dedup signal. The anon visitor id rides
 // in the body. Best-effort throughout — a missing header just means less data.
 import { NextRequest, NextResponse } from "next/server";
+import { USER_AT_COOKIE } from "@/lib/auth/server";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
   };
   if (ip) headers["x-forwarded-for"] = ip;
   if (cc) headers["x-client-country"] = cc;
+  // Attribute the vote to the signed-in reader when there's a session, so their
+  // pick follows them across web + app (same user). Guests vote anonymously.
+  const token = req.cookies.get(USER_AT_COOKIE)?.value;
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
     const res = await fetch(

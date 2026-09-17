@@ -48,13 +48,33 @@ export default function PollBlock({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Guests: on-device memory (localStorage). Signed-in readers: the server
+    // pick wins and follows their account across web + app — checked right after.
     try {
       const stored = localStorage.getItem(key);
       if (stored !== null) setChosen(Number(stored));
     } catch {
       /* private mode — fall through, they can still vote this session */
     }
-  }, [key]);
+    let alive = true;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/blog/my-poll-vote?slug=${encodeURIComponent(slug)}`,
+          { cache: "no-store" },
+        );
+        const data = await res.json().catch(() => null);
+        if (alive && typeof data?.optionIndex === "number") {
+          setChosen(data.optionIndex);
+        }
+      } catch {
+        /* not signed in / read failed — keep the on-device state */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [key, slug]);
 
   const total = votes.reduce((a, b) => a + b, 0);
   const voted = chosen !== null;
@@ -78,6 +98,10 @@ export default function PollBlock({
       });
       const data = await res.json().catch(() => null);
       if (data?.votes) setVotes(data.votes);
+      // Server's canonical pick (attributes to the signed-in account when there
+      // is one) — keeps the highlighted option in sync across devices.
+      if (typeof data?.myOptionIndex === "number")
+        setChosen(data.myOptionIndex);
     } catch {
       /* keep the optimistic state — the vote just didn't persist */
     } finally {
