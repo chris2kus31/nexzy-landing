@@ -737,10 +737,15 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     }
   };
 
-  const publish = async () => {
+  // Grounding-block override: only offered AFTER a publish attempt was blocked
+  // by the numeric grounding gate — a deliberate second click, never a default.
+  const [groundingBlocked, setGroundingBlocked] = useState(false);
+
+  const publish = async (force = false) => {
     setPublishing(true);
     try {
       const r = await publishContentCard(s.id, {
+        force: force || undefined,
         // Image mode: withhold the video so FB/IG publish as photo/image posts
         // (the API routes on media presence).
         videoUrl: mediaMode === "video" ? (videoUrl ?? undefined) : undefined,
@@ -764,6 +769,9 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         igImageUrl: images.instagram,
       });
       setResults(r.results);
+      setGroundingBlocked(
+        r.results.some((res) => /grounding flag/i.test(res.error ?? "")),
+      );
     } catch {
       setResults([
         { platform: "facebook", ok: false, error: "request failed" },
@@ -1574,13 +1582,40 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       <Button
         size="sm"
         colorPalette="blue"
-        onClick={publish}
+        // Explicit no-arg call — the handler's `force` param must never
+        // receive the click event.
+        onClick={() => publish()}
         loading={publishing}
         loadingText="Publishing…"
         disabled={!canPublish}
       >
         Publish now
       </Button>
+
+      {/* Grounding-block override — appears only after the gate blocked a
+          publish. Deliberate second click; the flag on the card is unchanged
+          (a later Regenerate still re-runs the fact-check). */}
+      {groundingBlocked && !publishing && (
+        <Box mt={2}>
+          <Text color="orange.300" fontSize="xs" mb={1}>
+            The number check blocked this publish. If you&apos;ve verified the
+            price/number yourself (or removed it from the copy), you can
+            override:
+          </Text>
+          <Button
+            size="sm"
+            bg="orange.500"
+            color="white"
+            _hover={{ bg: "orange.400" }}
+            onClick={() => publish(true)}
+            loading={publishing}
+            loadingText="Publishing…"
+            disabled={!canPublish}
+          >
+            ⚠ Publish anyway — I checked the numbers
+          </Button>
+        </Box>
+      )}
 
       {results && (
         <VStack align="stretch" gap={0.5} mt={2}>

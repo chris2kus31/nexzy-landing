@@ -945,6 +945,8 @@ export async function publishContentCard(
     threadsImageUrl?: string;
     fbImageUrl?: string;
     igImageUrl?: string;
+    /** Override the numeric grounding block ("I checked the numbers"). */
+    force?: boolean;
   },
 ): Promise<{ results: PublishResult[] }> {
   return handle(
