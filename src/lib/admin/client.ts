@@ -2119,6 +2119,13 @@ export interface ReportedComment {
   hidden: boolean;
   createdAt: string;
   editedAt: string | null;
+  // Attached GIF (if the comment carried one) so moderators see what was posted.
+  gif: {
+    webpUrl?: string;
+    posterUrl?: string;
+    width?: number;
+    height?: number;
+  } | null;
 }
 
 export async function getReportedComments(): Promise<ReportedComment[]> {

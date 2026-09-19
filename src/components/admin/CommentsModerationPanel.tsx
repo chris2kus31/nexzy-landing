@@ -12,6 +12,7 @@ import {
   Spinner,
   Link,
   Badge,
+  Image,
 } from "@chakra-ui/react";
 import {
   FiFlag,
@@ -176,6 +177,19 @@ export default function CommentsModerationPanel() {
                 >
                   {c.content}
                 </Text>
+
+                {c.gif?.posterUrl || c.gif?.webpUrl ? (
+                  <Image
+                    src={(c.gif.posterUrl || c.gif.webpUrl) ?? undefined}
+                    alt="Reported comment GIF"
+                    mb={3}
+                    maxH="200px"
+                    maxW="100%"
+                    borderRadius="md"
+                    objectFit="contain"
+                    bg="blackAlpha.400"
+                  />
+                ) : null}
 
                 <Flex
                   justify="space-between"
