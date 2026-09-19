@@ -2346,6 +2346,22 @@ export async function searchIgdb(q: string): Promise<IgdbSearchHit[]> {
   );
 }
 
+/** Owner-only: import ONE game by IGDB id — the same end-to-end pipeline the
+ *  nightly sync uses (dedup, S3-owned images, taxonomy, filter stamp). An
+ *  existing game gets enriched instead of duplicated. */
+export async function importGameByIgdbId(igdbId: number): Promise<{
+  imported: boolean;
+  updated: boolean;
+  game: { id: string; name: string; slug: string } | null;
+  reason?: string;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/igdb/import/${igdbId}`, {
+      method: "POST",
+    }),
+  );
+}
+
 /**
  * Owner-only: import an IGDB game into the catalog AND link it to the post in
  * one step (the article editor's "Import from IGDB" — same shared processor as

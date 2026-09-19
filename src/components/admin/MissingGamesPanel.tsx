@@ -41,6 +41,9 @@ import {
   renameUnresolvedGame,
   createTaxonomyEntry,
   getPlatformFamilies,
+  searchIgdb,
+  importGameByIgdbId,
+  type IgdbSearchHit,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -1366,6 +1369,215 @@ function Pager({
  * the resolver couldn't match to a DB game. Map to an existing game (learns an
  * alias) or import it from RAWG (owner only).
  */
+/**
+ * Standalone "import a game" tool: search YOUR catalog first (is it already
+ * here?), then IGDB — and import any candidate end to end through the exact
+ * pipeline the nightly sync uses (dedup, S3-owned box-art cover, screenshots,
+ * taxonomy, filter stamp). Owner-only (the IGDB endpoints are OwnerGuard).
+ */
+function IgdbImportBox() {
+  const [q, setQ] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [dbHits, setDbHits] = useState<GameLite[]>([]);
+  const [igdbHits, setIgdbHits] = useState<IgdbSearchHit[]>([]);
+  const [importing, setImporting] = useState<number | null>(null);
+  const [note, setNote] = useState<{ text: string; tone: string } | null>(null);
+
+  const yearOf = (h: IgdbSearchHit): string =>
+    h.first_release_date
+      ? String(new Date(h.first_release_date * 1000).getUTCFullYear())
+      : "TBD";
+
+  const search = async () => {
+    if (q.trim().length < 2) return;
+    setSearching(true);
+    setNote(null);
+    try {
+      const [db, igdb] = await Promise.all([
+        searchGamesForLink(q.trim()).catch(() => [] as GameLite[]),
+        searchIgdb(q.trim()),
+      ]);
+      setDbHits(db);
+      setIgdbHits(igdb);
+      setSearched(true);
+    } catch (e) {
+      setNote({ text: (e as Error).message, tone: "red" });
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const doImport = async (hit: IgdbSearchHit) => {
+    setImporting(hit.id);
+    setNote(null);
+    try {
+      const res = await importGameByIgdbId(hit.id);
+      if (res.imported && res.game) {
+        setNote({
+          text: `✓ Imported “${res.game.name}” end to end — cover, screenshots, taxonomy, filters. It's live in the catalog (and the Game hub).`,
+          tone: "green",
+        });
+      } else if (res.updated && res.game) {
+        setNote({
+          text: `“${res.game.name}” was already in the catalog — enriched it from IGDB instead (no duplicate created).`,
+          tone: "blue",
+        });
+      } else if (res.reason === "skipped_platform") {
+        setNote({
+          text: `IGDB lists this game only on excluded platforms (IGDB_EXCLUDE_PLATFORMS gate) — not imported. Add it via “Add game manually” if you want it anyway.`,
+          tone: "orange",
+        });
+      } else {
+        setNote({
+          text: `Import failed: ${res.reason ?? "unknown"}`,
+          tone: "red",
+        });
+      }
+      // Refresh the catalog side so a fresh import shows under "already here".
+      setDbHits(await searchGamesForLink(q.trim()).catch(() => dbHits));
+    } catch (e) {
+      setNote({ text: (e as Error).message, tone: "red" });
+    } finally {
+      setImporting(null);
+    }
+  };
+
+  return (
+    <Box
+      borderWidth="1px"
+      borderColor="nexzy.blue"
+      borderRadius="lg"
+      p={4}
+      mb={4}
+      bg="whiteAlpha.50"
+    >
+      <Heading size="sm" color="nexzy.white" mb={1}>
+        Import a game from IGDB
+      </Heading>
+      <Text fontSize="xs" color="whiteAlpha.600" mb={3}>
+        Checks your catalog first, then IGDB. Importing runs the same end-to-end
+        pipeline as the nightly sync — an existing game is enriched, never
+        duplicated.
+      </Text>
+      <HStack gap={2} maxW="520px">
+        <Input
+          {...inputProps}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Game name…"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void search();
+          }}
+        />
+        <Button size="sm" {...primaryBtn} onClick={search} loading={searching}>
+          <FiSearch /> Search
+        </Button>
+      </HStack>
+
+      {note && (
+        <Text fontSize="sm" color={toneColor(note.tone)} mt={2}>
+          {note.text}
+        </Text>
+      )}
+
+      {searched && (
+        <Flex gap={6} mt={3} wrap="wrap" align="flex-start">
+          {/* Your catalog */}
+          <Box flex="1" minW="260px">
+            <Text fontSize="xs" fontWeight="700" color="whiteAlpha.600" mb={1}>
+              ALREADY IN YOUR CATALOG ({dbHits.length})
+            </Text>
+            {dbHits.length === 0 ? (
+              <Text fontSize="xs" color="whiteAlpha.500">
+                No match — clear to import.
+              </Text>
+            ) : (
+              <VStack align="stretch" gap={1}>
+                {dbHits.slice(0, 6).map((g) => (
+                  <HStack
+                    key={g.id}
+                    gap={2}
+                    p={1.5}
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="md"
+                  >
+                    {g.backgroundImage && (
+                      <Image
+                        src={g.backgroundImage}
+                        alt=""
+                        boxSize="24px"
+                        borderRadius="sm"
+                        objectFit="cover"
+                      />
+                    )}
+                    <Text fontSize="sm" color="nexzy.white" lineClamp={1}>
+                      {g.name}
+                    </Text>
+                    {g.released && (
+                      <Text fontSize="xs" color="whiteAlpha.500">
+                        {g.released.slice(0, 4)}
+                      </Text>
+                    )}
+                  </HStack>
+                ))}
+              </VStack>
+            )}
+          </Box>
+
+          {/* IGDB candidates */}
+          <Box flex="1" minW="300px">
+            <Text fontSize="xs" fontWeight="700" color="whiteAlpha.600" mb={1}>
+              IGDB RESULTS ({igdbHits.length})
+            </Text>
+            {igdbHits.length === 0 ? (
+              <Text fontSize="xs" color="whiteAlpha.500">
+                Nothing on IGDB for that name — try another spelling.
+              </Text>
+            ) : (
+              <VStack align="stretch" gap={1}>
+                {igdbHits.map((h) => (
+                  <Flex
+                    key={h.id}
+                    align="center"
+                    gap={2}
+                    p={1.5}
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="md"
+                  >
+                    <Text
+                      flex="1"
+                      fontSize="sm"
+                      color="nexzy.white"
+                      lineClamp={1}
+                    >
+                      {h.name}
+                    </Text>
+                    <Text fontSize="xs" color="whiteAlpha.500">
+                      {yearOf(h)}
+                    </Text>
+                    <Button
+                      size="xs"
+                      {...primaryBtn}
+                      onClick={() => doImport(h)}
+                      loading={importing === h.id}
+                      disabled={importing !== null && importing !== h.id}
+                    >
+                      <FiDownloadCloud /> Import
+                    </Button>
+                  </Flex>
+                ))}
+              </VStack>
+            )}
+          </Box>
+        </Flex>
+      )}
+    </Box>
+  );
+}
+
 export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [rows, setRows] = useState<UnresolvedGameRef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1374,6 +1586,7 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [working, setWorking] = useState<string | null>(null);
   const [result, setResult] = useState<OpResult | null>(null);
   const [view, setView] = useState<"queue" | "issues">("queue");
+  const [showIgdbImport, setShowIgdbImport] = useState(false);
   const [diags, setDiags] = useState<ImportDiagnostic[]>([]);
   const [diagsLoading, setDiagsLoading] = useState(false);
   const [addingManual, setAddingManual] = useState(false);
@@ -1566,6 +1779,15 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
           {view === "queue" && isOwner && (
             <Button
               size="sm"
+              {...(showIgdbImport ? primaryBtn : outlineBtn)}
+              onClick={() => setShowIgdbImport((v) => !v)}
+            >
+              <FiSearch /> Import from IGDB
+            </Button>
+          )}
+          {view === "queue" && isOwner && (
+            <Button
+              size="sm"
               {...primaryBtn}
               onClick={() => setAddingManual((v) => !v)}
             >
@@ -1615,6 +1837,8 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
           </Button>
         </HStack>
       </Flex>
+
+      {view === "queue" && isOwner && showIgdbImport && <IgdbImportBox />}
 
       {/* Sub-nav: the unresolved queue vs. the import-issues log */}
       <HStack gap={2} mb={4}>
