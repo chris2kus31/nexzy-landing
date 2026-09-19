@@ -25,6 +25,8 @@ import {
   FaInfoCircle,
   FaTrash,
   FaPen,
+  FaArrowUp,
+  FaArrowDown,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
 import {
@@ -94,6 +96,17 @@ const ICONS: Record<string, IconType> = {
   "info-circle": FaInfoCircle,
 };
 
+type Block = { type: string; [k: string]: unknown };
+
+const BLOCK_TYPES = [
+  "heading",
+  "paragraph",
+  "image",
+  "bullets",
+  "divider",
+  "button",
+];
+
 type Form = {
   id: string | null;
   type: string;
@@ -104,7 +117,7 @@ type Form = {
   subtitle: string;
   audience: "everyone" | "authenticated";
   priority: number;
-  ctaAction: "none" | "link" | "remind";
+  ctaAction: "none" | "link" | "remind" | "sheet";
   ctaLabel: string;
   ctaTarget: string;
   eventAt: string;
@@ -113,6 +126,7 @@ type Form = {
   endAt: string;
   autoDismissAfterHours: string;
   active: boolean;
+  blocks: Block[];
 };
 
 const EMPTY: Form = {
@@ -134,6 +148,7 @@ const EMPTY: Form = {
   endAt: "",
   autoDismissAfterHours: "",
   active: true,
+  blocks: [],
 };
 
 const tint = (hex: string, a: number) => {
@@ -174,6 +189,33 @@ export default function AnnouncementsPanel() {
   const set = <K extends keyof Form>(k: K, v: Form[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  const addBlock = (type: string) => {
+    const base: Record<string, Block> = {
+      heading: { type: "heading", text: "" },
+      paragraph: { type: "paragraph", text: "" },
+      image: { type: "image", url: "", alt: "" },
+      bullets: { type: "bullets", items: [] },
+      divider: { type: "divider" },
+      button: { type: "button", label: "", target: "" },
+    };
+    setForm((f) => ({ ...f, blocks: [...f.blocks, base[type] ?? { type }] }));
+  };
+  const updateBlock = (i: number, patch: Record<string, unknown>) =>
+    setForm((f) => ({
+      ...f,
+      blocks: f.blocks.map((b, j) => (j === i ? { ...b, ...patch } : b)),
+    }));
+  const removeBlock = (i: number) =>
+    setForm((f) => ({ ...f, blocks: f.blocks.filter((_, j) => j !== i) }));
+  const moveBlock = (i: number, dir: -1 | 1) =>
+    setForm((f) => {
+      const next = [...f.blocks];
+      const t = i + dir;
+      if (t < 0 || t >= next.length) return f;
+      [next[i], next[t]] = [next[t], next[i]];
+      return { ...f, blocks: next };
+    });
+
   const pickType = (t: string) => {
     const p = PRESETS[t];
     setForm((f) => ({
@@ -213,6 +255,9 @@ export default function AnnouncementsPanel() {
       autoDismissAfterHours:
         a.autoDismissAfterHours == null ? "" : String(a.autoDismissAfterHours),
       active: a.active,
+      blocks: Array.isArray(a.detail?.blocks)
+        ? (a.detail!.blocks as Block[])
+        : [],
     });
   };
 
@@ -242,6 +287,7 @@ export default function AnnouncementsPanel() {
       autoDismissAfterHours: form.autoDismissAfterHours
         ? Number(form.autoDismissAfterHours)
         : null,
+      detail: form.blocks.length ? { blocks: form.blocks } : null,
       active: form.active,
     };
     try {
@@ -627,6 +673,159 @@ export default function AnnouncementsPanel() {
               </Button>
             </Box>
           </HStack>
+
+          <Box>
+            {label(
+              "Detail sheet (optional) — opens on the 'Open detail sheet' CTA, or by tapping the banner",
+            )}
+            <VStack align="stretch" gap={2}>
+              {form.blocks.map((b, i) => (
+                <Box
+                  key={i}
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="md"
+                  p={2}
+                >
+                  <HStack justify="space-between" mb={1}>
+                    <Text
+                      fontSize="xs"
+                      color="whiteAlpha.700"
+                      textTransform="uppercase"
+                      letterSpacing="1px"
+                    >
+                      {String(b.type)}
+                    </Text>
+                    <HStack gap={1}>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="nexzy.gray.100"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        onClick={() => moveBlock(i, -1)}
+                        aria-label="Move up"
+                      >
+                        <FaArrowUp />
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="nexzy.gray.100"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        onClick={() => moveBlock(i, 1)}
+                        aria-label="Move down"
+                      >
+                        <FaArrowDown />
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="red.300"
+                        _hover={{ bg: "red.500/15" }}
+                        onClick={() => removeBlock(i)}
+                        aria-label="Remove"
+                      >
+                        <FaTrash />
+                      </Button>
+                    </HStack>
+                  </HStack>
+                  {b.type === "heading" || b.type === "paragraph" ? (
+                    <Input
+                      {...inputProps}
+                      value={String(b.text ?? "")}
+                      onChange={(e) => updateBlock(i, { text: e.target.value })}
+                      placeholder={
+                        b.type === "heading" ? "Heading" : "Paragraph text"
+                      }
+                    />
+                  ) : null}
+                  {b.type === "image" ? (
+                    <VStack align="stretch" gap={2}>
+                      <Input
+                        {...inputProps}
+                        value={String(b.url ?? "")}
+                        onChange={(e) =>
+                          updateBlock(i, { url: e.target.value })
+                        }
+                        placeholder="Image URL (CDN)"
+                      />
+                      <Input
+                        {...inputProps}
+                        value={String(b.alt ?? "")}
+                        onChange={(e) =>
+                          updateBlock(i, { alt: e.target.value })
+                        }
+                        placeholder="Alt text (optional)"
+                      />
+                    </VStack>
+                  ) : null}
+                  {b.type === "bullets" ? (
+                    <textarea
+                      value={(Array.isArray(b.items)
+                        ? (b.items as string[])
+                        : []
+                      ).join("\n")}
+                      onChange={(e) =>
+                        updateBlock(i, {
+                          items: e.target.value
+                            .split("\n")
+                            .map((x) => x.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder="One item per line"
+                      style={{
+                        ...nativeControl,
+                        minHeight: 70,
+                        resize: "vertical",
+                      }}
+                    />
+                  ) : null}
+                  {b.type === "button" ? (
+                    <HStack gap={2}>
+                      <Input
+                        {...inputProps}
+                        value={String(b.label ?? "")}
+                        onChange={(e) =>
+                          updateBlock(i, { label: e.target.value })
+                        }
+                        placeholder="Button label"
+                      />
+                      <Input
+                        {...inputProps}
+                        value={String(b.target ?? "")}
+                        onChange={(e) =>
+                          updateBlock(i, { target: e.target.value })
+                        }
+                        placeholder="/route or https URL"
+                      />
+                    </HStack>
+                  ) : null}
+                  {b.type === "divider" ? (
+                    <Text fontSize="xs" color="whiteAlpha.500">
+                      A horizontal divider.
+                    </Text>
+                  ) : null}
+                </Box>
+              ))}
+              <HStack gap={2} wrap="wrap">
+                {BLOCK_TYPES.map((t) => (
+                  <Button
+                    key={t}
+                    size="xs"
+                    variant="outline"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() => addBlock(t)}
+                  >
+                    + {t}
+                  </Button>
+                ))}
+              </HStack>
+            </VStack>
+          </Box>
 
           <HStack gap={2} pt={1}>
             <Button

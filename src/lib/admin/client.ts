@@ -4160,6 +4160,7 @@ export interface AdminAnnouncement {
   startAt: string | null;
   endAt: string | null;
   autoDismissAfterHours: number | null;
+  detail: { blocks?: unknown[] } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
