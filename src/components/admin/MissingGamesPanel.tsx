@@ -1420,7 +1420,7 @@ function IgdbImportBox() {
         });
       } else if (res.updated && res.game) {
         setNote({
-          text: `“${res.game.name}” was already in the catalog — enriched it from IGDB instead (no duplicate created).`,
+          text: `“${res.game.name}” was already in the catalog (same IGDB id, or same name + release year) — enriched it instead of duplicating.`,
           tone: "blue",
         });
       } else if (res.reason === "skipped_platform") {

@@ -2356,6 +2356,8 @@ export async function importGameByIgdbId(igdbId: number): Promise<{
   reason?: string;
 }> {
   return handle(
+    // Dedup is date-aware server-side: same name + clearly different release
+    // year = a different game (remake) and imports as new.
     await fetch(`/api/newsroom/admin/igdb/import/${igdbId}`, {
       method: "POST",
     }),
