@@ -34,8 +34,10 @@ import {
   createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
+  getAnnouncementSubmissions,
   type AdminAnnouncement,
   type AnnouncementInput,
+  type AnnouncementSubmission,
 } from "@/lib/admin/client";
 
 const inputProps = {
@@ -98,6 +100,22 @@ const ICONS: Record<string, IconType> = {
 
 type Block = { type: string; [k: string]: unknown };
 
+type FField = {
+  type: string;
+  key: string;
+  label: string;
+  required: boolean;
+  options?: string[];
+};
+const FIELD_TYPES = [
+  "text",
+  "textarea",
+  "email",
+  "number",
+  "select",
+  "checkbox",
+];
+
 const BLOCK_TYPES = [
   "heading",
   "paragraph",
@@ -127,6 +145,9 @@ type Form = {
   autoDismissAfterHours: string;
   active: boolean;
   blocks: Block[];
+  formFields: FField[];
+  submitLabel: string;
+  successMessage: string;
 };
 
 const EMPTY: Form = {
@@ -149,6 +170,9 @@ const EMPTY: Form = {
   autoDismissAfterHours: "",
   active: true,
   blocks: [],
+  formFields: [],
+  submitLabel: "",
+  successMessage: "",
 };
 
 const tint = (hex: string, a: number) => {
@@ -176,6 +200,9 @@ export default function AnnouncementsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [entriesFor, setEntriesFor] = useState<AdminAnnouncement | null>(null);
+  const [entries, setEntries] = useState<AnnouncementSubmission[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
 
   const refresh = () => {
     setLoading(true);
@@ -214,6 +241,40 @@ export default function AnnouncementsPanel() {
       if (t < 0 || t >= next.length) return f;
       [next[i], next[t]] = [next[t], next[i]];
       return { ...f, blocks: next };
+    });
+
+  const addField = (type: string) =>
+    setForm((f) => ({
+      ...f,
+      formFields: [
+        ...f.formFields,
+        {
+          type,
+          key: `field_${f.formFields.length + 1}`,
+          label: "",
+          required: false,
+        },
+      ],
+    }));
+  const updateField = (i: number, patch: Partial<FField>) =>
+    setForm((f) => ({
+      ...f,
+      formFields: f.formFields.map((x, j) =>
+        j === i ? { ...x, ...patch } : x,
+      ),
+    }));
+  const removeField = (i: number) =>
+    setForm((f) => ({
+      ...f,
+      formFields: f.formFields.filter((_, j) => j !== i),
+    }));
+  const moveField = (i: number, dir: -1 | 1) =>
+    setForm((f) => {
+      const next = [...f.formFields];
+      const t = i + dir;
+      if (t < 0 || t >= next.length) return f;
+      [next[i], next[t]] = [next[t], next[i]];
+      return { ...f, formFields: next };
     });
 
   const pickType = (t: string) => {
@@ -258,6 +319,11 @@ export default function AnnouncementsPanel() {
       blocks: Array.isArray(a.detail?.blocks)
         ? (a.detail!.blocks as Block[])
         : [],
+      formFields: Array.isArray(a.detail?.form?.fields)
+        ? (a.detail!.form!.fields as FField[])
+        : [],
+      submitLabel: a.detail?.form?.submit?.label ?? "",
+      successMessage: a.detail?.form?.successMessage ?? "",
     });
   };
 
@@ -287,7 +353,21 @@ export default function AnnouncementsPanel() {
       autoDismissAfterHours: form.autoDismissAfterHours
         ? Number(form.autoDismissAfterHours)
         : null,
-      detail: form.blocks.length ? { blocks: form.blocks } : null,
+      detail:
+        form.blocks.length || form.formFields.length
+          ? {
+              blocks: form.blocks,
+              form: form.formFields.length
+                ? {
+                    fields: form.formFields,
+                    submit: form.submitLabel
+                      ? { label: form.submitLabel }
+                      : undefined,
+                    successMessage: form.successMessage || undefined,
+                  }
+                : undefined,
+            }
+          : null,
       active: form.active,
     };
     try {
@@ -318,6 +398,20 @@ export default function AnnouncementsPanel() {
       refresh();
     } catch (e) {
       setError((e as Error)?.message || "Delete failed");
+    }
+  };
+
+  const openEntries = async (a: AdminAnnouncement) => {
+    setEntriesFor(a);
+    setEntries([]);
+    setEntriesLoading(true);
+    try {
+      const r = await getAnnouncementSubmissions(a.id);
+      setEntries(r.items);
+    } catch {
+      setEntries([]);
+    } finally {
+      setEntriesLoading(false);
     }
   };
 
@@ -827,6 +921,150 @@ export default function AnnouncementsPanel() {
             </VStack>
           </Box>
 
+          <Box>
+            {label(
+              "Contest / form (optional) — collects entries; users submit in the app",
+            )}
+            <VStack align="stretch" gap={2}>
+              {form.formFields.map((f, i) => (
+                <Box
+                  key={i}
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="md"
+                  p={2}
+                >
+                  <HStack justify="space-between" mb={1}>
+                    <Text
+                      fontSize="xs"
+                      color="whiteAlpha.700"
+                      textTransform="uppercase"
+                      letterSpacing="1px"
+                    >
+                      {f.type}
+                    </Text>
+                    <HStack gap={1}>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="nexzy.gray.100"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        onClick={() => moveField(i, -1)}
+                        aria-label="Move up"
+                      >
+                        <FaArrowUp />
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="nexzy.gray.100"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        onClick={() => moveField(i, 1)}
+                        aria-label="Move down"
+                      >
+                        <FaArrowDown />
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="red.300"
+                        _hover={{ bg: "red.500/15" }}
+                        onClick={() => removeField(i)}
+                        aria-label="Remove"
+                      >
+                        <FaTrash />
+                      </Button>
+                    </HStack>
+                  </HStack>
+                  <HStack gap={2}>
+                    <Input
+                      {...inputProps}
+                      value={f.label}
+                      onChange={(e) =>
+                        updateField(i, { label: e.target.value })
+                      }
+                      placeholder="Field label"
+                    />
+                    <Input
+                      {...inputProps}
+                      value={f.key}
+                      onChange={(e) =>
+                        updateField(i, {
+                          key: e.target.value.replace(/\s+/g, "_"),
+                        })
+                      }
+                      placeholder="key"
+                    />
+                  </HStack>
+                  {f.type === "select" ? (
+                    <textarea
+                      value={(f.options ?? []).join("\n")}
+                      onChange={(e) =>
+                        updateField(i, {
+                          options: e.target.value
+                            .split("\n")
+                            .map((x) => x.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder="One option per line"
+                      style={{
+                        ...nativeControl,
+                        minHeight: 60,
+                        resize: "vertical",
+                        marginTop: 8,
+                      }}
+                    />
+                  ) : null}
+                  <Button
+                    mt={2}
+                    size="xs"
+                    onClick={() => updateField(i, { required: !f.required })}
+                    bg={f.required ? "green.500/20" : "whiteAlpha.100"}
+                    color={f.required ? "green.200" : "nexzy.gray.100"}
+                    border="1px solid"
+                    borderColor={f.required ? "green.400/50" : "whiteAlpha.300"}
+                    _hover={{ opacity: 0.9 }}
+                  >
+                    {f.required ? "Required" : "Optional"}
+                  </Button>
+                </Box>
+              ))}
+              <HStack gap={2} wrap="wrap">
+                {FIELD_TYPES.map((t) => (
+                  <Button
+                    key={t}
+                    size="xs"
+                    variant="outline"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    onClick={() => addField(t)}
+                  >
+                    + {t}
+                  </Button>
+                ))}
+              </HStack>
+              {form.formFields.length ? (
+                <HStack gap={2}>
+                  <Input
+                    {...inputProps}
+                    value={form.submitLabel}
+                    onChange={(e) => set("submitLabel", e.target.value)}
+                    placeholder="Submit button label (e.g. Enter now)"
+                  />
+                  <Input
+                    {...inputProps}
+                    value={form.successMessage}
+                    onChange={(e) => set("successMessage", e.target.value)}
+                    placeholder="Success message"
+                  />
+                </HStack>
+              ) : null}
+            </VStack>
+          </Box>
+
           <HStack gap={2} pt={1}>
             <Button
               size="sm"
@@ -941,6 +1179,19 @@ export default function AnnouncementsPanel() {
                     >
                       <FaTrash />
                     </Button>
+                    {Array.isArray(a.detail?.form?.fields) &&
+                    a.detail!.form!.fields!.length ? (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="nexzy.gray.100"
+                        borderColor="whiteAlpha.300"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        onClick={() => openEntries(a)}
+                      >
+                        Entries
+                      </Button>
+                    ) : null}
                   </HStack>
                 </Box>
               );
@@ -948,6 +1199,86 @@ export default function AnnouncementsPanel() {
           )}
         </VStack>
       </HStack>
+
+      {entriesFor ? (
+        <Box
+          position="fixed"
+          inset="0"
+          zIndex={2600}
+          bg="blackAlpha.800"
+          overflowY="auto"
+          p={{ base: 3, md: 6 }}
+          onClick={() => setEntriesFor(null)}
+        >
+          <Box
+            maxW="720px"
+            mx="auto"
+            bg="nexzy.navy"
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            p={{ base: 4, md: 6 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <HStack justify="space-between" mb={3}>
+              <Text fontSize="md" fontWeight="700" color="white">
+                Entries — {entriesFor.title}
+              </Text>
+              <Button
+                size="xs"
+                variant="outline"
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                onClick={() => setEntriesFor(null)}
+              >
+                Close
+              </Button>
+            </HStack>
+            {entriesLoading ? (
+              <Text color="nexzy.gray.100" fontSize="sm">
+                Loading…
+              </Text>
+            ) : entries.length === 0 ? (
+              <Text color="nexzy.gray.100" fontSize="sm">
+                No entries yet.
+              </Text>
+            ) : (
+              <VStack align="stretch" gap={2}>
+                <Text color="whiteAlpha.600" fontSize="xs">
+                  {entries.length} entries
+                </Text>
+                {entries.map((sub, i) => (
+                  <Box
+                    key={i}
+                    bg="whiteAlpha.50"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="md"
+                    p={3}
+                  >
+                    <HStack justify="space-between" mb={1}>
+                      <Text fontSize="sm" fontWeight="600" color="nexzy.white">
+                        @{sub.username}
+                      </Text>
+                      <Text fontSize="xs" color="whiteAlpha.500">
+                        {new Date(sub.createdAt).toLocaleString()}
+                      </Text>
+                    </HStack>
+                    {Object.entries(sub.values || {}).map(([k, v]) => (
+                      <Text key={k} fontSize="xs" color="whiteAlpha.800">
+                        <Text as="span" color="whiteAlpha.500">
+                          {k}:
+                        </Text>{" "}
+                        {String(v)}
+                      </Text>
+                    ))}
+                  </Box>
+                ))}
+              </VStack>
+            )}
+          </Box>
+        </Box>
+      ) : null}
     </Box>
   );
 }

@@ -32,7 +32,7 @@ type Announcement = {
   title: string;
   subtitle: string | null;
   cta: Cta | null;
-  detail: { blocks?: unknown[] } | null;
+  detail: { blocks?: unknown[]; form?: { fields?: unknown[] } } | null;
 };
 
 const ICONS: Record<string, IconType> = {
@@ -235,6 +235,24 @@ export default function SiteAnnouncementBanner() {
               </Button>
             </Flex>
             <AnnouncementDetail blocks={blocks} accent={accent} />
+            {Array.isArray(item.detail?.form?.fields) &&
+            item.detail!.form!.fields!.length ? (
+              <Box
+                mt={5}
+                p={4}
+                borderRadius="lg"
+                border="1px solid"
+                borderColor={tint(accent, 0.35)}
+                bg={tint(accent, 0.08)}
+              >
+                <Text color="white" fontWeight="600" fontSize="sm">
+                  Enter in the Nexzy app
+                </Text>
+                <Text color="whiteAlpha.700" fontSize="xs" mt={1}>
+                  Open Nexzy on your phone to submit your entry.
+                </Text>
+              </Box>
+            ) : null}
           </Box>
         </Box>
       ) : null}

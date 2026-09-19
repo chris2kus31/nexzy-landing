@@ -4160,7 +4160,14 @@ export interface AdminAnnouncement {
   startAt: string | null;
   endAt: string | null;
   autoDismissAfterHours: number | null;
-  detail: { blocks?: unknown[] } | null;
+  detail: {
+    blocks?: unknown[];
+    form?: {
+      fields?: unknown[];
+      submit?: { label?: string };
+      successMessage?: string;
+    };
+  } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -4206,5 +4213,20 @@ export async function deleteAnnouncement(
     await fetch(`/api/newsroom/admin/announcements/${id}`, {
       method: "DELETE",
     }),
+  );
+}
+
+export interface AnnouncementSubmission {
+  userId: string;
+  username: string;
+  values: Record<string, unknown>;
+  createdAt: string;
+}
+
+export async function getAnnouncementSubmissions(
+  id: string,
+): Promise<{ total: number; items: AnnouncementSubmission[] }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/announcements/${id}/submissions`),
   );
 }
