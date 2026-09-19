@@ -4138,3 +4138,72 @@ export async function toggleTrailerSource(
     }),
   );
 }
+
+// ---- Announcement banners (feed top, app + web) ---------------------------
+
+export interface AdminAnnouncement {
+  id: string;
+  type: string;
+  accentColor: string | null;
+  iconName: string | null;
+  iconSet: string;
+  kicker: string | null;
+  title: string;
+  subtitle: string | null;
+  audience: "everyone" | "authenticated";
+  priority: number;
+  ctaLabel: string | null;
+  ctaAction: string | null;
+  ctaTarget: string | null;
+  eventAt: string | null;
+  reminderLeadMinutes: number | null;
+  startAt: string | null;
+  endAt: string | null;
+  autoDismissAfterHours: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AnnouncementInput = Partial<
+  Omit<AdminAnnouncement, "id" | "createdAt" | "updatedAt">
+>;
+
+export async function listAnnouncements(): Promise<AdminAnnouncement[]> {
+  return handle(await fetch("/api/newsroom/admin/announcements"));
+}
+
+export async function createAnnouncement(
+  data: AnnouncementInput,
+): Promise<AdminAnnouncement> {
+  return handle(
+    await fetch("/api/newsroom/admin/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  );
+}
+
+export async function updateAnnouncement(
+  id: string,
+  data: AnnouncementInput,
+): Promise<AdminAnnouncement> {
+  return handle(
+    await fetch(`/api/newsroom/admin/announcements/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  );
+}
+
+export async function deleteAnnouncement(
+  id: string,
+): Promise<{ deleted: true }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/announcements/${id}`, {
+      method: "DELETE",
+    }),
+  );
+}
