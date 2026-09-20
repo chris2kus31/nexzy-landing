@@ -135,7 +135,7 @@ type Form = {
   subtitle: string;
   audience: "everyone" | "authenticated";
   priority: number;
-  ctaAction: "none" | "link" | "remind" | "sheet";
+  ctaAction: "none" | "link" | "remind" | "sheet" | "claim_coins";
   ctaLabel: string;
   ctaTarget: string;
   eventAt: string;
@@ -143,6 +143,7 @@ type Form = {
   startAt: string;
   endAt: string;
   autoDismissAfterHours: string;
+  rewardCoins: string;
   active: boolean;
   blocks: Block[];
   formFields: FField[];
@@ -168,6 +169,7 @@ const EMPTY: Form = {
   startAt: "",
   endAt: "",
   autoDismissAfterHours: "",
+  rewardCoins: "",
   active: true,
   blocks: [],
   formFields: [],
@@ -315,6 +317,7 @@ export default function AnnouncementsPanel() {
       endAt: isoToLocal(a.endAt),
       autoDismissAfterHours:
         a.autoDismissAfterHours == null ? "" : String(a.autoDismissAfterHours),
+      rewardCoins: a.rewardCoins == null ? "" : String(a.rewardCoins),
       active: a.active,
       blocks: Array.isArray(a.detail?.blocks)
         ? (a.detail!.blocks as Block[])
@@ -353,6 +356,10 @@ export default function AnnouncementsPanel() {
       autoDismissAfterHours: form.autoDismissAfterHours
         ? Number(form.autoDismissAfterHours)
         : null,
+      rewardCoins:
+        form.ctaAction === "claim_coins" && form.rewardCoins
+          ? Number(form.rewardCoins)
+          : null,
       detail:
         form.blocks.length || form.formFields.length
           ? {
