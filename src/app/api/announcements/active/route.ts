@@ -9,16 +9,24 @@ const API_SECRET_KEY = process.env.API_SECRET_KEY;
 
 export const dynamic = "force-dynamic";
 
+// Let the CDN absorb repeat hits: a banner being up to a minute stale is fine,
+// and this keeps the function-invocation count (Netlify credits) near zero.
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+};
+
 export async function GET() {
   try {
     const res = await fetch(`${API_BASE_URL}/announcements/active`, {
       headers: { "X-API-Key": API_SECRET_KEY ?? "" },
       cache: "no-store",
     });
-    if (!res.ok) return NextResponse.json(null);
+    if (!res.ok) return NextResponse.json(null, { headers: CACHE_HEADERS });
     const text = await res.text();
-    return NextResponse.json(text ? JSON.parse(text) : null);
+    return NextResponse.json(text ? JSON.parse(text) : null, {
+      headers: CACHE_HEADERS,
+    });
   } catch {
-    return NextResponse.json(null);
+    return NextResponse.json(null, { headers: CACHE_HEADERS });
   }
 }

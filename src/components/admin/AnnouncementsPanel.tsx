@@ -280,15 +280,21 @@ export default function AnnouncementsPanel() {
     });
 
   const pickType = (t: string) => {
-    const p = PRESETS[t];
-    setForm((f) => ({
-      ...f,
-      type: t,
-      // Only fill blanks so an edit doesn't clobber overrides.
-      accentColor: f.accentColor || (p?.accentColor ?? ""),
-      iconName: f.iconName || (p?.iconName ?? ""),
-      kicker: f.kicker || (p?.kicker ?? ""),
-    }));
+    setForm((f) => {
+      const prev = PRESETS[f.type];
+      const next = PRESETS[t];
+      // Follow the new preset for any field that is blank OR still sitting on
+      // the previous preset's default; keep true manual overrides.
+      const carry = (cur: string, prevDef?: string, nextDef?: string) =>
+        !cur || cur === prevDef ? (nextDef ?? "") : cur;
+      return {
+        ...f,
+        type: t,
+        accentColor: carry(f.accentColor, prev?.accentColor, next?.accentColor),
+        iconName: carry(f.iconName, prev?.iconName, next?.iconName),
+        kicker: carry(f.kicker, prev?.kicker, next?.kicker),
+      };
+    });
   };
 
   const startNew = () => {
@@ -331,9 +337,55 @@ export default function AnnouncementsPanel() {
   };
 
   const save = async () => {
-    if (!form.title.trim()) {
-      setError("Title is required.");
+    const fail = (msg: string) => {
+      setError(msg);
+      return true;
+    };
+    if (!form.title.trim() && fail("Title is required.")) return;
+    if (
+      form.ctaAction !== "none" &&
+      !form.ctaLabel.trim() &&
+      fail("Button label is required for the selected call to action.")
+    )
       return;
+    if (
+      form.ctaAction === "link" &&
+      !form.ctaTarget.trim() &&
+      fail("Link target is required (a /route or https URL).")
+    )
+      return;
+    if (
+      form.ctaAction === "remind" &&
+      !form.eventAt &&
+      fail("Event time is required for a Remind me button.")
+    )
+      return;
+    if (
+      form.ctaAction === "claim_coins" &&
+      (!form.rewardCoins || Number(form.rewardCoins) <= 0) &&
+      fail("Reward coins must be a positive number for Grab coins.")
+    )
+      return;
+    const keys = form.formFields.map((f) => f.key.trim());
+    if (form.formFields.length) {
+      if (keys.some((k) => !k) && fail("Every form field needs a key.")) return;
+      if (
+        new Set(keys).size !== keys.length &&
+        fail("Form field keys must be unique.")
+      )
+        return;
+      if (
+        form.formFields.some((f) => !f.label.trim()) &&
+        fail("Every form field needs a label.")
+      )
+        return;
+      if (
+        form.formFields.some(
+          (f) => f.type === "select" && !(f.options ?? []).length,
+        ) &&
+        fail("Select fields need at least one option.")
+      )
+        return;
     }
     setSaving(true);
     setError("");
@@ -399,6 +451,12 @@ export default function AnnouncementsPanel() {
   };
 
   const remove = async (a: AdminAnnouncement) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(`Delete "${a.title}"? This cannot be undone.`)
+    ) {
+      return;
+    }
     try {
       await deleteAnnouncement(a.id);
       if (form.id === a.id) startNew();
