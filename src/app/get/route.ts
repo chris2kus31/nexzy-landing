@@ -12,9 +12,14 @@ export const dynamic = "force-dynamic";
 
 export function GET(req: NextRequest): NextResponse {
   const ua = req.headers.get("user-agent") || "";
+  // Attribution: /get?src=app_share_menu flows into the Play install referrer
+  // so shared installs are attributable. Bad/missing src falls back to "qr"
+  // (the historical default, so existing QR codes are unchanged).
+  const raw = req.nextUrl.searchParams.get("src") ?? "";
+  const src = /^[a-z0-9_-]{1,40}$/i.test(raw) ? raw : "qr";
 
   if (/android/i.test(ua)) {
-    return NextResponse.redirect(googlePlayUrl("qr"));
+    return NextResponse.redirect(googlePlayUrl(src));
   }
   if (/iphone|ipad|ipod/i.test(ua)) {
     return NextResponse.redirect(APP_STORE_URL);
