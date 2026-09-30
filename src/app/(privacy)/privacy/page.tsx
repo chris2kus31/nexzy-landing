@@ -83,13 +83,15 @@ export default function PrivacyPage() {
                   <strong>Age &amp; Demographic Information:</strong> Your date
                   of birth, which we collect at sign-up to confirm you meet our
                   16+ age requirement and to keep age-appropriate content
-                  settings. With your consent, we also collect optional profile
-                  details such as gender and an approximate location (country
-                  and, where available, city) derived from your IP address —
-                  never precise GPS. We use these to understand our community and
-                  to improve and, in future, support relevant advertising. You
-                  can decline the optional details and still use Nexzy, and you
-                  can update or remove them at any time in the app.
+                  settings. If you choose to, you can also add your gender; it
+                  is optional and never required. When you sign in, we
+                  automatically determine your approximate location (country
+                  and, where available, city) from your IP address — never
+                  precise GPS or your device&apos;s location services. We use
+                  these details to understand our community and to improve and,
+                  in future, support relevant advertising. You can skip gender
+                  and still use Nexzy, and you can update it at any time in the
+                  app.
                 </Text>
               </Stack>
             </Box>
@@ -196,7 +198,11 @@ export default function PrivacyPage() {
                 <Text color="gray.700">• Access your personal data</Text>
                 <Text color="gray.700">• Correct inaccurate information</Text>
                 <Text color="gray.700">
-                  • Delete your account and associated data
+                  • Delete your account and associated data (
+                  <Link asChild color="nexzy.blue">
+                    <NextLink href="/delete-account">how to delete</NextLink>
+                  </Link>
+                  )
                 </Text>
                 <Text color="gray.700">
                   • Opt-out of marketing communications
@@ -213,9 +219,9 @@ export default function PrivacyPage() {
               </Heading>
               <Text color="gray.700">
                 Nexzy is rated 16+ and is intended for users aged 16 and older.
-                We ask for your date of birth at sign-up to confirm you meet this
-                requirement, and we do not permit accounts for anyone under 16.
-                We do not knowingly collect personal information from anyone
+                We ask for your date of birth at sign-up to confirm you meet
+                this requirement, and we do not permit accounts for anyone under
+                16. We do not knowingly collect personal information from anyone
                 under 16; if you believe someone under 16 has provided us
                 information, please contact us and we will remove it.
               </Text>
