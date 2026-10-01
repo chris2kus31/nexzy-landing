@@ -3515,6 +3515,45 @@ export async function listVideos(limit = 100): Promise<AdminVideo[]> {
   return handle(await fetch(`/api/newsroom/admin/videos?limit=${limit}`));
 }
 
+/** Video Library, server-paged. `series`: undefined/null = all, "" =
+ *  uncategorized, else exact series. Counts cover the WHOLE library. */
+export interface VideoLibraryPage {
+  items: AdminVideo[];
+  total: number;
+  counts: {
+    all: number;
+    uncategorized: number;
+    series: Record<string, number>;
+  };
+}
+export async function listVideosPage(params: {
+  offset: number;
+  limit: number;
+  series?: string | null;
+}): Promise<VideoLibraryPage> {
+  const qs = new URLSearchParams({
+    offset: String(params.offset),
+    limit: String(params.limit),
+  });
+  if (params.series === "") qs.set("uncategorized", "1");
+  else if (params.series) qs.set("series", params.series);
+  return handle(await fetch(`/api/newsroom/admin/videos/page?${qs}`));
+}
+
+/** Batch categorize: set one series on many videos ("" = uncategorized). */
+export async function batchSetVideoSeries(
+  ids: string[],
+  series: string,
+): Promise<{ updated: number }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/videos/batch/series`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, series }),
+    }),
+  );
+}
+
 /** Pull real performance for a video (Video Library) → returns the updated video. */
 export async function refreshVideoInsights(id: string): Promise<AdminVideo> {
   return handle(
@@ -4019,6 +4058,8 @@ export interface TrailerCandidate {
   status: "pending" | "approved" | "dismissed";
   resolvedGameId: string | null;
   resolvedGameName?: string | null;
+  /** The suggested game's cover (backgroundImage) — for the picked chip. */
+  resolvedGameCover?: string | null;
   candidateGames: { gameId: string; name: string; score: number }[] | null;
 }
 
@@ -4065,6 +4106,8 @@ export interface TrailerIgdbResult {
   igdbId: number;
   name: string;
   year: number | null;
+  /** Small IGDB box-art thumb (null when IGDB has no cover). */
+  coverUrl?: string | null;
 }
 
 /** Search IGDB by name to import a game not yet in the catalog. */

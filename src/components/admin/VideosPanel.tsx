@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -28,7 +28,9 @@ import {
   FiMenu,
 } from "react-icons/fi";
 import {
-  listVideos,
+  listVideosPage,
+  batchSetVideoSeries,
+  type VideoLibraryPage,
   createVideo,
   updateVideo,
   deleteVideo,
@@ -48,6 +50,9 @@ import CopyLinkButton from "@/components/admin/CopyLinkButton";
 import { uploadHostedFile } from "@/lib/admin/hostedUpload";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+
+// Video Library page size — one page travels the wire (server-paginated).
+const VIDEO_PAGE_SIZE = 25;
 
 const primaryBtn = {
   bg: "nexzy.blue",
@@ -97,6 +102,23 @@ export default function VideosPanel() {
   const [msg, setMsg] = useState<string | null>(null);
   // Series filter: null = All, "" = Uncategorized (no series), else the name.
   const [seriesFilter, setSeriesFilter] = useState<string | null>(null);
+  // Server-side pagination: one page travels the wire; chip counts come from
+  // the server so they cover the WHOLE library, not just the loaded page.
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [libCounts, setLibCounts] = useState<VideoLibraryPage["counts"]>({
+    all: 0,
+    uncategorized: 0,
+    series: {},
+  });
+  const pageSeq = useRef(0);
+  // Batch categorize: multi-select rows (persists across pages within the
+  // current filter), then apply one series to all of them in one shot.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchSeries, setBatchSeries] = useState("");
+  const [batchNew, setBatchNew] = useState(false);
+  const [batching, setBatching] = useState(false);
 
   // form
   const [showForm, setShowForm] = useState(false);
@@ -132,10 +154,39 @@ export default function VideosPanel() {
   const [gResults, setGResults] = useState<GameLite[]>([]);
   const [gSearching, setGSearching] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  // One page of the library for the current filter (stale-response guarded).
+  async function loadPage() {
+    const seq = ++pageSeq.current;
+    setPageLoading(true);
     try {
-      setVideos(await listVideos(200));
+      const res = await listVideosPage({
+        offset: page * VIDEO_PAGE_SIZE,
+        limit: VIDEO_PAGE_SIZE,
+        series: seriesFilter,
+      });
+      if (seq !== pageSeq.current) return;
+      setVideos(res.items);
+      setTotal(res.total);
+      setLibCounts(res.counts);
+    } catch (e) {
+      if (seq === pageSeq.current) setMsg((e as Error).message);
+    } finally {
+      if (seq === pageSeq.current) {
+        setPageLoading(false);
+        setLoading(false);
+      }
+    }
+  }
+  // Page / filter changes refetch just the page.
+  useEffect(() => {
+    void loadPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, seriesFilter]);
+
+  // After any mutation: refresh the current page + series metadata.
+  async function load() {
+    try {
+      await loadPage();
       getVideoSeries()
         .then(setSeriesOptions)
         .catch(() => {});
@@ -154,13 +205,63 @@ export default function VideosPanel() {
         .catch(() => {});
     } catch (e) {
       setMsg((e as Error).message);
-    } finally {
-      setLoading(false);
     }
   }
+  // Series metadata once on mount (the page itself loads via the effect above).
   useEffect(() => {
-    load();
+    getVideoSeries()
+      .then(setSeriesOptions)
+      .catch(() => {});
+    getVideoSeriesMeta()
+      .then((rows) => {
+        const map: Record<string, VideoSeriesMetaRow> = {};
+        for (const r of rows) map[r.name] = r;
+        setSeriesFormats(map);
+        setOrderedSections(
+          [...rows]
+            .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+            .map((r) => r.name),
+        );
+        setOrderDirty(false);
+      })
+      .catch(() => {});
   }, []);
+
+  // Switching chips: back to page 1, drop any selection from the old filter.
+  function pickFilter(next: string | null) {
+    setSeriesFilter(next);
+    setPage(0);
+    setSelected(new Set());
+  }
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+  async function applyBatch() {
+    if (!selected.size) return;
+    setBatching(true);
+    setMsg(null);
+    try {
+      const r = await batchSetVideoSeries([...selected], batchSeries.trim());
+      setMsg(
+        `Categorized ${r.updated} video${r.updated === 1 ? "" : "s"} → ${
+          batchSeries.trim() || "No series"
+        }`,
+      );
+      setSelected(new Set());
+      setBatchSeries("");
+      setBatchNew(false);
+      await load();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBatching(false);
+    }
+  }
 
   function resetForm() {
     setEditingId(null);
@@ -337,26 +438,24 @@ export default function VideosPanel() {
     }
   }
 
-  // Series filter chips: every series present in the loaded list (plus any
-  // known series options that happen to have no videos loaded), with counts,
-  // and an "Uncategorized" bucket for videos with no series.
-  const seriesCounts = new Map<string, number>();
-  let uncategorizedCount = 0;
-  for (const v of videos) {
-    const s = (v.series ?? "").trim();
-    if (s) seriesCounts.set(s, (seriesCounts.get(s) ?? 0) + 1);
-    else uncategorizedCount++;
-  }
+  // Series filter chips — counts come from the SERVER (whole library), plus
+  // any known series that currently has no videos, and the Uncategorized bucket.
+  const seriesCounts = new Map<string, number>(
+    Object.entries(libCounts.series),
+  );
+  const uncategorizedCount = libCounts.uncategorized;
   for (const s of seriesOptions) {
     if (s && !seriesCounts.has(s)) seriesCounts.set(s, 0);
   }
   const seriesChips = [...seriesCounts.entries()].sort((a, b) =>
     a[0].localeCompare(b[0]),
   );
-  const filteredVideos =
-    seriesFilter === null
-      ? videos
-      : videos.filter((v) => ((v.series ?? "").trim() || "") === seriesFilter);
+  // The server already filtered this page by the active chip.
+  const filteredVideos = videos;
+  const pageCount = Math.max(1, Math.ceil(total / VIDEO_PAGE_SIZE));
+  const pageAllSelected =
+    filteredVideos.length > 0 &&
+    filteredVideos.every((v) => selected.has(v.id));
 
   const moveSection = (from: number, to: number) => {
     if (from === to || from < 0 || to < 0) return;
@@ -480,22 +579,20 @@ export default function VideosPanel() {
 
       {/* Series filter chips — narrow the library to one series (or the
           uncategorized bucket) without losing the list. */}
-      {!loading && videos.length > 0 && (
+      {!loading && libCounts.all > 0 && (
         <HStack gap={1.5} mb={3} wrap="wrap">
           <Button
             size="2xs"
-            onClick={() => setSeriesFilter(null)}
+            onClick={() => pickFilter(null)}
             {...(seriesFilter === null ? primaryBtn : outlineBtn)}
           >
-            All ({videos.length})
+            All ({libCounts.all})
           </Button>
           {seriesChips.map(([name, count]) => (
             <Button
               key={name}
               size="2xs"
-              onClick={() =>
-                setSeriesFilter(seriesFilter === name ? null : name)
-              }
+              onClick={() => pickFilter(seriesFilter === name ? null : name)}
               {...(seriesFilter === name ? primaryBtn : outlineBtn)}
             >
               {name} ({count})
@@ -504,7 +601,7 @@ export default function VideosPanel() {
           {uncategorizedCount > 0 && (
             <Button
               size="2xs"
-              onClick={() => setSeriesFilter(seriesFilter === "" ? null : "")}
+              onClick={() => pickFilter(seriesFilter === "" ? null : "")}
               {...(seriesFilter === ""
                 ? { bg: "orange.500", color: "white", _hover: { opacity: 0.9 } }
                 : {
@@ -820,11 +917,11 @@ export default function VideosPanel() {
 
       {loading ? (
         <Spinner size="sm" color="nexzy.blue" />
-      ) : videos.length === 0 ? (
+      ) : libCounts.all === 0 ? (
         <Text fontSize="sm" color="whiteAlpha.500">
           No videos yet. Click &ldquo;New video&rdquo; to add one.
         </Text>
-      ) : filteredVideos.length === 0 ? (
+      ) : filteredVideos.length === 0 && !pageLoading ? (
         <Text fontSize="sm" color="whiteAlpha.500">
           {seriesFilter === ""
             ? "No uncategorized videos — everything has a series. 🎉"
@@ -833,302 +930,451 @@ export default function VideosPanel() {
             as="button"
             color="nexzy.lightBlue"
             textDecoration="underline"
-            onClick={() => setSeriesFilter(null)}
+            onClick={() => pickFilter(null)}
           >
             Show all
           </Box>
         </Text>
       ) : (
-        <VStack align="stretch" gap={2}>
-          {filteredVideos.map((v) => {
-            const thumb = thumbFor(v);
-            const short = isShort(v.youtubeUrl);
-            return (
-              <Box
-                key={v.id}
-                borderWidth="1px"
-                borderColor={
-                  editingId === v.id ? "nexzy.blue" : "whiteAlpha.200"
+        <>
+          {/* Selection header + batch categorize bar. Selection is opt-in —
+              with nothing checked the library behaves exactly as before. */}
+          <Flex
+            align="center"
+            gap={3}
+            mb={2}
+            wrap="wrap"
+            p={selected.size ? 2 : 0}
+            borderRadius="md"
+            bg={selected.size ? "whiteAlpha.100" : "transparent"}
+            borderWidth={selected.size ? "1px" : "0"}
+            borderColor="nexzy.blue"
+          >
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                color: "#c5cbe0",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={pageAllSelected}
+                onChange={() =>
+                  setSelected((prev) => {
+                    const n = new Set(prev);
+                    if (pageAllSelected)
+                      filteredVideos.forEach((v) => n.delete(v.id));
+                    else filteredVideos.forEach((v) => n.add(v.id));
+                    return n;
+                  })
                 }
-                borderRadius="md"
-                p={2}
-              >
-                <Flex align="center" gap={3}>
-                  {thumb ? (
-                    <Image
-                      src={thumb}
-                      alt=""
-                      w="64px"
-                      h="36px"
-                      borderRadius="sm"
-                      objectFit="cover"
+              />
+              Select page
+            </label>
+            {selected.size > 0 && (
+              <>
+                <Text fontSize="sm" color="nexzy.white" fontWeight="700">
+                  {selected.size} selected
+                </Text>
+                <Text fontSize="xs" color="whiteAlpha.600">
+                  Set series:
+                </Text>
+                <select
+                  value={batchNew ? "__new__" : batchSeries}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__new__") {
+                      setBatchNew(true);
+                      setBatchSeries("");
+                    } else {
+                      setBatchNew(false);
+                      setBatchSeries(val);
+                    }
+                  }}
+                  style={{
+                    background: "#1a2036",
+                    color: "#e6e8f0",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 6,
+                    padding: "5px 8px",
+                    fontSize: 13,
+                  }}
+                >
+                  <option value="">— No series —</option>
+                  {seriesOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  <option value="__new__">+ New series…</option>
+                </select>
+                {batchNew && (
+                  <Input
+                    {...inputStyle}
+                    w="200px"
+                    autoFocus
+                    value={batchSeries}
+                    onChange={(e) => setBatchSeries(e.target.value)}
+                    placeholder="New series name"
+                  />
+                )}
+                <Button
+                  size="xs"
+                  {...primaryBtn}
+                  onClick={applyBatch}
+                  loading={batching}
+                  disabled={batchNew && !batchSeries.trim()}
+                >
+                  Apply to {selected.size}
+                </Button>
+                <Button
+                  size="xs"
+                  {...outlineBtn}
+                  onClick={() => setSelected(new Set())}
+                >
+                  Clear
+                </Button>
+              </>
+            )}
+            <Text fontSize="xs" color="whiteAlpha.500" ml="auto">
+              {total === 0
+                ? ""
+                : `Showing ${page * VIDEO_PAGE_SIZE + 1}–${Math.min(
+                    total,
+                    page * VIDEO_PAGE_SIZE + filteredVideos.length,
+                  )} of ${total}`}
+            </Text>
+          </Flex>
+
+          <VStack align="stretch" gap={2} opacity={pageLoading ? 0.6 : 1}>
+            {filteredVideos.map((v) => {
+              const thumb = thumbFor(v);
+              const short = isShort(v.youtubeUrl);
+              return (
+                <Box
+                  key={v.id}
+                  borderWidth="1px"
+                  borderColor={
+                    editingId === v.id || selected.has(v.id)
+                      ? "nexzy.blue"
+                      : "whiteAlpha.200"
+                  }
+                  bg={selected.has(v.id) ? "whiteAlpha.50" : undefined}
+                  borderRadius="md"
+                  p={2}
+                >
+                  <Flex align="center" gap={3}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${v.title}`}
+                      checked={selected.has(v.id)}
+                      onChange={() => toggleSelect(v.id)}
+                      style={{ flexShrink: 0, cursor: "pointer" }}
                     />
-                  ) : (
-                    <Box
-                      w="64px"
-                      h="36px"
-                      borderRadius="sm"
-                      bg="whiteAlpha.100"
-                    />
-                  )}
-                  <Box flex="1" minW="0">
-                    <HStack gap={2}>
-                      <Text
-                        fontSize="sm"
-                        color="nexzy.white"
-                        lineClamp={1}
-                        fontWeight={v.featured ? "700" : "400"}
-                      >
-                        {v.title}
-                      </Text>
-                      {v.featured && (
-                        <Badge colorPalette="yellow" variant="solid">
-                          ★ Featured
-                        </Badge>
-                      )}
-                    </HStack>
-                    <HStack gap={1} mt={1} wrap="wrap">
-                      {/* Series tag — click to filter the library to it */}
-                      {(v.series ?? "").trim() ? (
-                        <Badge
-                          colorPalette="purple"
-                          variant="solid"
-                          cursor="pointer"
-                          title="Filter by this series"
-                          onClick={() => setSeriesFilter(v.series!.trim())}
+                    {thumb ? (
+                      <Image
+                        src={thumb}
+                        alt=""
+                        w="64px"
+                        h="36px"
+                        borderRadius="sm"
+                        objectFit="cover"
+                      />
+                    ) : (
+                      <Box
+                        w="64px"
+                        h="36px"
+                        borderRadius="sm"
+                        bg="whiteAlpha.100"
+                      />
+                    )}
+                    <Box flex="1" minW="0">
+                      <HStack gap={2}>
+                        <Text
+                          fontSize="sm"
+                          color="nexzy.white"
+                          lineClamp={1}
+                          fontWeight={v.featured ? "700" : "400"}
                         >
-                          {v.series!.trim()}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          colorPalette="orange"
-                          variant="outline"
-                          cursor="pointer"
-                          title="No series — click to see all uncategorized"
-                          onClick={() => setSeriesFilter("")}
-                        >
-                          No series
-                        </Badge>
-                      )}
-                      <Badge
-                        colorPalette={v.source === "nexzy" ? "blue" : "gray"}
-                        variant="subtle"
-                      >
-                        {v.source}
-                      </Badge>
-                      {short && (
-                        <Badge colorPalette="pink" variant="subtle">
-                          Short
-                        </Badge>
-                      )}
-                      <Badge
-                        colorPalette={
-                          v.status === "published" ? "green" : "orange"
-                        }
-                        variant="subtle"
-                      >
-                        {v.status}
-                      </Badge>
-                      {v.platformLinks?.tiktok && (
-                        <Badge colorPalette="pink" variant="outline">
-                          TikTok
-                        </Badge>
-                      )}
-                      {v.platformLinks?.reels && (
-                        <Badge colorPalette="purple" variant="outline">
-                          Reels
-                        </Badge>
-                      )}
-                      {v.platformLinks?.facebook && (
-                        <Badge colorPalette="blue" variant="outline">
-                          Facebook
-                        </Badge>
-                      )}
-                      {(v.videoUrl || v.mediaKey) && (
-                        <Badge colorPalette="green" variant="solid">
-                          Hosted
-                        </Badge>
-                      )}
-                      <Text fontSize="11px" color="whiteAlpha.500">
-                        {v.viewCount} views
-                      </Text>
-                    </HStack>
-                    {/* attached games */}
-                    <HStack gap={1} mt={1.5} wrap="wrap">
-                      {(v.games ?? []).map((g) => (
-                        <HStack
-                          key={g.id}
-                          gap={1}
-                          px={2}
-                          py={0.5}
-                          borderRadius="full"
-                          bg="whiteAlpha.100"
-                        >
-                          <Text fontSize="11px" color="nexzy.white">
-                            {g.name}
-                          </Text>
-                          <Box
-                            as="button"
-                            onClick={() => detach(v, g.id)}
-                            color="whiteAlpha.600"
-                            _hover={{ color: "red.300" }}
+                          {v.title}
+                        </Text>
+                        {v.featured && (
+                          <Badge colorPalette="yellow" variant="solid">
+                            ★ Featured
+                          </Badge>
+                        )}
+                      </HStack>
+                      <HStack gap={1} mt={1} wrap="wrap">
+                        {/* Series tag — click to filter the library to it */}
+                        {(v.series ?? "").trim() ? (
+                          <Badge
+                            colorPalette="purple"
+                            variant="solid"
+                            cursor="pointer"
+                            title="Filter by this series"
+                            onClick={() => setSeriesFilter(v.series!.trim())}
                           >
-                            <FiX size={11} />
-                          </Box>
-                        </HStack>
-                      ))}
+                            {v.series!.trim()}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            colorPalette="orange"
+                            variant="outline"
+                            cursor="pointer"
+                            title="No series — click to see all uncategorized"
+                            onClick={() => setSeriesFilter("")}
+                          >
+                            No series
+                          </Badge>
+                        )}
+                        <Badge
+                          colorPalette={v.source === "nexzy" ? "blue" : "gray"}
+                          variant="subtle"
+                        >
+                          {v.source}
+                        </Badge>
+                        {short && (
+                          <Badge colorPalette="pink" variant="subtle">
+                            Short
+                          </Badge>
+                        )}
+                        <Badge
+                          colorPalette={
+                            v.status === "published" ? "green" : "orange"
+                          }
+                          variant="subtle"
+                        >
+                          {v.status}
+                        </Badge>
+                        {v.platformLinks?.tiktok && (
+                          <Badge colorPalette="pink" variant="outline">
+                            TikTok
+                          </Badge>
+                        )}
+                        {v.platformLinks?.reels && (
+                          <Badge colorPalette="purple" variant="outline">
+                            Reels
+                          </Badge>
+                        )}
+                        {v.platformLinks?.facebook && (
+                          <Badge colorPalette="blue" variant="outline">
+                            Facebook
+                          </Badge>
+                        )}
+                        {(v.videoUrl || v.mediaKey) && (
+                          <Badge colorPalette="green" variant="solid">
+                            Hosted
+                          </Badge>
+                        )}
+                        <Text fontSize="11px" color="whiteAlpha.500">
+                          {v.viewCount} views
+                        </Text>
+                      </HStack>
+                      {/* attached games */}
+                      <HStack gap={1} mt={1.5} wrap="wrap">
+                        {(v.games ?? []).map((g) => (
+                          <HStack
+                            key={g.id}
+                            gap={1}
+                            px={2}
+                            py={0.5}
+                            borderRadius="full"
+                            bg="whiteAlpha.100"
+                          >
+                            <Text fontSize="11px" color="nexzy.white">
+                              {g.name}
+                            </Text>
+                            <Box
+                              as="button"
+                              onClick={() => detach(v, g.id)}
+                              color="whiteAlpha.600"
+                              _hover={{ color: "red.300" }}
+                            >
+                              <FiX size={11} />
+                            </Box>
+                          </HStack>
+                        ))}
+                        <Button
+                          size="2xs"
+                          variant="ghost"
+                          color="nexzy.lightBlue"
+                          _hover={{ bg: "whiteAlpha.100" }}
+                          onClick={() =>
+                            setAttachFor(attachFor === v.id ? null : v.id)
+                          }
+                        >
+                          + game
+                        </Button>
+                      </HStack>
+                    </Box>
+                    <HStack gap={1}>
                       <Button
-                        size="2xs"
-                        variant="ghost"
-                        color="nexzy.lightBlue"
-                        _hover={{ bg: "whiteAlpha.100" }}
-                        onClick={() =>
-                          setAttachFor(attachFor === v.id ? null : v.id)
-                        }
+                        size="xs"
+                        {...(v.featured ? primaryBtn : outlineBtn)}
+                        onClick={() => toggleFeature(v)}
+                        loading={busy === v.id}
+                        title={v.featured ? "Unfeature" : "Feature"}
                       >
-                        + game
+                        <FiStar />
                       </Button>
-                    </HStack>
-                  </Box>
-                  <HStack gap={1}>
-                    <Button
-                      size="xs"
-                      {...(v.featured ? primaryBtn : outlineBtn)}
-                      onClick={() => toggleFeature(v)}
-                      loading={busy === v.id}
-                      title={v.featured ? "Unfeature" : "Feature"}
-                    >
-                      <FiStar />
-                    </Button>
-                    <Button
-                      size="xs"
-                      {...outlineBtn}
-                      onClick={() => toggleStatus(v)}
-                      loading={busy === v.id}
-                      title={v.status === "published" ? "Hide" : "Publish"}
-                    >
-                      {v.status === "published" ? <FiEyeOff /> : <FiEye />}
-                    </Button>
-                    <Button
-                      size="xs"
-                      {...outlineBtn}
-                      onClick={() => startEdit(v)}
-                      title="Edit"
-                    >
-                      <FiEdit2 />
-                    </Button>
-                    {v.youtubeUrl && (
                       <Button
                         size="xs"
                         {...outlineBtn}
-                        onClick={() =>
-                          window.open(
-                            v.youtubeUrl!,
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
-                        }
-                        title="Open on YouTube"
+                        onClick={() => toggleStatus(v)}
+                        loading={busy === v.id}
+                        title={v.status === "published" ? "Hide" : "Publish"}
                       >
-                        <FiExternalLink />
+                        {v.status === "published" ? <FiEyeOff /> : <FiEye />}
                       </Button>
-                    )}
-                    {v.status === "published" && (
-                      <CopyLinkButton
-                        url={`${SITE_URL}/videos/${v.slug}`}
-                        title="Copy public video link"
-                      />
-                    )}
-                    <Button
-                      size="xs"
-                      {...outlineBtn}
-                      onClick={() => remove(v)}
-                      loading={busy === v.id}
-                      title="Delete video"
-                    >
-                      <FiTrash2 />
-                    </Button>
-                  </HStack>
-                </Flex>
-
-                {/* Self-hosted MP4 upload (Nexzy TikTok native feed source) */}
-                <Box mt={2} pl="76px">
-                  <HostedVideoUpload
-                    videoId={v.id}
-                    hasHosted={!!(v.videoUrl || v.mediaKey)}
-                    onDone={load}
-                  />
-                </Box>
-
-                {/* attach-game search row */}
-                {attachFor === v.id && (
-                  <Box
-                    mt={2}
-                    pt={2}
-                    borderTop="1px solid"
-                    borderColor="whiteAlpha.200"
-                  >
-                    <HStack gap={2}>
-                      <Input
-                        {...inputStyle}
-                        value={gq}
-                        onChange={(e) => setGq(e.target.value)}
-                        placeholder="Search a game to attach…"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") gameSearch();
-                        }}
-                      />
                       <Button
-                        size="sm"
-                        {...primaryBtn}
-                        onClick={gameSearch}
-                        loading={gSearching}
+                        size="xs"
+                        {...outlineBtn}
+                        onClick={() => startEdit(v)}
+                        title="Edit"
                       >
-                        <FiSearch />
+                        <FiEdit2 />
+                      </Button>
+                      {v.youtubeUrl && (
+                        <Button
+                          size="xs"
+                          {...outlineBtn}
+                          onClick={() =>
+                            window.open(
+                              v.youtubeUrl!,
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }
+                          title="Open on YouTube"
+                        >
+                          <FiExternalLink />
+                        </Button>
+                      )}
+                      {v.status === "published" && (
+                        <CopyLinkButton
+                          url={`${SITE_URL}/videos/${v.slug}`}
+                          title="Copy public video link"
+                        />
+                      )}
+                      <Button
+                        size="xs"
+                        {...outlineBtn}
+                        onClick={() => remove(v)}
+                        loading={busy === v.id}
+                        title="Delete video"
+                      >
+                        <FiTrash2 />
                       </Button>
                     </HStack>
-                    {gResults.length > 0 && (
-                      <VStack align="stretch" gap={1} mt={2}>
-                        {gResults.map((g) => (
-                          <Flex
-                            key={g.id}
-                            align="center"
-                            gap={2}
-                            p={2}
-                            borderWidth="1px"
-                            borderColor="whiteAlpha.200"
-                            borderRadius="md"
-                            cursor="pointer"
-                            _hover={{ bg: "whiteAlpha.100" }}
-                            onClick={() => attach(v, g)}
-                          >
-                            {g.backgroundImage && (
-                              <Image
-                                src={g.backgroundImage}
-                                alt=""
-                                boxSize="24px"
-                                borderRadius="sm"
-                                objectFit="cover"
-                              />
-                            )}
-                            <Text
-                              flex="1"
-                              fontSize="sm"
-                              color="nexzy.white"
-                              lineClamp={1}
-                            >
-                              {g.name}
-                            </Text>
-                          </Flex>
-                        ))}
-                      </VStack>
-                    )}
+                  </Flex>
+
+                  {/* Self-hosted MP4 upload (Nexzy TikTok native feed source) */}
+                  <Box mt={2} pl="76px">
+                    <HostedVideoUpload
+                      videoId={v.id}
+                      hasHosted={!!(v.videoUrl || v.mediaKey)}
+                      onDone={load}
+                    />
                   </Box>
-                )}
-              </Box>
-            );
-          })}
-        </VStack>
+
+                  {/* attach-game search row */}
+                  {attachFor === v.id && (
+                    <Box
+                      mt={2}
+                      pt={2}
+                      borderTop="1px solid"
+                      borderColor="whiteAlpha.200"
+                    >
+                      <HStack gap={2}>
+                        <Input
+                          {...inputStyle}
+                          value={gq}
+                          onChange={(e) => setGq(e.target.value)}
+                          placeholder="Search a game to attach…"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") gameSearch();
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          {...primaryBtn}
+                          onClick={gameSearch}
+                          loading={gSearching}
+                        >
+                          <FiSearch />
+                        </Button>
+                      </HStack>
+                      {gResults.length > 0 && (
+                        <VStack align="stretch" gap={1} mt={2}>
+                          {gResults.map((g) => (
+                            <Flex
+                              key={g.id}
+                              align="center"
+                              gap={2}
+                              p={2}
+                              borderWidth="1px"
+                              borderColor="whiteAlpha.200"
+                              borderRadius="md"
+                              cursor="pointer"
+                              _hover={{ bg: "whiteAlpha.100" }}
+                              onClick={() => attach(v, g)}
+                            >
+                              {g.backgroundImage && (
+                                <Image
+                                  src={g.backgroundImage}
+                                  alt=""
+                                  boxSize="24px"
+                                  borderRadius="sm"
+                                  objectFit="cover"
+                                />
+                              )}
+                              <Text
+                                flex="1"
+                                fontSize="sm"
+                                color="nexzy.white"
+                                lineClamp={1}
+                              >
+                                {g.name}
+                              </Text>
+                            </Flex>
+                          ))}
+                        </VStack>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </VStack>
+
+          {pageCount > 1 && (
+            <Flex justify="center" align="center" gap={3} mt={4}>
+              <Button
+                size="sm"
+                {...outlineBtn}
+                disabled={page === 0 || pageLoading}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ← Prev
+              </Button>
+              <Text fontSize="sm" color="nexzy.gray.100">
+                Page {page + 1} of {pageCount}
+              </Text>
+              <Button
+                size="sm"
+                {...outlineBtn}
+                disabled={page + 1 >= pageCount || pageLoading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next →
+              </Button>
+            </Flex>
+          )}
+        </>
       )}
     </Box>
   );

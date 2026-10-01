@@ -72,8 +72,44 @@ const inputStyle = {
 
 // A resolved selection: either a catalog game (has id) or an IGDB game to import.
 type Picked =
-  | { kind: "catalog"; id: string; name: string }
-  | { kind: "igdb"; igdbId: number; name: string; year: number | null };
+  | {
+      kind: "catalog";
+      id: string;
+      name: string;
+      cover?: string | null;
+      year?: string | null;
+    }
+  | {
+      kind: "igdb";
+      igdbId: number;
+      name: string;
+      year: number | null;
+      cover?: string | null;
+    };
+
+/** Small cover thumb for the game picker — a neutral tile when there's no art. */
+function GameThumb({ src, size = 32 }: { src?: string | null; size?: number }) {
+  return src ? (
+    <Image
+      src={src}
+      alt=""
+      w={`${size}px`}
+      h={`${Math.round(size * 1.33)}px`}
+      objectFit="cover"
+      borderRadius="sm"
+      flexShrink={0}
+      loading="lazy"
+    />
+  ) : (
+    <Box
+      w={`${size}px`}
+      h={`${Math.round(size * 1.33)}px`}
+      borderRadius="sm"
+      bg="whiteAlpha.100"
+      flexShrink={0}
+    />
+  );
+}
 
 // Strip common trailer-title noise so the default game search is useful.
 function cleanTitle(title: string): string {
@@ -95,6 +131,7 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
           kind: "catalog",
           id: c.resolvedGameId,
           name: c.resolvedGameName ?? "Suggested game",
+          cover: c.resolvedGameCover ?? null,
         }
       : null,
   );
@@ -197,8 +234,10 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
             <Text fontSize="sm" color="whiteAlpha.700">
               Game:
             </Text>
+            <GameThumb src={picked.cover} size={28} />
             <Badge colorPalette={picked.kind === "igdb" ? "yellow" : "blue"}>
               {picked.name}
+              {picked.year ? ` · ${picked.year}` : ""}
               {picked.kind === "igdb" ? " (import from IGDB)" : ""}
             </Badge>
             <Button
@@ -242,7 +281,7 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
               </Button>
             </HStack>
             {mode === "catalog" && catalog.length > 0 && (
-              <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+              <VStack align="stretch" gap={1} maxH="260px" overflowY="auto">
                 {catalog.map((g) => (
                   <HStack
                     key={g.id}
@@ -252,9 +291,16 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
                     _hover={{ bg: "whiteAlpha.100" }}
                     cursor="pointer"
                     onClick={() =>
-                      setPicked({ kind: "catalog", id: g.id, name: g.name })
+                      setPicked({
+                        kind: "catalog",
+                        id: g.id,
+                        name: g.name,
+                        cover: g.backgroundImage ?? null,
+                        year: g.released ? g.released.slice(0, 4) : null,
+                      })
                     }
                   >
+                    <GameThumb src={g.backgroundImage} />
                     <Text fontSize="sm" color="nexzy.white">
                       {g.name}
                     </Text>
@@ -268,7 +314,7 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
               </VStack>
             )}
             {mode === "igdb" && igdb.length > 0 && (
-              <VStack align="stretch" gap={1} maxH="180px" overflowY="auto">
+              <VStack align="stretch" gap={1} maxH="260px" overflowY="auto">
                 {igdb.map((g) => (
                   <HStack
                     key={g.igdbId}
@@ -283,9 +329,11 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
                         igdbId: g.igdbId,
                         name: g.name,
                         year: g.year,
+                        cover: g.coverUrl ?? null,
                       })
                     }
                   >
+                    <GameThumb src={g.coverUrl} />
                     <FiDownloadCloud color="#FFE14D" />
                     <Text fontSize="sm" color="nexzy.white">
                       {g.name}
