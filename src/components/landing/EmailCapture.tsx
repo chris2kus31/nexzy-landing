@@ -27,9 +27,25 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function EmailCapture({
   variant = "hero",
   source = "landing",
+  title = "Get gaming news, guides, and deals in your inbox",
+  buttonLabel = "Sign Up",
+  successMessage = "You're in! Gaming news, guides, and deals, straight to your inbox.",
+  footnote = "No spam. Unsubscribe anytime.",
+  stacked = false,
+  showPreferredSource = true,
+  onSuccess,
 }: {
   variant?: "hero" | "cta";
   source?: string;
+  /** Line above the field. Empty string hides it. */
+  title?: string;
+  buttonLabel?: string;
+  successMessage?: string;
+  footnote?: string;
+  /** Force input + button into one column (narrow containers like the popup). */
+  stacked?: boolean;
+  showPreferredSource?: boolean;
+  onSuccess?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -52,10 +68,9 @@ export default function EmailCapture({
       if (!res.ok) throw new Error("Request failed");
       track("newsletter_signup", { source });
       setStatus("success");
-      setMessage(
-        "You're in! Gaming news, guides, and deals — straight to your inbox. 🎮",
-      );
+      setMessage(successMessage);
       setEmail("");
+      onSuccess?.();
     } catch {
       setStatus("error");
       setMessage("Something went wrong. Please try again.");
@@ -86,7 +101,9 @@ export default function EmailCapture({
             {message}
           </Text>
         </HStack>
-        <PreferredSourceButton label="One more thing — add Nexzy to your Google feed" />
+        {showPreferredSource ? (
+          <PreferredSourceButton label="One more thing — add Nexzy to your Google feed" />
+        ) : null}
       </Stack>
     );
   }
@@ -99,15 +116,21 @@ export default function EmailCapture({
       maxW={{ base: "full", sm: onCta ? "lg" : "md" }}
     >
       <Stack gap={2}>
-        <HStack gap={2} justify={onCta ? "center" : "flex-start"}>
-          <Icon color="nexzy.yellow" boxSize={4}>
-            <HiSparkles />
-          </Icon>
-          <Text fontSize="sm" fontWeight="medium" color="nexzy.white">
-            Get gaming news, guides, and deals in your inbox
-          </Text>
-        </HStack>
-        <Stack direction={{ base: "column", sm: "row" }} gap={3} w="full">
+        {title ? (
+          <HStack gap={2} justify={onCta ? "center" : "flex-start"}>
+            <Icon color="nexzy.yellow" boxSize={4}>
+              <HiSparkles />
+            </Icon>
+            <Text fontSize="sm" fontWeight="medium" color="nexzy.white">
+              {title}
+            </Text>
+          </HStack>
+        ) : null}
+        <Stack
+          direction={stacked ? "column" : { base: "column", sm: "row" }}
+          gap={3}
+          w="full"
+        >
           <Input
             type="email"
             value={email}
@@ -137,7 +160,7 @@ export default function EmailCapture({
             _hover={{ bg: "nexzy.gold", transform: "translateY(-2px)" }}
             transition="all 0.2s"
           >
-            Sign Up
+            {buttonLabel}
           </Button>
         </Stack>
         {status === "error" && (
@@ -145,9 +168,11 @@ export default function EmailCapture({
             {message}
           </Text>
         )}
-        <Text fontSize="xs" color="nexzy.gray.100" opacity={0.8}>
-          No spam. Unsubscribe anytime.
-        </Text>
+        {footnote ? (
+          <Text fontSize="xs" color="nexzy.gray.100" opacity={0.8}>
+            {footnote}
+          </Text>
+        ) : null}
       </Stack>
     </Box>
   );

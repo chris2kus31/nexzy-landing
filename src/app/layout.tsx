@@ -9,6 +9,7 @@ import GoogleAnalytics from "@/components/GoogleAnalytics";
 import WebVitals from "@/components/WebVitals";
 import Clarity from "@/components/Clarity";
 import SiteAnnouncementBanner from "@/components/SiteAnnouncementBanner";
+import LaunchPopup from "@/components/launch/LaunchPopup";
 import React from "react";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
 
@@ -176,6 +177,7 @@ export default function RootLayout({
         <Providers>
           <SiteAnnouncementBanner />
           {children}
+          <LaunchPopup />
         </Providers>
       </body>
     </html>

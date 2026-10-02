@@ -8,13 +8,51 @@
 // Linked from the Apple featuring nomination + social bios.
 // ============================================
 import type { Metadata } from "next";
+import { readdirSync } from "node:fs";
+import path from "node:path";
 import Navigation from "@/components/landing/Navigation";
 import Footer from "@/components/landing/Footer";
-import FollowLaunch from "@/components/landing/FollowLaunch";
+import FollowLaunch, { type Shot } from "@/components/landing/FollowLaunch";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
-export const revalidate = 3600;
+// Fully static: the screenshot folder is read once at build time, so new
+// screenshots show up on the next deploy (no code change needed).
+export const dynamic = "force-static";
+
+// Alt text for store-1..store-5, in order.
+const STORE_ALTS = [
+  "A game page in Nexzy with Library, Wishlist and Follow buttons and the game's player hub",
+  "Nexzy wishlist with price tracking for each game",
+  "A Nexzy Gamer Card profile showing library, wishlist and followed games",
+  "Writing a new post in Nexzy with a game tagged",
+  "Nexzy Activity with likes, replies and new followers",
+];
+
+const IMG_RE = /\.(png|jpe?g|webp|avif)$/i;
+
+function readShots(): { shots: Shot[]; pillarShots: (string | null)[] } {
+  let files: string[] = [];
+  try {
+    files = readdirSync(path.join(process.cwd(), "public", "follow", "shots"))
+      .filter((f) => IMG_RE.test(f))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  } catch {
+    // folder missing: sections fall back gracefully
+  }
+  const url = (f: string) => `/follow/shots/${encodeURIComponent(f)}`;
+  const pillarShots = [1, 2, 3].map((n) => {
+    const f = files.find((x) => x.toLowerCase().startsWith(`pillar-${n}`));
+    return f ? url(f) : null;
+  });
+  const shots = files
+    .filter((f) => f.toLowerCase().startsWith("store-"))
+    .map((f, i) => ({
+      src: url(f),
+      alt: STORE_ALTS[i] ?? `Nexzy app screenshot ${i + 1}`,
+    }));
+  return { shots, pillarShots };
+}
 
 const TITLE = "The new Nexzy: Follow the games you love";
 const DESCRIPTION =
@@ -45,7 +83,7 @@ export default function FollowPage() {
     <>
       <Navigation />
       <main>
-        <FollowLaunch />
+        <FollowLaunch {...readShots()} />
       </main>
       <Footer />
     </>
