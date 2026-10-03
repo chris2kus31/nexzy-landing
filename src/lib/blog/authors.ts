@@ -20,7 +20,7 @@ export const AUTHORS: Record<string, Author> = {
     role: "Senior Staff Writer",
     bio: "Chuy covers the big beats for Nexzy — game news, console hardware, and patch notes. He's been playing, breaking, and writing about games for over a decade.",
     avatar: "/authors/chuy.jpg",
-    x: null,
+    x: "https://x.com/chris2kus",
     instagram: null,
   },
   eli: {
