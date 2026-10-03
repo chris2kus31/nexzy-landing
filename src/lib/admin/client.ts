@@ -1133,6 +1133,40 @@ export async function getContentAnalytics(): Promise<ContentAnalytics> {
   return handle(await fetch("/api/newsroom/admin/analytics/content"));
 }
 
+/** Who's reading — what sent the counted reads on one day. */
+export interface ReadersReport {
+  day: string;
+  counterReads: number;
+  logged: number;
+  people: number;
+  byCategory: { category: string; count: number }[];
+  topAgents: { agent: string; category: string; count: number }[];
+  topReferrers: { host: string; count: number }[];
+  bySource: { via: string; count: number }[];
+  suspicious: {
+    visitor: string;
+    count: number;
+    articles: number;
+    agent: string;
+    country: string | null;
+  }[];
+  byArticle: {
+    slug: string;
+    title: string;
+    total: number;
+    people: number;
+    app: number;
+    bots: number;
+    owner: number;
+  }[];
+  hourly: number[];
+  available: boolean;
+}
+export async function getReadersReport(day?: string): Promise<ReadersReport> {
+  const qs = day ? `?day=${encodeURIComponent(day)}` : "";
+  return handle(await fetch(`/api/newsroom/admin/analytics/readers${qs}`));
+}
+
 export async function getCostAnalytics(): Promise<CostAnalytics> {
   return handle(await fetch("/api/newsroom/admin/analytics/cost"));
 }

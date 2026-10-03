@@ -22,10 +22,22 @@ export default function ViewPing({ slug }: { slug: string }) {
       // localStorage blocked (private mode) — fall through and still count.
     }
 
+    // Who-sent-this signals for Admin → Analytics → Who's reading: the page's
+    // ORIGINAL referrer (the ping's own Referer is always our article page)
+    // and an optional ?src= tag. Counting itself is unchanged.
+    let ref = "";
+    let src = "";
+    try {
+      ref = document.referrer || "";
+      src = new URLSearchParams(window.location.search).get("src") || "";
+    } catch {
+      /* best-effort */
+    }
+
     fetch("/api/blog/view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
+      body: JSON.stringify({ slug, ref, src }),
       keepalive: true,
     }).catch(() => {});
   }, [slug]);

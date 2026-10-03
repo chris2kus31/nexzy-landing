@@ -25,9 +25,10 @@ import { beatLabel } from "@/lib/blog/beats";
 import HealthPanel from "./HealthPanel";
 import PollAnalyticsPanel from "./PollAnalyticsPanel";
 import CommentsAnalyticsPanel from "./CommentsAnalyticsPanel";
+import ReadersPanel from "./ReadersPanel";
 import { num, Metric, SectionCard } from "./analyticsUi";
 
-type Section = "content" | "cost" | "polls" | "comments" | "health";
+type Section = "content" | "readers" | "cost" | "polls" | "comments" | "health";
 
 function SegButton({
   label,
@@ -209,6 +210,11 @@ export default function AnalyticsPanel() {
             onClick={() => setSection("content")}
           />
           <SegButton
+            label="Who's reading"
+            active={section === "readers"}
+            onClick={() => setSection("readers")}
+          />
+          <SegButton
             label="Cost"
             active={section === "cost"}
             onClick={() => setSection("cost")}
@@ -257,6 +263,7 @@ export default function AnalyticsPanel() {
       )}
 
       {section === "health" && <HealthPanel />}
+      {section === "readers" && <ReadersPanel />}
       {section === "polls" && <PollAnalyticsPanel />}
       {section === "comments" && <CommentsAnalyticsPanel />}
 
@@ -268,6 +275,20 @@ export default function AnalyticsPanel() {
             <Metric label="Reads · 7 days" value={num(content.reads7d)} />
             <Metric label="Reads · 30 days" value={num(content.reads30d)} />
           </SimpleGrid>
+          {/* The Reads counter includes crawlers + scripts — point to the
+              breakdown that says who actually sent them. */}
+          <Text fontSize="xs" color="nexzy.gray.100" mt={-2} mb={4}>
+            Reads count every page load, including bots.{" "}
+            <Button
+              size="2xs"
+              variant="plain"
+              color="nexzy.lightBlue"
+              px={0}
+              onClick={() => setSection("readers")}
+            >
+              See who&apos;s reading →
+            </Button>
+          </Text>
           <SimpleGrid columns={{ base: 1, lg: 3 }} gap={4} mb={4}>
             <SectionCard title="Top today">
               <TopList items={content.topToday} />
