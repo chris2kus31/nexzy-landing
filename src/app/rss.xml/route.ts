@@ -1,6 +1,7 @@
 // RSS 2.0 feed of the latest Nexzy News articles, for aggregators and
 // syndication. Referenced from robots.txt and the page <head> is optional.
 import { fetchPosts } from "@/lib/blog/api";
+import { isPostIndexable } from "@/lib/blog/indexing";
 
 export const revalidate = 300;
 
@@ -18,8 +19,11 @@ function xmlEscape(s: string): string {
 export async function GET(): Promise<Response> {
   let items: Awaited<ReturnType<typeof fetchPosts>>["items"] = [];
   try {
-    const res = await fetchPosts({ pageSize: 30 });
-    items = res.items;
+    // Fetch extra, then drop noindex articles (deals, patch notes, per-post
+    // toggle) — same check as sitemap.xml, so the feed never hands Google/Bing
+    // a page that says "don't index me". Keep the feed at 30 items.
+    const res = await fetchPosts({ pageSize: 50 });
+    items = res.items.filter((p) => isPostIndexable(p)).slice(0, 30);
   } catch {
     items = [];
   }
