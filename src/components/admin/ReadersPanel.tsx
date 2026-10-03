@@ -279,6 +279,78 @@ export default function ReadersPanel() {
                 </SectionCard>
               </SimpleGrid>
 
+              {/* AI referrals — people sent here by an AI assistant */}
+              {(() => {
+                const ai = data.aiReferrals;
+                const today = (ai?.today ?? []).reduce(
+                  (a, r) => a + r.count,
+                  0,
+                );
+                const month = (ai?.last30 ?? []).reduce(
+                  (a, r) => a + r.count,
+                  0,
+                );
+                return (
+                  <SectionCard title="AI referrals (people sent by ChatGPT, Perplexity, Gemini…)">
+                    <SimpleGrid columns={{ base: 2 }} gap={3} mb={3}>
+                      <Metric label="This day" value={num(today)} />
+                      <Metric label="Last 30 days" value={num(month)} />
+                    </SimpleGrid>
+                    {month === 0 ? (
+                      <Text fontSize="sm" color="nexzy.gray.100">
+                        None yet. When someone clicks a Nexzy link inside an AI
+                        answer, it shows up here.
+                      </Text>
+                    ) : (
+                      <VStack align="stretch" gap={1}>
+                        {(ai?.last30 ?? []).map((r) => (
+                          <Flex key={r.engine} justify="space-between" gap={2}>
+                            <Text fontSize="sm" color="nexzy.white">
+                              {r.engine}
+                            </Text>
+                            <Text fontSize="sm" color="nexzy.gray.100">
+                              {num(r.count)}
+                            </Text>
+                          </Flex>
+                        ))}
+                        {(ai?.articles30 ?? []).length > 0 && (
+                          <Text
+                            fontSize="xs"
+                            color="nexzy.gray.100"
+                            mt={2}
+                            textTransform="uppercase"
+                          >
+                            Articles they landed on (30 days)
+                          </Text>
+                        )}
+                        {(ai?.articles30 ?? []).map((r) => (
+                          <Flex
+                            key={`${r.slug}-${r.engine}`}
+                            justify="space-between"
+                            gap={2}
+                          >
+                            <Text
+                              fontSize="sm"
+                              color="nexzy.white"
+                              lineClamp={1}
+                            >
+                              {r.title}
+                            </Text>
+                            <Text
+                              fontSize="sm"
+                              color="nexzy.gray.100"
+                              flexShrink={0}
+                            >
+                              {r.engine} · {num(r.count)}
+                            </Text>
+                          </Flex>
+                        ))}
+                      </VStack>
+                    )}
+                  </SectionCard>
+                );
+              })()}
+
               {/* Hourly */}
               <SectionCard title="Reads by hour">
                 <Flex align="flex-end" gap="3px" h="80px">

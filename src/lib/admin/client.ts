@@ -1160,6 +1160,17 @@ export interface ReadersReport {
     owner: number;
   }[];
   hourly: number[];
+  /** Readers who arrived from an AI assistant (ChatGPT, Perplexity, …). */
+  aiReferrals?: {
+    today: { engine: string; count: number }[];
+    last30: { engine: string; count: number }[];
+    articles30: {
+      slug: string;
+      title: string;
+      engine: string;
+      count: number;
+    }[];
+  };
   available: boolean;
 }
 export async function getReadersReport(day?: string): Promise<ReadersReport> {

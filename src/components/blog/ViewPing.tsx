@@ -29,7 +29,11 @@ export default function ViewPing({ slug }: { slug: string }) {
     let src = "";
     try {
       ref = document.referrer || "";
-      src = new URLSearchParams(window.location.search).get("src") || "";
+      // ?src= is ours; utm_source is what AI assistants add (ChatGPT appends
+      // utm_source=chatgpt.com) — kept so AI referrals show even when the
+      // browser hides the referrer.
+      const qs = new URLSearchParams(window.location.search);
+      src = qs.get("src") || qs.get("utm_source") || "";
     } catch {
       /* best-effort */
     }
