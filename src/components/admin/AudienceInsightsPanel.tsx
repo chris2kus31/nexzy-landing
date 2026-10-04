@@ -351,6 +351,7 @@ export default function AudienceInsightsPanel({
   const [audience, setAudience] = useState<AudienceProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [refreshErr, setRefreshErr] = useState("");
 
   useEffect(() => {
     getAudienceProfile()
@@ -361,10 +362,14 @@ export default function AudienceInsightsPanel({
 
   const refresh = useCallback(async () => {
     setBusy(true);
+    setRefreshErr("");
     try {
       setAudience(await refreshAudienceProfile());
-    } catch {
-      /* leave as-is on failure */
+    } catch (e) {
+      // Keep the last good profile on screen, but say the refresh failed.
+      setRefreshErr(
+        `Refresh failed: ${(e as Error)?.message || "unknown error"}`,
+      );
     } finally {
       setBusy(false);
     }
@@ -389,6 +394,11 @@ export default function AudienceInsightsPanel({
           data says to post — pulled from your real accounts.
         </Text>
       </Box>
+      {refreshErr && (
+        <Text color="orange.300" fontSize="sm">
+          {refreshErr}
+        </Text>
+      )}
       <AudiencePanel
         audience={audience}
         isOwner={isOwner}

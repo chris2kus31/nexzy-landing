@@ -300,6 +300,7 @@ function ytLongWindows(target: Date): number[] {
   return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
 }
 const PLATFORM_LABEL: Record<string, string> = {
+  youtube_long: "YouTube (long)",
   x: "X",
   threads: "Threads",
   instagram: "Instagram",
@@ -336,7 +337,13 @@ function nextPostSlot(
 ): { text: string; src: string } | null {
   const flatWindows = GUIDE_WINDOWS[platform];
   const hasReal = !!real && Object.keys(real).length > 0;
-  if (!flatWindows && platform !== "youtube" && !hasReal) return null;
+  if (
+    !flatWindows &&
+    platform !== "youtube" &&
+    platform !== "youtube_long" &&
+    !hasReal
+  )
+    return null;
   const DAY = 86400000;
   const cands: { at: Date; src: string }[] = [];
   for (let i = 0; i <= 8; i++) {
@@ -358,19 +365,21 @@ function nextPostSlot(
       }
     }
     const dayWindows =
-      platform === "youtube"
-        ? ytShortsWindows(day)
-        : platform === "facebook"
-          ? fbWindows(day)
-          : platform === "instagram"
-            ? igWindows(day)
-            : platform === "threads"
-              ? threadsWindows(day)
-              : platform === "x"
-                ? xWindows(day)
-                : platform === "tiktok"
-                  ? tiktokWindows(day)
-                  : flatWindows;
+      platform === "youtube_long"
+        ? ytLongWindows(day)
+        : platform === "youtube"
+          ? ytShortsWindows(day)
+          : platform === "facebook"
+            ? fbWindows(day)
+            : platform === "instagram"
+              ? igWindows(day)
+              : platform === "threads"
+                ? threadsWindows(day)
+                : platform === "x"
+                  ? xWindows(day)
+                  : platform === "tiktok"
+                    ? tiktokWindows(day)
+                    : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
         const c = new Date(day);
@@ -682,10 +691,18 @@ function LeadCard({
     const plats = lead?.platforms ?? [];
     return plats
       .map((p) => {
-        const realKey = p === "reels" ? "instagram" : p;
-        const slot = nextPostSlot(p, now, audienceByPlatformDay?.[realKey]);
+        // A YouTube lead planned as Long-form uses long-form timing + data
+        // (long-form peaks at different hours than Shorts).
+        const slotKey =
+          p === "youtube" && plan.youtube === "long" ? "youtube_long" : p;
+        const realKey = slotKey === "reels" ? "instagram" : slotKey;
+        const slot = nextPostSlot(
+          slotKey,
+          now,
+          audienceByPlatformDay?.[realKey],
+        );
         return slot
-          ? { platform: p, label: PLATFORM_LABEL[p] ?? p, ...slot }
+          ? { platform: p, label: PLATFORM_LABEL[slotKey] ?? p, ...slot }
           : null;
       })
       .filter(
@@ -698,7 +715,7 @@ function LeadCard({
           src: string;
         } => x !== null,
       );
-  }, [lead?.platforms, audienceByPlatformDay, now]);
+  }, [lead?.platforms, audienceByPlatformDay, now, plan.youtube]);
 
   const generating = !!s.payload?.generating;
   const lastError = s.payload?.lastError;
@@ -1561,10 +1578,16 @@ export function AudiencePanel({
   const [dayIdx, setDayIdx] = useState(0);
   const sel = dayOptions[Math.min(dayIdx, dayOptions.length - 1)];
 
-  const has = !!audience?.dominantAge;
   const byPlat = audience?.bestTimes?.byPlatformDay;
   const pull = audience?.bestTimes?.pull;
   const anyReal = !!byPlat && Object.keys(byPlat).length > 0;
+  // Show the panel whenever SOMETHING was pulled — demographics OR post data.
+  // (It used to require demographics, so one failed IG pull hid best times,
+  // data sources and the performance cards too.)
+  const has =
+    !!audience?.dominantAge ||
+    anyReal ||
+    (!!pull && Object.keys(pull).length > 0);
   const ages = Object.entries(audience?.ageBrackets || {})
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
@@ -1587,10 +1610,23 @@ export function AudiencePanel({
   //  • generalRows — the FULL research windows for EVERY platform, always, so the
   //    complete recommendation is always available for a judgment call.
   const realRows = PLATFORMS_SHOWN.flatMap((p) => {
+    const rows: { p: string; label: string; slots: PostTimeSlot[] }[] = [];
     const slots = realSlotsForDay(p, sel.date, byPlat?.[p]);
-    if (!slots.length) return [];
-    const label = p === "youtube" ? "YT Shorts" : (PLATFORM_LABEL[p] ?? p);
-    return [{ p, label, slots }];
+    if (slots.length) {
+      const label = p === "youtube" ? "YT Shorts" : (PLATFORM_LABEL[p] ?? p);
+      rows.push({ p, label, slots });
+    }
+    // Long-form YouTube has its own real data (it was pulled but never shown).
+    if (p === "youtube") {
+      const longSlots = realSlotsForDay(
+        "youtube_long",
+        sel.date,
+        byPlat?.youtube_long,
+      );
+      if (longSlots.length)
+        rows.push({ p: "youtube_long", label: "YT Long", slots: longSlots });
+    }
+    return rows;
   });
   const generalRows = PLATFORMS_SHOWN.flatMap((p) => {
     // YouTube splits into Shorts + a separate Long-form row, because the two
@@ -1789,62 +1825,71 @@ export function AudiencePanel({
               combined across all 2026 studies (gaming rows weighted 3x for
               YT/FB). YT Shorts, Facebook &amp; Instagram: afternoon + evening.
               YT long-form: mornings. Threads: mornings (8–11am, text-first),
-              Tue–Thu best. Others (X, TikTok) use flat windows.
+              Tue–Thu best. All times are Central (CT).
             </Text>
           </Box>
 
-          <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
-            WHO
-            {audience?.sources?.length
-              ? ` · from ${audience.sources.join(", ")}`
-              : ""}
-          </Text>
-          <VStack align="stretch" gap={1} mb={2}>
-            {ages.map(([k, v]) => (
-              <Flex key={k} align="center" gap={2}>
-                <Text
-                  w="52px"
-                  fontSize="10px"
-                  color="nexzy.gray.100"
-                  flexShrink={0}
-                >
-                  {k}
-                </Text>
-                <Box
-                  flex="1"
-                  h="6px"
-                  bg="whiteAlpha.200"
-                  borderRadius="full"
-                  overflow="hidden"
-                >
-                  <Box
-                    h="100%"
-                    w={`${Math.min(100, Math.max(2, v))}%`}
-                    bg="nexzy.blue"
-                  />
-                </Box>
-                <Text
-                  w="34px"
-                  fontSize="10px"
-                  color="nexzy.white"
-                  textAlign="right"
-                  flexShrink={0}
-                >
-                  {v}%
-                </Text>
-              </Flex>
-            ))}
-          </VStack>
-          <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-            {[
-              gTop ? `${gTop[1]}% ${gTop[0]}` : "",
-              countries.length
-                ? `top: ${countries.map(([c, p]) => `${c} ${p}%`).join(", ")}`
-                : "",
-            ]
-              .filter(Boolean)
-              .join("  ·  ")}
-          </Text>
+          {ages.length > 0 && (
+            <>
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mb={1}
+              >
+                WHO
+                {audience?.sources?.length
+                  ? ` · from ${audience.sources.join(", ")}`
+                  : ""}
+              </Text>
+              <VStack align="stretch" gap={1} mb={2}>
+                {ages.map(([k, v]) => (
+                  <Flex key={k} align="center" gap={2}>
+                    <Text
+                      w="52px"
+                      fontSize="10px"
+                      color="nexzy.gray.100"
+                      flexShrink={0}
+                    >
+                      {k}
+                    </Text>
+                    <Box
+                      flex="1"
+                      h="6px"
+                      bg="whiteAlpha.200"
+                      borderRadius="full"
+                      overflow="hidden"
+                    >
+                      <Box
+                        h="100%"
+                        w={`${Math.min(100, Math.max(2, v))}%`}
+                        bg="nexzy.blue"
+                      />
+                    </Box>
+                    <Text
+                      w="34px"
+                      fontSize="10px"
+                      color="nexzy.white"
+                      textAlign="right"
+                      flexShrink={0}
+                    >
+                      {v}%
+                    </Text>
+                  </Flex>
+                ))}
+              </VStack>
+              <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                {[
+                  gTop ? `${gTop[1]}% ${gTop[0]}` : "",
+                  countries.length
+                    ? `top: ${countries.map(([c, p]) => `${c} ${p}%`).join(", ")}`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join("  ·  ")}
+              </Text>
+            </>
+          )}
 
           <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
             {anyReal
