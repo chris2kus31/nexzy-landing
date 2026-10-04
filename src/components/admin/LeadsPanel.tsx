@@ -276,22 +276,26 @@ const X_BY_DAY: Record<number, number[]> = {
 function xWindows(target: Date): number[] {
   return X_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.x;
 }
-// TikTok — Metricool 2026 (2.3M posts, 8pm peak) + Buffer (evenings 6–11pm).
-// Weekend-FRIENDLY (unlike the others): Metricool's peak day is Sunday, Buffer's
-// is Saturday — keep weekend evening slots live. Dropped the old flat 8am (early
-// morning is a dead zone). CST, best->worst. (2026 — now day-specific.)
+// TikTok best-practice windows PER WEEKDAY, CENTRAL time, best->worst.
+// FINAL 2026-10-04 — own research + Chris's links + Chris's screenshots:
+//   Buffer (7.1M posts; table + heatmap, local=CT) · Sprout (2B engagements;
+//   table + heatmap, local=CT) · Influencer Marketing Hub table (EST-1h) as
+//   republished by Hopper/SocialBee/Iconosquare/Small Business Expo (counted
+//   ONCE) · Metricool (2.3M posts, local) · Eklipse GAMING table (local) ·
+//   RecurPost (2M+ posts, EST-1h) · Viraly (ET-1h; derivative, weight only).
+// Rule: a slot needs 2+ independent sources; a 1-hour difference counts as
+// agreement (the EST->CT shift otherwise hid real morning matches). Each day
+// gets the best-supported MORNING (5-11), AFTERNOON (12-4) and EVENING (5-11 PM)
+// slot, then the three are ranked strongest->weakest by combined support.
+// Your TikTok Studio "Most active times" should override this once posting.
 const TIKTOK_BY_DAY: Record<number, number[]> = {
-  // MULTI-SOURCE 2026 (Buffer 7.1M + Metricool 2.3M + Sprout 2B + Later + SocialPilot).
-  // Strong convergence: Tier 1 = evening 6–8pm + weekend afternoons; Tier 2 = 2–4pm
-  // (Sprout/Later) + noon. Weekends (Sat/Sun) are STRONG here (the exception vs other
-  // platforms) — matches the 25–34 male gamer audience. CST, best->worst. HIGH.
-  0: [13, 18], // Sun — weekend afternoon + evening
-  1: [18, 13, 20], // Mon
-  2: [18, 15, 12], // Tue
-  3: [19, 15, 12], // Wed
-  4: [18, 15, 11], // Thu
-  5: [18, 20, 15], // Fri
-  6: [16, 18], // Sat — strong day; weekend afternoon→evening
+  0: [18, 15, 10], // Sun — 6 PM (5 src), 3 PM, 10 AM
+  1: [12, 11, 21], // Mon — 12 PM (5 src), 11 AM (5 src), 9 PM
+  2: [14, 21, 8], // Tue — 2 PM, 9 PM, 8 AM
+  3: [21, 6, 14], // Wed — 9 PM (5 src), 6 AM, 2 PM
+  4: [18, 12, 11], // Thu — 6 PM, 12 PM, 11 AM
+  5: [19, 12, 11], // Fri — 7 PM (5 src), 12 PM, 11 AM
+  6: [18, 11, 15], // Sat — 6 PM (all 6 src), 11 AM, 3 PM
 };
 function tiktokWindows(target: Date): number[] {
   return TIKTOK_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.tiktok;
