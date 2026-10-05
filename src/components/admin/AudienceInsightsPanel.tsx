@@ -19,6 +19,7 @@ const CAD_LABEL: Record<string, string> = {
   facebook: "Facebook",
   threads: "Threads",
   x: "X",
+  reddit: "Reddit",
 };
 const CAD_ORDER = [
   "youtube",
@@ -28,6 +29,7 @@ const CAD_ORDER = [
   "facebook",
   "threads",
   "x",
+  "reddit",
 ];
 
 const TREND_META: Record<

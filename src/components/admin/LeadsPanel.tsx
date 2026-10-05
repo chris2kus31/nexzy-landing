@@ -73,6 +73,11 @@ const PLAT_OPTS: Record<string, [string, string, string][]> = {
     ["carousel", "Carousel", "carousel"],
     ["skip", "Skip", "skip"],
   ],
+  reddit: [
+    ["post", "Post (r/NexzyGaming)", "video"],
+    ["image", "Image post", "image"],
+    ["skip", "Skip", "skip"],
+  ],
   x: [
     ["hot_take", "Hot take", "video"],
     ["thread", "Thread", "video"],
@@ -88,6 +93,7 @@ const PLAN_ROWS: [string, string, string][] = [
   ["tiktok", "TikTok", ""],
   ["facebook", "Facebook", ""],
   ["threads", "Threads", ""],
+  ["reddit", "Reddit", ""],
   ["x", "X", "post shape"],
 ];
 const BUCKET_ORDER = ["video", "long", "carousel", "photo", "album", "image"];
@@ -143,6 +149,9 @@ const GUIDE_WINDOWS: Record<string, number[]> = {
   facebook: [12, 19], // 2026: midday-anchored per Sprout
   youtube: [18], // 2026: Shorts evening; day-specific maps override
   tiktok: [19, 20, 13], // 2026: evening peak; day-specific map overrides
+  // Reddit (playbook, 6,600 top gaming posts Jul 2026): 5-8am + 3-6pm CT beat
+  // the crowded mid-morning; 5pm is the single best hour. Same every day.
+  reddit: [17, 6, 15],
 };
 
 // YouTube SHORTS best-practice windows PER WEEKDAY, in the owner's local time
@@ -312,6 +321,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   facebook: "Facebook",
   youtube: "YouTube",
   tiktok: "TikTok",
+  reddit: "Reddit",
 };
 
 function fmtSlot(at: Date, now: Date): string {
@@ -675,6 +685,7 @@ function LeadCard({
       tiktok: normFmt("tiktok", lead?.platformFormats?.tiktok),
       facebook: normFmt("facebook", lead?.platformFormats?.facebook),
       threads: normFmt("threads", lead?.platformFormats?.threads),
+      reddit: normFmt("reddit", lead?.platformFormats?.reddit),
       x: normFmt("x", lead?.platformFormats?.x ?? lead?.xFormat),
     }),
     [lead],
@@ -1450,6 +1461,7 @@ const PLATFORMS_SHOWN = [
   "facebook",
   "youtube",
   "tiktok",
+  "reddit",
 ];
 
 function relTime(d: Date): string {

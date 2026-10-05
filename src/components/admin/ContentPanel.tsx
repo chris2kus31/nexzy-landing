@@ -234,6 +234,15 @@ function KitBlock({
         {name}
       </Text>
 
+      {/* Reddit only: where/who/flair — these fields exist on no other kit. */}
+      {(kit.subreddit || kit.account || kit.flair) && (
+        <Text color="nexzy.gray.300" fontSize="2xs" mt={0.5}>
+          {[kit.subreddit, kit.account, kit.flair && `Flair: ${kit.flair}`]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      )}
+
       {title && (
         <>
           <FieldLabel text="TITLE" copy={title} />
@@ -2492,6 +2501,10 @@ function SuggestionCard({
                     <KitBlock name="Instagram" kit={platforms.reels} />
                     <KitBlock name="Facebook" kit={platforms.facebook} />
                     <KitBlock name="X (Twitter)" kit={platforms.x} />
+                    <KitBlock
+                      name="Reddit (r/NexzyGaming)"
+                      kit={platforms.reddit}
+                    />
                   </VStack>
                 )}
               </VStack>
@@ -2598,6 +2611,12 @@ function SuggestionCard({
                     )}
                     {inPlan("facebook") && (
                       <KitBlock name="Facebook" kit={platforms.facebook} />
+                    )}
+                    {inPlan("reddit") && (
+                      <KitBlock
+                        name="Reddit (r/NexzyGaming)"
+                        kit={platforms.reddit}
+                      />
                     )}
                   </VStack>
                 )}
@@ -2813,6 +2832,16 @@ function SuggestionCard({
                     )}
                     {inPlan("x") && (
                       <KitBlock name="X (Twitter)" kit={platforms.x} />
+                    )}
+                    {inPlan("reddit") && (
+                      <KitBlock
+                        name={
+                          isLong
+                            ? "Reddit (r/NexzyGaming, discussion)"
+                            : "Reddit (r/NexzyGaming)"
+                        }
+                        kit={platforms.reddit}
+                      />
                     )}
                   </VStack>
                 )}

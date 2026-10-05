@@ -467,6 +467,12 @@ export interface PlatformKit {
   thread?: string[];
   /** X (Twitter): a poll — question + 2-4 options. */
   poll?: { question?: string; options?: string[] };
+  /** Reddit: the post flair in r/NexzyGaming (News / Rewind / ...). */
+  flair?: string;
+  /** Reddit: which account posts it (u/nexzyapp or u/chris2kus). */
+  account?: string;
+  /** Reddit: the target subreddit (r/NexzyGaming). */
+  subreddit?: string;
 }
 
 /** One proposed chapter in a long-form timeline (~30–35s each). */
@@ -523,6 +529,8 @@ export interface ContentSuggestion {
       threads?: PlatformKit;
       /** X (Twitter): a hot-take post (+ the link) — persona voice kept. */
       x?: PlatformKit;
+      /** Reddit: a native post for r/NexzyGaming (title + body + flair). */
+      reddit?: PlatformKit;
     };
     // Guide-lead fields (kind === "guide")
     game?: string;
