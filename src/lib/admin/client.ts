@@ -617,6 +617,9 @@ export interface ContentSuggestion {
     publishImages?: Partial<
       Record<"global" | "x" | "threads" | "facebook" | "instagram", string>
     >;
+    // MANUAL (at-will) lead input — present only on leads created with
+    // "+ New suggestion" (sourceType "manual"). Generate grounds on `context`.
+    manual?: ManualLeadInput;
     // Game chip — links the card (and the video produced from it) to a game.
     // Auto-resolved on the fast routes; editable on the card. null = cleared.
     // (Named gameLink because payload.game is already the guide-lead's game NAME.)
@@ -3850,6 +3853,46 @@ export interface HashtagAbRollup {
 /** Hashtag A/B readout — views/engagement per variant, split short vs long. */
 export async function getHashtagAb(): Promise<HashtagAbRollup> {
   return handle(await fetch("/api/newsroom/admin/content/hashtag-ab"));
+}
+
+/** A manual (at-will) lead's topic + context — `context` is the only source of truth. */
+export interface ManualLeadInput {
+  title: string;
+  context: string;
+  angle?: string;
+  lane?: "news" | "deal" | "guide" | "meme";
+  games?: string[];
+  imageUrl?: string;
+}
+
+/**
+ * Create an AT-WILL lead (no article) in Content Studio → Leads. Owner-only on
+ * the server (one cheap analyst call); Generate is still a separate click.
+ */
+export async function createManualLead(
+  input: ManualLeadInput & { writer?: string },
+): Promise<{ ok: boolean; card: ContentSuggestion | null }> {
+  return handle(
+    await fetch("/api/newsroom/admin/content/manual-lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+/** Edit a manual lead's topic/context before Generate (zero-token). */
+export async function updateManualLead(
+  id: string,
+  patch: Partial<ManualLeadInput>,
+): Promise<{ ok: boolean; card: ContentSuggestion | null }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/manual-lead`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  );
 }
 
 /** Generate the real card FROM a lead in the chosen writer + format (spends tokens). */

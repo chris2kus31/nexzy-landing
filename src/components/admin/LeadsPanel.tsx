@@ -28,6 +28,7 @@ import {
   type LongFormChapter,
 } from "@/lib/admin/client";
 import Paginated from "@/components/admin/Paginated";
+import ManualLeadForm from "@/components/admin/ManualLeadForm";
 import YouTubePerformance, {
   type YtSource,
 } from "@/components/admin/YouTubePerformance";
@@ -675,6 +676,9 @@ function LeadCard({
   const [igSteer, setIgSteer] = useState("");
   const [quickErr, setQuickErr] = useState<string | null>(null);
   const [quickOk, setQuickOk] = useState(false);
+  // MANUAL (at-will) leads only: inline "Edit context" form.
+  const manual = s.sourceType === "manual" ? s.payload?.manual : undefined;
+  const [editingManual, setEditingManual] = useState(false);
 
   // The analyst's recommended plan (platformFormats + xFormat), normalized to
   // valid per-surface options — this pre-fills the pickers and marks "changed".
@@ -876,6 +880,11 @@ function LeadCard({
         <Badge colorPalette={LANE_COLOR[lane] || "gray"} variant="solid">
           {lane.toUpperCase()}
         </Badge>
+        {s.sourceType === "manual" && (
+          <Badge colorPalette="purple" variant="subtle">
+            {manual?.lane === "meme" ? "MANUAL · FUN" : "MANUAL"}
+          </Badge>
+        )}
         {whenBadge && (
           <Badge
             colorPalette={
@@ -934,6 +943,70 @@ function LeadCard({
 
       {open && (
         <Box px={4} pb={4}>
+          {manual && (
+            <Box mt={3} mb={3}>
+              {editingManual ? (
+                <ManualLeadForm
+                  writers={writers}
+                  existing={s}
+                  onCancel={() => setEditingManual(false)}
+                  onSaved={async () => {
+                    setEditingManual(false);
+                    await reload();
+                  }}
+                />
+              ) : (
+                <Box
+                  bg="whiteAlpha.50"
+                  border="1px solid"
+                  borderColor="whiteAlpha.200"
+                  borderRadius="md"
+                  p={3}
+                >
+                  <Flex justify="space-between" align="center" mb={1} gap={2}>
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      YOUR CONTEXT (the only source Generate will use)
+                    </Text>
+                    {isOwner && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        color="nexzy.lightBlue"
+                        borderColor="whiteAlpha.300"
+                        _hover={{ bg: "whiteAlpha.100" }}
+                        disabled={generating}
+                        onClick={() => setEditingManual(true)}
+                      >
+                        Edit context
+                      </Button>
+                    )}
+                  </Flex>
+                  {manual.angle && (
+                    <Text color="nexzy.lightBlue" fontSize="xs" mb={1}>
+                      Angle: {manual.angle}
+                    </Text>
+                  )}
+                  <Text
+                    color="nexzy.gray.100"
+                    fontSize="xs"
+                    whiteSpace="pre-wrap"
+                    lineClamp={6}
+                  >
+                    {manual.context}
+                  </Text>
+                  {!!manual.games?.length && (
+                    <Text color="whiteAlpha.600" fontSize="xs" mt={1}>
+                      Game: {manual.games.join(", ")}
+                    </Text>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
           {lead?.summary && (
             <Text color="nexzy.gray.100" fontSize="sm" mb={2}>
               {lead.summary}
@@ -2019,6 +2092,8 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   // Filter the board by the lead's writer (null = all).
   const [writerFilter, setWriterFilter] = useState<string | null>(null);
+  // "+ New suggestion" (manual, at-will lead) form toggle — owner-only.
+  const [showNew, setShowNew] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -2103,29 +2178,57 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
             then Generate — nothing heavy runs until you do.
           </Text>
         </Box>
-        {leads.length > 0 && (
-          <HStack gap={2} flexShrink={0}>
+        <HStack gap={2} flexShrink={0}>
+          {isOwner && (
             <Button
               size="xs"
-              variant="ghost"
-              color="nexzy.lightBlue"
+              variant="outline"
+              color="nexzy.white"
+              borderColor="nexzy.blue"
               _hover={{ bg: "whiteAlpha.100" }}
-              onClick={expandAll}
+              onClick={() => setShowNew((v) => !v)}
             >
-              Expand all
+              {showNew ? "Close" : "+ New suggestion"}
             </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              color="nexzy.gray.100"
-              _hover={{ bg: "whiteAlpha.100" }}
-              onClick={collapseAll}
-            >
-              Collapse all
-            </Button>
-          </HStack>
-        )}
+          )}
+          {leads.length > 0 && (
+            <>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="nexzy.lightBlue"
+                _hover={{ bg: "whiteAlpha.100" }}
+                onClick={expandAll}
+              >
+                Expand all
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                color="nexzy.gray.100"
+                _hover={{ bg: "whiteAlpha.100" }}
+                onClick={collapseAll}
+              >
+                Collapse all
+              </Button>
+            </>
+          )}
+        </HStack>
       </Flex>
+
+      {isOwner && showNew && (
+        <ManualLeadForm
+          writers={writers}
+          onCancel={() => setShowNew(false)}
+          onSaved={async (card) => {
+            setShowNew(false);
+            setWriterFilter(null);
+            await load();
+            // Open the new lead so its Generate controls are right there.
+            if (card?.id) setOpenIds((prev) => new Set(prev).add(card.id));
+          }}
+        />
+      )}
 
       {leads.length > 0 && writerChips.length > 1 && (
         <HStack gap={2} wrap="wrap">
