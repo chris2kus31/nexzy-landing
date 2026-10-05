@@ -162,14 +162,28 @@ function Section({
   );
 }
 
-function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
+function KitBlock({
+  name,
+  kit,
+  ctaBeforeTags = false,
+}: {
+  name: string;
+  kit?: PlatformKit;
+  /** TikTok (NEXZY_TIKTOK_CAPTIONS_2026-10.md): caption, then the question, then the 3 hashtags. */
+  ctaBeforeTags?: boolean;
+}) {
   if (!kit) return null;
   const hashtags = (kit.hashtags || []).join(" ");
   const title = kit.title || "";
   const body = kit.description || kit.caption || kit.post || "";
   // The full caption you'd paste into the post box: body, then hashtags, then
-  // the platform engagement line — one clean block, no re-typing.
-  const caption = [body, hashtags, kit.cta].filter(Boolean).join("\n\n");
+  // the platform engagement line — one clean block, no re-typing. TikTok puts
+  // the engagement question before the hashtags.
+  const caption = (
+    ctaBeforeTags ? [body, kit.cta, hashtags] : [body, hashtags, kit.cta]
+  )
+    .filter(Boolean)
+    .join("\n\n");
   const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
   const pinned = kit.pinnedComment || "";
   const firstReply = kit.firstReply || "";
@@ -283,7 +297,7 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
               {body}
             </Text>
           )}
-          {hashtags && (
+          {hashtags && !ctaBeforeTags && (
             <Text color="nexzy.lightBlue" fontSize="xs" mt={1}>
               {hashtags}
             </Text>
@@ -296,6 +310,11 @@ function KitBlock({ name, kit }: { name: string; kit?: PlatformKit }) {
               fontStyle="italic"
             >
               {kit.cta}
+            </Text>
+          )}
+          {hashtags && ctaBeforeTags && (
+            <Text color="nexzy.lightBlue" fontSize="xs" mt={1}>
+              {hashtags}
             </Text>
           )}
         </>
@@ -2465,7 +2484,11 @@ function SuggestionCard({
                       name="YouTube (community)"
                       kit={platforms.youtube}
                     />
-                    <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                    <KitBlock
+                      name="TikTok (Photo)"
+                      kit={platforms.tiktok}
+                      ctaBeforeTags
+                    />
                     <KitBlock name="Instagram" kit={platforms.reels} />
                     <KitBlock name="Facebook" kit={platforms.facebook} />
                     <KitBlock name="X (Twitter)" kit={platforms.x} />
@@ -2567,7 +2590,11 @@ function SuggestionCard({
                       <KitBlock name="Instagram" kit={platforms.reels} />
                     )}
                     {inPlan("tiktok") && (
-                      <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                      <KitBlock
+                        name="TikTok (Photo)"
+                        kit={platforms.tiktok}
+                        ctaBeforeTags
+                      />
                     )}
                     {inPlan("facebook") && (
                       <KitBlock name="Facebook" kit={platforms.facebook} />
@@ -2665,7 +2692,11 @@ function SuggestionCard({
                       <KitBlock name="Threads" kit={platforms.threads} />
                     )}
                     {inPlan("tiktok") && platforms.tiktok && (
-                      <KitBlock name="TikTok (Photo)" kit={platforms.tiktok} />
+                      <KitBlock
+                        name="TikTok (Photo)"
+                        kit={platforms.tiktok}
+                        ctaBeforeTags
+                      />
                     )}
                     {inPlan("facebook") && platforms.facebook && (
                       <KitBlock name="Facebook" kit={platforms.facebook} />
@@ -2753,6 +2784,7 @@ function SuggestionCard({
                       <KitBlock
                         name={isLong ? "TikTok (teaser)" : "TikTok"}
                         kit={platforms.tiktok}
+                        ctaBeforeTags
                       />
                     )}
                     {inPlan("instagram") && (
