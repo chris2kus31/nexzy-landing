@@ -3810,7 +3810,13 @@ export interface AudienceProfile {
     >;
     pull?: Record<
       string,
-      { listed: number; withReach: number; error?: string }
+      {
+        listed: number;
+        withReach: number;
+        error?: string;
+        metric?: string;
+        excluded?: number;
+      }
     >;
     note?: string;
   };
@@ -3834,6 +3840,74 @@ export interface AudienceProfile {
   raw?: Record<string, unknown>;
   errors?: Record<string, string>;
   fetchedAt?: string | null;
+  /** True while a background refresh is running on the API. */
+  refreshing?: boolean;
+}
+
+// ---- Post Lab (per-post analysis; lives at raw.postLab) ----
+export type PostLabFormat =
+  | "reel"
+  | "video"
+  | "short"
+  | "long"
+  | "image"
+  | "carousel"
+  | "text"
+  | "link";
+export interface PostLabSlot {
+  day: string;
+  startHour: number;
+  n: number;
+  median: number;
+  vsMedian: number;
+}
+export interface PostLabPost {
+  id: string;
+  at: string;
+  dayCt: string;
+  hourCt: number;
+  format: PostLabFormat;
+  reach: number | null;
+  engRate: number | null;
+  interactions: number | null;
+  url: string | null;
+  caption: string | null;
+  settling: boolean;
+  excluded: string | null;
+}
+export interface PostLabPlatform {
+  platform: string;
+  metric: string;
+  windowDays: number;
+  error?: string;
+  notes: string[];
+  listed: number;
+  analyzed: number;
+  settling: number;
+  excluded: { reason: string; count: number }[];
+  range: { from: string; to: string } | null;
+  median: number | null;
+  medianEngRate: number | null;
+  bestSlots: PostLabSlot[];
+  worstSlots: PostLabSlot[];
+  formats: {
+    format: PostLabFormat;
+    n: number;
+    median: number;
+    vsMedian: number;
+    engRate: number | null;
+  }[];
+  top: PostLabPost[];
+  bottom: PostLabPost[];
+  flags: { level: "bad" | "warn" | "info"; text: string }[];
+  recent: PostLabPost[];
+}
+export interface PostLabReport {
+  generatedAt: string;
+  tz: string;
+  settleHours: number;
+  minSample: number;
+  platforms: PostLabPlatform[];
 }
 
 export async function getAudienceProfile(): Promise<AudienceProfile | null> {

@@ -2099,7 +2099,7 @@ export function AudiencePanel({
                         : "whiteAlpha.500";
                     const txt = st.error
                       ? st.error
-                      : `${st.listed} post${st.listed === 1 ? "" : "s"} pulled · ${st.withReach} with reach`;
+                      : `${st.listed} post${st.listed === 1 ? "" : "s"} pulled · ${st.withReach} with ${st.metric ? st.metric.toLowerCase() : "reach"}${st.excluded ? ` · ${st.excluded} excluded` : ""}`;
                     return (
                       <Flex key={p} align="center" gap={2}>
                         <Text

@@ -8,8 +8,10 @@ import {
   getHashtagAb,
   type AudienceProfile,
   type HashtagAbRollup,
+  type PostLabReport,
 } from "@/lib/admin/client";
 import { AudiencePanel } from "@/components/admin/LeadsPanel";
+import PostLabPanel from "@/components/admin/PostLabPanel";
 
 const CAD_LABEL: Record<string, string> = {
   youtube: "YouTube Shorts",
@@ -362,11 +364,31 @@ export default function AudienceInsightsPanel({
       .finally(() => setLoading(false));
   }, []);
 
+  // Refresh runs in the BACKGROUND on the API (the full pull can outlast the
+  // web proxy's timeout). Kick it off, then poll until `fetchedAt` changes.
   const refresh = useCallback(async () => {
     setBusy(true);
     setRefreshErr("");
+    const before = audience?.fetchedAt ?? null;
     try {
-      setAudience(await refreshAudienceProfile());
+      const started = await refreshAudienceProfile();
+      // Older API (no background mode) returns the fresh profile directly.
+      if (!started?.refreshing) {
+        setAudience(started);
+        return;
+      }
+      const deadline = Date.now() + 5 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const p = await getAudienceProfile().catch(() => null);
+        if (p && !p.refreshing && p.fetchedAt && p.fetchedAt !== before) {
+          setAudience(p);
+          return;
+        }
+      }
+      setRefreshErr(
+        "Refresh is taking longer than 5 minutes. It keeps running in the background. Reload in a bit.",
+      );
     } catch (e) {
       // Keep the last good profile on screen, but say the refresh failed.
       setRefreshErr(
@@ -375,7 +397,7 @@ export default function AudienceInsightsPanel({
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [audience?.fetchedAt]);
 
   if (loading) {
     return (
@@ -406,6 +428,9 @@ export default function AudienceInsightsPanel({
         isOwner={isOwner}
         onRefresh={refresh}
         busy={busy}
+      />
+      <PostLabPanel
+        lab={(audience?.raw?.postLab as PostLabReport | undefined) ?? null}
       />
       <CadencePanel cadence={audience?.cadence} />
       <HashtagAbPanel />
