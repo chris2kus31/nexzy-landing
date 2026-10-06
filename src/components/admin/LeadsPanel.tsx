@@ -19,6 +19,7 @@ import {
   getVideoLeads,
   generateFromLead,
   generateQuickAnnounce,
+  generateGamingMeme,
   skipContentSuggestion,
   getWriterNames,
   getAudienceProfile,
@@ -667,7 +668,7 @@ function LeadCard({
   const [writer, setWriter] = useState(
     s.author || lead?.suggestedWriter || "Chuy",
   );
-  const [busy, setBusy] = useState<"gen" | "skip" | null>(null);
+  const [busy, setBusy] = useState<"gen" | "skip" | "meme" | null>(null);
   const [steer, setSteer] = useState("");
   // Quick Announcement (X + Threads + FB + IG) — its own per-platform steers.
   const [xSteer, setXSteer] = useState("");
@@ -676,6 +677,10 @@ function LeadCard({
   const [igSteer, setIgSteer] = useState("");
   const [quickErr, setQuickErr] = useState<string | null>(null);
   const [quickOk, setQuickOk] = useState(false);
+  // GAMING MEME (film-clip reaction) — its own steer + status; the lead stays open.
+  const [memeSteer, setMemeSteer] = useState("");
+  const [memeErr, setMemeErr] = useState<string | null>(null);
+  const [memeOk, setMemeOk] = useState(false);
   // MANUAL (at-will) leads only: inline "Edit context" form.
   const manual = s.sourceType === "manual" ? s.payload?.manual : undefined;
   const [editingManual, setEditingManual] = useState(false);
@@ -821,6 +826,22 @@ function LeadCard({
       setQuickErr(
         e instanceof Error ? e.message : "Quick announcement request failed.",
       );
+    } finally {
+      setBusy(null);
+    }
+  };
+  // Generate a GAMING MEME card (5 verified film-clip options + captions).
+  // Additive: does not consume the lead or touch the other generate paths.
+  const generateMeme = async () => {
+    setBusy("meme");
+    setMemeErr(null);
+    setMemeOk(false);
+    try {
+      await generateGamingMeme(s.id, writer, memeSteer.trim() || undefined);
+      setMemeOk(true);
+      await reload();
+    } catch (e) {
+      setMemeErr(e instanceof Error ? e.message : "Meme request failed.");
     } finally {
       setBusy(null);
     }
@@ -1226,6 +1247,70 @@ function LeadCard({
               <Text color="teal.300" fontSize="xs" mt={2}>
                 Queued — your X, Threads, Facebook &amp; Instagram takes will
                 appear in the Suggestions tab (⚡ QUICK) in a moment.
+              </Text>
+            )}
+          </Box>
+
+          {/* Gaming meme — 5 film-clip options, each checked against
+              Clip.Cafe / Wikiquote. Independent path; the lead stays open. */}
+          <Box
+            bg="whiteAlpha.50"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            borderRadius="md"
+            p={3}
+            mb={3}
+          >
+            <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
+              Gaming meme (film clip)
+            </Text>
+            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+              5 movie-scene options with the exact line, what to clip and the
+              on-screen text — each one checked so no scene is made up — plus
+              captions for every platform. Grab the clip on Clip.Cafe. This lead
+              stays open.
+            </Text>
+            <Text
+              color="whiteAlpha.600"
+              fontSize="10px"
+              fontWeight="700"
+              mb={1}
+            >
+              MEME STEER (optional)
+            </Text>
+            <Textarea
+              value={memeSteer}
+              onChange={(e) => setMemeSteer(e.target.value)}
+              placeholder="e.g. lean triumphant; or try Gladiator / Lord of the Rings"
+              size="sm"
+              rows={2}
+              mb={2}
+              bg="whiteAlpha.100"
+              borderColor="whiteAlpha.300"
+            />
+            <Button
+              size="sm"
+              bg="nexzy.blue"
+              color="white"
+              fontWeight="700"
+              _hover={{ bg: "nexzy.lightBlue" }}
+              onClick={generateMeme}
+              loading={busy === "meme" || !!s.payload?.memeGenerating}
+              loadingText="Finding clips…"
+            >
+              {s.payload?.memeCardId
+                ? "Re-roll gaming meme"
+                : "Make gaming meme"}
+            </Button>
+            {(memeErr || s.payload?.memeError) && (
+              <Text color="red.300" fontSize="xs" mt={2}>
+                {memeErr || s.payload?.memeError}
+              </Text>
+            )}
+            {memeOk && !memeErr && (
+              <Text color="teal.300" fontSize="xs" mt={2}>
+                Queued — the meme card (MEME) will appear in the Suggestions tab
+                in a moment.
               </Text>
             )}
           </Box>

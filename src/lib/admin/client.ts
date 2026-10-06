@@ -617,9 +617,22 @@ export interface ContentSuggestion {
     publishImages?: Partial<
       Record<"global" | "x" | "threads" | "facebook" | "instagram", string>
     >;
+    // Oct-2026 first-frame notes: the moment to OPEN on (in motion) + the 3-6
+    // word on-screen hook for frame 1. Absent on older cards.
+    firstFrame?: string;
+    onScreenHook?: string;
     // MANUAL (at-will) lead input — present only on leads created with
     // "+ New suggestion" (sourceType "manual"). Generate grounds on `context`.
     manual?: ManualLeadInput;
+    // GAMING MEME card (format === "meme"): 5 film-clip options, each verified
+    // against Clip.Cafe / Wikiquote. Lead side: memeGenerating / memeError /
+    // memeCardId while (and after) a meme is made from that lead.
+    angle?: string;
+    memeOptions?: MemeOption[];
+    memeVerify?: { clipcafe?: boolean; wikiquote?: boolean; verified?: number };
+    memeGenerating?: boolean;
+    memeError?: string | null;
+    memeCardId?: string;
     // Game chip — links the card (and the video produced from it) to a game.
     // Auto-resolved on the fast routes; editable on the card. null = cleared.
     // (Named gameLink because payload.game is already the guide-lead's game NAME.)
@@ -645,6 +658,7 @@ export interface ContentSuggestion {
       | "pinned_comment"
       | "text_post"
       | "quick"
+      | "meme"
       | "none";
     // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
     longform?: {
@@ -3928,6 +3942,51 @@ export async function generateFromLead(
  * a lead, each with its own steer. Independent of the long-form / per-platform
  * paths.
  */
+/** One GAMING MEME film-clip option (+ how it was verified). */
+export interface MemeOption {
+  movie: string;
+  year?: number;
+  character?: string;
+  line: string;
+  scene?: string;
+  clip?: string;
+  whyItFits?: string;
+  onScreenText?: { top?: string; bottom?: string };
+  rating?: string;
+  audience?: string;
+  repeat?: boolean;
+  verification?: {
+    status: "verified" | "quote_verified" | "mismatch" | "unverified";
+    source?: "clipcafe" | "wikiquote";
+    matchedTitle?: string;
+    matchedYear?: number;
+    matchedLine?: string;
+    clipId?: number;
+    previewUrl?: string;
+    searchUrl: string;
+    note: string;
+    checkedAt?: string;
+  };
+}
+
+/** GAMING MEME: queue 5 verified film-clip options for a lead (lead stays open). */
+export async function generateGamingMeme(
+  id: string,
+  writer?: string,
+  steer?: string,
+): Promise<{ queued: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/gaming-meme`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(writer ? { writer } : {}),
+        ...(steer ? { steer } : {}),
+      }),
+    }),
+  );
+}
+
 export async function generateQuickAnnounce(
   id: string,
   writer?: string,

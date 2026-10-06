@@ -39,6 +39,7 @@ import {
   type GameLite,
   type ContentSuggestion,
   type PlatformKit,
+  type MemeOption,
   type PublishResult,
   type PlatformInsights,
   type TtsBudget,
@@ -1819,7 +1820,11 @@ function SuggestionCard({
   // SLIDE decks (Phase 3): carousel / photo / album — copy-only slide deck +
   // captions. Same "brief card" family as image_card — no video/TTS/Produce/Publish.
   const isSlideCard = fmt === "carousel" || fmt === "photo" || fmt === "album";
-  const isBriefCard = isImageCard || isSlideCard;
+  // GAMING MEME (format === "meme"): copy-only — 5 verified film-clip options
+  // + on-screen text + captions. Same brief-card family (no video/TTS/Publish).
+  const isMemeCard = fmt === "meme";
+  const memeOptions = view.payload?.memeOptions ?? [];
+  const isBriefCard = isImageCard || isSlideCard || isMemeCard;
   const slides = view.payload?.slides ?? [];
   const saveCta = view.payload?.saveCta ?? "";
   const slideLabel =
@@ -1952,6 +1957,11 @@ function SuggestionCard({
           {isQuick && (
             <Badge colorPalette="teal" variant="solid">
               ⚡ QUICK
+            </Badge>
+          )}
+          {isMemeCard && (
+            <Badge colorPalette="purple" variant="solid">
+              MEME
             </Badge>
           )}
           {isNonVideo && (
@@ -2623,6 +2633,54 @@ function SuggestionCard({
               </VStack>
             )}
 
+            {isMemeCard && (
+              <VStack align="stretch" gap={3} mb={3}>
+                {view.payload?.angle && (
+                  <Text color="nexzy.gray.100" fontSize="sm">
+                    <Text as="span" color="nexzy.lightBlue" fontWeight="700">
+                      The joke:{" "}
+                    </Text>
+                    {view.payload.angle}
+                  </Text>
+                )}
+                <Text color="nexzy.gray.300" fontSize="2xs">
+                  {view.payload?.memeVerify?.verified ?? 0} of{" "}
+                  {memeOptions.length} scenes verified · checked with{" "}
+                  {[
+                    view.payload?.memeVerify?.clipcafe ? "Clip.Cafe" : "",
+                    view.payload?.memeVerify?.wikiquote ? "Wikiquote" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" + ") || "nothing (verification off)"}
+                  . Pick one, grab the clip on Clip.Cafe, burn the text on it.
+                </Text>
+                {memeOptions.map((o, i) => (
+                  <MemeOptionBlock key={i} n={i + 1} o={o} />
+                ))}
+                {platforms && (
+                  <VStack align="stretch" gap={2}>
+                    <Text color="nexzy.gray.300" fontSize="2xs">
+                      Captions work with whichever clip you pick.
+                    </Text>
+                    <KitBlock
+                      name="TikTok"
+                      kit={platforms.tiktok}
+                      ctaBeforeTags
+                    />
+                    <KitBlock name="YouTube Shorts" kit={platforms.youtube} />
+                    <KitBlock name="Instagram Reels" kit={platforms.reels} />
+                    <KitBlock name="Facebook Reels" kit={platforms.facebook} />
+                    <KitBlock name="Threads" kit={platforms.threads} />
+                    <KitBlock name="X (Twitter)" kit={platforms.x} />
+                    <KitBlock
+                      name="Reddit (r/NexzyGaming)"
+                      kit={platforms.reddit}
+                    />
+                  </VStack>
+                )}
+              </VStack>
+            )}
+
             {isSlideCard && (
               <VStack align="stretch" gap={3} mb={3}>
                 {onSendToCards && (
@@ -3147,6 +3205,38 @@ function SuggestionCard({
                                 </Text>
                               )
                             )}
+                            {(view.payload?.firstFrame ||
+                              view.payload?.onScreenHook) && (
+                              <Box
+                                bg="rgba(245,181,61,0.08)"
+                                border="1px solid"
+                                borderColor="rgba(245,181,61,0.35)"
+                                borderRadius="md"
+                                px={2}
+                                py={1.5}
+                              >
+                                <Text
+                                  color="#f5b53d"
+                                  fontSize="10px"
+                                  fontWeight="700"
+                                  mb={0.5}
+                                >
+                                  FIRST FRAME (open on motion, never a title
+                                  card)
+                                </Text>
+                                {view.payload?.firstFrame && (
+                                  <Text color="nexzy.gray.100" fontSize="xs">
+                                    <b>Open on:</b> {view.payload.firstFrame}
+                                  </Text>
+                                )}
+                                {view.payload?.onScreenHook && (
+                                  <Text color="nexzy.gray.100" fontSize="xs">
+                                    <b>On-screen hook:</b>{" "}
+                                    {view.payload.onScreenHook}
+                                  </Text>
+                                )}
+                              </Box>
+                            )}
                             {(view.payload?.onScreenText?.length ?? 0) > 0 && (
                               <Text color="nexzy.gray.100" fontSize="xs">
                                 💬 <b>On-screen text</b> (captions to overlay):{" "}
@@ -3209,6 +3299,131 @@ function SuggestionCard({
   );
 }
 
+const MEME_STATUS: Record<string, { label: string; color: string }> = {
+  verified: { label: "Verified on Clip.Cafe", color: "green" },
+  quote_verified: { label: "Line verified (Wikiquote)", color: "teal" },
+  mismatch: { label: "Wrong film? Line found elsewhere", color: "red" },
+  unverified: { label: "Unverified · check before posting", color: "yellow" },
+};
+
+/** One GAMING MEME film-clip option + its verification. */
+function MemeOptionBlock({ n, o }: { n: number; o: MemeOption }) {
+  const v = o.verification;
+  const st = MEME_STATUS[v?.status ?? "unverified"] ?? MEME_STATUS.unverified;
+  const top = o.onScreenText?.top ?? "";
+  const bottom = o.onScreenText?.bottom ?? "";
+  const overlay = [top, bottom].filter(Boolean).join("\n");
+  return (
+    <Box
+      bg="whiteAlpha.50"
+      border="1px solid"
+      borderColor={
+        v?.status === "verified" || v?.status === "quote_verified"
+          ? "green.700"
+          : "whiteAlpha.200"
+      }
+      borderRadius="lg"
+      p={3}
+    >
+      <Flex justify="space-between" align="flex-start" gap={2} wrap="wrap">
+        <Text color="nexzy.white" fontSize="sm" fontWeight="700">
+          {n}. {o.movie}
+          {o.year ? ` (${o.year})` : ""}
+          {o.character ? ` — ${o.character}` : ""}
+        </Text>
+        <HStack gap={1} wrap="wrap">
+          {o.rating && (
+            <Badge colorPalette="gray" variant="subtle" fontSize="10px">
+              {o.rating}
+              {o.audience ? ` · ${o.audience}` : ""}
+            </Badge>
+          )}
+          {o.repeat && (
+            <Badge colorPalette="orange" variant="subtle" fontSize="10px">
+              used recently
+            </Badge>
+          )}
+          <Badge colorPalette={st.color} variant="solid" fontSize="10px">
+            {st.label}
+          </Badge>
+        </HStack>
+      </Flex>
+      <Text color="nexzy.white" fontSize="sm" fontStyle="italic" mt={1}>
+        “{o.line}”
+      </Text>
+      {o.scene && (
+        <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+          <b>Scene:</b> {o.scene}
+        </Text>
+      )}
+      {o.clip && (
+        <Text color="nexzy.gray.100" fontSize="xs">
+          <b>Clip:</b> {o.clip}
+        </Text>
+      )}
+      {o.whyItFits && (
+        <Text color="nexzy.gray.100" fontSize="xs">
+          <b>Why it fits:</b> {o.whyItFits}
+        </Text>
+      )}
+      {overlay && (
+        <Box mt={2}>
+          <Flex justify="space-between" align="center" gap={2}>
+            <Text color="nexzy.lightBlue" fontSize="2xs" fontWeight="700">
+              ON-SCREEN TEXT
+            </Text>
+            <CopyBtn text={overlay} label="Copy" />
+          </Flex>
+          {top && (
+            <Text color="nexzy.white" fontSize="sm" fontWeight="600">
+              {top}
+            </Text>
+          )}
+          {bottom && (
+            <Text color="nexzy.white" fontSize="sm">
+              {bottom}
+            </Text>
+          )}
+        </Box>
+      )}
+      {v && (
+        <Box mt={2}>
+          <Text color="nexzy.gray.300" fontSize="2xs">
+            {v.note}
+            {v.matchedLine && v.status !== "quote_verified"
+              ? ` Source line: “${v.matchedLine}”.`
+              : ""}
+          </Text>
+          <HStack gap={3} mt={1} wrap="wrap">
+            <Link
+              href={v.searchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              color="nexzy.lightBlue"
+              fontSize="xs"
+              fontWeight="700"
+            >
+              Find on Clip.Cafe ↗
+            </Link>
+            {v.previewUrl && (
+              <Link
+                href={v.previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="nexzy.lightBlue"
+                fontSize="xs"
+              >
+                Preview the clip ↗
+              </Link>
+            )}
+            <CopyBtn text={o.line} label="Copy line" />
+          </HStack>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 /** Tab label for an asset card inside a story group, from its format. */
 function assetLabel(s: ContentSuggestion): string {
   const f = s.payload?.format;
@@ -3217,6 +3432,7 @@ function assetLabel(s: ContentSuggestion): string {
   if (f === "photo") return "Photo (TikTok)";
   if (f === "album") return "Album (FB)";
   if (f === "image_card" || f === "image") return "Image";
+  if (f === "meme") return "Meme";
   return "Short video";
 }
 
