@@ -14,6 +14,7 @@ import {
   fetchVideosForSitemap,
   fetchTags,
   fetchRewindDays,
+  CACHE_SITEMAP,
 } from "@/lib/blog/api";
 import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
@@ -22,7 +23,7 @@ import { isPostIndexable } from "@/lib/blog/indexing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
-export const revalidate = 300;
+export const revalidate = 21600; // 6 h; the publish webhook refreshes it instantly
 
 // Safety cap so the sitemap can grow with the archive without an unbounded
 // crawl of the API. 20 pages x 50 = up to 1,000 most-recent articles.
@@ -76,7 +77,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articleEntries: MetadataRoute.Sitemap = [];
   try {
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const { items, total } = await fetchPosts({ page, pageSize: PAGE_SIZE });
+      const { items, total } = await fetchPosts(
+        { page, pageSize: PAGE_SIZE },
+        { revalidate: CACHE_SITEMAP },
+      );
       for (const p of items) {
         // Noindex articles (commodity beats, or an explicit per-article flag)
         // are kept out of the sitemap so Google doesn't waste crawl budget.
@@ -115,7 +119,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const { prefix, fetch } of evergreen) {
     try {
       for (let page = 1; page <= MAX_PAGES; page++) {
-        const { items, total } = await fetch({ page, pageSize: PAGE_SIZE });
+        const { items, total } = await fetch(
+          { page, pageSize: PAGE_SIZE },
+          { revalidate: CACHE_SITEMAP },
+        );
         for (const p of items) {
           evergreenEntries.push({
             url: `${SITE_URL}${prefix}/${p.slug}`,
@@ -225,7 +232,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // tags-API hiccup never breaks the sitemap.
   const topicEntries: MetadataRoute.Sitemap = [];
   try {
-    const tags = await fetchTags(500);
+    const tags = await fetchTags(500, { revalidate: CACHE_SITEMAP });
     for (const t of tags) {
       if (t.count < MIN_TOPIC_ARTICLES) continue;
       topicEntries.push({

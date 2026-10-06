@@ -140,18 +140,47 @@ export interface PostList {
   pageSize: number;
 }
 
-// Revalidate published content periodically (ISR-friendly).
-const REVALIDATE = 300; // 5 min
+// ---- Cache windows (seconds) ----
+// Pages are served from Netlify's cache and only re-rendered when a window
+// expires OR the publish webhook (/api/published) revalidates them on demand.
+// Publish / unpublish / feature / byline / rating / game-link changes fire that
+// webhook, so long windows never hide new content. A page's effective window is
+// the SHORTEST of its segment `revalidate` and the fetches it makes, so each
+// helper below uses the window that matches the pages that call it.
+//   DETAIL  - a single article/guide/list/review/walkthrough + its rails.
+//   HUB     - game hub pages (also pick up trailers/videos between publishes).
+//   LIST    - homepage, indexes, trending/most-read, rewind, videos.
+//   SITEMAP - sitemap / news-sitemap / rss (also refreshed by the webhook).
+export const CACHE_DETAIL = 86400; // 24 h
+export const CACHE_HUB = 21600; // 6 h
+export const CACHE_LIST = 1800; // 30 min
+export const CACHE_SITEMAP = 21600; // 6 h
 
-export async function fetchPosts(params?: {
-  beat?: string;
-  q?: string;
-  page?: number;
-  pageSize?: number;
-  author?: string;
-  tag?: string;
-  type?: string;
-}): Promise<PostList> {
+// Never let a slow/hung API keep a render (and the Netlify function, which is
+// billed by wall-clock time) waiting. On timeout the fetch throws: ISR keeps
+// serving the last good page, and helpers with a try/catch return empty.
+const API_TIMEOUT_MS = 10000;
+
+/** Shared fetch init: Next data-cache window + the API timeout. */
+function cacheInit(revalidate: number): RequestInit {
+  return {
+    next: { revalidate },
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  };
+}
+
+export async function fetchPosts(
+  params?: {
+    beat?: string;
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    author?: string;
+    tag?: string;
+    type?: string;
+  },
+  opts?: { revalidate?: number },
+): Promise<PostList> {
   const q = new URLSearchParams();
   if (params?.beat) q.set("beat", params.beat);
   if (params?.q) q.set("q", params.q);
@@ -166,9 +195,10 @@ export async function fetchPosts(params?: {
   q.set("hero", "1");
   const qs = q.toString();
 
-  const res = await fetch(`${API}/newsroom/public/posts${qs ? `?${qs}` : ""}`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/newsroom/public/posts${qs ? `?${qs}` : ""}`,
+    cacheInit(opts?.revalidate ?? CACHE_LIST),
+  );
   if (!res.ok) {
     return { items: [], total: 0, page: 1, pageSize: 20 };
   }
@@ -190,30 +220,39 @@ export async function fetchFeaturedAny(): Promise<PublicPost | null> {
 }
 
 /** Evergreen guides index ("how to beat X"). Newest first, paginated. */
-export async function fetchGuides(params?: {
-  q?: string;
-  page?: number;
-  pageSize?: number;
-}): Promise<PostList> {
-  return fetchPosts({ ...params, type: "guide" });
+export async function fetchGuides(
+  params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  opts?: { revalidate?: number },
+): Promise<PostList> {
+  return fetchPosts({ ...params, type: "guide" }, opts);
 }
 
 /** Evergreen lists index ("upcoming" + "new this week"). Newest first. */
-export async function fetchLists(params?: {
-  q?: string;
-  page?: number;
-  pageSize?: number;
-}): Promise<PostList> {
-  return fetchPosts({ ...params, type: "list" });
+export async function fetchLists(
+  params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  opts?: { revalidate?: number },
+): Promise<PostList> {
+  return fetchPosts({ ...params, type: "list" }, opts);
 }
 
 /** Reviews index (game adaptations — movies/TV — with a score). Newest first. */
-export async function fetchReviews(params?: {
-  q?: string;
-  page?: number;
-  pageSize?: number;
-}): Promise<PostList> {
-  return fetchPosts({ ...params, type: "review" });
+export async function fetchReviews(
+  params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  opts?: { revalidate?: number },
+): Promise<PostList> {
+  return fetchPosts({ ...params, type: "review" }, opts);
 }
 
 /**
@@ -250,9 +289,10 @@ export interface NostalgiaSpotlight {
  */
 export async function fetchNostalgia(): Promise<NostalgiaSpotlight | null> {
   try {
-    const res = await fetch(`${API}/games/nostalgia/today`, {
-      next: { revalidate: REVALIDATE },
-    });
+    const res = await fetch(
+      `${API}/games/nostalgia/today`,
+      cacheInit(CACHE_LIST),
+    );
     if (!res.ok) return null;
     const json = await res.json();
     const fact = json?.data;
@@ -275,7 +315,7 @@ export async function fetchTrending(
   // faster. sort=hot = time-decayed trending; sort=reads = lifetime "Most read".
   const res = await fetch(
     `${API}/newsroom/public/trending?limit=${limit}&sort=${sort}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_LIST),
   );
   if (!res.ok) return [];
   return res.json();
@@ -289,7 +329,7 @@ export async function fetchRelated(
   // "Keep reading" rail + internal linking for topical authority.
   const res = await fetch(
     `${API}/newsroom/public/posts/${encodeURIComponent(slug)}/related?limit=${limit}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_DETAIL),
   );
   if (!res.ok) return [];
   return res.json();
@@ -308,7 +348,7 @@ export async function fetchRelatedByGame(
   // game(s) + the game for the heading/hub link. Pillar->cluster internal links.
   const res = await fetch(
     `${API}/newsroom/public/posts/${encodeURIComponent(slug)}/related-by-game?limit=${limit}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_DETAIL),
   );
   if (!res.ok) return { game: null, items: [] };
   return res.json();
@@ -332,7 +372,7 @@ export async function fetchAuthorProfile(
   try {
     const res = await fetch(
       `${API}/newsroom/public/authors/${encodeURIComponent(slug)}`,
-      { next: { revalidate: REVALIDATE } },
+      cacheInit(CACHE_LIST),
     );
     if (!res.ok) return null;
     // The endpoint returns an empty body when there's no matching persona (or
@@ -344,22 +384,26 @@ export async function fetchAuthorProfile(
   }
 }
 
-export async function fetchTags(limit = 200): Promise<TagInfo[]> {
+export async function fetchTags(
+  limit = 200,
+  opts?: { revalidate?: number },
+): Promise<TagInfo[]> {
   // Distinct published tags + counts, for the topic-hub index and sitemap.
-  const res = await fetch(`${API}/newsroom/public/tags?limit=${limit}`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/newsroom/public/tags?limit=${limit}`,
+    cacheInit(opts?.revalidate ?? CACHE_LIST),
+  );
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchPost(slug: string): Promise<PublicPost | null> {
   // ISR-cached so article pages serve fast/static to crawlers; the read count
-  // may be up to REVALIDATE seconds stale (the increment itself still fires via
+  // may be up to CACHE_DETAIL seconds stale (the increment itself still fires via
   // the client ViewPing).
   const res = await fetch(
     `${API}/newsroom/public/posts/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_DETAIL),
   );
   if (res.status === 404) return null;
   if (!res.ok) return null;
@@ -436,7 +480,7 @@ export async function fetchRewindEpisode(
 ): Promise<RewindEpisode | null> {
   const res = await fetch(
     `${API}/rewind/public/episode/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_LIST),
   );
   if (res.status === 404) return null;
   if (!res.ok) return null;
@@ -448,9 +492,10 @@ export async function fetchRewindDay(
   month: number,
   day: number,
 ): Promise<RewindDayHub | null> {
-  const res = await fetch(`${API}/rewind/public/day/${month}/${day}`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/rewind/public/day/${month}/${day}`,
+    cacheInit(CACHE_LIST),
+  );
   if (!res.ok) return null;
   const text = await res.text();
   return text ? (JSON.parse(text) as RewindDayHub) : null;
@@ -469,18 +514,17 @@ export interface RewindRecentItem {
 export async function fetchRewindRecent(
   limit = 12,
 ): Promise<RewindRecentItem[]> {
-  const res = await fetch(`${API}/rewind/public/recent?limit=${limit}`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/rewind/public/recent?limit=${limit}`,
+    cacheInit(CACHE_LIST),
+  );
   if (!res.ok) return [];
   const text = await res.text();
   return text ? (JSON.parse(text) as RewindRecentItem[]) : [];
 }
 
 export async function fetchRewindToday(): Promise<RewindEpisode | null> {
-  const res = await fetch(`${API}/rewind/public/today`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(`${API}/rewind/public/today`, cacheInit(CACHE_LIST));
   if (!res.ok) return null;
   const text = await res.text();
   return text ? (JSON.parse(text) as RewindEpisode) : null;
@@ -489,9 +533,7 @@ export async function fetchRewindToday(): Promise<RewindEpisode | null> {
 export async function fetchRewindSlugs(): Promise<
   { slug: string; updatedAt: string | null }[]
 > {
-  const res = await fetch(`${API}/rewind/public/slugs`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(`${API}/rewind/public/slugs`, cacheInit(CACHE_LIST));
   if (!res.ok) return [];
   const text = await res.text();
   return text ? JSON.parse(text) : [];
@@ -500,9 +542,10 @@ export async function fetchRewindSlugs(): Promise<
 export async function fetchRewindDays(): Promise<
   { month: number; day: number }[]
 > {
-  const res = await fetch(`${API}/rewind/public/days`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/rewind/public/days`,
+    cacheInit(CACHE_SITEMAP),
+  );
   if (!res.ok) return [];
   const text = await res.text();
   return text ? JSON.parse(text) : [];
@@ -528,18 +571,21 @@ export interface WalkthroughChapterResponse {
 }
 
 /** Walkthrough hub — published overviews, newest first. */
-export async function fetchWalkthroughs(params?: {
-  q?: string;
-  page?: number;
-  pageSize?: number;
-}): Promise<PostList> {
+export async function fetchWalkthroughs(
+  params?: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  opts?: { revalidate?: number },
+): Promise<PostList> {
   const q = new URLSearchParams();
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
   const qs = q.toString();
   const res = await fetch(
     `${API}/newsroom/public/walkthroughs${qs ? `?${qs}` : ""}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(opts?.revalidate ?? CACHE_LIST),
   );
   if (!res.ok)
     return {
@@ -557,7 +603,7 @@ export async function fetchWalkthrough(
 ): Promise<WalkthroughOverview | null> {
   const res = await fetch(
     `${API}/newsroom/public/walkthroughs/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_DETAIL),
   );
   if (!res.ok) return null;
   return res.json();
@@ -570,7 +616,7 @@ export async function fetchChapter(
 ): Promise<WalkthroughChapterResponse | null> {
   const res = await fetch(
     `${API}/newsroom/public/walkthroughs/${encodeURIComponent(slug)}/${encodeURIComponent(chapterSlug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_DETAIL),
   );
   if (!res.ok) return null;
   return res.json();
@@ -585,9 +631,10 @@ export interface WalkthroughChapterSitemapRef {
 export async function fetchWalkthroughChapters(): Promise<
   WalkthroughChapterSitemapRef[]
 > {
-  const res = await fetch(`${API}/newsroom/public/walkthrough-chapters`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/newsroom/public/walkthrough-chapters`,
+    cacheInit(CACHE_SITEMAP),
+  );
   if (!res.ok) return [];
   return res.json();
 }
@@ -655,7 +702,7 @@ export interface GameWithContent {
 export async function fetchGameHub(slug: string): Promise<GameHub | null> {
   const res = await fetch(
     `${API}/newsroom/public/games/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_HUB),
   );
   if (!res.ok) return null;
   return res.json();
@@ -664,9 +711,10 @@ export async function fetchGameHub(slug: string): Promise<GameHub | null> {
 /** Every game that has a public hub (>=1 published linked content). Full list
  *  (no paging) — used by the sitemap, which needs every game. */
 export async function fetchGamesWithContent(): Promise<GameWithContent[]> {
-  const res = await fetch(`${API}/newsroom/public/games`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/newsroom/public/games`,
+    cacheInit(CACHE_SITEMAP),
+  );
   if (!res.ok) return [];
   return res.json();
 }
@@ -685,7 +733,7 @@ export async function fetchGamesPage(
 ): Promise<GamesPage> {
   const res = await fetch(
     `${API}/newsroom/public/games?page=${page}&pageSize=${pageSize}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_LIST),
   );
   if (!res.ok) return { items: [], total: 0, page, pageSize };
   return res.json();
@@ -731,7 +779,7 @@ export async function fetchVideos(params?: {
   const qs = q.toString();
   const res = await fetch(
     `${API}/newsroom/public/videos${qs ? `?${qs}` : ""}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_LIST),
   );
   if (!res.ok)
     return {
@@ -747,7 +795,7 @@ export async function fetchVideos(params?: {
 export async function fetchVideo(slug: string): Promise<PublicVideo | null> {
   const res = await fetch(
     `${API}/newsroom/public/videos/${encodeURIComponent(slug)}`,
-    { next: { revalidate: REVALIDATE } },
+    cacheInit(CACHE_LIST),
   );
   if (res.status === 404) return null;
   if (!res.ok) return null;
@@ -770,9 +818,10 @@ export interface VideoSitemapRef {
 
 /** Every published video slug + updatedAt, for the sitemap (one round-trip). */
 export async function fetchVideosForSitemap(): Promise<VideoSitemapRef[]> {
-  const res = await fetch(`${API}/newsroom/public/videos-sitemap`, {
-    next: { revalidate: REVALIDATE },
-  });
+  const res = await fetch(
+    `${API}/newsroom/public/videos-sitemap`,
+    cacheInit(CACHE_SITEMAP),
+  );
   if (!res.ok) return [];
   return res.json();
 }

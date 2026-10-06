@@ -30,7 +30,7 @@ import {
   webEraForYear,
 } from "@/lib/rewind/era";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const SERIF = 'Georgia, "Times New Roman", serif';

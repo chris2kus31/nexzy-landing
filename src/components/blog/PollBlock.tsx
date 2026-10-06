@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Box, Text, VStack, HStack } from "@chakra-ui/react";
 import { track } from "@/lib/analytics";
 import type { PublicPost } from "@/lib/blog/api";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Poll = NonNullable<PublicPost["poll"]>;
 
@@ -46,16 +47,24 @@ export default function PollBlock({
   const [chosen, setChosen] = useState<number | null>(null);
   const [votes, setVotes] = useState<number[]>(poll.votes ?? []);
   const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
   useEffect(() => {
-    // Guests: on-device memory (localStorage). Signed-in readers: the server
-    // pick wins and follows their account across web + app — checked right after.
+    // Guests: on-device memory (localStorage).
     try {
       const stored = localStorage.getItem(key);
       if (stored !== null) setChosen(Number(stored));
     } catch {
       /* private mode — fall through, they can still vote this session */
     }
+  }, [key]);
+
+  useEffect(() => {
+    // Signed-in readers: the server pick wins and follows their account across
+    // web + app. Guests have no server pick (the route returns null for them),
+    // so skip the call — it was a Netlify function hit on every poll view.
+    if (!userId) return;
     let alive = true;
     void (async () => {
       try {
@@ -74,7 +83,7 @@ export default function PollBlock({
     return () => {
       alive = false;
     };
-  }, [key, slug]);
+  }, [slug, userId]);
 
   const total = votes.reduce((a, b) => a + b, 0);
   const voted = chosen !== null;

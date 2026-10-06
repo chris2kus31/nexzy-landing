@@ -15,7 +15,7 @@ import { fetchGuides } from "@/lib/blog/api";
 import BlogCard from "@/components/blog/BlogCard";
 import AppCta from "@/components/blog/AppCta";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PAGE_SIZE = 18;

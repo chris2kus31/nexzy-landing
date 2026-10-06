@@ -5,7 +5,7 @@ import Footer from "@/components/landing/Footer";
 import RewindSeriesLanding from "@/components/rewind/RewindSeriesLanding";
 import { fetchRewindDay, fetchRewindRecent } from "@/lib/blog/api";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 const REWIND_TITLE = "Rewind — This Day in Gaming History | Nexzy";
 const REWIND_DESC =

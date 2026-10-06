@@ -23,6 +23,9 @@ async function fetchMe(accessToken: string) {
   return fetch(`${USER_API_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
+    // Read-only, so safe to time out (the refresh call below is NOT given a
+    // timeout: aborting a token rotation midway could orphan the session).
+    signal: AbortSignal.timeout(8000),
   });
 }
 

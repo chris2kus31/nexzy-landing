@@ -24,7 +24,7 @@ import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
-export const revalidate = 300;
+export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 function toHowToSteps(markdown?: string): { name: string; text: string }[] {

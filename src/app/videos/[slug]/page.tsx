@@ -24,7 +24,7 @@ import VideoViewPing from "@/components/blog/VideoViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 
 // ISR: video pages are cached and rebuilt in the background (fast + crawlable).
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 

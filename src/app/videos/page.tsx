@@ -17,7 +17,7 @@ import VideoShelf from "@/components/blog/VideoShelf";
 import FeaturedVideo from "@/components/blog/FeaturedVideo";
 import AppCta from "@/components/blog/AppCta";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PAGE_SIZE = 24;

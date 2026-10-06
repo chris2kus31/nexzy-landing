@@ -32,7 +32,7 @@ import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import SourcesBlock from "@/components/blog/SourcesBlock";
 
 // ISR: review pages are cached and rebuilt in the background (fast + crawlable).
-export const revalidate = 300;
+export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 

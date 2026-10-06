@@ -18,7 +18,12 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(
       `${API}/newsroom/public/posts/${encodeURIComponent(slug)}/my-poll-vote`,
-      { method: "GET", headers, cache: "no-store" },
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      },
     );
     const data = await res.json().catch(() => ({ optionIndex: null }));
     return NextResponse.json(data, { status: res.status });

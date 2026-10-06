@@ -1,9 +1,9 @@
 // RSS 2.0 feed of the latest Nexzy News articles, for aggregators and
 // syndication. Referenced from robots.txt and the page <head> is optional.
-import { fetchPosts } from "@/lib/blog/api";
+import { fetchPosts, CACHE_SITEMAP } from "@/lib/blog/api";
 import { isPostIndexable } from "@/lib/blog/indexing";
 
-export const revalidate = 300;
+export const revalidate = 21600; // 6 h; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -22,7 +22,10 @@ export async function GET(): Promise<Response> {
     // Fetch extra, then drop noindex articles (deals, patch notes, per-post
     // toggle) — same check as sitemap.xml, so the feed never hands Google/Bing
     // a page that says "don't index me". Keep the feed at 30 items.
-    const res = await fetchPosts({ pageSize: 50 });
+    const res = await fetchPosts(
+      { pageSize: 50 },
+      { revalidate: CACHE_SITEMAP },
+    );
     items = res.items.filter((p) => isPostIndexable(p)).slice(0, 30);
   } catch {
     items = [];
@@ -63,7 +66,12 @@ ${entries}
   return new Response(xml, {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=300",
+      // Must match the segment `revalidate` (6 h): this header is what the CDN
+      // obeys, so a shorter s-maxage here would re-invoke the function every
+      // 5 min and quietly defeat the long window. The publish webhook purges
+      // this path on every publish, so freshness never depends on expiry.
+      "Cache-Control":
+        "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400",
     },
   });
 }

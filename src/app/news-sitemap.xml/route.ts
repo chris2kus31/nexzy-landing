@@ -1,9 +1,9 @@
 // Google News sitemap: articles published in the last 48 hours, with
 // <news:news> tags. Google News crawls this to surface fresh articles in the
 // News tab / Top Stories. Referenced from robots.txt.
-import { fetchPosts } from "@/lib/blog/api";
+import { fetchPosts, CACHE_SITEMAP } from "@/lib/blog/api";
 
-export const revalidate = 300;
+export const revalidate = 21600; // 6 h; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const PUBLICATION = "Nexzy News";
@@ -23,7 +23,10 @@ export async function GET(): Promise<Response> {
   let items: Awaited<ReturnType<typeof fetchPosts>>["items"] = [];
   try {
     // Grab the newest page; filter to the 48h Google News window.
-    const res = await fetchPosts({ pageSize: 50 });
+    const res = await fetchPosts(
+      { pageSize: 50 },
+      { revalidate: CACHE_SITEMAP },
+    );
     items = res.items.filter(
       (p) => p.publishedAt && new Date(p.publishedAt).getTime() >= cutoff,
     );
@@ -58,7 +61,12 @@ ${urls}
   return new Response(xml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, max-age=0, s-maxage=300",
+      // Must match the segment `revalidate` (6 h): this header is what the CDN
+      // obeys, so a shorter s-maxage here would re-invoke the function every
+      // 5 min and quietly defeat the long window. The publish webhook purges
+      // this path on every publish, so freshness never depends on expiry.
+      "Cache-Control":
+        "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400",
     },
   });
 }

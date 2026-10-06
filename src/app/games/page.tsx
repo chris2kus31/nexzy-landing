@@ -3,7 +3,7 @@ import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGamesPage } from "@/lib/blog/api";
 import GamesGrid from "@/components/games/GamesGrid";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export const metadata: Metadata = {

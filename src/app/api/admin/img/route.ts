@@ -2,18 +2,25 @@
 // published article, its heroImageUrl lives on S3/CDN — fetching it directly
 // into a <canvas> for PNG export would taint the canvas (CORS). Routing the
 // image through here makes it same-origin so html-to-image can export cleanly.
-// Locked to https + an allowlisted host set (no open proxy / SSRF).
+// Locked to https + an allowlisted host set (no open proxy / SSRF), and to a
+// signed-in admin (the admin session cookie), so the public can't use it to
+// pull arbitrary images through our Netlify function (compute + bandwidth).
+// Default hosts are OUR media only: the CDN, our bucket, and the site itself
+// (a host also matches its subdomains). Override with CARD_IMAGE_PROXY_HOSTS.
 import { NextRequest, NextResponse } from "next/server";
+import { ADMIN_COOKIE } from "@/lib/admin/server";
 
 const ALLOW = (
   process.env.CARD_IMAGE_PROXY_HOSTS ||
-  "amazonaws.com,cloudfront.net,nexzyapp.com"
+  "cdn.nexzyapp.com,nexzy-newsroom-media.s3.us-east-1.amazonaws.com,nexzy-newsroom-media.s3.amazonaws.com,nexzyapp.com"
 )
   .split(",")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
 export async function GET(req: NextRequest) {
+  if (!req.cookies.get(ADMIN_COOKIE)?.value)
+    return new NextResponse("unauthorized", { status: 401 });
   const raw = req.nextUrl.searchParams.get("url");
   if (!raw) return new NextResponse("missing url", { status: 400 });
 
@@ -31,7 +38,10 @@ export async function GET(req: NextRequest) {
   if (!ok) return new NextResponse("host not allowed", { status: 403 });
 
   try {
-    const res = await fetch(u.toString(), { cache: "no-store" });
+    const res = await fetch(u.toString(), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
     if (!res.ok) return new NextResponse("upstream error", { status: 502 });
     const ct = res.headers.get("content-type") || "";
     if (!ct.startsWith("image/"))

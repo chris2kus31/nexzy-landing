@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers,
         cache: "no-store",
+        signal: AbortSignal.timeout(5000),
       },
     );
   } catch {

@@ -32,7 +32,7 @@ import GameMedia from "@/components/games/GameMedia";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
 
-export const revalidate = 300;
+export const revalidate = 21600; // 6 h; the publish webhook refreshes every hub instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 const TYPE_BADGE: Record<string, { label: string; palette: string }> = {

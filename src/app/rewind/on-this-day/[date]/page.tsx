@@ -7,7 +7,7 @@ import DayHubView from "@/components/rewind/DayHubView";
 import { fetchRewindDay } from "@/lib/blog/api";
 import { parseDateSlug, monthName } from "@/lib/rewind/era";
 
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 export async function generateMetadata({
   params,

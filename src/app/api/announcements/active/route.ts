@@ -20,6 +20,7 @@ export async function GET() {
     const res = await fetch(`${API_BASE_URL}/announcements/active`, {
       headers: { "X-API-Key": API_SECRET_KEY ?? "" },
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return NextResponse.json(null, { headers: CACHE_HEADERS });
     const text = await res.text();

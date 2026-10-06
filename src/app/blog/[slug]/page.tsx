@@ -48,7 +48,7 @@ import SourcesBlock from "@/components/blog/SourcesBlock";
 import GamesRail from "@/components/blog/GamesRail";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
-export const revalidate = 300;
+export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 

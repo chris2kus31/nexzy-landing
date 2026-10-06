@@ -20,7 +20,7 @@ const PAGE_SIZE = 12;
 
 // ISR: cached, rebuilt in the background. (Renders dynamically when search/
 // filter params are present; data is cached either way.)
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 type SP = Promise<{ page?: string; beat?: string; q?: string }>;
 

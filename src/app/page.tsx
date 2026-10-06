@@ -24,7 +24,7 @@ import {
 } from "@/lib/blog/api";
 
 // Cache the home page (with its content modules) — rebuilt in the background.
-export const revalidate = 300;
+export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 export default async function HomePage() {
   const [news, hot, reads, library, videos, rewindToday, gamesPage] =
