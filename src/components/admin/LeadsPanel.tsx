@@ -2207,7 +2207,9 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   // While any lead is generating (a queued job is running), poll so the board
   // updates when it finishes (card appears in Suggestions) or fails.
   useEffect(() => {
-    if (!leads?.some((l) => l.payload?.generating)) return;
+    // A queued gaming meme also counts (its own flag — the lead stays open).
+    if (!leads?.some((l) => l.payload?.generating || l.payload?.memeGenerating))
+      return;
     const t = setInterval(() => {
       void load();
     }, 4000);
