@@ -62,12 +62,62 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
   const [vidInput, setVidInput] = useState("");
   const [shotInput, setShotInput] = useState("");
   const shotFileRef = useRef<HTMLInputElement>(null);
+  // Inline status for the screenshot gallery so an upload/save is never silent.
+  const [shotStatus, setShotStatus] = useState<{
+    kind: "working" | "ok" | "error";
+    text: string;
+  } | null>(null);
+  const [freshShots, setFreshShots] = useState<string[]>([]);
   if (!post || !form) return null;
 
-  const addShot = (url: string) => {
+  const flashOk = (text: string, urls: string[] = []) => {
+    setShotStatus({ kind: "ok", text });
+    setFreshShots(urls);
+    window.setTimeout(() => {
+      setShotStatus((s) => (s?.kind === "ok" ? null : s));
+      setFreshShots([]);
+    }, 5000);
+  };
+
+  // Save a new screenshot list and report the outcome inline.
+  const saveShotsWithStatus = async (
+    next: string[],
+    okText: string,
+    added: string[] = [],
+  ) => {
+    setShotStatus({ kind: "working", text: "Saving…" });
+    const ok = await saveScreenshots(next);
+    if (ok) flashOk(okText, added);
+    else
+      setShotStatus({
+        kind: "error",
+        text: "Couldn't save the screenshots. Try again.",
+      });
+    return ok;
+  };
+
+  const addShot = async (url: string) => {
     const u = url.trim();
-    if (!u || screenshots.includes(u)) return;
-    saveScreenshots([...screenshots, u].slice(0, 12));
+    if (!u) return;
+    if (screenshots.includes(u)) {
+      setShotStatus({
+        kind: "error",
+        text: "That image is already in the list.",
+      });
+      return;
+    }
+    if (screenshots.length >= 12) {
+      setShotStatus({
+        kind: "error",
+        text: "12 screenshots max. Remove one first.",
+      });
+      return;
+    }
+    await saveShotsWithStatus(
+      [...screenshots, u],
+      "Screenshot added and saved",
+      [u],
+    );
   };
   // Append a reused game screenshot into the article IMAGE gallery (dedup by URL).
   // Additive: the normal upload/paste-image flows in ArticleImages are untouched.
@@ -93,27 +143,77 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
     setShotInput("");
   };
   const removeShot = (idx: number) =>
-    saveScreenshots(screenshots.filter((_, i) => i !== idx));
+    saveShotsWithStatus(
+      screenshots.filter((_, i) => i !== idx),
+      "Screenshot removed",
+    );
   const moveShot = (idx: number, dir: number) => {
     const j = idx + dir;
     if (j < 0 || j >= screenshots.length) return;
     const next = [...screenshots];
     [next[idx], next[j]] = [next[j], next[idx]];
-    saveScreenshots(next);
+    saveShotsWithStatus(next, "Order saved");
   };
-  const onPickShot = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Upload one or more files: downscale in the browser (so big PNGs never 413),
+  // upload each, then save the list once. Every step reports inline.
+  const onPickShot = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) return;
-    // Browser-side downscale/re-encode so big PNGs never 413 on the proxy.
-    prepareImageDataUrl(file)
-      .then(async (dataUrl) => {
+    if (!files.length) return;
+    const room = 12 - screenshots.length;
+    if (room <= 0) {
+      setShotStatus({
+        kind: "error",
+        text: "12 screenshots max. Remove one first.",
+      });
+      return;
+    }
+    const picked = files.slice(0, room);
+    const skipped: string[] = [];
+    if (files.length > room)
+      skipped.push(`${files.length - room} over the 12 limit`);
+    const uploaded: string[] = [];
+    for (let i = 0; i < picked.length; i++) {
+      const f = picked[i];
+      if (f.size > 20 * 1024 * 1024) {
+        skipped.push(`${f.name} is over 20 MB`);
+        continue;
+      }
+      setShotStatus({
+        kind: "working",
+        text:
+          picked.length > 1
+            ? `Uploading ${i + 1} of ${picked.length}…`
+            : "Uploading…",
+      });
+      try {
+        const dataUrl = await prepareImageDataUrl(f);
         const { url } = await uploadBodyImage(id, dataUrl);
-        if (url) addShot(url);
-      })
-      .catch(() => {
-        /* surfaced via the editor's error state on next save */
+        if (url && !screenshots.includes(url) && !uploaded.includes(url))
+          uploaded.push(url);
+        else if (!url) skipped.push(`${f.name} failed to upload`);
+      } catch (err) {
+        skipped.push(
+          `${f.name}: ${(err as Error)?.message || "upload failed"}`,
+        );
+      }
+    }
+    if (!uploaded.length) {
+      setShotStatus({
+        kind: "error",
+        text: `Nothing was added. ${skipped.join(" · ")}`,
+      });
+      return;
+    }
+    const ok = await saveShotsWithStatus(
+      [...screenshots, ...uploaded],
+      `${uploaded.length} screenshot${uploaded.length === 1 ? "" : "s"} uploaded and saved`,
+      uploaded,
+    );
+    if (ok && skipped.length)
+      setShotStatus({
+        kind: "error",
+        text: `${uploaded.length} added. Skipped: ${skipped.join(" · ")}`,
       });
   };
 
@@ -533,7 +633,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
               borderColor="whiteAlpha.300"
               _hover={{ bg: "whiteAlpha.100" }}
               onClick={() => shotFileRef.current?.click()}
-              loading={busy === "Screenshots saved"}
+              loading={shotStatus?.kind === "working"}
+              loadingText={shotStatus?.text}
               flexShrink={0}
             >
               ↑ Upload
@@ -543,9 +644,29 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
             ref={shotFileRef}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+            multiple
             style={{ display: "none" }}
             onChange={onPickShot}
           />
+          {shotStatus && (
+            <Text
+              mt={2}
+              fontSize="xs"
+              fontWeight="600"
+              color={
+                shotStatus.kind === "ok"
+                  ? "green.300"
+                  : shotStatus.kind === "error"
+                    ? "red.300"
+                    : "nexzy.lightBlue"
+              }
+              role="status"
+              aria-live="polite"
+            >
+              {shotStatus.kind === "ok" ? "✓ " : ""}
+              {shotStatus.text}
+            </Text>
+          )}
           {screenshots.length > 0 && (
             <Box
               mt={2}
@@ -560,10 +681,28 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
                   borderRadius="md"
                   overflow="hidden"
                   border="1px solid"
-                  borderColor="whiteAlpha.200"
+                  borderColor={
+                    freshShots.includes(src) ? "green.400" : "whiteAlpha.200"
+                  }
+                  borderWidth={freshShots.includes(src) ? "2px" : "1px"}
                   bg="black"
                 >
                   <Image src={src} alt="" w="100%" h="64px" objectFit="cover" />
+                  {freshShots.includes(src) && (
+                    <Text
+                      position="absolute"
+                      bottom={1}
+                      left={1}
+                      fontSize="9px"
+                      fontWeight="700"
+                      bg="green.500"
+                      color="white"
+                      px={1.5}
+                      borderRadius="sm"
+                    >
+                      NEW
+                    </Text>
+                  )}
                   <HStack
                     gap={0}
                     position="absolute"

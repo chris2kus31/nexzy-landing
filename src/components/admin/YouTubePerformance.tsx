@@ -30,7 +30,14 @@ export type YtSource = {
     shares?: number;
   };
   trafficSources?: { source: string; views: number; minutes: number }[];
-  topVideos?: { videoId: string; views: number; minutes: number }[];
+  topVideos?: {
+    videoId: string;
+    views: number;
+    minutes: number;
+    title?: string | null;
+    thumbnail?: string | null;
+    format?: "short" | "long" | null;
+  }[];
   byContentType?: {
     type: string;
     views: number;
@@ -237,22 +244,50 @@ export default function YouTubePerformance({ src }: { src?: YtSource }) {
             <VStack align="stretch" gap={2.5}>
               {top.map((v) => (
                 <Box key={v.videoId}>
-                  <Flex justify="space-between" mb={1} gap={2}>
-                    <a
-                      href={`https://www.youtube.com/watch?v=${v.videoId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: "#4aa3ff",
-                        fontSize: 13,
-                        textDecoration: "none",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {v.videoId}
-                    </a>
+                  <Flex justify="space-between" align="center" mb={1} gap={2}>
+                    {v.thumbnail && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={v.thumbnail}
+                        alt=""
+                        width={48}
+                        height={27}
+                        style={{
+                          borderRadius: 4,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <Box flex="1" minW={0}>
+                      <a
+                        href={
+                          v.format === "short"
+                            ? `https://www.youtube.com/shorts/${v.videoId}`
+                            : `https://www.youtube.com/watch?v=${v.videoId}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={v.title ?? v.videoId}
+                        style={{
+                          display: "block",
+                          color: "#4aa3ff",
+                          fontSize: 13,
+                          textDecoration: "none",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {v.title || v.videoId}
+                      </a>
+                      {v.format && (
+                        <Text color="nexzy.gray.100" fontSize="10px">
+                          {v.format === "short" ? "Short" : "Long-form"} ·{" "}
+                          {fmt(Math.round(v.minutes))} min watched
+                        </Text>
+                      )}
+                    </Box>
                     <Text color="nexzy.gray.100" fontSize="xs" flexShrink={0}>
                       {fmt(v.views)}
                     </Text>

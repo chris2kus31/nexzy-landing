@@ -1708,20 +1708,22 @@ function generalSlotsForDay(platform: string, target: Date): PostTimeSlot[] {
 }
 
 // Chris's OWN YouTube Studio "When your viewers are on YouTube" chart, hand-read
-// 2026-09-02 (Analytics → Audience; all viewers, not just subs; last 28d; already
+// (latest re-read 2026-10-07; first 2026-09-02) (Analytics → Audience; all viewers, not just subs; last 28d; already
 // in CT/GMT-0500). This is a THIRD layer — real per-channel YouTube audience-online
 // data — shown ALONGSIDE (not replacing) the research windows. YouTube's active-hours
 // aren't API-pullable (Studio UI only), so re-transcribe this when the chart shifts.
 // Best→worst by weekday (0=Sun). Peaks: midday ~1pm every day + a 5–7pm wing (Fri
 // strongest evening); mornings are weak.
 const YT_AUDIENCE_CHART: Record<number, number[]> = {
-  0: [13, 10, 12], // Sun
-  1: [13, 12, 18], // Mon
-  2: [13, 17, 15], // Tue
-  3: [13, 12, 14], // Wed
-  4: [13, 14, 12], // Thu
-  5: [18, 17, 13], // Fri — evening strongest
-  6: [13, 17, 14], // Sat
+  // Re-read 2026-10-07 from Studio (GMT-0500 = CDT, last 28 days). Midday to
+  // mid-afternoon peak every day; Fri evening peak gone; Mon/Sat peak 4 PM.
+  0: [11, 12, 14], // Sun
+  1: [16, 12, 13], // Mon
+  2: [12, 13, 18], // Tue — flattest day
+  3: [15, 12, 14], // Wed
+  4: [14, 15, 12], // Thu
+  5: [12, 14, 15], // Fri
+  6: [16, 13, 22], // Sat — 4 PM peak + 10 PM spike
 };
 
 /** Rich, day-selectable audience + best-times stats hub for the Leads header. */

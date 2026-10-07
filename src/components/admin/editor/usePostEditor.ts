@@ -134,7 +134,13 @@ export function usePostEditor(id: string) {
   const set = (k: keyof FormState, v: string) =>
     setForm((f) => (f ? { ...f, [k]: v } : f));
 
-  const run = async (label: string, fn: () => Promise<BlogPost>) => {
+  // Resolves true on success / false on failure, so inline UIs (the rewind
+  // screenshot gallery) can show their own status. `run` below keeps its
+  // original void signature for every existing caller.
+  const runOk = async (
+    label: string,
+    fn: () => Promise<BlogPost>,
+  ): Promise<boolean> => {
     setBusy(label);
     setNotice("");
     setError("");
@@ -150,11 +156,16 @@ export function usePostEditor(id: string) {
       setFormatData(updated.formatData ?? {});
       setAuthorSel(updated.author || "Nexzy Editorial");
       setNotice(`${label} ✓`);
+      return true;
     } catch (e) {
       setError((e as Error)?.message || `${label} failed.`);
+      return false;
     } finally {
       setBusy("");
     }
+  };
+  const run = async (label: string, fn: () => Promise<BlogPost>) => {
+    await runOk(label, fn);
   };
 
   const onPickImage = (e: ChangeEvent<HTMLInputElement>) => {
@@ -348,7 +359,7 @@ export function usePostEditor(id: string) {
   // upload) so an added/removed/reordered shot doesn't silently need a Save.
   const saveScreenshots = (next: string[]) => {
     setScreenshots(next);
-    return run("Screenshots saved", () =>
+    return runOk("Screenshots saved", () =>
       updatePost(id, buildUpdate(form!.bodyMarkdown, next)),
     );
   };

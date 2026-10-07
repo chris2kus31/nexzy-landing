@@ -97,8 +97,9 @@ function StatCard({
       <Text color="nexzy.gray.100" fontSize="xs">
         {label}
       </Text>
-      {hint && on && (
-        <Text color="red.300" fontSize="10px" mt={0.5}>
+      {/* Alert cards show their hint only when firing; plain cards always. */}
+      {hint && (on || !alert) && (
+        <Text color={on ? "red.300" : "orange.300"} fontSize="10px" mt={0.5}>
           {hint}
         </Text>
       )}
@@ -239,7 +240,15 @@ function AdminContent() {
     <>
       <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={6}>
         <StatCard label="Awaiting review" value={stats.awaitingReview} />
-        <StatCard label="In progress" value={stats.inProgress} />
+        <StatCard
+          label="In progress"
+          value={stats.inProgress}
+          hint={
+            stats.stalled
+              ? `${stats.stalled} stalled (no progress in 2h+)`
+              : undefined
+          }
+        />
         <StatCard label="Published" value={stats.published} />
         <StatCard
           label="Stuck / failed jobs"

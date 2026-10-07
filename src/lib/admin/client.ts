@@ -233,6 +233,8 @@ export async function getPostsPage(
 export interface AdminStats {
   awaitingReview: number;
   inProgress: number;
+  /** Mid-pipeline posts that haven't moved in 2h+ (their job died). */
+  stalled?: number;
   published: number;
   failedJobs: number;
 }
