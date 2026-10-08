@@ -36,7 +36,7 @@ export default function HostedVideoUpload({
     setMsg("Uploading…");
     try {
       await uploadHostedFile(videoId, file);
-      setMsg("Uploaded ✓");
+      setMsg("Uploaded");
       onDone?.();
     } catch (e) {
       setErr(true);

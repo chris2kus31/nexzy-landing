@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -21,14 +21,11 @@ import {
   skipContentSuggestion,
   useContentSuggestion,
   produceContentVideo,
-  regenerateContentCard,
-  regenerateScript,
   updateContentScript,
   uploadContentVideo,
   uploadContentImage,
   clearContentImage,
   type PublishImageSlot,
-  publishContentCard,
   getPublishConfig,
   refreshContentInsights,
   attachContentYoutube,
@@ -44,6 +41,30 @@ import {
   type PlatformInsights,
   type TtsBudget,
 } from "@/lib/admin/client";
+import {
+  errorMessage,
+  fetchContentCard,
+  isConflict,
+  isTimeoutLike,
+  pollContentCard,
+  publishCard,
+  regenerateCard,
+  regenerateCardScript,
+  type RepostPlatform,
+} from "@/lib/admin/client-content";
+import {
+  FiCheck,
+  FiChevronDown,
+  FiChevronRight,
+  FiDownload,
+  FiExternalLink,
+  FiRefreshCw,
+  FiX,
+} from "react-icons/fi";
+
+// The site's API proxy (a serverless function) rejects request bodies over
+// about 6 MB, so card video uploads above this size can't go through it.
+const MAX_PROXY_UPLOAD_BYTES = 6 * 1024 * 1024;
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -74,7 +95,7 @@ function CopyBtn({ text, label }: { text: string; label: string }) {
       _hover={{ bg: "whiteAlpha.100" }}
       onClick={copy}
     >
-      {done ? "Copied ✓" : label}
+      {done ? "Copied" : label}
     </Button>
   );
 }
@@ -143,7 +164,7 @@ function Section({
           transform={open ? "rotate(90deg)" : "none"}
           transition="transform .15s"
         >
-          ▶
+          <FiChevronRight aria-hidden />
         </Text>
         <Text color="nexzy.white" fontWeight="700" fontSize="sm" flex={1}>
           {title}
@@ -161,6 +182,19 @@ function Section({
       )}
     </Box>
   );
+}
+
+// The model occasionally returns thread items / poll options as OBJECTS
+// (e.g. {tweet: "..."}) instead of strings; rendering an object as a React
+// child throws (error #31). Coerce everything to text so a card can't crash.
+function toText(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    const inner = o.tweet ?? o.text ?? o.option ?? o.label ?? o.content;
+    return typeof inner === "string" ? inner : JSON.stringify(v);
+  }
+  return v == null ? "" : String(v);
 }
 
 function KitBlock({
@@ -188,21 +222,6 @@ function KitBlock({
   const tags = kit.tags && kit.tags.length > 0 ? kit.tags.join(", ") : "";
   const pinned = kit.pinnedComment || "";
   const firstReply = kit.firstReply || "";
-  // The model occasionally returns thread items / poll options as OBJECTS
-  // (e.g. {tweet: "..."}) instead of strings; rendering an object as a React
-  // child throws (error #31). Coerce everything to text so the card can't crash.
-  const toText = (v: unknown): string =>
-    typeof v === "string"
-      ? v
-      : v && typeof v === "object"
-        ? String(
-            (v as Record<string, unknown>).tweet ??
-              (v as Record<string, unknown>).text ??
-              (v as Record<string, unknown>).option ??
-              (v as Record<string, unknown>).content ??
-              JSON.stringify(v),
-          )
-        : String(v ?? "");
   const thread = (
     Array.isArray(kit.thread) && kit.thread.length > 0 ? kit.thread : []
   ).map(toText);
@@ -273,7 +292,7 @@ function KitBlock({
                   fontSize="sm"
                   fontWeight={i === 0 ? "700" : "500"}
                 >
-                  {i === 0 ? "★ " : `${i + 1}. `}
+                  {i === 0 ? "Top: " : `${i + 1}. `}
                   {o.title}{" "}
                   <Text as="span" color="nexzy.gray.300" fontSize="2xs">
                     ({o.title.length}/60)
@@ -333,7 +352,7 @@ function KitBlock({
       {firstReply && (
         <>
           <FieldLabel
-            text="↩ FIRST REPLY (post right after — optional)"
+            text="FIRST REPLY (post right after — optional)"
             copy={firstReply}
           />
           <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
@@ -345,7 +364,7 @@ function KitBlock({
       {thread.length > 0 && (
         <>
           <FieldLabel
-            text="🧵 THREAD (post as replies, in order)"
+            text="THREAD (post as replies, in order)"
             copy={thread.join("\n\n")}
           />
           <VStack align="stretch" gap={1} mt={0.5}>
@@ -366,7 +385,7 @@ function KitBlock({
       {poll && (
         <>
           <FieldLabel
-            text="📊 POLL"
+            text="POLL"
             copy={[poll.question, ...(poll.options || [])]
               .filter(Boolean)
               .join("\n")}
@@ -397,10 +416,7 @@ function KitBlock({
 
       {pinned && (
         <>
-          <FieldLabel
-            text="📌 PINNED COMMENT — pin after posting"
-            copy={pinned}
-          />
+          <FieldLabel text="PINNED COMMENT — pin after posting" copy={pinned} />
           <Text color="nexzy.gray.100" fontSize="xs" whiteSpace="pre-wrap">
             {pinned}
           </Text>
@@ -455,7 +471,7 @@ function xCharCount(text: string): number {
 }
 
 /**
- * 🎮 Game chip — links the card to a game (payload.game). Auto-resolved on the
+ * Game chip — links the card to a game (payload.game). Auto-resolved on the
  * fast routes (quick announce / make-a-short) and copied from the article on
  * post-backed quick cards; editable here. The video produced from the card
  * links to THIS game, so it lands on the game's public hub.
@@ -517,7 +533,7 @@ function CardGameChip({ s }: { s: ContentSuggestion }) {
     <Box mb={3}>
       <HStack gap={2} wrap="wrap">
         <Text fontSize="xs" color="whiteAlpha.600" fontWeight="700">
-          🎮 GAME
+          GAME
         </Text>
         {game ? (
           <>
@@ -546,8 +562,9 @@ function CardGameChip({ s }: { s: ContentSuggestion }) {
               onClick={clear}
               loading={busy}
               title="Unlink the game"
+              aria-label="Unlink the game"
             >
-              ✕
+              <FiX aria-hidden />
             </Button>
           </>
         ) : (
@@ -606,8 +623,103 @@ function CardGameChip({ s }: { s: ContentSuggestion }) {
  * the video) and a Threads text post. Calls the publish endpoints; shows each
  * platform's result. Threads doesn't need the video (it's a text take).
  */
-function PublishBox({ s }: { s: ContentSuggestion }) {
+type PubPlatform = RepostPlatform;
+const PUB_LABEL: Record<PubPlatform, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  threads: "Threads",
+  x: "X",
+};
+
+/** Each platform's latest SUCCESSFUL result from the card's persisted list. */
+function okByPlatform(
+  list: PublishResult[] | undefined,
+): Partial<Record<PubPlatform, PublishResult>> {
+  const out: Partial<Record<PubPlatform, PublishResult>> = {};
+  for (const r of Array.isArray(list) ? list : []) {
+    if (r?.ok && r.platform in PUB_LABEL) out[r.platform as PubPlatform] = r;
+  }
+  return out;
+}
+
+/** Public link for a posted result, when one can be built from its id. */
+function postLink(r: PublishResult): string | null {
+  const extra = r as PublishResult & { url?: unknown; permalink?: unknown };
+  if (typeof extra.url === "string" && extra.url) return extra.url;
+  if (typeof extra.permalink === "string" && extra.permalink)
+    return extra.permalink;
+  if (!r.id) return null;
+  if (r.platform === "x") return `https://x.com/i/web/status/${r.id}`;
+  if (r.platform === "facebook") return `https://www.facebook.com/${r.id}`;
+  return null;
+}
+
+/** True while the server holds a fresh publish claim on the card (K1). A claim
+ *  older than 10 minutes is stale (the API treats it as free again). */
+function isServerPublishing(card: ContentSuggestion): boolean {
+  const pub = (card.payload as { publishing?: { startedAt?: string } } | null)
+    ?.publishing;
+  if (!pub) return false;
+  const t = pub.startedAt ? Date.parse(pub.startedAt) : NaN;
+  return Number.isNaN(t) || Date.now() - t < 10 * 60_000;
+}
+
+/** Keeps a render error in the publish box from taking down the whole card. */
+class PublishBoundary extends Component<
+  { children: ReactNode },
+  { error: string | null }
+> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(e: unknown) {
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <Box mt={3} p={3} borderRadius="lg" bg="red.500/10">
+          <Text color="red.300" fontSize="xs">
+            The publish box hit an error ({this.state.error}). Reload the page
+            to try again; nothing was published by this error.
+          </Text>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function PublishBox({
+  s,
+  isOwner,
+  onUpdate,
+}: {
+  s: ContentSuggestion;
+  isOwner: boolean;
+  /** Lift a re-read card to the parent list (persisted publish results). */
+  onUpdate: (card: ContentSuggestion) => void;
+}) {
   const p = s.payload?.platforms;
+  // Per-platform truth persisted on the card (K1). A platform whose latest
+  // result is ok is "Posted": unchecked by default and only re-posted through
+  // the explicit "Post again" box (sent as repostPlatforms).
+  const posted = okByPlatform(s.payload?.publishResults);
+  const postedKey = (Object.keys(PUB_LABEL) as PubPlatform[])
+    .filter((k) => posted[k])
+    .join(",");
+  const [repost, setRepost] = useState<ReadonlySet<PubPlatform>>(new Set());
+  const [publishMsg, setPublishMsg] = useState<{
+    tone: "error" | "info";
+    text: string;
+  } | null>(null);
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const serverBusy = isServerPublishing(s);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   // Publish images — a GLOBAL image plus optional per-platform overrides, so
@@ -641,14 +753,16 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   const [ytUrl, setYtUrl] = useState("");
   const [ytBusy, setYtBusy] = useState(false);
   const [ytAttached, setYtAttached] = useState(false);
+  const [insightsErr, setInsightsErr] = useState<string | null>(null);
   const published = (s.payload?.publishResults ?? []).some((r) => r.ok);
   const refreshInsights = async () => {
     setRefreshing(true);
     try {
       const card = await refreshContentInsights(s.id);
       setInsights(card.payload?.insights ?? []);
-    } catch {
-      /* leave as-is */
+      setInsightsErr(null);
+    } catch (e) {
+      setInsightsErr(errorMessage(e, "Refresh failed."));
     } finally {
       setRefreshing(false);
     }
@@ -661,15 +775,16 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       setInsights(card.payload?.insights ?? []);
       setYtAttached(true);
       setYtUrl("");
-    } catch {
-      /* leave as-is */
+      setInsightsErr(null);
+    } catch (e) {
+      setInsightsErr(errorMessage(e, "Could not fetch that YouTube video."));
     } finally {
       setYtBusy(false);
     }
   };
-  const [fb, setFb] = useState(!!p?.facebook);
-  const [ig, setIg] = useState(!!p?.reels);
-  const [th, setTh] = useState(!!p?.threads);
+  const [fb, setFb] = useState(!!p?.facebook && !posted.facebook);
+  const [ig, setIg] = useState(!!p?.reels && !posted.instagram);
+  const [th, setTh] = useState(!!p?.threads && !posted.threads);
   const [fbCaption, setFbCaption] = useState(assembleCaption(p?.facebook));
   const [igCaption, setIgCaption] = useState(assembleCaption(p?.reels));
   const [threadsText, setThreadsText] = useState(
@@ -684,8 +799,31 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     p?.threads?.pinnedComment ?? "",
   );
   const [xOn, setXOn] = useState(false);
-  const [xPost, setXPost] = useState(p?.x?.post ?? "");
-  const [xReply, setXReply] = useState(p?.x?.firstReply ?? "");
+  const [xPost, setXPost] = useState(toText(p?.x?.post));
+  const [xReply, setXReply] = useState(toText(p?.x?.firstReply));
+  const setOn: Record<PubPlatform, (v: boolean) => void> = {
+    facebook: setFb,
+    instagram: setIg,
+    threads: setTh,
+    x: setXOn,
+  };
+  // Never leave a toggle on for a platform that has already succeeded unless
+  // "Post again" is ticked — e.g. after a re-read shows a wave-1 success.
+  useEffect(() => {
+    for (const k of postedKey ? (postedKey.split(",") as PubPlatform[]) : []) {
+      if (!repost.has(k)) setOn[k](false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postedKey]);
+  const togglePostAgain = (k: PubPlatform, on: boolean) => {
+    setRepost((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(k);
+      else next.delete(k);
+      return next;
+    });
+    setOn[k](on);
+  };
   const [cfg, setCfg] = useState<{ x?: boolean } | null>(null);
   useEffect(() => {
     getPublishConfig()
@@ -716,8 +854,8 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     setFbPinned(p?.facebook?.pinnedComment ?? "");
     setIgPinned(p?.reels?.pinnedComment ?? "");
     setThreadsPinned(p?.threads?.pinnedComment ?? "");
-    setXPost(p?.x?.post ?? "");
-    setXReply(p?.x?.firstReply ?? "");
+    setXPost(toText(p?.x?.post));
+    setXReply(toText(p?.x?.firstReply));
     setImages(
       s.payload?.publishImages && Object.keys(s.payload.publishImages).length
         ? s.payload.publishImages
@@ -728,13 +866,25 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [srcKey]);
 
+  const [videoErr, setVideoErr] = useState<string | null>(null);
+  const [pastedVideo, setPastedVideo] = useState("");
   const upload = async (file: File) => {
+    setVideoErr(null);
+    // The upload goes through the site's API proxy, whose request body limit
+    // is about 6 MB (there is no presigned path for card videos yet). Refuse
+    // up front with a clear message instead of a vague proxy failure.
+    if (file.size > MAX_PROXY_UPLOAD_BYTES) {
+      setVideoErr(
+        `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Uploads here are limited to about 6 MB — compress it, or paste a public video URL below.`,
+      );
+      return;
+    }
     setUploading(true);
     try {
       const r = await uploadContentVideo(s.id, file);
       setVideoUrl(r.url);
-    } catch {
-      /* leave unset on failure */
+    } catch (e) {
+      setVideoErr(errorMessage(e, "Video upload failed."));
     } finally {
       setUploading(false);
     }
@@ -770,10 +920,51 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
   // by the numeric grounding gate — a deliberate second click, never a default.
   const [groundingBlocked, setGroundingBlocked] = useState(false);
 
+  // After an error/timeout/409 the server may still be publishing: re-read the
+  // card until its publish claim clears, then show what it actually recorded
+  // per platform (never a generic "request failed").
+  const showPersisted = async (why: string) => {
+    const card = await pollContentCard(s.id, (c) => !isServerPublishing(c), {
+      intervalMs: 4000,
+      timeoutMs: 3 * 60_000,
+      isCancelled: () => !mounted.current,
+      onTick: onUpdate,
+    });
+    if (!mounted.current) return;
+    if (!card) {
+      setPublishMsg({
+        tone: "error",
+        text: `${why} Could not re-read the card — refresh the page to see what posted.`,
+      });
+      return;
+    }
+    const saved = card.payload?.publishResults ?? [];
+    setResults(saved.length ? saved : null);
+    setPublishMsg({
+      tone: isServerPublishing(card) ? "info" : "error",
+      text: isServerPublishing(card)
+        ? `${why} The server is still publishing — refresh in a minute.`
+        : saved.length
+          ? `${why} Below is what the card recorded for each platform.`
+          : `${why} Nothing was recorded as posted.`,
+    });
+  };
+
   const publish = async (force = false) => {
+    // Ref guard: a fast double-click must never send two publish requests.
+    if (inFlight.current) return;
+    inFlight.current = true;
     setPublishing(true);
+    setPublishMsg(null);
+    const on: Record<PubPlatform, boolean> = {
+      facebook: fb,
+      instagram: ig,
+      threads: th,
+      x: xOn,
+    };
+    const repostPlatforms = [...repost].filter((k) => on[k]);
     try {
-      const r = await publishContentCard(s.id, {
+      const r = await publishCard(s.id, {
         force: force || undefined,
         // Image mode: withhold the video so FB/IG publish as photo/image posts
         // (the API routes on media presence).
@@ -796,17 +987,31 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         threadsImageUrl: images.threads,
         fbImageUrl: images.facebook,
         igImageUrl: images.instagram,
+        ...(repostPlatforms.length ? { repostPlatforms } : {}),
       });
       setResults(r.results);
       setGroundingBlocked(
         r.results.some((res) => /grounding flag/i.test(res.error ?? "")),
       );
-    } catch {
-      setResults([
-        { platform: "facebook", ok: false, error: "request failed" },
-      ]);
+      setRepost(new Set());
+      // Re-read so "Posted" comes from what the server persisted.
+      const card = await fetchContentCard(s.id).catch(() => null);
+      if (card && mounted.current) onUpdate(card);
+    } catch (e) {
+      if (isConflict(e)) {
+        setPublishMsg({
+          tone: "info",
+          text: "A publish is already running for this card — refresh in a moment.",
+        });
+        await showPersisted("A publish is already running for this card.");
+      } else {
+        await showPersisted(
+          `The publish request did not finish cleanly (${errorMessage(e)}).`,
+        );
+      }
     } finally {
-      setPublishing(false);
+      inFlight.current = false;
+      if (mounted.current) setPublishing(false);
     }
   };
 
@@ -856,7 +1061,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
     publishBlockers.push(
       `Threads first reply is ${threadsPinned.length}/500 characters — over Threads' limit, trim it.`,
     );
-  const canPublish = publishBlockers.length === 0;
+  const canPublish = publishBlockers.length === 0 && !serverBusy;
   const toggle = (on: boolean, set: (v: boolean) => void, label: string) => (
     <Button
       size="xs"
@@ -867,10 +1072,73 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       _hover={{ bg: on ? "nexzy.blue" : "whiteAlpha.100" }}
       onClick={() => set(!on)}
     >
-      {on ? "✓ " : ""}
+      {on ? <FiCheck aria-hidden /> : null}
       {label}
     </Button>
   );
+  // A platform that already posted shows "Posted" + its link, plus an explicit
+  // "Post again" box instead of the plain toggle.
+  const platformControl = (
+    k: PubPlatform,
+    on: boolean,
+    set: (v: boolean) => void,
+    label: string,
+    disabled = false,
+  ) => {
+    const done = posted[k];
+    if (!done) return toggle(on, set, label);
+    const href = postLink(done);
+    return (
+      <HStack
+        key={k}
+        gap={2}
+        px={2}
+        py={1}
+        borderRadius="md"
+        border="1px solid"
+        borderColor="green.400/40"
+        bg="green.500/10"
+      >
+        <Text fontSize="xs" color="green.200" fontWeight="700">
+          {label}: Posted
+        </Text>
+        {href ? (
+          <Link
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="green.200"
+            fontSize="xs"
+            textDecoration="underline"
+          >
+            view
+          </Link>
+        ) : done.id ? (
+          <Text fontSize="10px" color="whiteAlpha.600">
+            id {done.id}
+          </Text>
+        ) : null}
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 12,
+            color: "#d6dbe6",
+            cursor: disabled ? "not-allowed" : "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={repost.has(k)}
+            disabled={disabled}
+            onChange={(e) => togglePostAgain(k, e.target.checked)}
+          />
+          Post again
+        </label>
+      </HStack>
+    );
+  };
   const ta = {
     rows: 3,
     bg: "whiteAlpha.50",
@@ -889,761 +1157,881 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
       borderColor="nexzy.blue/40"
     >
       <Text color="nexzy.white" fontWeight="700" fontSize="sm" mb={2}>
-        📣 Publish to social
+        Publish to social
       </Text>
 
-      {/* FB/IG publish format — explicit Reel-vs-image choice. */}
-      {(fb || ig) && (
-        <HStack gap={2} mb={2} align="center">
-          <Text fontSize="xs" color="nexzy.gray.100" fontWeight="600">
-            FB / IG format:
-          </Text>
-          <Button
-            size="xs"
-            variant={mediaMode === "video" ? "solid" : "outline"}
-            bg={mediaMode === "video" ? "nexzy.blue" : "transparent"}
-            color={mediaMode === "video" ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{
-              bg: mediaMode === "video" ? "nexzy.blue" : "whiteAlpha.100",
-            }}
-            onClick={() => setMediaMode("video")}
-          >
-            🎬 Reel (video)
-          </Button>
-          <Button
-            size="xs"
-            variant={mediaMode === "image" ? "solid" : "outline"}
-            bg={mediaMode === "image" ? "nexzy.blue" : "transparent"}
-            color={mediaMode === "image" ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{
-              bg: mediaMode === "image" ? "nexzy.blue" : "whiteAlpha.100",
-            }}
-            onClick={() => setMediaMode("image")}
-          >
-            🖼 Image / quick post
-          </Button>
-        </HStack>
-      )}
-
-      {/* Video upload — needed for Facebook + Instagram in Reel mode */}
-      {needsVideo && (
-        <Box mb={2}>
-          <Input
-            type="file"
-            accept="video/*"
-            size="sm"
-            p={1}
-            color="nexzy.gray.100"
-            borderColor="whiteAlpha.300"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload(f);
-            }}
-          />
-          <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
-            {uploading
-              ? "Uploading…"
-              : videoUrl
-                ? "✓ Video uploaded"
-                : "Upload the finished video (Facebook + Instagram need it)."}
-          </Text>
-        </Box>
-      )}
-
-      {/* Optional image — attaches to the X + Threads posts, and in IMAGE
-          mode also becomes the Facebook photo post + the Instagram image post
-          (IG REQUIRES it — no text-only posts). JPEG/PNG, ≤5MB; kept in its
-          original format (NO AVIF — X/Threads would reject it). */}
-      {(th || xOn || (mediaMode === "image" && (fb || ig))) && (
-        <Box mb={2}>
-          <Text
-            color="whiteAlpha.600"
-            fontSize="10px"
-            fontWeight="700"
-            mb={0.5}
-          >
-            {mediaMode === "image" && (fb || ig)
-              ? `IMAGE — ATTACHES TO X + THREADS${ig ? ", REQUIRED FOR INSTAGRAM" : ""}${fb ? ", MAKES FACEBOOK A PHOTO POST" : ""}`
-              : "IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS"}
-          </Text>
-          <Input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            size="sm"
-            p={1}
-            color="nexzy.gray.100"
-            borderColor="whiteAlpha.300"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadImg(f, "global");
-            }}
-          />
-          <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
-            {uploadingImg === "global"
-              ? "Uploading…"
-              : imageErr
-                ? `✗ ${imageErr}`
-                : images.global
-                  ? "✓ Global image attached — used by every platform unless overridden below."
-                  : "JPEG/PNG up to 5MB. This is the GLOBAL image (all platforms); override per platform below."}
-          </Text>
-          {images.global && uploadingImg !== "global" && (
-            <HStack gap={2} mt={1} align="center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={images.global}
-                alt="publish preview"
-                style={{
-                  height: 56,
-                  borderRadius: 6,
-                  border: "1px solid rgba(255,255,255,0.25)",
-                }}
-              />
+      {/* K10: publishing to the brand accounts (and the uploads it needs) is
+          owner-only; everyone can still read results and performance. */}
+      {isOwner ? (
+        <>
+          {/* FB/IG publish format — explicit Reel-vs-image choice. */}
+          {(fb || ig) && (
+            <HStack gap={2} mb={2} align="center">
+              <Text fontSize="xs" color="nexzy.gray.100" fontWeight="600">
+                FB / IG format:
+              </Text>
               <Button
                 size="xs"
-                variant="outline"
-                color="nexzy.gray.100"
+                variant={mediaMode === "video" ? "solid" : "outline"}
+                bg={mediaMode === "video" ? "nexzy.blue" : "transparent"}
+                color={mediaMode === "video" ? "white" : "nexzy.gray.100"}
                 borderColor="whiteAlpha.300"
-                onClick={() => clearImg("global")}
+                _hover={{
+                  bg: mediaMode === "video" ? "nexzy.blue" : "whiteAlpha.100",
+                }}
+                onClick={() => setMediaMode("video")}
               >
-                ✕ Remove image
+                Reel (video)
+              </Button>
+              <Button
+                size="xs"
+                variant={mediaMode === "image" ? "solid" : "outline"}
+                bg={mediaMode === "image" ? "nexzy.blue" : "transparent"}
+                color={mediaMode === "image" ? "white" : "nexzy.gray.100"}
+                borderColor="whiteAlpha.300"
+                _hover={{
+                  bg: mediaMode === "image" ? "nexzy.blue" : "whiteAlpha.100",
+                }}
+                onClick={() => setMediaMode("image")}
+              >
+                Image / quick post
               </Button>
             </HStack>
           )}
 
-          {/* Per-platform overrides — a slot's image beats the global for
-              that platform only, so each publish wave can carry its own art. */}
-          <Text
-            color="whiteAlpha.600"
-            fontSize="10px"
-            fontWeight="700"
-            mt={2}
-            mb={0.5}
-          >
-            PER-PLATFORM IMAGE OVERRIDES (OPTIONAL)
-          </Text>
-          {(
-            [
-              ["x", "X", xOn],
-              ["threads", "Threads", th],
-              ["facebook", "Facebook", fb],
-              ["instagram", "Instagram", ig],
-            ] as [PublishImageSlot, string, boolean][]
-          )
-            .filter(([, , on]) => on)
-            .map(([slot, label]) => (
-              <HStack key={slot} gap={2} mt={1} align="center">
-                <Text
-                  fontSize="xs"
+          {/* Video upload — needed for Facebook + Instagram in Reel mode */}
+          {needsVideo && (
+            <Box mb={2}>
+              <Input
+                type="file"
+                accept="video/*"
+                size="sm"
+                p={1}
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) upload(f);
+                }}
+              />
+              <Text
+                fontSize="xs"
+                color={videoErr ? "red.300" : "nexzy.gray.100"}
+                mt={1}
+              >
+                {uploading
+                  ? "Uploading…"
+                  : videoErr
+                    ? videoErr
+                    : videoUrl
+                      ? "Video ready — posts as a Reel."
+                      : "Upload the finished video, up to about 6 MB (Facebook + Instagram need it)."}
+              </Text>
+              {/* Large files: paste a public video URL (e.g. an S3/CDN MP4) — the
+              publish API takes any public URL, so this skips the 6 MB proxy. */}
+              <HStack gap={2} mt={1}>
+                <Input
+                  size="xs"
+                  placeholder="or paste a public video URL (https://...mp4)"
+                  value={pastedVideo}
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  onChange={(e) => setPastedVideo(e.target.value)}
+                />
+                <Button
+                  size="xs"
+                  variant="outline"
                   color="nexzy.gray.100"
-                  minW="72px"
-                  fontWeight="600"
+                  borderColor="whiteAlpha.300"
+                  _hover={{ bg: "whiteAlpha.100" }}
+                  disabled={!/^https:\/\/\S+$/i.test(pastedVideo.trim())}
+                  onClick={() => {
+                    setVideoErr(null);
+                    setVideoUrl(pastedVideo.trim());
+                    setPastedVideo("");
+                  }}
                 >
-                  {label}
-                </Text>
-                {images[slot] ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={images[slot]}
-                      alt={`${label} image`}
-                      style={{
-                        height: 36,
-                        borderRadius: 4,
-                        border: "1px solid rgba(255,255,255,0.25)",
-                      }}
-                    />
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      color="nexzy.gray.100"
-                      borderColor="whiteAlpha.300"
-                      onClick={() => clearImg(slot)}
-                      title="Revert to the global image"
-                    >
-                      ✕ Use global
-                    </Button>
-                  </>
-                ) : uploadingImg === slot ? (
-                  <Text fontSize="xs" color="nexzy.gray.100">
-                    Uploading…
-                  </Text>
-                ) : (
-                  <Input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    size="xs"
-                    p={0.5}
-                    maxW="260px"
-                    color="nexzy.gray.100"
-                    borderColor="whiteAlpha.300"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadImg(f, slot);
+                  Use URL
+                </Button>
+              </HStack>
+            </Box>
+          )}
+
+          {/* Optional image — attaches to the X + Threads posts, and in IMAGE
+          mode also becomes the Facebook photo post + the Instagram image post
+          (IG REQUIRES it — no text-only posts). JPEG/PNG, ≤5MB; kept in its
+          original format (NO AVIF — X/Threads would reject it). */}
+          {(th || xOn || (mediaMode === "image" && (fb || ig))) && (
+            <Box mb={2}>
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mb={0.5}
+              >
+                {mediaMode === "image" && (fb || ig)
+                  ? `IMAGE — ATTACHES TO X + THREADS${ig ? ", REQUIRED FOR INSTAGRAM" : ""}${fb ? ", MAKES FACEBOOK A PHOTO POST" : ""}`
+                  : "IMAGE (OPTIONAL) — ATTACHES TO THE X + THREADS POSTS"}
+              </Text>
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                size="sm"
+                p={1}
+                color="nexzy.gray.100"
+                borderColor="whiteAlpha.300"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadImg(f, "global");
+                }}
+              />
+              <Text fontSize="xs" color="nexzy.gray.100" mt={1}>
+                {uploadingImg === "global"
+                  ? "Uploading…"
+                  : imageErr
+                    ? imageErr
+                    : images.global
+                      ? "Global image attached — used by every platform unless overridden below."
+                      : "JPEG/PNG up to 5MB. This is the GLOBAL image (all platforms); override per platform below."}
+              </Text>
+              {images.global && uploadingImg !== "global" && (
+                <HStack gap={2} mt={1} align="center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={images.global}
+                    alt="publish preview"
+                    style={{
+                      height: 56,
+                      borderRadius: 6,
+                      border: "1px solid rgba(255,255,255,0.25)",
                     }}
                   />
-                )}
-              </HStack>
-            ))}
-        </Box>
-      )}
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    color="nexzy.gray.100"
+                    borderColor="whiteAlpha.300"
+                    onClick={() => clearImg("global")}
+                  >
+                    Remove image
+                  </Button>
+                </HStack>
+              )}
 
-      {/* Which platforms */}
-      <HStack gap={2} mb={2} wrap="wrap">
-        {p?.facebook && toggle(fb, setFb, "Facebook")}
-        {p?.reels && toggle(ig, setIg, "Instagram")}
-        {p?.threads && toggle(th, setTh, "Threads")}
-        {p?.x && (
-          <Button
-            size="xs"
-            variant={xOn ? "solid" : "outline"}
-            bg={xOn ? "nexzy.blue" : "transparent"}
-            color={xOn ? "white" : "nexzy.gray.100"}
-            borderColor="whiteAlpha.300"
-            _hover={{ bg: xOn ? "nexzy.blue" : "whiteAlpha.100" }}
-            onClick={() => setXOn(!xOn)}
-            disabled={!cfg?.x}
-            title={
-              cfg?.x
-                ? ""
-                : "Add the X API keys + set X_PUBLISH_ENABLED=true to enable"
-            }
-          >
-            {xOn ? "✓ " : ""}X{cfg?.x ? "" : " (needs API keys)"}
-          </Button>
-        )}
-      </HStack>
+              {/* Per-platform overrides — a slot's image beats the global for
+              that platform only, so each publish wave can carry its own art. */}
+              <Text
+                color="whiteAlpha.600"
+                fontSize="10px"
+                fontWeight="700"
+                mt={2}
+                mb={0.5}
+              >
+                PER-PLATFORM IMAGE OVERRIDES (OPTIONAL)
+              </Text>
+              {(
+                [
+                  ["x", "X", xOn],
+                  ["threads", "Threads", th],
+                  ["facebook", "Facebook", fb],
+                  ["instagram", "Instagram", ig],
+                ] as [PublishImageSlot, string, boolean][]
+              )
+                .filter(([, , on]) => on)
+                .map(([slot, label]) => (
+                  <HStack key={slot} gap={2} mt={1} align="center">
+                    <Text
+                      fontSize="xs"
+                      color="nexzy.gray.100"
+                      minW="72px"
+                      fontWeight="600"
+                    >
+                      {label}
+                    </Text>
+                    {images[slot] ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={images[slot]}
+                          alt={`${label} image`}
+                          style={{
+                            height: 36,
+                            borderRadius: 4,
+                            border: "1px solid rgba(255,255,255,0.25)",
+                          }}
+                        />
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          color="nexzy.gray.100"
+                          borderColor="whiteAlpha.300"
+                          onClick={() => clearImg(slot)}
+                          title="Revert to the global image"
+                        >
+                          Use global
+                        </Button>
+                      </>
+                    ) : uploadingImg === slot ? (
+                      <Text fontSize="xs" color="nexzy.gray.100">
+                        Uploading…
+                      </Text>
+                    ) : (
+                      <Input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        size="xs"
+                        p={0.5}
+                        maxW="260px"
+                        color="nexzy.gray.100"
+                        borderColor="whiteAlpha.300"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadImg(f, slot);
+                        }}
+                      />
+                    )}
+                  </HStack>
+                ))}
+            </Box>
+          )}
 
-      {/* Editable captions per selected platform */}
-      <VStack align="stretch" gap={2} mb={2}>
-        {fb && p?.facebook && (
-          <Box>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={0.5}
-            >
-              FACEBOOK CAPTION
-            </Text>
-            <Textarea
-              {...ta}
-              value={fbCaption}
-              onChange={(e) => setFbCaption(e.target.value)}
-            />
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mt={2}
-              mb={0.5}
-            >
-              FACEBOOK FIRST COMMENT (auto-posted — pin it manually)
-            </Text>
-            <Textarea
-              {...ta}
-              rows={2}
-              value={fbPinned}
-              onChange={(e) => setFbPinned(e.target.value)}
-            />
-          </Box>
-        )}
-        {ig && p?.reels && (
-          <Box>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={0.5}
-            >
-              INSTAGRAM CAPTION
-            </Text>
-            <Textarea
-              {...ta}
-              value={igCaption}
-              onChange={(e) => setIgCaption(e.target.value)}
-            />
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mt={2}
-              mb={0.5}
-            >
-              INSTAGRAM FIRST COMMENT (auto-posted — pin it manually)
-            </Text>
-            <Textarea
-              {...ta}
-              rows={2}
-              value={igPinned}
-              onChange={(e) => setIgPinned(e.target.value)}
-            />
-          </Box>
-        )}
-        {th && p?.threads && (
-          <Box>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={0.5}
-            >
-              THREADS TEXT (Threads&apos; limit: 500)
-            </Text>
-            <Textarea
-              {...ta}
-              value={threadsText}
-              onChange={(e) => setThreadsText(e.target.value)}
-            />
-            <Text
-              fontSize="10px"
-              fontWeight="700"
-              mt={0.5}
-              color={threadsText.length > 500 ? "red.300" : "whiteAlpha.600"}
-            >
-              {threadsText.length}/500
-              {threadsText.length > 500
-                ? " — over Threads' limit, trim it"
-                : ""}
-            </Text>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mt={2}
-              mb={0.5}
-            >
-              THREADS TOPIC TAG (one clickable tag — # optional)
-            </Text>
-            <Input
-              size="sm"
-              bg="whiteAlpha.50"
-              color="nexzy.white"
-              borderColor="whiteAlpha.300"
-              fontSize="sm"
-              value={threadsTopicTag}
-              maxLength={50}
-              placeholder="e.g. gaming"
-              onChange={(e) => setThreadsTopicTag(e.target.value)}
-            />
-            <Text color="whiteAlpha.600" fontSize="10px" mt={1}>
-              Threads allows one clickable topic tag; extra #tags in the text
-              show as plain grey words.
-            </Text>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mt={2}
-              mb={0.5}
-            >
-              THREADS FIRST REPLY (auto-posted — pin it manually)
-            </Text>
-            <Textarea
-              {...ta}
-              rows={2}
-              value={threadsPinned}
-              onChange={(e) => setThreadsPinned(e.target.value)}
-            />
-            <Text
-              fontSize="10px"
-              fontWeight="700"
-              mt={0.5}
-              color={threadsPinned.length > 500 ? "red.300" : "whiteAlpha.600"}
-            >
-              {threadsPinned.length}/500
-              {threadsPinned.length > 500
-                ? " — over Threads' limit, trim it"
-                : ""}
-            </Text>
-          </Box>
-        )}
-        {xOn && p?.x && (
-          <Box>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={0.5}
-            >
-              X POST (the link is fine in the post)
-            </Text>
-            <Textarea
-              {...ta}
-              value={xPost}
-              onChange={(e) => setXPost(e.target.value)}
-            />
-            <Text
-              fontSize="10px"
-              fontWeight="700"
-              mt={0.5}
-              color={
-                xCharCount(xPost) > 25000
-                  ? "red.300"
-                  : xCharCount(xPost) > 280
-                    ? "#FFD866"
-                    : "whiteAlpha.600"
-              }
-            >
-              {xCharCount(xPost)} chars (links count as 23)
-              {xCharCount(xPost) > 25000
-                ? " — over X's 25,000 limit, trim to publish"
-                : xCharCount(xPost) > 280
-                  ? " — long post: X shows the first ~280 with a Show more fold"
-                  : ""}
-            </Text>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mt={2}
-              mb={0.5}
-            >
-              X FIRST REPLY (optional)
-            </Text>
-            <Textarea
-              {...ta}
-              value={xReply}
-              onChange={(e) => setXReply(e.target.value)}
-            />
-            <Text
-              fontSize="10px"
-              fontWeight="700"
-              mt={0.5}
-              color={
-                xCharCount(xReply) > 25000
-                  ? "red.300"
-                  : xCharCount(xReply) > 280
-                    ? "#FFD866"
-                    : "whiteAlpha.600"
-              }
-            >
-              {xCharCount(xReply)} chars
-              {xCharCount(xReply) > 25000
-                ? " — over X's 25,000 limit, trim to publish"
-                : xCharCount(xReply) > 280
-                  ? " — long reply: shows a Show more fold past ~280"
-                  : ""}
-            </Text>
-          </Box>
-        )}
-      </VStack>
+          {/* Which platforms */}
+          <HStack gap={2} mb={2} wrap="wrap">
+            {p?.facebook && platformControl("facebook", fb, setFb, "Facebook")}
+            {p?.reels && platformControl("instagram", ig, setIg, "Instagram")}
+            {p?.threads && platformControl("threads", th, setTh, "Threads")}
+            {p?.x &&
+              posted.x &&
+              platformControl("x", xOn, setXOn, "X", !cfg?.x)}
+            {p?.x && !posted.x && (
+              <Button
+                size="xs"
+                variant={xOn ? "solid" : "outline"}
+                bg={xOn ? "nexzy.blue" : "transparent"}
+                color={xOn ? "white" : "nexzy.gray.100"}
+                borderColor="whiteAlpha.300"
+                _hover={{ bg: xOn ? "nexzy.blue" : "whiteAlpha.100" }}
+                onClick={() => setXOn(!xOn)}
+                disabled={!cfg?.x}
+                title={
+                  cfg?.x
+                    ? ""
+                    : "Add the X API keys + set X_PUBLISH_ENABLED=true to enable"
+                }
+              >
+                {xOn ? <FiCheck aria-hidden /> : null}X
+                {cfg?.x ? "" : " (needs API keys)"}
+              </Button>
+            )}
+          </HStack>
 
-      {(fb || ig || th || xOn) && (
-        <Box
-          mb={2}
-          p={3}
-          borderRadius="lg"
-          bg="blackAlpha.400"
-          border="1px solid"
-          borderColor="nexzy.blue/40"
-        >
-          <Text color="nexzy.white" fontSize="xs" fontWeight="700" mb={2}>
-            📋 Exactly what will publish when you press Publish now
-          </Text>
-          <VStack align="stretch" gap={3}>
+          {/* Editable captions per selected platform */}
+          <VStack align="stretch" gap={2} mb={2}>
             {fb && p?.facebook && (
               <Box>
                 <Text
-                  color="nexzy.lightBlue"
-                  fontSize="11px"
+                  color="whiteAlpha.600"
+                  fontSize="10px"
                   fontWeight="700"
-                  mb={1}
+                  mb={0.5}
                 >
-                  ▸ Facebook — video Reel + comment
+                  FACEBOOK CAPTION
                 </Text>
+                <Textarea
+                  {...ta}
+                  value={fbCaption}
+                  onChange={(e) => setFbCaption(e.target.value)}
+                />
                 <Text
-                  color={videoUrl ? "green.300" : "orange.300"}
-                  fontSize="xs"
-                  mb={1}
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={2}
+                  mb={0.5}
                 >
-                  🎬 Video:{" "}
-                  {videoUrl
-                    ? "✓ uploaded — posts as a Reel"
-                    : "⚠ none uploaded yet (required)"}
+                  FACEBOOK FIRST COMMENT (auto-posted — pin it manually)
                 </Text>
-                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
-                  CAPTION (posts exactly as shown)
-                </Text>
-                <Text
-                  color="nexzy.gray.100"
-                  fontSize="xs"
-                  whiteSpace="pre-wrap"
-                  mb={fbPinned.trim() ? 1 : 0}
-                >
-                  {fbCaption.trim() || "— empty —"}
-                </Text>
-                {fbPinned.trim() && (
-                  <>
-                    <Text
-                      color="whiteAlpha.600"
-                      fontSize="10px"
-                      fontWeight="700"
-                    >
-                      FIRST COMMENT (auto-posted, not pinned)
-                    </Text>
-                    <Text
-                      color="nexzy.gray.100"
-                      fontSize="xs"
-                      whiteSpace="pre-wrap"
-                    >
-                      {fbPinned}
-                    </Text>
-                  </>
-                )}
+                <Textarea
+                  {...ta}
+                  rows={2}
+                  value={fbPinned}
+                  onChange={(e) => setFbPinned(e.target.value)}
+                />
               </Box>
             )}
             {ig && p?.reels && (
               <Box>
                 <Text
-                  color="nexzy.lightBlue"
-                  fontSize="11px"
+                  color="whiteAlpha.600"
+                  fontSize="10px"
                   fontWeight="700"
-                  mb={1}
+                  mb={0.5}
                 >
-                  ▸ Instagram — video Reel + comment
+                  INSTAGRAM CAPTION
                 </Text>
+                <Textarea
+                  {...ta}
+                  value={igCaption}
+                  onChange={(e) => setIgCaption(e.target.value)}
+                />
                 <Text
-                  color={videoUrl ? "green.300" : "orange.300"}
-                  fontSize="xs"
-                  mb={1}
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={2}
+                  mb={0.5}
                 >
-                  🎬 Video:{" "}
-                  {videoUrl
-                    ? "✓ uploaded — posts as a Reel"
-                    : "⚠ none uploaded yet (required)"}
+                  INSTAGRAM FIRST COMMENT (auto-posted — pin it manually)
                 </Text>
-                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
-                  CAPTION (posts exactly as shown)
-                </Text>
-                <Text
-                  color="nexzy.gray.100"
-                  fontSize="xs"
-                  whiteSpace="pre-wrap"
-                  mb={igPinned.trim() ? 1 : 0}
-                >
-                  {igCaption.trim() || "— empty —"}
-                </Text>
-                {igPinned.trim() && (
-                  <>
-                    <Text
-                      color="whiteAlpha.600"
-                      fontSize="10px"
-                      fontWeight="700"
-                    >
-                      FIRST COMMENT (auto-posted, not pinned)
-                    </Text>
-                    <Text
-                      color="nexzy.gray.100"
-                      fontSize="xs"
-                      whiteSpace="pre-wrap"
-                    >
-                      {igPinned}
-                    </Text>
-                  </>
-                )}
+                <Textarea
+                  {...ta}
+                  rows={2}
+                  value={igPinned}
+                  onChange={(e) => setIgPinned(e.target.value)}
+                />
               </Box>
             )}
             {th && p?.threads && (
               <Box>
                 <Text
-                  color="nexzy.lightBlue"
-                  fontSize="11px"
+                  color="whiteAlpha.600"
+                  fontSize="10px"
                   fontWeight="700"
-                  mb={1}
+                  mb={0.5}
                 >
-                  ▸ Threads —{" "}
-                  {(images.threads ?? images.global)
-                    ? "image post"
-                    : "text post (no video)"}
+                  THREADS TEXT (Threads&apos; limit: 500)
                 </Text>
-                {(images.threads ?? images.global) && (
-                  <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-                    🖼 Image attached
-                    {images.threads ? " (Threads-specific)" : ""}
-                  </Text>
-                )}
-                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
-                  TEXT (posts exactly as shown)
+                <Textarea
+                  {...ta}
+                  value={threadsText}
+                  onChange={(e) => setThreadsText(e.target.value)}
+                />
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={0.5}
+                  color={
+                    threadsText.length > 500 ? "red.300" : "whiteAlpha.600"
+                  }
+                >
+                  {threadsText.length}/500
+                  {threadsText.length > 500
+                    ? " — over Threads' limit, trim it"
+                    : ""}
                 </Text>
                 <Text
-                  color="nexzy.gray.100"
-                  fontSize="xs"
-                  whiteSpace="pre-wrap"
-                  mb={1}
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={2}
+                  mb={0.5}
                 >
-                  {threadsText.trim() || "— empty —"}
+                  THREADS TOPIC TAG (one clickable tag — # optional)
                 </Text>
-                <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-                  🏷 Topic tag:{" "}
-                  {threadsTopicTag.trim()
-                    ? "#" + threadsTopicTag.trim().replace(/^#/, "")
-                    : "none"}
+                <Input
+                  size="sm"
+                  bg="whiteAlpha.50"
+                  color="nexzy.white"
+                  borderColor="whiteAlpha.300"
+                  fontSize="sm"
+                  value={threadsTopicTag}
+                  maxLength={50}
+                  placeholder="e.g. gaming"
+                  onChange={(e) => setThreadsTopicTag(e.target.value)}
+                />
+                <Text color="whiteAlpha.600" fontSize="10px" mt={1}>
+                  Threads allows one clickable topic tag; extra #tags in the
+                  text show as plain grey words.
                 </Text>
-                {threadsPinned.trim() && (
-                  <>
-                    <Text
-                      color="whiteAlpha.600"
-                      fontSize="10px"
-                      fontWeight="700"
-                    >
-                      FIRST REPLY (auto-posted)
-                    </Text>
-                    <Text
-                      color="nexzy.gray.100"
-                      fontSize="xs"
-                      whiteSpace="pre-wrap"
-                    >
-                      {threadsPinned}
-                    </Text>
-                  </>
-                )}
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={2}
+                  mb={0.5}
+                >
+                  THREADS FIRST REPLY (auto-posted — pin it manually)
+                </Text>
+                <Textarea
+                  {...ta}
+                  rows={2}
+                  value={threadsPinned}
+                  onChange={(e) => setThreadsPinned(e.target.value)}
+                />
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={0.5}
+                  color={
+                    threadsPinned.length > 500 ? "red.300" : "whiteAlpha.600"
+                  }
+                >
+                  {threadsPinned.length}/500
+                  {threadsPinned.length > 500
+                    ? " — over Threads' limit, trim it"
+                    : ""}
+                </Text>
               </Box>
             )}
             {xOn && p?.x && (
               <Box>
                 <Text
-                  color="nexzy.lightBlue"
-                  fontSize="11px"
+                  color="whiteAlpha.600"
+                  fontSize="10px"
                   fontWeight="700"
-                  mb={1}
+                  mb={0.5}
                 >
-                  ▸ X{cfg?.x ? "" : " (disabled — needs API keys)"}
+                  X POST (the link is fine in the post)
                 </Text>
-                {(images.x ?? images.global) && (
-                  <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
-                    🖼 Image attached{images.x ? " (X-specific)" : ""}
-                    {(p?.x?.poll?.options?.length ?? 0) > 0
-                      ? " — the poll will be DROPPED (X can't combine them)"
+                <Textarea
+                  {...ta}
+                  value={xPost}
+                  onChange={(e) => setXPost(e.target.value)}
+                />
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={0.5}
+                  color={
+                    xCharCount(xPost) > 25000
+                      ? "red.300"
+                      : xCharCount(xPost) > 280
+                        ? "#FFD866"
+                        : "whiteAlpha.600"
+                  }
+                >
+                  {xCharCount(xPost)} chars (links count as 23)
+                  {xCharCount(xPost) > 25000
+                    ? " — over X's 25,000 limit, trim to publish"
+                    : xCharCount(xPost) > 280
+                      ? " — long post: X shows the first ~280 with a Show more fold"
                       : ""}
-                  </Text>
-                )}
-                <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700">
-                  POST (posts exactly as shown)
                 </Text>
                 <Text
-                  color="nexzy.gray.100"
-                  fontSize="xs"
-                  whiteSpace="pre-wrap"
-                  mb={1}
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={2}
+                  mb={0.5}
                 >
-                  {xPost.trim() || "— empty —"}
+                  X FIRST REPLY (optional)
                 </Text>
-                {(p?.x?.thread?.length ?? 0) > 0 && (
-                  <>
+                <Textarea
+                  {...ta}
+                  value={xReply}
+                  onChange={(e) => setXReply(e.target.value)}
+                />
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  mt={0.5}
+                  color={
+                    xCharCount(xReply) > 25000
+                      ? "red.300"
+                      : xCharCount(xReply) > 280
+                        ? "#FFD866"
+                        : "whiteAlpha.600"
+                  }
+                >
+                  {xCharCount(xReply)} chars
+                  {xCharCount(xReply) > 25000
+                    ? " — over X's 25,000 limit, trim to publish"
+                    : xCharCount(xReply) > 280
+                      ? " — long reply: shows a Show more fold past ~280"
+                      : ""}
+                </Text>
+              </Box>
+            )}
+          </VStack>
+
+          {(fb || ig || th || xOn) && (
+            <Box
+              mb={2}
+              p={3}
+              borderRadius="lg"
+              bg="blackAlpha.400"
+              border="1px solid"
+              borderColor="nexzy.blue/40"
+            >
+              <Text color="nexzy.white" fontSize="xs" fontWeight="700" mb={2}>
+                Exactly what will publish when you press Publish now
+              </Text>
+              <VStack align="stretch" gap={3}>
+                {fb && p?.facebook && (
+                  <Box>
                     <Text
-                      color="whiteAlpha.600"
-                      fontSize="10px"
+                      color="nexzy.lightBlue"
+                      fontSize="11px"
                       fontWeight="700"
+                      mb={1}
                     >
-                      THREAD (posted as chained replies)
+                      {mediaMode === "video"
+                        ? "Facebook — video Reel + comment"
+                        : (images.facebook ?? images.global)
+                          ? "Facebook — photo post + comment"
+                          : "Facebook — text post with the article link + comment"}
                     </Text>
-                    {(p?.x?.thread ?? []).map((t, i) => (
+                    {mediaMode === "video" ? (
                       <Text
-                        key={i}
-                        color="nexzy.gray.100"
+                        color={videoUrl ? "green.300" : "orange.300"}
                         fontSize="xs"
-                        whiteSpace="pre-wrap"
+                        mb={1}
                       >
-                        {i + 1}. {t}
+                        Video:{" "}
+                        {videoUrl
+                          ? "uploaded — posts as a Reel"
+                          : "none uploaded yet (required for a Reel)"}
                       </Text>
-                    ))}
-                  </>
-                )}
-                {(p?.x?.poll?.options?.length ?? 0) > 0 && (
-                  <>
-                    <Text
-                      color="whiteAlpha.600"
-                      fontSize="10px"
-                      fontWeight="700"
-                      mt={1}
-                    >
-                      POLL (attached to the post)
-                    </Text>
-                    {(p?.x?.poll?.options ?? []).map((o, i) => (
-                      <Text key={i} color="nexzy.lightBlue" fontSize="xs">
-                        • {o}
+                    ) : (
+                      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                        Image:{" "}
+                        {(images.facebook ?? images.global)
+                          ? `attached${images.facebook ? " (Facebook-specific)" : ""}`
+                          : "none (optional — posts as text with the link preview)"}
                       </Text>
-                    ))}
-                  </>
-                )}
-                {xReply.trim() && (
-                  <>
+                    )}
                     <Text
                       color="whiteAlpha.600"
                       fontSize="10px"
                       fontWeight="700"
                     >
-                      FIRST REPLY
+                      CAPTION (posts exactly as shown)
                     </Text>
                     <Text
                       color="nexzy.gray.100"
                       fontSize="xs"
                       whiteSpace="pre-wrap"
+                      mb={fbPinned.trim() ? 1 : 0}
                     >
-                      {xReply}
+                      {fbCaption.trim() || "— empty —"}
                     </Text>
-                  </>
+                    {fbPinned.trim() && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                        >
+                          FIRST COMMENT (auto-posted, not pinned)
+                        </Text>
+                        <Text
+                          color="nexzy.gray.100"
+                          fontSize="xs"
+                          whiteSpace="pre-wrap"
+                        >
+                          {fbPinned}
+                        </Text>
+                      </>
+                    )}
+                  </Box>
                 )}
-              </Box>
-            )}
-          </VStack>
-        </Box>
-      )}
+                {ig && p?.reels && (
+                  <Box>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="11px"
+                      fontWeight="700"
+                      mb={1}
+                    >
+                      {mediaMode === "video"
+                        ? "Instagram — video Reel + comment"
+                        : "Instagram — image post + comment"}
+                    </Text>
+                    {mediaMode === "video" ? (
+                      <Text
+                        color={videoUrl ? "green.300" : "orange.300"}
+                        fontSize="xs"
+                        mb={1}
+                      >
+                        Video:{" "}
+                        {videoUrl
+                          ? "uploaded — posts as a Reel"
+                          : "none uploaded yet (required for a Reel)"}
+                      </Text>
+                    ) : (
+                      <Text
+                        color={
+                          (images.instagram ?? images.global)
+                            ? "green.300"
+                            : "orange.300"
+                        }
+                        fontSize="xs"
+                        mb={1}
+                      >
+                        Image:{" "}
+                        {(images.instagram ?? images.global)
+                          ? `attached${images.instagram ? " (Instagram-specific)" : ""}`
+                          : "none uploaded yet (Instagram requires one)"}
+                      </Text>
+                    )}
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      CAPTION (posts exactly as shown)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      mb={igPinned.trim() ? 1 : 0}
+                    >
+                      {igCaption.trim() || "— empty —"}
+                    </Text>
+                    {igPinned.trim() && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                        >
+                          FIRST COMMENT (auto-posted, not pinned)
+                        </Text>
+                        <Text
+                          color="nexzy.gray.100"
+                          fontSize="xs"
+                          whiteSpace="pre-wrap"
+                        >
+                          {igPinned}
+                        </Text>
+                      </>
+                    )}
+                  </Box>
+                )}
+                {th && p?.threads && (
+                  <Box>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="11px"
+                      fontWeight="700"
+                      mb={1}
+                    >
+                      Threads —{" "}
+                      {(images.threads ?? images.global)
+                        ? "image post"
+                        : "text post (no video)"}
+                    </Text>
+                    {(images.threads ?? images.global) && (
+                      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                        Image attached
+                        {images.threads ? " (Threads-specific)" : ""}
+                      </Text>
+                    )}
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      TEXT (posts exactly as shown)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      mb={1}
+                    >
+                      {threadsText.trim() || "— empty —"}
+                    </Text>
+                    <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                      Topic tag:{" "}
+                      {threadsTopicTag.trim()
+                        ? "#" + threadsTopicTag.trim().replace(/^#/, "")
+                        : "none"}
+                    </Text>
+                    {threadsPinned.trim() && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                        >
+                          FIRST REPLY (auto-posted)
+                        </Text>
+                        <Text
+                          color="nexzy.gray.100"
+                          fontSize="xs"
+                          whiteSpace="pre-wrap"
+                        >
+                          {threadsPinned}
+                        </Text>
+                      </>
+                    )}
+                  </Box>
+                )}
+                {xOn && p?.x && (
+                  <Box>
+                    <Text
+                      color="nexzy.lightBlue"
+                      fontSize="11px"
+                      fontWeight="700"
+                      mb={1}
+                    >
+                      X{cfg?.x ? "" : " (disabled — needs API keys)"}
+                    </Text>
+                    {(images.x ?? images.global) && (
+                      <Text color="nexzy.gray.100" fontSize="xs" mb={1}>
+                        Image attached{images.x ? " (X-specific)" : ""}
+                        {(p?.x?.poll?.options?.length ?? 0) > 0
+                          ? " — the poll will be DROPPED (X can't combine them)"
+                          : ""}
+                      </Text>
+                    )}
+                    <Text
+                      color="whiteAlpha.600"
+                      fontSize="10px"
+                      fontWeight="700"
+                    >
+                      POST (posts exactly as shown)
+                    </Text>
+                    <Text
+                      color="nexzy.gray.100"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      mb={1}
+                    >
+                      {xPost.trim() || "— empty —"}
+                    </Text>
+                    {(p?.x?.thread?.length ?? 0) > 0 && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                        >
+                          THREAD (posted as chained replies)
+                        </Text>
+                        {(Array.isArray(p?.x?.thread) ? p.x.thread : []).map(
+                          (t, i) => (
+                            <Text
+                              key={i}
+                              color="nexzy.gray.100"
+                              fontSize="xs"
+                              whiteSpace="pre-wrap"
+                            >
+                              {i + 1}. {toText(t)}
+                            </Text>
+                          ),
+                        )}
+                      </>
+                    )}
+                    {(p?.x?.poll?.options?.length ?? 0) > 0 && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                          mt={1}
+                        >
+                          POLL (attached to the post)
+                        </Text>
+                        {(Array.isArray(p?.x?.poll?.options)
+                          ? p.x.poll.options
+                          : []
+                        ).map((o, i) => (
+                          <Text key={i} color="nexzy.lightBlue" fontSize="xs">
+                            • {toText(o)}
+                          </Text>
+                        ))}
+                      </>
+                    )}
+                    {xReply.trim() && (
+                      <>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="10px"
+                          fontWeight="700"
+                        >
+                          FIRST REPLY
+                        </Text>
+                        <Text
+                          color="nexzy.gray.100"
+                          fontSize="xs"
+                          whiteSpace="pre-wrap"
+                        >
+                          {xReply}
+                        </Text>
+                      </>
+                    )}
+                  </Box>
+                )}
+              </VStack>
+            </Box>
+          )}
 
-      <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
-        Make sure nexzy_app is a <b>public</b> account, or the API will reject
-        the post.
-      </Text>
-
-      {publishBlockers.length > 0 && (
-        <VStack align="stretch" gap={0.5} mb={2}>
-          {publishBlockers.map((b) => (
-            <Text key={b} color="orange.300" fontSize="xs">
-              ⚠ {b}
-            </Text>
-          ))}
-        </VStack>
-      )}
-
-      <Button
-        size="sm"
-        colorPalette="blue"
-        // Explicit no-arg call — the handler's `force` param must never
-        // receive the click event.
-        onClick={() => publish()}
-        loading={publishing}
-        loadingText="Publishing…"
-        disabled={!canPublish}
-      >
-        Publish now
-      </Button>
-
-      {/* Grounding-block override — appears only after the gate blocked a
-          publish. Deliberate second click; the flag on the card is unchanged
-          (a later Regenerate still re-runs the fact-check). */}
-      {groundingBlocked && !publishing && (
-        <Box mt={2}>
-          <Text color="orange.300" fontSize="xs" mb={1}>
-            The number check blocked this publish. If you&apos;ve verified the
-            price/number yourself (or removed it from the copy), you can
-            override:
+          <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
+            Make sure nexzy_app is a <b>public</b> account, or the API will
+            reject the post.
           </Text>
+
+          {publishBlockers.length > 0 && (
+            <VStack align="stretch" gap={0.5} mb={2}>
+              {publishBlockers.map((b) => (
+                <Text key={b} color="orange.300" fontSize="xs">
+                  {b}
+                </Text>
+              ))}
+            </VStack>
+          )}
+
           <Button
             size="sm"
-            bg="orange.500"
-            color="white"
-            _hover={{ bg: "orange.400" }}
-            onClick={() => publish(true)}
+            colorPalette="blue"
+            // Explicit no-arg call — the handler's `force` param must never
+            // receive the click event.
+            onClick={() => publish()}
             loading={publishing}
             loadingText="Publishing…"
-            disabled={!canPublish}
+            disabled={!canPublish || publishing}
           >
-            ⚠ Publish anyway — I checked the numbers
+            Publish now
           </Button>
-        </Box>
+          {serverBusy && !publishing && (
+            <Text color="teal.300" fontSize="xs" mt={1}>
+              A publish is running for this card on the server — wait for it to
+              finish, then refresh.
+            </Text>
+          )}
+
+          {/* Grounding-block override — appears only after the gate blocked a
+          publish. Deliberate second click; the flag on the card is unchanged
+          (a later Regenerate still re-runs the fact-check). */}
+          {groundingBlocked && !publishing && (
+            <Box mt={2}>
+              <Text color="orange.300" fontSize="xs" mb={1}>
+                The number check blocked this publish. If you&apos;ve verified
+                the price/number yourself (or removed it from the copy), you can
+                override:
+              </Text>
+              <Button
+                size="sm"
+                bg="orange.500"
+                color="white"
+                _hover={{ bg: "orange.400" }}
+                onClick={() => publish(true)}
+                loading={publishing}
+                loadingText="Publishing…"
+                disabled={!canPublish || publishing}
+              >
+                Publish anyway — I checked the numbers
+              </Button>
+            </Box>
+          )}
+        </>
+      ) : (
+        <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+          Publishing to social is owner-only.
+        </Text>
+      )}
+
+      {publishMsg && (
+        <Text
+          fontSize="xs"
+          mt={2}
+          color={publishMsg.tone === "error" ? "orange.300" : "teal.300"}
+        >
+          {publishMsg.text}
+        </Text>
       )}
 
       {results && (
@@ -1656,12 +2044,14 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
                 r.ok ? "green.200" : r.skipped ? "whiteAlpha.500" : "red.300"
               }
             >
-              {r.platform}:{" "}
-              {r.skipped
-                ? "skipped (off / not configured)"
-                : r.ok
-                  ? `✓ posted (${r.id})`
-                  : `✗ ${r.error}`}
+              {PUB_LABEL[r.platform as PubPlatform] ?? r.platform}:{" "}
+              {r.ok && r.skipped
+                ? `already posted — not sent again${r.id ? ` (${r.id})` : ""}`
+                : r.skipped
+                  ? "skipped (off / not configured)"
+                  : r.ok
+                    ? `posted${r.id ? ` (${r.id})` : ""}`
+                    : `failed — ${toText(r.error) || "no error message"}`}
             </Text>
           ))}
         </VStack>
@@ -1695,6 +2085,11 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
             Fetch
           </Button>
         </HStack>
+        {insightsErr && (
+          <Text color="red.300" fontSize="xs" mt={1}>
+            {insightsErr}
+          </Text>
+        )}
       </Box>
 
       {/* Real performance — pulled from the published posts' ids */}
@@ -1702,7 +2097,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
         <Box mt={3} pt={3} borderTop="1px solid" borderColor="whiteAlpha.200">
           <Flex justify="space-between" align="center" mb={1} gap={2}>
             <Text color="nexzy.white" fontWeight="700" fontSize="sm">
-              📊 Performance
+              Performance
             </Text>
             <Button
               size="xs"
@@ -1714,7 +2109,7 @@ function PublishBox({ s }: { s: ContentSuggestion }) {
               loading={refreshing}
               loadingText="Refreshing…"
             >
-              ↻ Refresh
+              <FiRefreshCw aria-hidden /> Refresh
             </Button>
           </Flex>
           {insights.length === 0 ? (
@@ -1751,6 +2146,7 @@ function aspectToFmt(aspect?: string): string {
 function SuggestionCard({
   s,
   onDone,
+  onUpdate,
   isOwner,
   onBudget,
   writers,
@@ -1758,6 +2154,9 @@ function SuggestionCard({
 }: {
   s: ContentSuggestion;
   onDone: (id: string) => void;
+  /** Replace this card in the parent list (regenerate / re-read results), so
+   *  switching asset tabs or re-rendering never shows the stale version. */
+  onUpdate: (card: ContentSuggestion) => void;
   isOwner: boolean;
   onBudget: () => void;
   writers: string[];
@@ -1771,8 +2170,12 @@ function SuggestionCard({
   const [busy, setBusy] = useState<
     "skip" | "use" | "script" | "produce" | "rescript" | null
   >(null);
-  const [gen, setGen] = useState<ContentSuggestion | null>(null);
-  const view = gen ?? s;
+  const view = s;
+  const [cardErr, setCardErr] = useState<string | null>(null);
+  const [regenMsg, setRegenMsg] = useState<{
+    tone: "error" | "info";
+    text: string;
+  } | null>(null);
   const fld = {
     size: "sm" as const,
     bg: "whiteAlpha.50",
@@ -1860,44 +2263,84 @@ function SuggestionCard({
       else await useContentSuggestion(s.id);
       onDone(s.id);
       if (kind === "use") onBudget();
-    } catch {
-      setBusy(null);
-    }
-  };
-
-  const regen = async () => {
-    setBusy("script");
-    try {
-      // Rebuild the WHOLE card (hook/script/kits/hashtags/TTS) in the voice.
-      setGen(await regenerateContentCard(s.id, persona));
-    } catch {
-      /* leave as-is on failure */
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const regenScript = async () => {
-    setBusy("rescript");
-    try {
-      // Regenerate ONLY the ElevenLabs script, honoring the steer note.
-      setGen(
-        await regenerateScript(s.id, persona, scriptSteer.trim() || undefined),
+    } catch (e) {
+      setCardErr(
+        `${kind === "use" ? "Mark used" : "Skip"} failed: ${errorMessage(e)}`,
       );
-      setScriptSteer("");
-    } catch {
-      /* keep the current script on failure */
+      setBusy(null);
+    }
+  };
+
+  // Regenerate / Script-only are long synchronous LLM calls that can outlive
+  // the proxy timeout while the server still finishes and saves. On any
+  // failure, re-read the card instead of assuming nothing happened (LS-7).
+  const cardSig = (c: ContentSuggestion) =>
+    JSON.stringify([c.ttsScript, c.hook, c.script, c.payload?.platforms]);
+  const runRegen = async (
+    kind: "script" | "rescript",
+    call: () => Promise<ContentSuggestion | null>,
+    label: string,
+  ) => {
+    setBusy(kind);
+    setRegenMsg(null);
+    const before = cardSig(s);
+    try {
+      const card = (await call()) ?? (await fetchContentCard(s.id));
+      if (card) onUpdate(card);
+      if (kind === "rescript") setScriptSteer("");
+    } catch (e) {
+      if (isConflict(e)) {
+        setRegenMsg({
+          tone: "info",
+          text: `Already regenerating this card — refresh in a moment.`,
+        });
+      } else {
+        // A timeout usually means the server is still working: keep re-reading
+        // for a while. Any other error gets one re-read.
+        const card = await pollContentCard(s.id, (c) => cardSig(c) !== before, {
+          intervalMs: 5000,
+          timeoutMs: isTimeoutLike(e) ? 90_000 : 0,
+        }).catch(() => null);
+        if (card && cardSig(card) !== before) {
+          onUpdate(card);
+          if (kind === "rescript") setScriptSteer("");
+          setRegenMsg({
+            tone: "info",
+            text: `${label} finished on the server (the request itself timed out) — showing the new version.`,
+          });
+        } else {
+          setRegenMsg({
+            tone: "error",
+            text: `${label} failed: ${errorMessage(e)}. The card was re-checked and is unchanged.`,
+          });
+        }
+      }
     } finally {
       setBusy(null);
     }
   };
+  // Rebuild the WHOLE card (hook/script/kits/hashtags/TTS) in the voice.
+  const regen = () =>
+    runRegen("script", () => regenerateCard(s.id, persona), "Regenerate");
+  // Regenerate ONLY the ElevenLabs script, honoring the steer note.
+  const regenScript = () =>
+    runRegen(
+      "rescript",
+      () =>
+        regenerateCardScript(s.id, persona, scriptSteer.trim() || undefined),
+      "Script-only rewrite",
+    );
 
   const saveScript = async () => {
     setSaving(true);
     try {
-      setGen(await updateContentScript(s.id, draft));
-    } catch {
-      /* keep the edit in the box on failure */
+      onUpdate(await updateContentScript(s.id, draft));
+    } catch (e) {
+      // Keep the edit in the box; say why it didn't save.
+      setRegenMsg({
+        tone: "error",
+        text: `Save failed: ${errorMessage(e)}`,
+      });
     } finally {
       setSaving(false);
     }
@@ -1921,8 +2364,9 @@ function SuggestionCard({
       setProduced({ videoSlug: r.videoSlug, gameLinked: r.gameLinked });
       setShowProduce(false);
       onBudget();
-    } catch {
-      /* leave the form open on failure */
+    } catch (e) {
+      // Leave the form open; say why.
+      setCardErr(`Publish to /videos failed: ${errorMessage(e)}`);
     } finally {
       setBusy(null);
     }
@@ -1956,7 +2400,7 @@ function SuggestionCard({
           )}
           {isQuick && (
             <Badge colorPalette="teal" variant="solid">
-              ⚡ QUICK
+              QUICK
             </Badge>
           )}
           {isMemeCard && (
@@ -1980,7 +2424,7 @@ function SuggestionCard({
             </Badge>
           )}
           <Badge colorPalette="blue" variant="solid">
-            ✍ {view.author}
+            {view.author}
           </Badge>
           <Text color="nexzy.white" fontWeight="700" lineClamp={1}>
             {s.title}
@@ -1995,7 +2439,11 @@ function SuggestionCard({
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? "Expand card" : "Collapse card"}
           >
-            {collapsed ? "▸" : "▾"}
+            {collapsed ? (
+              <FiChevronRight aria-hidden />
+            ) : (
+              <FiChevronDown aria-hidden />
+            )}
           </Button>
           {s.kind === "video" &&
             !produced &&
@@ -2009,7 +2457,7 @@ function SuggestionCard({
                 variant="solid"
                 onClick={openProduce}
               >
-                🎬 Produce
+                Produce
               </Button>
             )}
           <Button
@@ -2020,7 +2468,7 @@ function SuggestionCard({
             loading={busy === "use"}
             loadingText="…"
           >
-            ✓ Used
+            <FiCheck aria-hidden /> Used
           </Button>
           <Button
             size="xs"
@@ -2035,6 +2483,12 @@ function SuggestionCard({
           </Button>
         </HStack>
       </Flex>
+
+      {cardErr && (
+        <Text color="red.300" fontSize="xs" mb={2}>
+          {cardErr}
+        </Text>
+      )}
 
       {/* HIDDEN, not unmounted — collapsing used to destroy PublishBox, taking
           the uploaded video URL, every caption edit and the publish receipt
@@ -2052,7 +2506,7 @@ function SuggestionCard({
               borderColor="green.400/40"
             >
               <Text fontSize="sm" color="green.200" mb={1}>
-                ✓ Published to /videos
+                Published to /videos
                 {produced.gameLinked
                   ? " and linked to the game."
                   : " — no game resolved; attach one in the Videos tab."}
@@ -2084,7 +2538,7 @@ function SuggestionCard({
                 bg="green.500/5"
               >
                 <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
-                  🎬 Publish this short to /videos
+                  Publish this short to /videos
                 </Text>
                 <VStack align="stretch" gap={2}>
                   <Input
@@ -2167,7 +2621,7 @@ function SuggestionCard({
             tagColor={editorFlags.length ? "yellow" : "green"}
             defaultOpen
           >
-            {/* ✎ What the Editor changed (Tier-1 completeness/structure guards) */}
+            {/* What the Editor changed (Tier-1 completeness/structure guards) */}
             {editorReport.length > 0 && (
               <Box
                 mb={3}
@@ -2185,23 +2639,23 @@ function SuggestionCard({
                   fontWeight="700"
                   mb={1}
                 >
-                  ✎ Editor · {editorRewrites.length} rewritten ·{" "}
+                  Editor · {editorRewrites.length} rewritten ·{" "}
                   {editorFixes.length} fixed · {editorFlags.length} to check
                 </Text>
                 <VStack align="stretch" gap={0.5}>
                   {editorRewrites.map((n, i) => (
                     <Text key={`r${i}`} color="nexzy.lightBlue" fontSize="xs">
-                      ✎ {n.label}
+                      Rewrote: {n.label}
                     </Text>
                   ))}
                   {editorFixes.map((n, i) => (
                     <Text key={`f${i}`} color="green.200" fontSize="xs">
-                      ✓ {n.label}
+                      Fixed: {n.label}
                     </Text>
                   ))}
                   {editorFlags.map((n, i) => (
                     <Text key={`w${i}`} color="yellow.200" fontSize="xs">
-                      ⚠ {n.label}
+                      Check: {n.label}
                     </Text>
                   ))}
                 </VStack>
@@ -2235,7 +2689,7 @@ function SuggestionCard({
                 borderColor="whiteAlpha.200"
               >
                 <Text color="nexzy.lightBlue" fontSize="xs">
-                  🕒 <b>When to post:</b> {postTiming.timing}
+                  <b>When to post:</b> {postTiming.timing}
                 </Text>
               </Box>
             )}
@@ -2253,7 +2707,7 @@ function SuggestionCard({
                 borderColor="orange.400"
               >
                 <Text color="orange.100" fontSize="xs">
-                  ⚠️ <b>YouTube title not ranking-grounded</b>
+                  <b>YouTube title not ranking-grounded</b>
                   {view.payload?.signalStatus === "no-key"
                     ? " — no YouTube API key configured"
                     : view.payload?.signalStatus === "quota-exhausted"
@@ -2280,7 +2734,7 @@ function SuggestionCard({
                 borderColor="whiteAlpha.200"
               >
                 <Text color="nexzy.gray.100" fontSize="xs">
-                  🔎 <b>Grounded against</b> (top YouTube now, by views/day):{" "}
+                  <b>Grounded against</b> (top YouTube now, by views/day):{" "}
                   {(view.payload?.groundedOn ?? [])
                     .map(
                       (g) =>
@@ -2304,7 +2758,7 @@ function SuggestionCard({
                 borderColor="yellow.500"
               >
                 <Text color="yellow.100" fontSize="xs">
-                  ✂️ <b>Title guardrail:</b>{" "}
+                  <b>Title guardrail:</b>{" "}
                   {view.payload?.titleFlags?.overLength && (
                     <>
                       auto-trimmed to ≤70 chars
@@ -2338,7 +2792,7 @@ function SuggestionCard({
                 borderColor="yellow.500"
               >
                 <Text color="yellow.100" fontSize="xs">
-                  ✂️ <b>Description guardrail:</b>{" "}
+                  <b>Description guardrail:</b>{" "}
                   {view.payload?.descFlags?.notKeywordFirst && (
                     <>
                       focus keyword isn&apos;t in the first ~7 words (the search
@@ -2371,7 +2825,7 @@ function SuggestionCard({
                 borderColor="orange.400"
               >
                 <Text color="orange.100" fontSize="xs">
-                  🎙️ <b>Script/comment check:</b>{" "}
+                  <b>Script/comment check:</b>{" "}
                   {view.payload?.qualityFlags?.keywordNotSpokenEarly && (
                     <>
                       the game/topic name isn&apos;t spoken in the first ~15s of
@@ -2405,7 +2859,7 @@ function SuggestionCard({
             {/* Hashtag A/B experiment variant used for this card's YouTube tail. */}
             {view.payload?.hashtagVariant && (
               <Text color="nexzy.gray.300" fontSize="2xs" mb={2}>
-                🧪 Hashtag variant <b>{view.payload.hashtagVariant}</b>{" "}
+                Hashtag variant <b>{view.payload.hashtagVariant}</b>{" "}
                 {view.payload.hashtagVariant === "A"
                   ? "(broad tail)"
                   : view.payload.hashtagVariant === "B"
@@ -2467,7 +2921,7 @@ function SuggestionCard({
                     color="nexzy.lightBlue"
                     fontSize="xs"
                   >
-                    ⬇ Download image
+                    <FiDownload aria-hidden /> Download image
                   </Link>
                 )}
                 {onScreen.length > 0 && (
@@ -2555,7 +3009,7 @@ function SuggestionCard({
                       fontSize="xs"
                       fontWeight="700"
                     >
-                      📸 IMAGE BRIEF (make this image yourself)
+                      IMAGE BRIEF (make this image yourself)
                       {aspect ? ` · ${aspect}` : ""}
                     </Text>
                     {imageBrief && <CopyBtn text={imageBrief} label="Copy" />}
@@ -2828,7 +3282,7 @@ function SuggestionCard({
               )}
               {view.payload?.cta && (
                 <Text color="nexzy.gray.100" fontSize="xs">
-                  📣 CTA: {view.payload.cta}
+                  CTA: {view.payload.cta}
                 </Text>
               )}
               {view.url && (
@@ -2839,7 +3293,7 @@ function SuggestionCard({
                   color="nexzy.lightBlue"
                   fontSize="xs"
                 >
-                  Backing page ↗
+                  Backing page <FiExternalLink aria-hidden />
                 </Link>
               )}
             </VStack>
@@ -3011,10 +3465,11 @@ function SuggestionCard({
                           onClick={regen}
                           loading={busy === "script"}
                           loadingText="Regenerating…"
+                          disabled={busy === "rescript"}
                         >
                           {view.ttsScript
-                            ? "↻ Regenerate in " + persona + "\u2019s voice"
-                            : "🎙 Generate in " + persona + "\u2019s voice"}
+                            ? "Regenerate in " + persona + "\u2019s voice"
+                            : "Generate in " + persona + "\u2019s voice"}
                         </Button>
                         {view.ttsScript && (
                           <HStack gap={1} flex={1} minW="220px">
@@ -3035,13 +3490,26 @@ function SuggestionCard({
                               onClick={regenScript}
                               loading={busy === "rescript"}
                               loadingText="Rewriting…"
-                              disabled={!scriptSteer.trim()}
+                              disabled={
+                                !scriptSteer.trim() || busy === "script"
+                              }
                             >
-                              ↻ Script only
+                              Script only
                             </Button>
                           </HStack>
                         )}
                       </Flex>
+                    )}
+                    {regenMsg && (
+                      <Text
+                        fontSize="xs"
+                        mt={2}
+                        color={
+                          regenMsg.tone === "error" ? "red.300" : "teal.300"
+                        }
+                      >
+                        {regenMsg.text}
+                      </Text>
                     )}
                     {view.ttsScript && (
                       <VStack align="stretch" gap={2} mt={2}>
@@ -3171,23 +3639,23 @@ function SuggestionCard({
                             fontWeight="700"
                             mb={1.5}
                           >
-                            🎬 Production notes
+                            Production notes
                           </Text>
                           <VStack align="stretch" gap={1.5}>
                             {view.payload?.voicePersona && (
                               <Text color="nexzy.gray.100" fontSize="xs">
-                                🗣 <b>Delivery:</b> {view.payload.voicePersona}
+                                <b>Delivery:</b> {view.payload.voicePersona}
                               </Text>
                             )}
                             {view.payload?.music && (
                               <Text color="nexzy.gray.100" fontSize="xs">
-                                🎵 <b>Music:</b> {view.payload.music}
+                                <b>Music:</b> {view.payload.music}
                               </Text>
                             )}
                             {(view.payload?.backgroundVideo?.length ?? 0) >
                               0 && (
                               <Text color="nexzy.gray.100" fontSize="xs">
-                                🎞 <b>Background footage:</b>{" "}
+                                <b>Background footage:</b>{" "}
                                 {(view.payload?.backgroundVideo ?? []).join(
                                   " · ",
                                 )}
@@ -3195,13 +3663,13 @@ function SuggestionCard({
                             )}
                             {(view.payload?.brollSfx?.length ?? 0) > 0 ? (
                               <Text color="nexzy.gray.100" fontSize="xs">
-                                🎬 <b>B-roll / SFX:</b>{" "}
+                                <b>B-roll / SFX:</b>{" "}
                                 {(view.payload?.brollSfx ?? []).join(" · ")}
                               </Text>
                             ) : (
                               view.payload?.broll && (
                                 <Text color="nexzy.gray.100" fontSize="xs">
-                                  🎬 <b>B-roll / SFX:</b> {view.payload.broll}
+                                  <b>B-roll / SFX:</b> {view.payload.broll}
                                 </Text>
                               )
                             )}
@@ -3239,7 +3707,7 @@ function SuggestionCard({
                             )}
                             {(view.payload?.onScreenText?.length ?? 0) > 0 && (
                               <Text color="nexzy.gray.100" fontSize="xs">
-                                💬 <b>On-screen text</b> (captions to overlay):{" "}
+                                <b>On-screen text</b> (captions to overlay):{" "}
                                 {(view.payload?.onScreenText ?? []).join(" · ")}
                               </Text>
                             )}
@@ -3290,7 +3758,9 @@ function SuggestionCard({
             !isBriefCard &&
             isOwner && (
               <Section title="Publish to social">
-                <PublishBox s={view} />
+                <PublishBoundary>
+                  <PublishBox s={view} isOwner={isOwner} onUpdate={onUpdate} />
+                </PublishBoundary>
               </Section>
             )}
         </>
@@ -3403,7 +3873,7 @@ function MemeOptionBlock({ n, o }: { n: number; o: MemeOption }) {
               fontSize="xs"
               fontWeight="700"
             >
-              Find on Clip.Cafe ↗
+              Find on Clip.Cafe <FiExternalLink aria-hidden />
             </Link>
             {v.previewUrl && (
               <Link
@@ -3413,7 +3883,7 @@ function MemeOptionBlock({ n, o }: { n: number; o: MemeOption }) {
                 color="nexzy.lightBlue"
                 fontSize="xs"
               >
-                Preview the clip ↗
+                Preview the clip <FiExternalLink aria-hidden />
               </Link>
             )}
             <CopyBtn text={o.line} label="Copy line" />
@@ -3446,6 +3916,7 @@ function assetLabel(s: ContentSuggestion): string {
 function StoryGroup({
   group,
   onDone,
+  onUpdate,
   isOwner,
   onBudget,
   writers,
@@ -3453,6 +3924,7 @@ function StoryGroup({
 }: {
   group: ContentSuggestion[];
   onDone: (id: string) => void;
+  onUpdate: (card: ContentSuggestion) => void;
   isOwner: boolean;
   onBudget: () => void;
   writers: string[];
@@ -3499,17 +3971,21 @@ function StoryGroup({
           ))}
         </HStack>
       </Box>
-      <Box p={2}>
-        <SuggestionCard
-          key={active.id}
-          s={active}
-          onDone={onDone}
-          isOwner={isOwner}
-          onBudget={onBudget}
-          writers={writers}
-          onSendToCards={onSendToCards}
-        />
-      </Box>
+      {/* Every asset stays mounted (inactive ones hidden) so an uploaded
+          video, caption edits or a publish receipt survive switching tabs. */}
+      {group.map((g) => (
+        <Box key={g.id} p={2} display={g.id === active.id ? "block" : "none"}>
+          <SuggestionCard
+            s={g}
+            onDone={onDone}
+            onUpdate={onUpdate}
+            isOwner={isOwner}
+            onBudget={onBudget}
+            writers={writers}
+            onSendToCards={onSendToCards}
+          />
+        </Box>
+      ))}
     </Box>
   );
 }
@@ -3547,6 +4023,10 @@ export default function ContentPanel({
 
   const remove = (id: string) =>
     setItems((xs) => (xs ? xs.filter((x) => x.id !== id) : xs));
+  // Regenerate / re-read results replace the card in the list (P1-6), so the
+  // new version survives tab switches and re-renders.
+  const update = (card: ContentSuggestion) =>
+    setItems((xs) => (xs ? xs.map((x) => (x.id === card.id ? card : x)) : xs));
 
   // Suggestions shows ONLY generated video cards. Leads (kind "video_lead")
   // live in the Leads tab; guide leads live in Guides & Walkthroughs.
@@ -3576,7 +4056,7 @@ export default function ContentPanel({
         >
           <Flex justify="space-between" align="center" gap={2} wrap="wrap">
             <Text color="nexzy.white" fontSize="sm" fontWeight="600">
-              🎙 ElevenLabs — {budget.remaining.toLocaleString()} of{" "}
+              ElevenLabs — {budget.remaining.toLocaleString()} of{" "}
               {budget.limit.toLocaleString()} credits left this month{" "}
               <Text as="span" color="nexzy.gray.100" fontWeight="400">
                 (~{Math.round(budget.remaining / 900)} min)
@@ -3639,6 +4119,7 @@ export default function ContentPanel({
                   key={group[0].id}
                   s={group[0]}
                   onDone={remove}
+                  onUpdate={update}
                   isOwner={isOwner}
                   onBudget={loadBudget}
                   writers={writers}
@@ -3649,6 +4130,7 @@ export default function ContentPanel({
                   key={key}
                   group={group}
                   onDone={remove}
+                  onUpdate={update}
                   isOwner={isOwner}
                   onBudget={loadBudget}
                   writers={writers}

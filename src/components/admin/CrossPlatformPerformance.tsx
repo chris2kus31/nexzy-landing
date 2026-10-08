@@ -7,8 +7,9 @@ import { Box, Flex, VStack, Heading, Text } from "@chakra-ui/react";
  * every integrated platform, from the post history the audience refresh already
  * pulls (no LLM, no extra API). Shows posts, total reach, avg reach/post, and
  * best post per platform. Reach is NOT apples-to-apples across platforms
- * (IG = unique accounts, YouTube/Threads = views, X = impressions/engagement),
- * so each platform's bar is scaled against itself, and the caveat is shown.
+ * (IG = accounts reached, Facebook = unique media views, YouTube/Threads =
+ * views, X = impressions), so each bar compares a platform only with ITSELF:
+ * the typical (average) post as a share of that platform's best post.
  */
 export type PlatformStat = {
   posts: number;
@@ -62,7 +63,9 @@ export default function CrossPlatformPerformance({
     }
   }
   if (rows.length === 0) return null;
-  const avgMax = Math.max(1, ...rows.map((r) => r.avgReach));
+  // Self-relative: avg post vs this platform's own best post (0-100%).
+  const selfPct = (r: PlatformStat) =>
+    r.bestReach > 0 ? Math.min(100, (r.avgReach / r.bestReach) * 100) : 0;
 
   return (
     <Box
@@ -76,7 +79,8 @@ export default function CrossPlatformPerformance({
         Cross-platform performance
       </Heading>
       <Text color="nexzy.gray.100" fontSize="xs" mb={4}>
-        From your recent post history · avg reach/post, scaled per platform
+        From your recent post history · each bar = your average post as a share
+        of that platform&apos;s best post
       </Text>
 
       <VStack align="stretch" gap={3.5}>
@@ -88,7 +92,8 @@ export default function CrossPlatformPerformance({
               </Text>
               <Text color="nexzy.gray.100" fontSize="xs">
                 {fmt(r.avgReach)} avg · {fmt(r.posts)} posts ·{" "}
-                {fmt(r.totalReach)} total · best {fmt(r.bestReach)}
+                {fmt(r.totalReach)} total · best {fmt(r.bestReach)} · avg is{" "}
+                {Math.round(selfPct(r))}% of best
               </Text>
             </Flex>
             <Box
@@ -101,7 +106,7 @@ export default function CrossPlatformPerformance({
               <Box
                 bg={PLATFORM_COLOR[r.platform] ?? "nexzy.blue"}
                 h="100%"
-                w={`${Math.max(2, Math.min(100, (r.avgReach / avgMax) * 100))}%`}
+                w={`${Math.max(2, selfPct(r))}%`}
                 borderRadius="full"
               />
             </Box>
@@ -110,9 +115,11 @@ export default function CrossPlatformPerformance({
       </VStack>
 
       <Text color="whiteAlpha.500" fontSize="10px" mt={4}>
-        Reach means different things per platform (IG = unique accounts, YouTube
-        / Threads = views, X = impressions or engagement), so compare each
-        platform against its own trend, not against the others.
+        Reach means different things per platform (Instagram = accounts reached,
+        Facebook = unique media views, YouTube / Threads = views, X =
+        impressions), so the bars never compare platforms with each other. A
+        short bar means one or two posts carry the platform; a long bar means
+        your posts perform consistently.
       </Text>
     </Box>
   );

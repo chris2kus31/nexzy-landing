@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -16,10 +16,19 @@ import {
 import {
   listVideos,
   refreshVideoInsights,
-  scanVideoInsights,
   type AdminVideo,
   type PlatformInsights,
 } from "@/lib/admin/client";
+import {
+  errorMessage,
+  getVideoInsightsScanStatus,
+  startVideoInsightsScan,
+} from "@/lib/admin/client-content";
+import { FiExternalLink, FiRefreshCw } from "react-icons/fi";
+
+// "Scan now" runs in the background on the server (K8); poll its status.
+const SCAN_POLL_MS = 4000;
+const SCAN_POLL_CAP_MS = 10 * 60_000;
 
 const PLATFORM_COLOR: Record<string, string> = {
   facebook: "blue",
@@ -41,8 +50,11 @@ function measurablePlatforms(v: AdminVideo): string[] {
   return out;
 }
 
-/** True if this video has anything we can measure (so it belongs on Performance). */
+/** True if this video has anything we can measure (so it belongs on Performance).
+ *  External videos (trailers, other channels) are never ours to measure — any
+ *  stored insights on them are old scan errors, so they never show here. */
 function isMeasurable(v: AdminVideo): boolean {
+  if (v.source && v.source !== "nexzy") return false;
   return (
     measurablePlatforms(v).length > 0 || !!(v.insights && v.insights.length)
   );
@@ -57,16 +69,18 @@ function PerfRow({ v }: { v: AdminVideo }) {
     v.insightsFetchedAt ?? null,
   );
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const platforms = measurablePlatforms(v);
 
   const refresh = async () => {
     setBusy(true);
+    setErr(null);
     try {
       const updated = await refreshVideoInsights(v.id);
       setInsights(updated.insights ?? []);
       setFetchedAt(updated.insightsFetchedAt ?? new Date().toISOString());
-    } catch {
-      /* leave as-is */
+    } catch (e) {
+      setErr(errorMessage(e, "Refresh failed."));
     } finally {
       setBusy(false);
     }
@@ -105,9 +119,14 @@ function PerfRow({ v }: { v: AdminVideo }) {
           loading={busy}
           loadingText="…"
         >
-          ↻ Refresh
+          <FiRefreshCw aria-hidden /> Refresh
         </Button>
       </Flex>
+      {err && (
+        <Text fontSize="xs" color="red.300" mb={1}>
+          {err}
+        </Text>
+      )}
 
       {insights.length === 0 ? (
         <Text fontSize="xs" color="whiteAlpha.500">
@@ -139,7 +158,7 @@ function PerfRow({ v }: { v: AdminVideo }) {
             color="nexzy.lightBlue"
             fontSize="xs"
           >
-            Watch ↗
+            Watch <FiExternalLink aria-hidden />
           </Link>
         ) : (
           <Box />
@@ -181,21 +200,58 @@ export default function InsightsPanel() {
     load();
   }, [load]);
 
+  // Unmount guard for the status poll (the tab can be closed mid-scan).
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
   const scanAll = async () => {
     setScanning(true);
     setScanNote("");
     try {
-      const { scanned } = await scanVideoInsights();
+      const start = await startVideoInsightsScan();
+      // Older API: the scan ran inside the request and returned {scanned}.
+      if (typeof start.scanned === "number" && !start.running) {
+        await load();
+        setScanNote(
+          start.scanned > 0
+            ? `Scanned ${start.scanned} video${start.scanned === 1 ? "" : "s"}.`
+            : "No videos to scan yet.",
+        );
+        return;
+      }
+      if (!start.started && start.running) {
+        setScanNote("A scan is already running — waiting for it to finish.");
+      }
+      const deadline = Date.now() + SCAN_POLL_CAP_MS;
+      let st = await getVideoInsightsScanStatus();
+      while (alive.current && st?.running && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, SCAN_POLL_MS));
+        if (!alive.current) return;
+        st = await getVideoInsightsScanStatus();
+      }
+      if (!alive.current) return;
       await load();
-      setScanNote(
-        scanned > 0
-          ? `Scanned ${scanned} video${scanned === 1 ? "" : "s"}.`
-          : "No videos to scan yet.",
-      );
-    } catch {
-      setScanNote("Scan failed — try again.");
+      if (st?.running) {
+        setScanNote("Still scanning on the server — check back in a bit.");
+      } else if (st) {
+        setScanNote(
+          st.scanned > 0
+            ? `Scanned ${st.scanned} video${st.scanned === 1 ? "" : "s"}${st.errors ? ` (${st.errors} with errors)` : ""}.`
+            : "No videos to scan yet.",
+        );
+      } else {
+        setScanNote("Scan finished.");
+      }
+    } catch (e) {
+      if (alive.current)
+        setScanNote(`Scan failed: ${errorMessage(e)} — try again.`);
     } finally {
-      setScanning(false);
+      if (alive.current) setScanning(false);
     }
   };
 
@@ -234,25 +290,29 @@ export default function InsightsPanel() {
               loading={scanning}
               loadingText="Scanning…"
             >
-              ↻ Scan now
+              <FiRefreshCw aria-hidden /> Scan now
             </Button>
           </HStack>
         </Flex>
         <Text color="nexzy.gray.100" fontSize="sm">
           Your Video Library with real numbers — YouTube analytics for videos on
-          our channel, plus Facebook / Instagram / Threads for posts carried over
-          at publish. Auto-refreshes daily; <b>Scan now</b> pulls the latest for
-          every video, or use a row&rsquo;s own Refresh.
+          our channel, plus Facebook / Instagram / Threads for posts carried
+          over at publish. Auto-refreshes daily; <b>Scan now</b> pulls the
+          latest for every video, or use a row&rsquo;s own Refresh.
         </Text>
       </Box>
       {videos.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
           Nothing to measure yet. Produce a video (with a YouTube URL, or after
-          publishing the card to Facebook/Instagram/Threads) and it&rsquo;ll show
-          up here with its real numbers.
+          publishing the card to Facebook/Instagram/Threads) and it&rsquo;ll
+          show up here with its real numbers.
         </Text>
       ) : (
-        videos.map((v) => <PerfRow key={v.id} v={v} />)
+        // Keyed on the fetch time too, so a reload after a scan re-seeds the
+        // row's numbers instead of keeping the first render's state (M19).
+        videos.map((v) => (
+          <PerfRow key={`${v.id}:${v.insightsFetchedAt ?? ""}`} v={v} />
+        ))
       )}
     </VStack>
   );

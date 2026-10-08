@@ -30,7 +30,19 @@ const PLATFORM_LABEL: Record<string, string> = {
   threads: "Threads",
   x: "X",
   youtube: "YouTube",
+  youtube_long: "YouTube long-form",
 };
+
+/** Additive API field: the platform has no credentials configured — not an
+ *  error, so it renders as a neutral "Not connected". */
+type LabPlatform = PostLabPlatform & { notConfigured?: boolean };
+
+function platformLabel(platform: string, all: LabPlatform[]): string {
+  // Once long-form has its own entry, the plain YouTube entry is Shorts only.
+  if (platform === "youtube" && all.some((p) => p.platform === "youtube_long"))
+    return "YouTube Shorts";
+  return PLATFORM_LABEL[platform] ?? platform;
+}
 const FORMAT_LABEL: Record<string, string> = {
   reel: "Reel",
   video: "Video",
@@ -205,8 +217,21 @@ function PostRow({ p, metric }: { p: PostLabPost; metric: string }) {
   );
 }
 
-function PlatformView({ p }: { p: PostLabPlatform }) {
+function PlatformView({ p }: { p: LabPlatform }) {
   const [showAll, setShowAll] = useState(false);
+  // The API also adds the pull error as a "Pull failed" flag; it is already
+  // shown once above the flags, so drop the duplicate.
+  const flags = p.error
+    ? p.flags.filter((f) => !/^pull failed/i.test(f.text))
+    : p.flags;
+  if (p.notConfigured && !p.error) {
+    return (
+      <Text fontSize="sm" color="nexzy.gray.100">
+        Not connected — add this platform&apos;s credentials on the API to pull
+        its post data.
+      </Text>
+    );
+  }
   const flagIcon = {
     bad: <FiAlertTriangle />,
     warn: <FiAlertCircle />,
@@ -254,10 +279,10 @@ function PlatformView({ p }: { p: PostLabPlatform }) {
       )}
 
       {/* The bad stuff, first. */}
-      {p.flags.length > 0 && (
+      {flags.length > 0 && (
         <Card title="What to watch">
           <VStack align="stretch" gap={1}>
-            {p.flags.map((f, i) => (
+            {flags.map((f, i) => (
               <Flex
                 key={i}
                 gap={2}
@@ -386,8 +411,11 @@ function PlatformView({ p }: { p: PostLabPlatform }) {
 }
 
 export default function PostLabPanel({ lab }: { lab: PostLabReport | null }) {
-  const platforms = useMemo(
-    () => lab?.platforms.filter((p) => p.listed > 0 || p.error) ?? [],
+  const platforms = useMemo<LabPlatform[]>(
+    () =>
+      (lab?.platforms as LabPlatform[] | undefined)?.filter(
+        (p) => p.listed > 0 || p.error || p.notConfigured,
+      ) ?? [],
     [lab],
   );
   const [sel, setSel] = useState<string | null>(null);
@@ -451,8 +479,12 @@ export default function PostLabPanel({ lab }: { lab: PostLabReport | null }) {
                   border="1px solid"
                   borderColor={on ? "nexzy.blue" : "whiteAlpha.300"}
                 >
-                  {PLATFORM_LABEL[p.platform] ?? p.platform}
-                  {p.error ? " · error" : ` · ${p.analyzed}`}
+                  {platformLabel(p.platform, platforms)}
+                  {p.error
+                    ? " · error"
+                    : p.notConfigured
+                      ? " · not connected"
+                      : ` · ${p.analyzed}`}
                 </Box>
               );
             })}

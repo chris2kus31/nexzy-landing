@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Flex, VStack, Heading, Text, Spinner } from "@chakra-ui/react";
 import {
   getAudienceProfile,
@@ -91,7 +91,7 @@ function CadencePanel({ cadence }: { cadence?: AudienceProfile["cadence"] }) {
       p={4}
     >
       <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
-        📈 How much to post — from YOUR data
+        How much to post — from YOUR data
       </Text>
       <Text color="whiteAlpha.700" fontSize="xs" mb={2} lineHeight="1.5">
         Each row reads:{" "}
@@ -293,7 +293,7 @@ function HashtagAbPanel() {
                   maxW="55%"
                   lineClamp={1}
                 >
-                  {isBest ? "🏆 " : ""}
+                  {isBest ? "Best: " : ""}
                   {VARIANT_LABEL[v]}
                 </Text>
                 <Text color="nexzy.white" fontSize="2xs">
@@ -321,7 +321,7 @@ function HashtagAbPanel() {
       borderColor="whiteAlpha.200"
     >
       <Heading size="sm" color="nexzy.white" mb={1}>
-        🧪 Hashtag A/B
+        Hashtag A/B
       </Heading>
       <Text color="nexzy.gray.100" fontSize="xs" mb={3}>
         Which YouTube hashtag tail wins. First 3 tags are identical across
@@ -356,6 +356,14 @@ export default function AudienceInsightsPanel({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [refreshErr, setRefreshErr] = useState("");
+  // Stops the refresh poll when the panel unmounts (CA-17).
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     getAudienceProfile()
@@ -374,28 +382,32 @@ export default function AudienceInsightsPanel({
       const started = await refreshAudienceProfile();
       // Older API (no background mode) returns the fresh profile directly.
       if (!started?.refreshing) {
-        setAudience(started);
+        if (alive.current) setAudience(started);
         return;
       }
       const deadline = Date.now() + 5 * 60 * 1000;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 4000));
+        if (!alive.current) return;
         const p = await getAudienceProfile().catch(() => null);
+        if (!alive.current) return;
         if (p && !p.refreshing && p.fetchedAt && p.fetchedAt !== before) {
           setAudience(p);
           return;
         }
       }
+      if (!alive.current) return;
       setRefreshErr(
         "Refresh is taking longer than 5 minutes. It keeps running in the background. Reload in a bit.",
       );
     } catch (e) {
       // Keep the last good profile on screen, but say the refresh failed.
-      setRefreshErr(
-        `Refresh failed: ${(e as Error)?.message || "unknown error"}`,
-      );
+      if (alive.current)
+        setRefreshErr(
+          `Refresh failed: ${(e as Error)?.message || "unknown error"}`,
+        );
     } finally {
-      setBusy(false);
+      if (alive.current) setBusy(false);
     }
   }, [audience?.fetchedAt]);
 

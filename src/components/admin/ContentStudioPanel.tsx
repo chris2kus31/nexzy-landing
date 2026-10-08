@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Box, HStack, VStack, Heading, Text, Button } from "@chakra-ui/react";
 import LeadsPanel from "@/components/admin/LeadsPanel";
 import ContentPanel from "@/components/admin/ContentPanel";
@@ -68,6 +68,22 @@ function isSub(v: string | null): v is Sub {
   );
 }
 
+/** Mounts its panel on first visit, then only hides it when inactive. */
+function Pane({
+  sub,
+  active,
+  visited,
+  children,
+}: {
+  sub: Sub;
+  active: Sub;
+  visited: ReadonlySet<Sub>;
+  children: ReactNode;
+}) {
+  if (sub !== active && !visited.has(sub)) return null;
+  return <Box display={sub === active ? "block" : "none"}>{children}</Box>;
+}
+
 export default function ContentStudioPanel({
   isOwner,
   onRefresh,
@@ -77,6 +93,14 @@ export default function ContentStudioPanel({
 }) {
   const [sub, _setSub] = useState<Sub>("suggestions");
   const [cardSeed, setCardSeed] = useState<CardSeed | null>(null);
+  const [visited, setVisited] = useState<ReadonlySet<Sub>>(
+    () => new Set<Sub>(["suggestions"]),
+  );
+
+  // Remember every tab that has been opened so it stays mounted afterwards.
+  useEffect(() => {
+    setVisited((v) => (v.has(sub) ? v : new Set(v).add(sub)));
+  }, [sub]);
 
   const setSub = useCallback((s: Sub) => {
     _setSub(s);
@@ -124,23 +148,34 @@ export default function ContentStudioPanel({
         })}
       </HStack>
 
-      {sub === "cards" && <CardStudioPanel isOwner={isOwner} seed={cardSeed} />}
-      {sub === "leads" && <LeadsPanel isOwner={isOwner} />}
-
-      {sub === "suggestions" && (
+      {/* Visited sub-tabs stay mounted (hidden with display:none) so pasted
+          notes, uploads and in-progress edits survive a tab switch (P1-6).
+          A tab mounts lazily on first visit, so unvisited panels cost nothing. */}
+      <Pane sub="cards" active={sub} visited={visited}>
+        <CardStudioPanel isOwner={isOwner} seed={cardSeed} />
+      </Pane>
+      <Pane sub="leads" active={sub} visited={visited}>
+        <LeadsPanel isOwner={isOwner} />
+      </Pane>
+      <Pane sub="suggestions" active={sub} visited={visited}>
         <ContentPanel isOwner={isOwner} onSendToCards={sendToCards} />
-      )}
-
-      {sub === "library" && <VideosPanel />}
-      {sub === "trailers" && <TrailersPanel />}
-
-      {sub === "replies" && <RepliesPanel isOwner={isOwner} />}
-
-      {sub === "performance" && <InsightsPanel />}
-
-      {sub === "audience" && <AudienceInsightsPanel isOwner={isOwner} />}
-
-      {sub === "guides" && (
+      </Pane>
+      <Pane sub="library" active={sub} visited={visited}>
+        <VideosPanel isOwner={isOwner} />
+      </Pane>
+      <Pane sub="trailers" active={sub} visited={visited}>
+        <TrailersPanel isOwner={isOwner} />
+      </Pane>
+      <Pane sub="replies" active={sub} visited={visited}>
+        <RepliesPanel isOwner={isOwner} />
+      </Pane>
+      <Pane sub="performance" active={sub} visited={visited}>
+        <InsightsPanel />
+      </Pane>
+      <Pane sub="audience" active={sub} visited={visited}>
+        <AudienceInsightsPanel isOwner={isOwner} />
+      </Pane>
+      <Pane sub="guides" active={sub} visited={visited}>
         <VStack align="stretch" gap={6}>
           <GuideTargetsPanel isOwner={isOwner} />
           {isOwner && (
@@ -162,7 +197,7 @@ export default function ContentStudioPanel({
             </Box>
           )}
         </VStack>
-      )}
+      </Pane>
     </VStack>
   );
 }

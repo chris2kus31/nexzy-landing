@@ -27,6 +27,14 @@ function safeSegments(path: string[]): boolean {
   );
 }
 
+// Slightly under maxDuration (60s) so we answer before the function is killed.
+const UPSTREAM_TIMEOUT_MS = 55_000;
+
+function isTimeout(err: unknown): boolean {
+  const name = (err as { name?: string } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 async function proxy(req: NextRequest, ctx: Ctx) {
   const { path } = await ctx.params;
   if (!safeSegments(path)) {
@@ -55,23 +63,40 @@ async function proxy(req: NextRequest, ctx: Ctx) {
   // (file uploads). Identical bytes for JSON bodies.
   const body = hasBody ? await req.arrayBuffer() : undefined;
 
+  // Abort the upstream call just before the platform kills this function, so
+  // the admin gets a readable JSON 504 instead of an opaque/HTML failure. The
+  // API may still finish the work, hence "refresh before retrying".
+  const signal = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
   let apiRes: Response;
+  let text: string;
   try {
     apiRes = await fetch(target, {
       method,
       headers,
       body,
       cache: "no-store",
+      signal,
     });
-  } catch {
+    text = await apiRes.text();
+  } catch (err) {
+    if (isTimeout(err)) {
+      return NextResponse.json(
+        {
+          error:
+            "Upstream timeout — the action may still be running; refresh before retrying.",
+        },
+        { status: 504 },
+      );
+    }
     return NextResponse.json(
       { error: "Could not reach the newsroom API" },
       { status: 502 },
     );
   }
 
-  const text = await apiRes.text();
-  return new NextResponse(text, {
+  // A 204/304 must not carry a body (even ""), or the Response constructor throws.
+  const nullBody = apiRes.status === 204 || apiRes.status === 304;
+  return new NextResponse(nullBody ? null : text, {
     status: apiRes.status,
     headers: { "Content-Type": "application/json" },
   });

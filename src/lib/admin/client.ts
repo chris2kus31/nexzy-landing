@@ -162,7 +162,56 @@ async function handle<T>(res: Response): Promise<T> {
       body?.message || body?.error || `Request failed (${res.status})`,
     );
   }
-  return res.json() as Promise<T>;
+  // A 2xx with no body (204, or a route that returned null/undefined, which
+  // Nest serializes as an empty 200) used to throw on res.json(). Resolve to
+  // null instead — callers of routes that can do this type T as `X | null`.
+  if (res.status === 204) return null as T;
+  const text = await res.text();
+  if (!text.trim()) return null as T;
+  return JSON.parse(text) as T;
+}
+
+/**
+ * Shared admin API request: same-origin proxy + the standard error/401/empty
+ * body handling above. `path` is relative to the admin API
+ * (e.g. "posts/123/rerun-guide-editor"); a path starting with "/api/" is used
+ * as-is. A plain-object `body` is sent as JSON; FormData/Blob/string pass
+ * through untouched. Resolves to null on an empty 2xx body.
+ */
+export async function adminRequest<T>(
+  path: string,
+  init: {
+    method?: string;
+    body?: unknown;
+    signal?: AbortSignal;
+    headers?: Record<string, string>;
+  } = {},
+): Promise<T> {
+  const url = path.startsWith("/api/")
+    ? path
+    : `/api/newsroom/admin/${path.replace(/^\/+/, "")}`;
+  const headers: Record<string, string> = { ...(init.headers ?? {}) };
+  let body: BodyInit | undefined;
+  if (init.body !== undefined) {
+    if (
+      typeof init.body === "string" ||
+      init.body instanceof FormData ||
+      init.body instanceof Blob
+    ) {
+      body = init.body;
+    } else {
+      body = JSON.stringify(init.body);
+      headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+    }
+  }
+  return handle<T>(
+    await fetch(url, {
+      method: init.method ?? (body !== undefined ? "POST" : "GET"),
+      headers,
+      body,
+      signal: init.signal,
+    }),
+  );
 }
 
 export async function requestMagicLink(email: string): Promise<void> {
@@ -1580,7 +1629,7 @@ export async function skipLead(id: string): Promise<Lead> {
 
 /**
  * "Quick announce" from a lead: SKIP the article and generate an X + Threads
- * take straight off the raw lead → lands as a ⚡ QUICK card in Content Studio →
+ * take straight off the raw lead → lands as a QUICK card in Content Studio →
  * Suggestions. Runs inline (owner-only), consumes the lead. Returns the created
  * card (or null if nothing was produced).
  */
@@ -2963,7 +3012,7 @@ export async function generateNotifyLead(
   );
 }
 
-/** Quick Post → X / Threads generator (MarketingPanel ⚡ Quick Post). */
+/** Quick Post → X / Threads generator (MarketingPanel Quick Post). */
 export type QuickSocialResult = {
   x?: {
     post: string;

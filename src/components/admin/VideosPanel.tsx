@@ -95,7 +95,28 @@ function isShort(url: string | null): boolean {
  * from the video's side. Complements the game-first Game hub. Talks to
  * /newsroom/admin/videos.
  */
-export default function VideosPanel() {
+/** Keyboard access for clickable badges (Enter / Space activate). */
+function clickableProps(onActivate: () => void) {
+  return {
+    role: "button" as const,
+    tabIndex: 0,
+    cursor: "pointer",
+    onClick: onActivate,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  };
+}
+
+export default function VideosPanel({
+  isOwner = false,
+}: {
+  /** K10: creating and deleting library videos is owner-only. */
+  isOwner?: boolean;
+}) {
   const [videos, setVideos] = useState<AdminVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -165,6 +186,16 @@ export default function VideosPanel() {
         series: seriesFilter,
       });
       if (seq !== pageSeq.current) return;
+      // Past the last page (e.g. the last item on the last page was deleted
+      // or moved): step back to the real last page instead of an empty list.
+      if (res.items.length === 0 && page > 0 && res.total > 0) {
+        setPage(Math.max(0, Math.ceil(res.total / VIDEO_PAGE_SIZE) - 1));
+        return;
+      }
+      if (res.items.length === 0 && page > 0 && res.total === 0) {
+        setPage(0);
+        return;
+      }
       setVideos(res.items);
       setTotal(res.total);
       setLibCounts(res.counts);
@@ -488,14 +519,16 @@ export default function VideosPanel() {
         <Heading size="md" color="nexzy.white">
           Videos library
         </Heading>
-        <Button size="sm" {...primaryBtn} onClick={openNew}>
-          <FiPlus /> New video
-        </Button>
+        {isOwner && (
+          <Button size="sm" {...primaryBtn} onClick={openNew}>
+            <FiPlus /> New video
+          </Button>
+        )}
       </Flex>
       <Text color="nexzy.gray.100" fontSize="sm" mb={4}>
         Every video, game-linked or standalone. YouTube plays inline on the
         site; TikTok / Reels are &ldquo;also on&rdquo; links. One video can be
-        &ldquo;★ Featured&rdquo; at a time — it headlines the /videos hub &amp;
+        &ldquo;Featured&rdquo; at a time — it headlines the /videos hub &amp;
         home rail. Use the Game hub to manage a single game&rsquo;s videos.
       </Text>
 
@@ -924,8 +957,10 @@ export default function VideosPanel() {
       ) : filteredVideos.length === 0 && !pageLoading ? (
         <Text fontSize="sm" color="whiteAlpha.500">
           {seriesFilter === ""
-            ? "No uncategorized videos — everything has a series. 🎉"
-            : `No videos in “${seriesFilter}”.`}{" "}
+            ? "No uncategorized videos — everything has a series."
+            : seriesFilter
+              ? `No videos in “${seriesFilter}”.`
+              : "No videos on this page."}{" "}
           <Box
             as="button"
             color="nexzy.lightBlue"
@@ -1104,7 +1139,7 @@ export default function VideosPanel() {
                         </Text>
                         {v.featured && (
                           <Badge colorPalette="yellow" variant="solid">
-                            ★ Featured
+                            Featured
                           </Badge>
                         )}
                       </HStack>
@@ -1114,9 +1149,10 @@ export default function VideosPanel() {
                           <Badge
                             colorPalette="purple"
                             variant="solid"
-                            cursor="pointer"
                             title="Filter by this series"
-                            onClick={() => setSeriesFilter(v.series!.trim())}
+                            {...clickableProps(() =>
+                              pickFilter(v.series!.trim()),
+                            )}
                           >
                             {v.series!.trim()}
                           </Badge>
@@ -1124,9 +1160,8 @@ export default function VideosPanel() {
                           <Badge
                             colorPalette="orange"
                             variant="outline"
-                            cursor="pointer"
                             title="No series — click to see all uncategorized"
-                            onClick={() => setSeriesFilter("")}
+                            {...clickableProps(() => pickFilter(""))}
                           >
                             No series
                           </Badge>
@@ -1260,15 +1295,18 @@ export default function VideosPanel() {
                           title="Copy public video link"
                         />
                       )}
-                      <Button
-                        size="xs"
-                        {...outlineBtn}
-                        onClick={() => remove(v)}
-                        loading={busy === v.id}
-                        title="Delete video"
-                      >
-                        <FiTrash2 />
-                      </Button>
+                      {isOwner && (
+                        <Button
+                          size="xs"
+                          {...outlineBtn}
+                          onClick={() => remove(v)}
+                          loading={busy === v.id}
+                          title="Delete video"
+                          aria-label="Delete video"
+                        >
+                          <FiTrash2 />
+                        </Button>
+                      )}
                     </HStack>
                   </Flex>
 
@@ -1319,9 +1357,8 @@ export default function VideosPanel() {
                               borderWidth="1px"
                               borderColor="whiteAlpha.200"
                               borderRadius="md"
-                              cursor="pointer"
                               _hover={{ bg: "whiteAlpha.100" }}
-                              onClick={() => attach(v, g)}
+                              {...clickableProps(() => attach(v, g))}
                             >
                               {g.backgroundImage && (
                                 <Image

@@ -17,9 +17,6 @@ import {
 } from "@chakra-ui/react";
 import {
   getVideoLeads,
-  generateFromLead,
-  generateQuickAnnounce,
-  generateGamingMeme,
   skipContentSuggestion,
   getWriterNames,
   getAudienceProfile,
@@ -28,6 +25,19 @@ import {
   type LongFormVerdict,
   type LongFormChapter,
 } from "@/lib/admin/client";
+import {
+  errorMessage,
+  isConflict,
+  leadGamingMeme,
+  leadGenerate,
+  leadQuickAnnounce,
+} from "@/lib/admin/client-content";
+import {
+  FiChevronRight,
+  FiExternalLink,
+  FiRefreshCw,
+  FiX,
+} from "react-icons/fi";
 import Paginated from "@/components/admin/Paginated";
 import ManualLeadForm from "@/components/admin/ManualLeadForm";
 import YouTubePerformance, {
@@ -141,6 +151,66 @@ const SELECT_STYLE: React.CSSProperties = {
 };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Every posting window below (and the audience data) is in US Central Time, so
+// days and hours are computed in America/Chicago — not the browser's clock —
+// so the hints stay right when the admin is opened from another time zone.
+const CT_ZONE = "America/Chicago";
+const ctFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: CT_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  weekday: "short",
+  hourCycle: "h23",
+});
+function ctParts(d: Date): {
+  y: number;
+  m: number;
+  d: number;
+  hour: number;
+  minute: number;
+  wd: number;
+} {
+  const get = (t: string) =>
+    ctFmt.formatToParts(d).find((p) => p.type === t)?.value ?? "";
+  return {
+    y: Number(get("year")),
+    m: Number(get("month")),
+    d: Number(get("day")),
+    hour: Number(get("hour")) % 24,
+    minute: Number(get("minute")),
+    wd: Math.max(0, DAY_NAMES.indexOf(get("weekday"))),
+  };
+}
+/** Weekday (0 = Sun) of this instant in Central Time. */
+function ctDay(d: Date): number {
+  return ctParts(d).wd;
+}
+/** The instant when the Central clock reads `hour`:00 on `d`'s Central date. */
+function ctAt(d: Date, hour: number): Date {
+  const p = ctParts(d);
+  const wall = Date.UTC(p.y, p.m - 1, p.d, hour, 0, 0);
+  // Offset = Central wall clock minus UTC at (about) that instant; re-checked
+  // once so a DST switch on that day still lands on the right hour.
+  const offsetAt = (ms: number) => {
+    const q = ctParts(new Date(ms));
+    return Date.UTC(q.y, q.m - 1, q.d, q.hour, q.minute) - ms;
+  };
+  let ms = wall - offsetAt(wall);
+  ms = wall - offsetAt(ms);
+  return new Date(ms);
+}
+/** Whole Central-calendar days from `now` to `at` (0 = same CT day). */
+function ctDayDiff(at: Date, now: Date): number {
+  const a = ctParts(at);
+  const n = ctParts(now);
+  return Math.round(
+    (Date.UTC(a.y, a.m - 1, a.d) - Date.UTC(n.y, n.m - 1, n.d)) / 86400000,
+  );
+}
 // General best posting windows per platform (grounded in our growth guides),
 // as local-clock target hours. The fallback when we have no real data yet.
 const GUIDE_WINDOWS: Record<string, number[]> = {
@@ -194,7 +264,7 @@ const YT_LONGFORM_BY_DAY: Record<number, number[]> = {
   6: [10, 13, 9], // Sat
 };
 function ytShortsWindows(target: Date): number[] {
-  return YT_SHORTS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
+  return YT_SHORTS_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.youtube;
 }
 
 // FACEBOOK (Reels-adjacent) best-practice windows PER WEEKDAY, in local time
@@ -218,7 +288,7 @@ const FB_BY_DAY: Record<number, number[]> = {
   6: [11, 20, 13], // Sat — weak day
 };
 function fbWindows(target: Date): number[] {
-  return FB_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.facebook;
+  return FB_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.facebook;
 }
 
 // INSTAGRAM (Reels-relevant) best-practice windows PER WEEKDAY, in local time
@@ -243,7 +313,7 @@ const IG_BY_DAY: Record<number, number[]> = {
   6: [11, 19, 12], // Sat
 };
 function igWindows(target: Date): number[] {
-  return IG_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.instagram;
+  return IG_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.instagram;
 }
 
 // THREADS best-practice windows PER WEEKDAY, in local time (Central). Threads is
@@ -264,7 +334,7 @@ const THREADS_BY_DAY: Record<number, number[]> = {
   6: [10, 12, 8], // Sat — weak day
 };
 function threadsWindows(target: Date): number[] {
-  return THREADS_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.threads;
+  return THREADS_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.threads;
 }
 // X (Twitter) — Buffer (mornings 9–11am) + Sprout 2026 (midday/afternoon 12–6pm)
 // blend. Both agree Tue–Thu are best days and weekends are weak; they disagree on
@@ -285,7 +355,7 @@ const X_BY_DAY: Record<number, number[]> = {
   6: [11, 20, 14], // Sat — weak day
 };
 function xWindows(target: Date): number[] {
-  return X_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.x;
+  return X_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.x;
 }
 // TikTok best-practice windows PER WEEKDAY, CENTRAL time, best->worst.
 // FINAL 2026-10-04 — own research + Chris's links + Chris's screenshots:
@@ -309,10 +379,10 @@ const TIKTOK_BY_DAY: Record<number, number[]> = {
   6: [18, 11, 15], // Sat — 6 PM (all 6 src), 11 AM, 3 PM
 };
 function tiktokWindows(target: Date): number[] {
-  return TIKTOK_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.tiktok;
+  return TIKTOK_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.tiktok;
 }
 function ytLongWindows(target: Date): number[] {
-  return YT_LONGFORM_BY_DAY[target.getDay()] ?? GUIDE_WINDOWS.youtube;
+  return YT_LONGFORM_BY_DAY[ctDay(target)] ?? GUIDE_WINDOWS.youtube;
 }
 const PLATFORM_LABEL: Record<string, string> = {
   youtube_long: "YouTube (long)",
@@ -327,22 +397,19 @@ const PLATFORM_LABEL: Record<string, string> = {
 };
 
 function fmtSlot(at: Date, now: Date): string {
-  const a = new Date(at);
-  a.setHours(0, 0, 0, 0);
-  const n = new Date(now);
-  n.setHours(0, 0, 0, 0);
-  const diff = Math.round((a.getTime() - n.getTime()) / 86400000);
-  const time = at.toLocaleTimeString([], {
+  const diff = ctDayDiff(at, now);
+  const time = at.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: CT_ZONE,
   });
   if (diff === 0) return `today ${time}`;
   if (diff === 1) return `tomorrow ${time}`;
-  return `${at.toLocaleDateString([], { weekday: "short" })} ${time}`;
+  return `${at.toLocaleDateString("en-US", { weekday: "short", timeZone: CT_ZONE })} ${time}`;
 }
 
 /**
- * Now-aware "when to post" for one platform, in the owner's local time. Uses
+ * Now-aware "when to post" for one platform, in Central Time (CT). Uses
  * real per-platform data (owner-local hour by weekday) when present, else the
  * general growth-guide windows. Returns null when we have neither.
  */
@@ -364,8 +431,9 @@ function nextPostSlot(
   const cands: { at: Date; src: string }[] = [];
   for (let i = 0; i <= 8; i++) {
     const day = new Date(now.getTime() + i * DAY);
+    let realForDay = 0;
     if (hasReal) {
-      const rawReal = real![DAY_NAMES[day.getDay()]] as
+      const rawReal = real![DAY_NAMES[ctDay(day)]] as
         | { hour: number; n: number; source: string }
         | { hour: number; n: number; source: string }[]
         | undefined;
@@ -375,11 +443,13 @@ function nextPostSlot(
           ? [rawReal]
           : [];
       for (const rd of ranked) {
-        const c = new Date(day);
-        c.setHours(rd.hour, 0, 0, 0);
-        cands.push({ at: c, src: `your data (${rd.n})` });
+        cands.push({ at: ctAt(day, rd.hour), src: `your data (${rd.n})` });
+        realForDay++;
       }
     }
+    // Research windows are only the FALLBACK for a day with no real slots —
+    // mixing them in would let a generic hour beat your own data (CA-15).
+    if (realForDay > 0) continue;
     const dayWindows =
       platform === "youtube_long"
         ? ytLongWindows(day)
@@ -398,9 +468,7 @@ function nextPostSlot(
                     : flatWindows;
     if (dayWindows) {
       for (const h of dayWindows) {
-        const c = new Date(day);
-        c.setHours(h, 0, 0, 0);
-        cands.push({ at: c, src: "general" });
+        cands.push({ at: ctAt(day, h), src: "general" });
       }
     }
   }
@@ -447,6 +515,7 @@ function LongFormBlock({
   chapters,
   setChapters,
   onGenerate,
+  canGenerate,
   busy,
   generating,
 }: {
@@ -454,6 +523,8 @@ function LongFormBlock({
   chapters: LongFormChapter[];
   setChapters: (c: LongFormChapter[]) => void;
   onGenerate: () => void;
+  /** K10: generation spends tokens — owner-only. */
+  canGenerate: boolean;
   busy: boolean;
   generating: boolean;
 }) {
@@ -600,7 +671,7 @@ function LongFormBlock({
                 onClick={() => remove(i)}
                 aria-label="Remove chapter"
               >
-                ✕
+                <FiX aria-hidden />
               </Button>
             </Flex>
             <Textarea
@@ -617,22 +688,30 @@ function LongFormBlock({
         ))}
       </VStack>
 
-      <Button
-        size="xs"
-        mt={2}
-        colorPalette="purple"
-        variant="solid"
-        loading={busy}
-        disabled={busy || generating || chapters.length === 0}
-        onClick={onGenerate}
-      >
-        {generating ? "Generating…" : "Generate long-form"}
-      </Button>
-      <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
-        Builds the full narrated long-form from this timeline, in the chosen
-        voice — it lands under Suggestions. Editing the timeline above is
-        applied when you generate.
-      </Text>
+      {canGenerate ? (
+        <>
+          <Button
+            size="xs"
+            mt={2}
+            colorPalette="purple"
+            variant="solid"
+            loading={busy}
+            disabled={busy || generating || chapters.length === 0}
+            onClick={onGenerate}
+          >
+            {generating ? "Generating…" : "Generate long-form"}
+          </Button>
+          <Text color="whiteAlpha.500" fontSize="10px" mt={1}>
+            Builds the full narrated long-form from this timeline, in the chosen
+            voice — it lands under Suggestions. Editing the timeline above is
+            applied when you generate.
+          </Text>
+        </>
+      ) : (
+        <Text color="whiteAlpha.500" fontSize="10px" mt={2}>
+          Generating long-form is owner-only.
+        </Text>
+      )}
     </Box>
   );
 }
@@ -676,6 +755,9 @@ function LeadCard({
   const [fbSteer, setFbSteer] = useState("");
   const [igSteer, setIgSteer] = useState("");
   const [quickErr, setQuickErr] = useState<string | null>(null);
+  // Generate / long-form status: server error text, or a 409 "already" note.
+  const [genErr, setGenErr] = useState<string | null>(null);
+  const [genNote, setGenNote] = useState<string | null>(null);
   const [quickOk, setQuickOk] = useState(false);
   // GAMING MEME (film-clip reaction) — its own steer + status; the lead stays open.
   const [memeSteer, setMemeSteer] = useState("");
@@ -765,46 +847,42 @@ function LeadCard({
   const cardCount = activeBuckets.length;
   const lane = s.lane ?? "news";
 
-  const generate = async () => {
+  // Lead actions (K2): the server claims the lead atomically and answers 409
+  // when a job is already running for it. "Queued" is shown only when the
+  // server says queued:true; every failure shows the server's own message.
+  const notQueuedMsg =
+    "The server did not queue this — the lead may be closed or gone. Refresh and try again.";
+  const runGenerate = async (body: Parameters<typeof leadGenerate>[1]) => {
     setBusy("gen");
+    setGenErr(null);
+    setGenNote(null);
     try {
-      await generateFromLead(
-        s.id,
-        writer,
-        undefined,
-        steer.trim() || undefined,
-        undefined,
-        plan,
-      );
+      const r = await leadGenerate(s.id, body);
+      if (!r.queued) setGenErr(r.message || notQueuedMsg);
       await reload();
-    } catch {
-      /* leave the lead in place so you can retry */
+    } catch (e) {
+      if (isConflict(e)) {
+        setGenNote("Already generating — refreshing the board.");
+        await reload();
+      } else {
+        setGenErr(errorMessage(e, "Generate failed."));
+      }
     } finally {
       setBusy(null);
     }
   };
+  const generate = () =>
+    runGenerate({ writer, steer: steer.trim() || undefined, plan });
   // Generate a LONG-FORM video from the (edited) chapter timeline. Separate from
   // the per-platform "Generate N cards" path — no plan, format 'long', and it
   // passes the reviewed chapters so the writer follows them exactly.
-  const generateLong = async () => {
-    setBusy("gen");
-    try {
-      await generateFromLead(
-        s.id,
-        writer,
-        "long",
-        steer.trim() || undefined,
-        undefined,
-        undefined,
-        lfChapters,
-      );
-      await reload();
-    } catch {
-      /* leave the lead in place so you can retry */
-    } finally {
-      setBusy(null);
-    }
-  };
+  const generateLong = () =>
+    runGenerate({
+      writer,
+      format: "long",
+      steer: steer.trim() || undefined,
+      longFormChapters: lfChapters,
+    });
   // Generate a QUICK ANNOUNCEMENT (X + Threads + FB + IG). Independent of the
   // per-platform and long-form paths — skips both, each platform its own steer.
   const generateQuick = async () => {
@@ -812,20 +890,22 @@ function LeadCard({
     setQuickErr(null);
     setQuickOk(false);
     try {
-      await generateQuickAnnounce(
-        s.id,
-        writer,
-        xSteer.trim() || undefined,
-        threadsSteer.trim() || undefined,
-        fbSteer.trim() || undefined,
-        igSteer.trim() || undefined,
-      );
-      setQuickOk(true);
+      const r = await leadQuickAnnounce(s.id, writer, {
+        xSteer: xSteer.trim() || undefined,
+        threadsSteer: threadsSteer.trim() || undefined,
+        fbSteer: fbSteer.trim() || undefined,
+        igSteer: igSteer.trim() || undefined,
+      });
+      if (r.queued) setQuickOk(true);
+      else setQuickErr(r.message || notQueuedMsg);
       await reload();
     } catch (e) {
-      setQuickErr(
-        e instanceof Error ? e.message : "Quick announcement request failed.",
-      );
+      if (isConflict(e)) {
+        setQuickErr("Already generating — refreshing the board.");
+        await reload();
+      } else {
+        setQuickErr(errorMessage(e, "Quick announcement request failed."));
+      }
     } finally {
       setBusy(null);
     }
@@ -837,11 +917,21 @@ function LeadCard({
     setMemeErr(null);
     setMemeOk(false);
     try {
-      await generateGamingMeme(s.id, writer, memeSteer.trim() || undefined);
-      setMemeOk(true);
+      const r = await leadGamingMeme(
+        s.id,
+        writer,
+        memeSteer.trim() || undefined,
+      );
+      if (r.queued) setMemeOk(true);
+      else setMemeErr(r.message || notQueuedMsg);
       await reload();
     } catch (e) {
-      setMemeErr(e instanceof Error ? e.message : "Meme request failed.");
+      if (isConflict(e)) {
+        setMemeErr("Already generating a meme — refreshing the board.");
+        await reload();
+      } else {
+        setMemeErr(errorMessage(e, "Meme request failed."));
+      }
     } finally {
       setBusy(null);
     }
@@ -851,7 +941,8 @@ function LeadCard({
     try {
       await skipContentSuggestion(s.id);
       onDone(s.id);
-    } catch {
+    } catch (e) {
+      setGenErr(errorMessage(e, "Skip failed."));
       setBusy(null);
     }
   };
@@ -872,7 +963,7 @@ function LeadCard({
       // NOTE: no overflow="hidden" — it would break the sticky header below.
     >
       {/* Header — always visible; click to expand/collapse. STICKY while the
-          card is open: an expanded lead is huge, and without this the ✕ Skip
+          card is open: an expanded lead is huge, and without this the Skip
           (and collapse) scroll off-screen — the exact "I have to collapse just
           to reach Skip" complaint. Solid bg so content doesn't ghost through. */}
       <Flex
@@ -896,7 +987,7 @@ function LeadCard({
           transform={open ? "rotate(90deg)" : "none"}
           transition="transform .15s"
         >
-          ▶
+          <FiChevronRight aria-hidden />
         </Text>
         <Badge colorPalette={LANE_COLOR[lane] || "gray"} variant="solid">
           {lane.toUpperCase()}
@@ -958,7 +1049,7 @@ function LeadCard({
             void skip();
           }}
         >
-          ✕ Skip
+          <FiX aria-hidden /> Skip
         </Button>
       </Flex>
 
@@ -1047,7 +1138,7 @@ function LeadCard({
                 fontWeight="700"
                 mb={0.5}
               >
-                WHEN TO POST (your local time)
+                WHEN TO POST (Central Time, CT)
               </Text>
               <Flex direction="column" gap={0.5}>
                 {postSlots.map((ps) => (
@@ -1106,218 +1197,234 @@ function LeadCard({
               chapters={lfChapters}
               setChapters={setLfChapters}
               onGenerate={generateLong}
+              canGenerate={isOwner}
               busy={busy === "gen"}
               generating={generating}
             />
           )}
 
-          {/* 🎮 Game chip (read-only here): auto-resolved on brief-backed leads;
+          {/* Game chip (read-only here): auto-resolved on brief-backed leads;
               every card generated from this lead carries it, and the produced
               video links to it (game hub). Correct it on the card if wrong. */}
           {s.payload?.gameLink && (
             <Text color="#B98CFF" fontSize="xs" fontWeight="700" mb={2}>
-              🎮 Linked game: {s.payload.gameLink.name}
+              Linked game: {s.payload.gameLink.name}
               {s.payload.gameLink.source === "resolver" ? " (auto)" : ""} —
               carried onto every generated card; change it there if wrong.
             </Text>
           )}
 
-          {/* Quick Announcement (X + Threads + FB + IG) — independent path;
+          {/* K10: quick announce + gaming meme spend tokens — owner-only. */}
+          {isOwner && (
+            <>
+              {/* Quick Announcement (X + Threads + FB + IG) — independent path;
               skips the per-platform and long-form generation entirely. */}
-          <Box
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="md"
-            p={3}
-            mb={3}
-          >
-            <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
-              ⚡ Quick Announce (X · Threads · FB · IG)
-            </Text>
-            {lead?.quickAnnouncement?.recommended ? (
-              <Text color="teal.300" fontSize="xs" fontWeight="600" mb={2}>
-                ⚡ Recommended: {lead.quickAnnouncement.why}
-              </Text>
-            ) : (
-              <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-                Fast text update — skips long-form and the per-platform cards.
-                Four distinct takes (X, Threads, Facebook, Instagram), each with
-                its own steer. Upload an image on the card before publishing
-                (Instagram requires one).
-              </Text>
-            )}
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={1}
-            >
-              X STEER (optional)
-            </Text>
-            <Textarea
-              value={xSteer}
-              onChange={(e) => setXSteer(e.target.value)}
-              placeholder={
-                lead?.quickAnnouncement?.xAngle ||
-                "e.g. make it a debate; lead with the price"
-              }
-              size="sm"
-              rows={2}
-              mb={2}
-              bg="whiteAlpha.100"
-              borderColor="whiteAlpha.300"
-            />
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={1}
-            >
-              THREADS STEER (optional)
-            </Text>
-            <Textarea
-              value={threadsSteer}
-              onChange={(e) => setThreadsSteer(e.target.value)}
-              placeholder={
-                lead?.quickAnnouncement?.threadsAngle ||
-                "e.g. ask if it's worth it; keep it warm"
-              }
-              size="sm"
-              rows={2}
-              mb={2}
-              bg="whiteAlpha.100"
-              borderColor="whiteAlpha.300"
-            />
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={1}
-            >
-              FACEBOOK STEER (optional)
-            </Text>
-            <Textarea
-              value={fbSteer}
-              onChange={(e) => setFbSteer(e.target.value)}
-              placeholder="e.g. lead with the exact date; end on the debate"
-              size="sm"
-              rows={2}
-              mb={2}
-              bg="whiteAlpha.100"
-              borderColor="whiteAlpha.300"
-            />
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={1}
-            >
-              INSTAGRAM STEER (optional)
-            </Text>
-            <Textarea
-              value={igSteer}
-              onChange={(e) => setIgSteer(e.target.value)}
-              placeholder="e.g. make the send-this line about squad mains"
-              size="sm"
-              rows={2}
-              mb={2}
-              bg="whiteAlpha.100"
-              borderColor="whiteAlpha.300"
-            />
-            <Button
-              size="sm"
-              bg="nexzy.blue"
-              color="white"
-              fontWeight="700"
-              _hover={{ bg: "nexzy.lightBlue" }}
-              onClick={generateQuick}
-              loading={busy === "gen"}
-              loadingText="Generating…"
-              disabled={generating}
-            >
-              Generate quick announcement
-            </Button>
-            {quickErr && (
-              <Text color="red.300" fontSize="xs" mt={2}>
-                {quickErr}
-              </Text>
-            )}
-            {quickOk && !quickErr && (
-              <Text color="teal.300" fontSize="xs" mt={2}>
-                Queued — your X, Threads, Facebook &amp; Instagram takes will
-                appear in the Suggestions tab (⚡ QUICK) in a moment.
-              </Text>
-            )}
-          </Box>
+              <Box
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                borderRadius="md"
+                p={3}
+                mb={3}
+              >
+                <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
+                  Quick Announce (X · Threads · FB · IG)
+                </Text>
+                {lead?.quickAnnouncement?.recommended ? (
+                  <Text color="teal.300" fontSize="xs" fontWeight="600" mb={2}>
+                    Recommended: {lead.quickAnnouncement.why}
+                  </Text>
+                ) : (
+                  <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                    Fast text update — skips long-form and the per-platform
+                    cards. Four distinct takes (X, Threads, Facebook,
+                    Instagram), each with its own steer. Upload an image on the
+                    card before publishing (Instagram requires one).
+                  </Text>
+                )}
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  X STEER (optional)
+                </Text>
+                <Textarea
+                  value={xSteer}
+                  onChange={(e) => setXSteer(e.target.value)}
+                  placeholder={
+                    lead?.quickAnnouncement?.xAngle ||
+                    "e.g. make it a debate; lead with the price"
+                  }
+                  size="sm"
+                  rows={2}
+                  mb={2}
+                  bg="whiteAlpha.100"
+                  borderColor="whiteAlpha.300"
+                />
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  THREADS STEER (optional)
+                </Text>
+                <Textarea
+                  value={threadsSteer}
+                  onChange={(e) => setThreadsSteer(e.target.value)}
+                  placeholder={
+                    lead?.quickAnnouncement?.threadsAngle ||
+                    "e.g. ask if it's worth it; keep it warm"
+                  }
+                  size="sm"
+                  rows={2}
+                  mb={2}
+                  bg="whiteAlpha.100"
+                  borderColor="whiteAlpha.300"
+                />
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  FACEBOOK STEER (optional)
+                </Text>
+                <Textarea
+                  value={fbSteer}
+                  onChange={(e) => setFbSteer(e.target.value)}
+                  placeholder="e.g. lead with the exact date; end on the debate"
+                  size="sm"
+                  rows={2}
+                  mb={2}
+                  bg="whiteAlpha.100"
+                  borderColor="whiteAlpha.300"
+                />
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  INSTAGRAM STEER (optional)
+                </Text>
+                <Textarea
+                  value={igSteer}
+                  onChange={(e) => setIgSteer(e.target.value)}
+                  placeholder="e.g. make the send-this line about squad mains"
+                  size="sm"
+                  rows={2}
+                  mb={2}
+                  bg="whiteAlpha.100"
+                  borderColor="whiteAlpha.300"
+                />
+                <Button
+                  size="sm"
+                  bg="nexzy.blue"
+                  color="white"
+                  fontWeight="700"
+                  _hover={{ bg: "nexzy.lightBlue" }}
+                  onClick={generateQuick}
+                  loading={busy === "gen"}
+                  loadingText="Generating…"
+                  disabled={generating}
+                >
+                  Generate quick announcement
+                </Button>
+                {quickErr && (
+                  <Text color="red.300" fontSize="xs" mt={2}>
+                    {quickErr}
+                  </Text>
+                )}
+                {quickOk && !quickErr && (
+                  <Text color="teal.300" fontSize="xs" mt={2}>
+                    Queued — your X, Threads, Facebook &amp; Instagram takes
+                    will appear in the Suggestions tab (QUICK) in a moment.
+                  </Text>
+                )}
+              </Box>
 
-          {/* Gaming meme — 5 film-clip options, each checked against
+              {/* Gaming meme — 5 film-clip options, each checked against
               Clip.Cafe / Wikiquote. Independent path; the lead stays open. */}
-          <Box
-            bg="whiteAlpha.50"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            borderRadius="md"
-            p={3}
-            mb={3}
-          >
-            <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
-              Gaming meme (film clip)
-            </Text>
-            <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
-              5 movie-scene options with the exact line, what to clip and the
-              on-screen text — each one checked so no scene is made up — plus
-              captions for every platform. Grab the clip on Clip.Cafe. This lead
-              stays open.
-            </Text>
-            <Text
-              color="whiteAlpha.600"
-              fontSize="10px"
-              fontWeight="700"
-              mb={1}
-            >
-              MEME STEER (optional)
-            </Text>
-            <Textarea
-              value={memeSteer}
-              onChange={(e) => setMemeSteer(e.target.value)}
-              placeholder="e.g. lean triumphant; or try Gladiator / Lord of the Rings"
-              size="sm"
-              rows={2}
-              mb={2}
-              bg="whiteAlpha.100"
-              borderColor="whiteAlpha.300"
-            />
-            <Button
-              size="sm"
-              bg="nexzy.blue"
-              color="white"
-              fontWeight="700"
-              _hover={{ bg: "nexzy.lightBlue" }}
-              onClick={generateMeme}
-              loading={busy === "meme" || !!s.payload?.memeGenerating}
-              loadingText="Finding clips…"
-            >
-              {s.payload?.memeCardId
-                ? "Re-roll gaming meme"
-                : "Make gaming meme"}
-            </Button>
-            {(memeErr || s.payload?.memeError) && (
-              <Text color="red.300" fontSize="xs" mt={2}>
-                {memeErr || s.payload?.memeError}
-              </Text>
-            )}
-            {memeOk && !memeErr && (
-              <Text color="teal.300" fontSize="xs" mt={2}>
-                Queued — the meme card (MEME) will appear in the Suggestions tab
-                in a moment.
-              </Text>
-            )}
-          </Box>
+              <Box
+                bg="whiteAlpha.50"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                borderRadius="md"
+                p={3}
+                mb={3}
+              >
+                <Text color="nexzy.white" fontSize="sm" fontWeight="700" mb={1}>
+                  Gaming meme (film clip)
+                </Text>
+                <Text color="nexzy.gray.100" fontSize="xs" mb={2}>
+                  5 movie-scene options with the exact line, what to clip and
+                  the on-screen text — each one checked so no scene is made up —
+                  plus captions for every platform. Grab the clip on Clip.Cafe.
+                  This lead stays open.
+                </Text>
+                <Text
+                  color="whiteAlpha.600"
+                  fontSize="10px"
+                  fontWeight="700"
+                  mb={1}
+                >
+                  MEME STEER (optional)
+                </Text>
+                <Textarea
+                  value={memeSteer}
+                  onChange={(e) => setMemeSteer(e.target.value)}
+                  placeholder="e.g. lean triumphant; or try Gladiator / Lord of the Rings"
+                  size="sm"
+                  rows={2}
+                  mb={2}
+                  bg="whiteAlpha.100"
+                  borderColor="whiteAlpha.300"
+                />
+                <Button
+                  size="sm"
+                  bg="nexzy.blue"
+                  color="white"
+                  fontWeight="700"
+                  _hover={{ bg: "nexzy.lightBlue" }}
+                  onClick={generateMeme}
+                  loading={busy === "meme" || !!s.payload?.memeGenerating}
+                  loadingText="Finding clips…"
+                >
+                  {s.payload?.memeCardId
+                    ? "Re-roll gaming meme"
+                    : "Make gaming meme"}
+                </Button>
+                {(memeErr || s.payload?.memeError) && (
+                  <Text color="red.300" fontSize="xs" mt={2}>
+                    {memeErr || s.payload?.memeError}
+                  </Text>
+                )}
+                {memeOk && !memeErr && (
+                  <Text color="teal.300" fontSize="xs" mt={2}>
+                    Queued — the meme card (MEME) will appear in the Suggestions
+                    tab in a moment.
+                  </Text>
+                )}
+              </Box>
+            </>
+          )}
 
           {lastError && (
             <Text color="red.300" fontSize="xs" mb={3}>
               Last generation failed: {lastError}. Adjust and retry.
+            </Text>
+          )}
+          {genErr && (
+            <Text color="red.300" fontSize="xs" mb={3}>
+              {genErr}
+            </Text>
+          )}
+          {genNote && !genErr && (
+            <Text color="teal.300" fontSize="xs" mb={3}>
+              {genNote}
             </Text>
           )}
 
@@ -1573,7 +1680,7 @@ function LeadCard({
                 color="nexzy.lightBlue"
                 fontSize="xs"
               >
-                Article ↗
+                Article <FiExternalLink aria-hidden />
               </Link>
             ) : (
               <Box />
@@ -1679,7 +1786,7 @@ function realSlotsForDay(
   target: Date,
   real?: Record<string, { hour: number; n: number; source: string }[]>,
 ): PostTimeSlot[] {
-  const dn = DAY_NAMES[target.getDay()];
+  const dn = DAY_NAMES[ctDay(target)];
   // Tolerate BOTH shapes: the new ranked array, and the legacy single object
   // from profiles pulled before the ranked change (until the next Refresh).
   const rawReal = real?.[dn] as
@@ -1747,7 +1854,10 @@ export function AudiencePanel({
           ? "Today"
           : i === 1
             ? "Tomorrow"
-            : d.toLocaleDateString([], { weekday: "short" });
+            : d.toLocaleDateString("en-US", {
+                weekday: "short",
+                timeZone: CT_ZONE,
+              });
       return { i, date: d, label };
     });
   }, []);
@@ -1775,12 +1885,10 @@ export function AudiencePanel({
     ? relTime(new Date(audience.fetchedAt))
     : "";
   // Chris's own YouTube Studio audience-online chart for the selected day (3rd layer).
-  const ytChartSlots = (YT_AUDIENCE_CHART[sel.date.getDay()] ?? []).map(
-    (h) => ({
-      label: fmtHour(sel.date, h),
-      isReal: false,
-    }),
-  );
+  const ytChartSlots = (YT_AUDIENCE_CHART[ctDay(sel.date)] ?? []).map((h) => ({
+    label: fmtHour(sel.date, h),
+    isReal: false,
+  }));
   // TWO independent lists, shown as two sections:
   //  • realRows — the owner's own best slots (only platforms that have history)
   //  • generalRows — the FULL research windows for EVERY platform, always, so the
@@ -1906,7 +2014,7 @@ export function AudiencePanel({
             loading={busy}
             loadingText="Pulling…"
           >
-            ↻ Refresh
+            <FiRefreshCw aria-hidden /> Refresh
           </Button>
         )}
       </Flex>
@@ -1933,7 +2041,7 @@ export function AudiencePanel({
           </Flex>
 
           <Text color="whiteAlpha.600" fontSize="10px" fontWeight="700" mb={1}>
-            BEST TIME TO POST — {sel.label.toUpperCase()} (your local time)
+            BEST TIME TO POST — {sel.label.toUpperCase()} (Central Time, CT)
           </Text>
           {realRows.length > 0 && (
             <Box mb={2}>

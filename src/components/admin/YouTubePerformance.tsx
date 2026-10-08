@@ -66,12 +66,20 @@ const YT_TRAFFIC_LABEL: Record<string, string> = {
 function ytTraffic(code: string): string {
   return YT_TRAFFIC_LABEL[code] ?? code.replace(/_/g, " ").toLowerCase();
 }
+// Keys are normalized (lowercase, no separators): the Analytics API returns
+// SHORTS / VIDEO_ON_DEMAND / LIVE_STREAM / UNSPECIFIED, older snapshots stored
+// shorts / videoOnDemand — both must match (CA-13).
 const YT_CONTENT_LABEL: Record<string, string> = {
   shorts: "Shorts",
-  videoOnDemand: "Long-form",
-  liveStream: "Live",
+  videoondemand: "Long-form",
+  livestream: "Live",
   unspecified: "Other",
 };
+function ytContentKey(type: string): string {
+  return String(type ?? "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
 
 function Kpi({ label, value }: { label: string; value: string | number }) {
   return (
@@ -131,7 +139,7 @@ export default function YouTubePerformance({ src }: { src?: YtSource }) {
   const traffic = (src.trafficSources ?? []).slice(0, 6);
   const trafficMax = Math.max(1, ...traffic.map((r) => r.views));
   const content = (src.byContentType ?? []).filter(
-    (c) => c.type !== "unspecified" || c.views > 0,
+    (c) => ytContentKey(c.type) !== "unspecified" || c.views > 0,
   );
   const contentMax = Math.max(1, ...content.map((c) => c.views));
   const top = (src.topVideos ?? []).slice(0, 5);
@@ -182,7 +190,7 @@ export default function YouTubePerformance({ src }: { src?: YtSource }) {
                 <Box key={c.type}>
                   <Flex justify="space-between" mb={1} gap={2}>
                     <Text color="nexzy.white" fontSize="sm">
-                      {YT_CONTENT_LABEL[c.type] ?? c.type}
+                      {YT_CONTENT_LABEL[ytContentKey(c.type)] ?? c.type}
                     </Text>
                     <Text color="nexzy.gray.100" fontSize="xs">
                       {fmt(c.views)} · {c.avgViewPercentage.toFixed(0)}% viewed

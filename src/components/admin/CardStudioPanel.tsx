@@ -24,7 +24,11 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import type { Canvas as FCanvas, FabricObject } from "fabric";
-import { getPublished, type BlogPost } from "@/lib/admin/client";
+import { FiDownload, FiTrash2 } from "react-icons/fi";
+
+// Rows per article-picker request (search reaches the rest server-side).
+const POST_PICKER_LIMIT = 30;
+import { getPostsPage, type BlogPost } from "@/lib/admin/client";
 
 type TplKey = "news" | "review" | "deal" | "patch" | "quote" | "soon" | "blank";
 type FmtKey = "universal" | "square" | "story" | "wide";
@@ -493,7 +497,10 @@ export default function CardStudioPanel({
     "content" | "design" | "image" | "layers"
   >("content");
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [postsTotal, setPostsTotal] = useState(0);
+  const [postsErr, setPostsErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [imgErr, setImgErr] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [sel, setSel] = useState<{
@@ -527,11 +534,34 @@ export default function CardStudioPanel({
   const dims = useRef({ dispW: 480, dispH: 600 });
   const prevF = useRef({ w: 1080, h: 1350 });
 
+  // The article picker searches SERVER-side (debounced), so any published
+  // article is reachable — not just the newest slice of a full list (CA-24).
   useEffect(() => {
-    getPublished()
-      .then(setPosts)
-      .catch(() => {});
-  }, []);
+    let stale = false;
+    const t = setTimeout(() => {
+      getPostsPage("published", {
+        offset: 0,
+        limit: POST_PICKER_LIMIT,
+        q: q.trim() || undefined,
+      })
+        .then((r) => {
+          if (stale) return;
+          setPosts(Array.isArray(r?.items) ? r.items : []);
+          setPostsTotal(typeof r?.total === "number" ? r.total : 0);
+          setPostsErr(null);
+        })
+        .catch((e) => {
+          if (!stale)
+            setPostsErr(
+              e instanceof Error ? e.message : "Couldn't load articles.",
+            );
+        });
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
+  }, [q]);
 
   const fontFamily = (role: "head" | "label" | "body") => fonts.current[role];
 
@@ -957,9 +987,20 @@ export default function CardStudioPanel({
       if (!c || !fab || !src) return;
       // Load the pixels once, then draw them as a Pattern fill on a shape so a
       // border can follow that shape. Never upscale past 1x (keeps it crisp).
-      const loader = await fab.FabricImage.fromURL(src, {
-        crossOrigin: "anonymous",
-      });
+      // A dead/blocked URL or a corrupt file rejects here — show it instead
+      // of failing silently (CA-24).
+      let loader: Awaited<ReturnType<typeof fab.FabricImage.fromURL>>;
+      try {
+        setImgErr(null);
+        loader = await fab.FabricImage.fromURL(src, {
+          crossOrigin: "anonymous",
+        });
+      } catch {
+        setImgErr(
+          "Couldn't load that image — the link may be broken or blocked. Try another image or upload the file.",
+        );
+        return;
+      }
       const el = loader.getElement() as HTMLImageElement | HTMLCanvasElement;
       const natW = loader.width || 1;
       const natH = loader.height || 1;
@@ -1025,9 +1066,20 @@ export default function CardStudioPanel({
       if (!c || !fab || !src) return;
       // A background is just a normal photo layer sized to cover the canvas and
       // sent to the back — so it stays fully movable, resizable and deletable.
-      const loader = await fab.FabricImage.fromURL(src, {
-        crossOrigin: "anonymous",
-      });
+      // A dead/blocked URL or a corrupt file rejects here — show it instead
+      // of failing silently (CA-24).
+      let loader: Awaited<ReturnType<typeof fab.FabricImage.fromURL>>;
+      try {
+        setImgErr(null);
+        loader = await fab.FabricImage.fromURL(src, {
+          crossOrigin: "anonymous",
+        });
+      } catch {
+        setImgErr(
+          "Couldn't load that image — the link may be broken or blocked. Try another image or upload the file.",
+        );
+        return;
+      }
       const el = loader.getElement() as HTMLImageElement | HTMLCanvasElement;
       const natW = loader.width || 1;
       const natH = loader.height || 1;
@@ -1166,7 +1218,14 @@ export default function CardStudioPanel({
   function loadFromPost(pst: BlogPost) {
     const c = fcRef.current;
     if (!c) return;
-    const head = c.getObjects().find((o) => (o as Tagged).role === "headline");
+    // Templates tag their headline "headline"; slides seeded from Content
+    // Studio tag it "head" — match both so Load from post always fills it.
+    const head = c
+      .getObjects()
+      .find(
+        (o) =>
+          (o as Tagged).role === "headline" || (o as Tagged).role === "head",
+      );
     if (head) {
       (head as unknown as { set: (k: string, v: string) => void }).set(
         "text",
@@ -1415,6 +1474,11 @@ export default function CardStudioPanel({
   return (
     <HStack align="flex-start" gap={8} wrap="wrap">
       <VStack align="stretch" gap={4} w={{ base: "100%", lg: "400px" }}>
+        {imgErr && (
+          <Text fontSize="xs" color="red.300">
+            {imgErr}
+          </Text>
+        )}
         {seed && seed.slides && seed.slides.length > 0 && (
           <Box
             bg="whiteAlpha.100"
@@ -1773,7 +1837,7 @@ export default function CardStudioPanel({
                 colorPalette="red"
                 onClick={deleteActive}
               >
-                🗑 Delete
+                <FiTrash2 aria-hidden /> Delete
               </Button>
             </HStack>
           </Box>
@@ -1797,38 +1861,49 @@ export default function CardStudioPanel({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
+              {postsErr && (
+                <Text fontSize="xs" color="red.300" mb={1}>
+                  {postsErr}
+                </Text>
+              )}
               <VStack align="stretch" gap={1} maxH="220px" overflowY="auto">
-                {posts
-                  .filter((p) =>
-                    (p.title || "").toLowerCase().includes(q.toLowerCase()),
-                  )
-                  .slice(0, 30)
-                  .map((p) => (
-                    <HStack
-                      key={p.id}
-                      p={2}
-                      borderRadius="md"
-                      cursor="pointer"
-                      _hover={{ bg: "whiteAlpha.100" }}
-                      onClick={() => loadFromPost(p)}
-                    >
-                      {p.heroImageUrl && (
-                        <CkImage
-                          src={p.heroImageUrl}
-                          alt=""
-                          boxSize="34px"
-                          objectFit="cover"
-                          borderRadius="sm"
-                        />
-                      )}
-                      <Text fontSize="sm" color="whiteAlpha.900" lineClamp={1}>
-                        {p.title}
-                      </Text>
-                    </HStack>
-                  ))}
+                {posts.map((p) => (
+                  <HStack
+                    key={p.id}
+                    p={2}
+                    borderRadius="md"
+                    cursor="pointer"
+                    _hover={{ bg: "whiteAlpha.100" }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => loadFromPost(p)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        loadFromPost(p);
+                      }
+                    }}
+                  >
+                    {p.heroImageUrl && (
+                      <CkImage
+                        src={p.heroImageUrl}
+                        alt=""
+                        boxSize="34px"
+                        objectFit="cover"
+                        borderRadius="sm"
+                      />
+                    )}
+                    <Text fontSize="sm" color="whiteAlpha.900" lineClamp={1}>
+                      {p.title}
+                    </Text>
+                  </HStack>
+                ))}
               </VStack>
             </Box>
             <Text fontSize="11px" color="gray.500">
+              {postsTotal > posts.length
+                ? `Showing ${posts.length} of ${postsTotal} — search to find any article. `
+                : ""}
               Tip: double-click any text on the card to edit it inline, or
               select it and edit above.
             </Text>
@@ -1919,7 +1994,7 @@ export default function CardStudioPanel({
                   colorPalette="blue"
                   onClick={() => bgFileRef.current?.click()}
                 >
-                  🖼 Set background image
+                  Set background image
                 </Button>
                 <Button
                   size="sm"
@@ -1927,7 +2002,7 @@ export default function CardStudioPanel({
                   colorPalette="gray"
                   onClick={addScrim}
                 >
-                  🌗 Add readability scrim
+                  Add readability scrim
                 </Button>
                 <Button
                   size="sm"
@@ -1935,7 +2010,7 @@ export default function CardStudioPanel({
                   colorPalette="blue"
                   onClick={() => addBrandLogo()}
                 >
-                  ⚡ Add Nexzy logo
+                  Add Nexzy logo
                 </Button>
               </VStack>
             </Box>
@@ -1965,7 +2040,7 @@ export default function CardStudioPanel({
               colorPalette="blue"
               onClick={() => addBrandLogo()}
             >
-              ⚡ Add Nexzy logo
+              Add Nexzy logo
             </Button>
             <Text fontSize="11px" color="gray.500">
               Photos import at true size (nothing cropped). Drag to move, pull a
@@ -2040,7 +2115,7 @@ export default function CardStudioPanel({
           borderColor="whiteAlpha.200"
         >
           <Button colorPalette="blue" size="lg" onClick={download}>
-            ⬇ Download PNG · {FORMATS[fmt].label}
+            <FiDownload aria-hidden /> Download PNG · {FORMATS[fmt].label}
           </Button>
           <Button
             variant="outline"

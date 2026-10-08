@@ -111,6 +111,24 @@ function GameThumb({ src, size = 32 }: { src?: string | null; size?: number }) {
   );
 }
 
+/** Keyboard access for clickable non-button rows (Enter / Space activate). */
+function clickableProps(onActivate: () => void) {
+  return {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: onActivate,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onActivate();
+      }
+    },
+  };
+}
+
+const errText = (e: unknown, fallback: string) =>
+  e instanceof Error && e.message ? e.message : fallback;
+
 // Strip common trailer-title noise so the default game search is useful.
 function cleanTitle(title: string): string {
   return title
@@ -123,8 +141,18 @@ function cleanTitle(title: string): string {
     .trim();
 }
 
-function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
+function InboxRow({
+  c,
+  onDone,
+  isOwner,
+}: {
+  c: TrailerCandidate;
+  /** Remove this row from the inbox (approved or dismissed). */
+  onDone: (id: string) => void;
+  isOwner: boolean;
+}) {
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<Picked | null>(
     c.resolvedGameId
       ? {
@@ -144,32 +172,40 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
   const search = async () => {
     if (!q.trim()) return;
     setSearching(true);
+    setErr(null);
     try {
       if (mode === "catalog") setCatalog(await searchGamesForLink(q.trim()));
       else setIgdb(await searchTrailerIgdb(q.trim()));
+    } catch (e) {
+      setErr(errText(e, "Search failed."));
     } finally {
       setSearching(false);
     }
   };
 
   const approve = async () => {
-    if (!picked) return;
+    if (!picked || busy) return;
     setBusy(true);
+    setErr(null);
     try {
       if (picked.kind === "catalog") await approveTrailer(c.id, picked.id);
       else await approveTrailerViaIgdb(c.id, picked.igdbId);
-      onDone();
-    } finally {
+      onDone(c.id);
+    } catch (e) {
+      setErr(errText(e, "Approve failed."));
       setBusy(false);
     }
   };
 
   const dismiss = async () => {
+    if (busy) return;
     setBusy(true);
+    setErr(null);
     try {
       await dismissTrailer(c.id);
-      onDone();
-    } finally {
+      onDone(c.id);
+    } catch (e) {
+      setErr(errText(e, "Dismiss failed."));
       setBusy(false);
     }
   };
@@ -289,16 +325,20 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
                     px={2}
                     borderRadius="md"
                     _hover={{ bg: "whiteAlpha.100" }}
+                    _focusVisible={{
+                      outline: "2px solid",
+                      outlineColor: "nexzy.lightBlue",
+                    }}
                     cursor="pointer"
-                    onClick={() =>
+                    {...clickableProps(() =>
                       setPicked({
                         kind: "catalog",
                         id: g.id,
                         name: g.name,
                         cover: g.backgroundImage ?? null,
                         year: g.released ? g.released.slice(0, 4) : null,
-                      })
-                    }
+                      }),
+                    )}
                   >
                     <GameThumb src={g.backgroundImage} />
                     <Text fontSize="sm" color="nexzy.white">
@@ -322,16 +362,20 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
                     px={2}
                     borderRadius="md"
                     _hover={{ bg: "whiteAlpha.100" }}
+                    _focusVisible={{
+                      outline: "2px solid",
+                      outlineColor: "nexzy.lightBlue",
+                    }}
                     cursor="pointer"
-                    onClick={() =>
+                    {...clickableProps(() =>
                       setPicked({
                         kind: "igdb",
                         igdbId: g.igdbId,
                         name: g.name,
                         year: g.year,
                         cover: g.coverUrl ?? null,
-                      })
-                    }
+                      }),
+                    )}
                   >
                     <GameThumb src={g.coverUrl} />
                     <FiDownloadCloud color="#FFE14D" />
@@ -351,18 +395,31 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
         )}
 
         <HStack gap={2}>
-          <Button
-            {...primaryBtn}
-            size="sm"
-            onClick={approve}
-            disabled={!picked || busy}
-          >
-            {busy ? <Spinner size="sm" /> : <FiCheck />} Approve
-          </Button>
+          {/* K10: approving publishes a video to the site/app — owner-only. */}
+          {isOwner && (
+            <Button
+              {...primaryBtn}
+              size="sm"
+              onClick={approve}
+              disabled={!picked || busy}
+            >
+              {busy ? <Spinner size="sm" /> : <FiCheck />} Approve
+            </Button>
+          )}
           <Button {...outlineBtn} size="sm" onClick={dismiss} disabled={busy}>
             <FiX /> Dismiss
           </Button>
+          {!isOwner && (
+            <Text fontSize="xs" color="whiteAlpha.600">
+              Approving is owner-only.
+            </Text>
+          )}
         </HStack>
+        {err && (
+          <Text fontSize="xs" color="red.300">
+            {err}
+          </Text>
+        )}
       </VStack>
     </Flex>
   );
@@ -371,10 +428,39 @@ function InboxRow({ c, onDone }: { c: TrailerCandidate; onDone: () => void }) {
 function ChannelsView({
   sources,
   reload,
+  onChange,
 }: {
   sources: TrailerSource[];
   reload: () => void;
+  /** Patch one source in place (null = removed). */
+  onChange: (id: string, next: TrailerSource | null) => void;
 }) {
+  const [rowErr, setRowErr] = useState<string | null>(null);
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const toggle = async (s: TrailerSource) => {
+    setRowBusy(s.id);
+    setRowErr(null);
+    try {
+      await toggleTrailerSource(s.id, !s.enabled);
+      onChange(s.id, { ...s, enabled: !s.enabled });
+    } catch (e) {
+      setRowErr(`${s.name}: ${errText(e, "Couldn't change it.")}`);
+    } finally {
+      setRowBusy(null);
+    }
+  };
+  const remove = async (s: TrailerSource) => {
+    setRowBusy(s.id);
+    setRowErr(null);
+    try {
+      await removeTrailerSource(s.id);
+      onChange(s.id, null);
+    } catch (e) {
+      setRowErr(`${s.name}: ${errText(e, "Couldn't remove it.")}`);
+    } finally {
+      setRowBusy(null);
+    }
+  };
   const [newInput, setNewInput] = useState("");
   const [newName, setNewName] = useState("");
   const [filter, setFilter] = useState("");
@@ -470,6 +556,12 @@ function ChannelsView({
         </Text>
       </HStack>
 
+      {rowErr && (
+        <Text fontSize="xs" color="red.300">
+          {rowErr}
+        </Text>
+      )}
+
       {/* Dense table */}
       <VStack align="stretch" gap={0}>
         {shown.map((s, i) => (
@@ -517,10 +609,9 @@ function ChannelsView({
               {...outlineBtn}
               size="xs"
               title={s.enabled ? "Disable" : "Enable"}
-              onClick={async () => {
-                await toggleTrailerSource(s.id, !s.enabled);
-                reload();
-              }}
+              aria-label={s.enabled ? "Disable" : "Enable"}
+              disabled={rowBusy === s.id}
+              onClick={() => void toggle(s)}
             >
               {s.enabled ? <FiEyeOff /> : <FiEye />}
             </Button>
@@ -528,10 +619,9 @@ function ChannelsView({
               {...outlineBtn}
               size="xs"
               title="Remove"
-              onClick={async () => {
-                await removeTrailerSource(s.id);
-                reload();
-              }}
+              aria-label="Remove"
+              disabled={rowBusy === s.id}
+              onClick={() => void remove(s)}
             >
               <FiTrash2 />
             </Button>
@@ -547,15 +637,22 @@ function ChannelsView({
   );
 }
 
-export default function TrailersPanel() {
+export default function TrailersPanel({
+  isOwner = false,
+}: {
+  isOwner?: boolean;
+}) {
   const [view, setView] = useState<"inbox" | "channels">("inbox");
   const [inbox, setInbox] = useState<TrailerCandidate[]>([]);
   const [sources, setSources] = useState<TrailerSource[]>([]);
+  // Full spinner only on the FIRST load; later refreshes keep the rows (and
+  // each row's game pick / search state) on screen (CA-10).
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setError(null);
     try {
       const [i, s] = await Promise.all([
         getTrailerInbox(),
@@ -563,6 +660,8 @@ export default function TrailersPanel() {
       ]);
       setInbox(i);
       setSources(s);
+    } catch (e) {
+      setError(errText(e, "Couldn't load the trailer inbox."));
     } finally {
       setLoading(false);
     }
@@ -574,13 +673,25 @@ export default function TrailersPanel() {
 
   const poll = async () => {
     setPolling(true);
+    setError(null);
     try {
       await pollTrailers();
       await load();
+    } catch (e) {
+      setError(`Poll failed: ${errText(e, "unknown error")}`);
     } finally {
       setPolling(false);
     }
   };
+
+  const removeFromInbox = (id: string) =>
+    setInbox((xs) => xs.filter((x) => x.id !== id));
+  const patchSource = (id: string, next: TrailerSource | null) =>
+    setSources((xs) =>
+      next
+        ? xs.map((x) => (x.id === id ? next : x))
+        : xs.filter((x) => x.id !== id),
+    );
 
   return (
     <VStack align="stretch" gap={5}>
@@ -593,7 +704,14 @@ export default function TrailersPanel() {
             {...(view === "inbox" ? primaryBtn : outlineBtn)}
           >
             Inbox
-            <Badge ml={2} colorPalette="blue">
+            {/* Solid white count on the active (blue) button — never a blue
+                badge on blue (CA-9). */}
+            <Badge
+              ml={2}
+              {...(view === "inbox"
+                ? { bg: "white", color: "gray.900" }
+                : { colorPalette: "blue" })}
+            >
               {inbox.length}
             </Badge>
           </Button>
@@ -603,7 +721,12 @@ export default function TrailersPanel() {
             {...(view === "channels" ? primaryBtn : outlineBtn)}
           >
             Channels
-            <Badge ml={2} colorPalette="gray">
+            <Badge
+              ml={2}
+              {...(view === "channels"
+                ? { bg: "white", color: "gray.900" }
+                : { colorPalette: "gray" })}
+            >
               {sources.length}
             </Badge>
           </Button>
@@ -612,6 +735,12 @@ export default function TrailersPanel() {
           {polling ? <Spinner size="sm" /> : <FiRefreshCw />} Poll now
         </Button>
       </Flex>
+
+      {error && (
+        <Text color="red.300" fontSize="sm">
+          {error}
+        </Text>
+      )}
 
       {loading ? (
         <Flex justify="center" py={12}>
@@ -626,12 +755,17 @@ export default function TrailersPanel() {
         ) : (
           <VStack align="stretch" gap={3}>
             {inbox.map((c) => (
-              <InboxRow key={c.id} c={c} onDone={load} />
+              <InboxRow
+                key={c.id}
+                c={c}
+                onDone={removeFromInbox}
+                isOwner={isOwner}
+              />
             ))}
           </VStack>
         )
       ) : (
-        <ChannelsView sources={sources} reload={load} />
+        <ChannelsView sources={sources} reload={load} onChange={patchSource} />
       )}
     </VStack>
   );

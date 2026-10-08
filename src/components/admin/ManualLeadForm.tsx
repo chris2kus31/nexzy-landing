@@ -39,6 +39,16 @@ const LANES: [NonNullable<ManualLeadInput["lane"]>, string][] = [
 
 const CONTEXT_MAX = 6000;
 
+/** Basic client-side check — the server fetches this URL, so only https. */
+function isHttpsUrl(v: string): boolean {
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && !!u.hostname;
+  } catch {
+    return false;
+  }
+}
+
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <Text color="whiteAlpha.700" fontSize="xs" fontWeight="700" mb={1}>
@@ -92,6 +102,11 @@ export default function ManualLeadForm({
       );
       return;
     }
+    const img = imageUrl.trim();
+    if (img && !isHttpsUrl(img)) {
+      setErr("Image URL must be a full https:// link (or leave it empty).");
+      return;
+    }
     setBusy(true);
     setErr(null);
     const games = game
@@ -104,8 +119,10 @@ export default function ManualLeadForm({
       context: context.trim(),
       lane,
       games,
-      ...(angle.trim() ? { angle: angle.trim() } : {}),
-      ...(imageUrl.trim() ? { imageUrl: imageUrl.trim() } : {}),
+      // On EDIT, send '' explicitly so clearing the box clears the field
+      // (the API treats '' as "clear"); on create, omit empty optionals.
+      ...(angle.trim() || editing ? { angle: angle.trim() } : {}),
+      ...(img || editing ? { imageUrl: img } : {}),
     };
     try {
       const res = editing
