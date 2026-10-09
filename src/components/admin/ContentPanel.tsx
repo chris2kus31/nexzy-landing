@@ -41,6 +41,8 @@ import {
   type PlatformInsights,
   type TtsBudget,
 } from "@/lib/admin/client";
+import PostLogBox from "@/components/admin/PostLogBox";
+import { kindLabel } from "@/lib/admin/client-postlog";
 import {
   errorMessage,
   fetchContentCard,
@@ -2184,10 +2186,18 @@ function SuggestionCard({
     _placeholder: { color: "whiteAlpha.500" },
   };
   const [showProduce, setShowProduce] = useState(false);
+  // Already produced on an earlier visit → show the link, not Produce again.
   const [produced, setProduced] = useState<{
     videoSlug: string;
     gameLinked: boolean;
-  } | null>(null);
+  } | null>(() =>
+    s.payload?.producedVideoSlug
+      ? {
+          videoSlug: s.payload.producedVideoSlug,
+          gameLinked: !!s.payload.producedGameLinked,
+        }
+      : null,
+  );
   const [pTitle, setPTitle] = useState("");
   const [pYoutube, setPYoutube] = useState("");
   const [pTiktok, setPTiktok] = useState("");
@@ -2227,7 +2237,18 @@ function SuggestionCard({
   // + on-screen text + captions. Same brief-card family (no video/TTS/Publish).
   const isMemeCard = fmt === "meme";
   const memeOptions = view.payload?.memeOptions ?? [];
-  const isBriefCard = isImageCard || isSlideCard || isMemeCard;
+  // LOGGED (format === "logged"): a zero-token card for something already made
+  // or posted ("Log it" on the lead form) — labels + Posted + Produce only.
+  const isLoggedCard = fmt === "logged";
+  const isBriefCard = isImageCard || isSlideCard || isMemeCard || isLoggedCard;
+  // Memes and logged cards are real videos too: they can be produced into the
+  // Video Library (image / slide cards still can't).
+  const canProduce =
+    s.kind === "video" &&
+    !isNonVideo &&
+    !isImage &&
+    !isQuick &&
+    (!isBriefCard || isMemeCard || isLoggedCard);
   const slides = view.payload?.slides ?? [];
   const saveCta = view.payload?.saveCta ?? "";
   const slideLabel =
@@ -2408,6 +2429,16 @@ function SuggestionCard({
               MEME
             </Badge>
           )}
+          {isLoggedCard && (
+            <Badge colorPalette="green" variant="solid">
+              LOGGED
+            </Badge>
+          )}
+          {view.payload?.postMeta?.kind && (
+            <Badge colorPalette="gray" variant="subtle">
+              {kindLabel(view.payload.postMeta.kind)}
+            </Badge>
+          )}
           {isNonVideo && (
             <Badge
               colorPalette={fmt === "none" ? "gray" : "yellow"}
@@ -2445,21 +2476,16 @@ function SuggestionCard({
               <FiChevronDown aria-hidden />
             )}
           </Button>
-          {s.kind === "video" &&
-            !produced &&
-            !isNonVideo &&
-            !isImage &&
-            !isBriefCard &&
-            !isQuick && (
-              <Button
-                size="xs"
-                colorPalette="green"
-                variant="solid"
-                onClick={openProduce}
-              >
-                Produce
-              </Button>
-            )}
+          {canProduce && !produced && (
+            <Button
+              size="xs"
+              colorPalette="green"
+              variant="solid"
+              onClick={openProduce}
+            >
+              Produce
+            </Button>
+          )}
           <Button
             size="xs"
             colorPalette="green"
@@ -2522,96 +2548,90 @@ function SuggestionCard({
             </Box>
           )}
 
-          {s.kind === "video" &&
-            showProduce &&
-            !produced &&
-            !isNonVideo &&
-            !isImage &&
-            !isBriefCard &&
-            !isQuick && (
-              <Box
-                mb={3}
-                p={3}
-                borderWidth="1px"
-                borderColor="green.400/40"
-                borderRadius="lg"
-                bg="green.500/5"
-              >
-                <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
-                  Publish this short to /videos
+          {canProduce && showProduce && !produced && (
+            <Box
+              mb={3}
+              p={3}
+              borderWidth="1px"
+              borderColor="green.400/40"
+              borderRadius="lg"
+              bg="green.500/5"
+            >
+              <Text fontSize="sm" fontWeight="700" color="nexzy.white" mb={2}>
+                Publish this short to /videos
+              </Text>
+              <VStack align="stretch" gap={2}>
+                <Input
+                  {...fld}
+                  value={pTitle}
+                  onChange={(e) => setPTitle(e.target.value)}
+                  placeholder="Title (prefilled from the YouTube kit)"
+                />
+                <Input
+                  {...fld}
+                  value={pYoutube}
+                  onChange={(e) => setPYoutube(e.target.value)}
+                  placeholder="YouTube URL (plays inline)"
+                />
+                <HStack gap={2}>
+                  <Input
+                    {...fld}
+                    value={pTiktok}
+                    onChange={(e) => setPTiktok(e.target.value)}
+                    placeholder="TikTok URL (optional)"
+                  />
+                  <Input
+                    {...fld}
+                    value={pReels}
+                    onChange={(e) => setPReels(e.target.value)}
+                    placeholder="Reels URL (optional)"
+                  />
+                </HStack>
+                <Input
+                  {...fld}
+                  value={pFacebook}
+                  onChange={(e) => setPFacebook(e.target.value)}
+                  placeholder="Facebook Reels URL (optional)"
+                />
+                <Input
+                  {...fld}
+                  value={pThumb}
+                  onChange={(e) => setPThumb(e.target.value)}
+                  placeholder="Thumbnail URL (optional — YouTube auto-derives)"
+                />
+                <HStack gap={2}>
+                  <Button
+                    size="sm"
+                    colorPalette="green"
+                    onClick={produce}
+                    loading={busy === "produce"}
+                    loadingText="Publishing…"
+                    disabled={
+                      !pYoutube.trim() &&
+                      !pTiktok.trim() &&
+                      !pReels.trim() &&
+                      !pFacebook.trim()
+                    }
+                  >
+                    Publish to /videos
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    color="nexzy.gray.100"
+                    onClick={() => setShowProduce(false)}
+                  >
+                    Cancel
+                  </Button>
+                </HStack>
+                <Text fontSize="xs" color="whiteAlpha.500">
+                  Creates a Nexzy video linked to this article&rsquo;s game
+                  (Nexzy videos rank first). At least one platform URL is
+                  required.
                 </Text>
-                <VStack align="stretch" gap={2}>
-                  <Input
-                    {...fld}
-                    value={pTitle}
-                    onChange={(e) => setPTitle(e.target.value)}
-                    placeholder="Title (prefilled from the YouTube kit)"
-                  />
-                  <Input
-                    {...fld}
-                    value={pYoutube}
-                    onChange={(e) => setPYoutube(e.target.value)}
-                    placeholder="YouTube URL (plays inline)"
-                  />
-                  <HStack gap={2}>
-                    <Input
-                      {...fld}
-                      value={pTiktok}
-                      onChange={(e) => setPTiktok(e.target.value)}
-                      placeholder="TikTok URL (optional)"
-                    />
-                    <Input
-                      {...fld}
-                      value={pReels}
-                      onChange={(e) => setPReels(e.target.value)}
-                      placeholder="Reels URL (optional)"
-                    />
-                  </HStack>
-                  <Input
-                    {...fld}
-                    value={pFacebook}
-                    onChange={(e) => setPFacebook(e.target.value)}
-                    placeholder="Facebook Reels URL (optional)"
-                  />
-                  <Input
-                    {...fld}
-                    value={pThumb}
-                    onChange={(e) => setPThumb(e.target.value)}
-                    placeholder="Thumbnail URL (optional — YouTube auto-derives)"
-                  />
-                  <HStack gap={2}>
-                    <Button
-                      size="sm"
-                      colorPalette="green"
-                      onClick={produce}
-                      loading={busy === "produce"}
-                      loadingText="Publishing…"
-                      disabled={
-                        !pYoutube.trim() &&
-                        !pTiktok.trim() &&
-                        !pReels.trim() &&
-                        !pFacebook.trim()
-                      }
-                    >
-                      Publish to /videos
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      color="nexzy.gray.100"
-                      onClick={() => setShowProduce(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </HStack>
-                  <Text fontSize="xs" color="whiteAlpha.500">
-                    Creates a Nexzy video linked to this article&rsquo;s game
-                    (Nexzy videos rank first). At least one platform URL is
-                    required.
-                  </Text>
-                </VStack>
-              </Box>
-            )}
+              </VStack>
+            </Box>
+          )}
 
           <Section
             title="Review & flags"
@@ -3749,6 +3769,22 @@ function SuggestionCard({
                 </Section>
               )}
             </>
+          )}
+
+          {/* POSTS LOG: labels + where/when it went out (feeds Post Lab). */}
+          {s.kind === "video" && (
+            <Section
+              title="Posted & labels"
+              tag={
+                view.payload?.postMeta?.kind
+                  ? kindLabel(view.payload.postMeta.kind)
+                  : "Not labeled"
+              }
+              tagColor={view.payload?.postMeta?.kind ? "green" : "yellow"}
+              defaultOpen={isLoggedCard}
+            >
+              <PostLogBox card={view} onUpdate={onUpdate} />
+            </Section>
           )}
 
           {/* Publish this card straight to FB/IG Reels + a Threads text post */}

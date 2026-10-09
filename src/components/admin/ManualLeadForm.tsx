@@ -16,6 +16,7 @@ import {
   type ContentSuggestion,
   type ManualLeadInput,
 } from "@/lib/admin/client";
+import { POST_KINDS, logPost } from "@/lib/admin/client-postlog";
 
 const SELECT_STYLE: React.CSSProperties = {
   appearance: "none",
@@ -89,9 +90,54 @@ export default function ManualLeadForm({
   const [imageUrl, setImageUrl] = useState(init?.imageUrl ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // "Log it": the thing is ALREADY made/posted — skip the AI entirely and land
+  // a card in Suggestions with its labels + Posted box (zero-token).
+  const [mode, setMode] = useState<"lead" | "log">("lead");
+  const [kind, setKind] = useState(lane === "meme" ? "video_meme" : "");
+  const [logged, setLogged] = useState<ContentSuggestion | null>(null);
+  const logging = !editing && mode === "log";
 
   const titleOk = title.trim().length >= 3;
   const contextOk = context.trim().length >= 20;
+
+  const submitLog = async () => {
+    if (!titleOk) {
+      setErr("Add a title (at least 3 characters).");
+      return;
+    }
+    if (!kind) {
+      setErr("Pick what it is (meme, short, ...).");
+      return;
+    }
+    const img = imageUrl.trim();
+    if (img && !isHttpsUrl(img)) {
+      setErr("Image URL must be a full https:// link (or leave it empty).");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const games = game
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      const res = await logPost({
+        title: title.trim(),
+        kind,
+        lane,
+        games,
+        ...(context.trim() ? { context: context.trim() } : {}),
+        ...(angle.trim() ? { angle: angle.trim() } : {}),
+        ...(img ? { imageUrl: img } : {}),
+      });
+      setLogged(res.card);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't log it.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async () => {
     if (!titleOk || !contextOk) {
@@ -154,11 +200,75 @@ export default function ManualLeadForm({
       <Text color="nexzy.white" fontWeight="700" mb={1}>
         {editing ? "Edit context" : "New suggestion (no article)"}
       </Text>
+      {!editing && (
+        <HStack gap={2} mb={2}>
+          {(
+            [
+              ["lead", "New lead"],
+              ["log", "Already made it? Log it"],
+            ] as const
+          ).map(([m, l]) => (
+            <Button
+              key={m}
+              size="xs"
+              variant={mode === m ? "solid" : "outline"}
+              bg={mode === m ? "nexzy.blue" : undefined}
+              color={mode === m ? "white" : "nexzy.gray.100"}
+              borderColor="whiteAlpha.300"
+              onClick={() => {
+                setMode(m);
+                setErr(null);
+              }}
+            >
+              {l}
+            </Button>
+          ))}
+        </HStack>
+      )}
       <Text color="nexzy.gray.100" fontSize="xs" mb={3}>
         {editing
           ? "Changes apply the next time you Generate. Nothing runs until you do."
-          : "Lands in Leads like any other lead. One quick analysis runs now; the heavy writing only runs when you hit Generate."}
+          : logging
+            ? "For a meme or short you already made (something seen on social, no lead). No AI runs. It lands in Suggestions with its labels and a Posted box, and Produce adds it to the Video Library."
+            : "Lands in Leads like any other lead. One quick analysis runs now; the heavy writing only runs when you hit Generate."}
       </Text>
+
+      {logged && (
+        <Box
+          mb={3}
+          p={3}
+          borderRadius="lg"
+          bg="green.500/10"
+          border="1px solid"
+          borderColor="green.400/40"
+        >
+          <Text color="green.200" fontSize="sm" mb={2}>
+            Logged. &ldquo;{logged.title}&rdquo; is in Suggestions: open it,
+            fill its labels and paste where it went in Posted &amp; labels.
+          </Text>
+          <HStack gap={2}>
+            <Button
+              size="xs"
+              bg="nexzy.blue"
+              color="white"
+              onClick={() => {
+                window.location.href =
+                  "/admin?tab=content-studio&sub=suggestions";
+              }}
+            >
+              Open Suggestions
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="nexzy.gray.100"
+              onClick={onCancel}
+            >
+              Done
+            </Button>
+          </HStack>
+        </Box>
+      )}
 
       <Box mb={3}>
         <Label>TOPIC</Label>
@@ -175,7 +285,11 @@ export default function ManualLeadForm({
       </Box>
 
       <Box mb={3}>
-        <Label>CONTEXT AND FACTS — the only thing it may say</Label>
+        <Label>
+          {logging
+            ? "NOTES (optional) — what it was about"
+            : "CONTEXT AND FACTS — the only thing it may say"}
+        </Label>
         <Textarea
           value={context}
           onChange={(e) => setContext(e.target.value.slice(0, CONTEXT_MAX))}
@@ -195,6 +309,23 @@ export default function ManualLeadForm({
       </Box>
 
       <Flex gap={3} wrap="wrap" mb={3}>
+        {logging && (
+          <Box flex="1 1 160px">
+            <Label>WHAT IT IS</Label>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              style={SELECT_STYLE}
+            >
+              <option value="">Pick…</option>
+              {POST_KINDS.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </Box>
+        )}
         <Box flex="1 1 160px">
           <Label>LANE</Label>
           <select
@@ -211,7 +342,7 @@ export default function ManualLeadForm({
             ))}
           </select>
         </Box>
-        {!editing && (
+        {!editing && !logging && (
           <Box flex="1 1 160px">
             <Label>WRITER</Label>
             <select
@@ -306,9 +437,10 @@ export default function ManualLeadForm({
           color="white"
           _hover={{ opacity: 0.9 }}
           loading={busy}
-          onClick={() => void submit()}
+          disabled={!!logged}
+          onClick={() => void (logging ? submitLog() : submit())}
         >
-          {editing ? "Save context" : "Create lead"}
+          {editing ? "Save context" : logging ? "Log it" : "Create lead"}
         </Button>
       </HStack>
     </Box>

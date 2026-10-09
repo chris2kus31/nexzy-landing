@@ -16,6 +16,7 @@ import type {
   PostLabPost,
   PostLabSlot,
 } from "@/lib/admin/client";
+import { kindLabel } from "@/lib/admin/client-postlog";
 
 /**
  * POST LAB — "your post data", in depth. One reach metric per platform (never
@@ -31,6 +32,8 @@ const PLATFORM_LABEL: Record<string, string> = {
   x: "X",
   youtube: "YouTube",
   youtube_long: "YouTube long-form",
+  tiktok: "TikTok (logged)",
+  reddit: "Reddit (logged)",
 };
 
 /** Additive API field: the platform has no credentials configured — not an
@@ -189,6 +192,7 @@ function PostRow({ p, metric }: { p: PostLabPost; metric: string }) {
         </Text>
         <Text fontSize="10px" color="nexzy.gray.100">
           {p.dayCt} {fmtDate(p.at)} CT · {FORMAT_LABEL[p.format] ?? p.format}
+          {p.kind ? ` · ${kindLabel(p.kind)}` : ""}
           {p.engRate != null ? ` · ${fmtPct(p.engRate)} engagement` : ""}
         </Text>
       </Box>
@@ -351,6 +355,53 @@ function PlatformView({ p }: { p: LabPlatform }) {
           </VStack>
         </Card>
       )}
+
+      {/* Posts log: each content kind's own median + best slots. */}
+      <Card title="By content type (Posts log)">
+        {p.kinds && p.kinds.length > 0 ? (
+          <VStack align="stretch" gap={2.5}>
+            {p.kinds.map((k) => (
+              <Box key={k.kind}>
+                <Flex align="center" gap={2}>
+                  <Text
+                    fontSize="sm"
+                    color="nexzy.white"
+                    fontWeight="600"
+                    w="130px"
+                  >
+                    {kindLabel(k.kind)}
+                  </Text>
+                  <Text fontSize="xs" color="nexzy.gray.100" flex="1">
+                    median {fmtNum(k.median)} · {k.n} posts
+                    {k.n < 3 ? " · thin sample" : ""}
+                  </Text>
+                  <Pill tone={k.vsMedian >= 0 ? "good" : "bad"}>
+                    {vs(k.vsMedian)}
+                  </Pill>
+                </Flex>
+                <Text fontSize="xs" color="nexzy.gray.100" pl="138px">
+                  {k.bestSlots.length
+                    ? `Best: ${k.bestSlots
+                        .map((sl) => `${slotLabel(sl)} (${sl.n})`)
+                        .join(" · ")}`
+                    : "No slot has 3+ posts of this type yet."}
+                </Text>
+              </Box>
+            ))}
+            <Text fontSize="10px" color="nexzy.gray.100">
+              {p.labeled ?? 0} of {p.analyzed} analyzed posts are logged with
+              labels. Log posts on their Suggestions card (Posted &amp; labels)
+              to fill this in.
+            </Text>
+          </VStack>
+        ) : (
+          <Text fontSize="xs" color="nexzy.gray.100">
+            No logged posts here yet. Paste each post&apos;s link on its
+            Suggestions card (Posted &amp; labels) and this splits memes vs
+            shorts by time slot after the next Refresh.
+          </Text>
+        )}
+      </Card>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
         <Card title="Top 5 posts">

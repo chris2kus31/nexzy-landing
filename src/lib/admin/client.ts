@@ -710,7 +710,17 @@ export interface ContentSuggestion {
       | "text_post"
       | "quick"
       | "meme"
+      | "logged"
       | "none";
+    // POSTS LOG: the card's labels (what it is, where it came from, the clip,
+    // gut rating...) — see client-postlog.ts. "logged" cards (format above)
+    // are zero-token cards for something already made; loggedKind = its kind.
+    postMeta?: import("./client-postlog").PostMeta;
+    loggedKind?: string;
+    // Set once the card is produced into a Nexzy video (Video Library).
+    producedVideoId?: string;
+    producedVideoSlug?: string;
+    producedGameLinked?: boolean;
     // Long-form-only: the chaptered plan + thumbnail concept + teaser advice.
     longform?: {
       chapters?: { title?: string; summary?: string; timestamp?: string }[];
@@ -3930,6 +3940,15 @@ export interface PostLabPost {
   caption: string | null;
   settling: boolean;
   excluded: string | null;
+  /** Content kind from the Posts log (absent/null = not logged). */
+  kind?: string | null;
+}
+export interface PostLabKind {
+  kind: string;
+  n: number;
+  median: number | null;
+  vsMedian: number;
+  bestSlots: PostLabSlot[];
 }
 export interface PostLabPlatform {
   platform: string;
@@ -3953,6 +3972,10 @@ export interface PostLabPlatform {
     vsMedian: number;
     engRate: number | null;
   }[];
+  /** Per content kind from the Posts log (absent on older pulls). */
+  kinds?: PostLabKind[];
+  /** Analyzed posts carrying a Posts log label. */
+  labeled?: number;
   top: PostLabPost[];
   bottom: PostLabPost[];
   flags: { level: "bad" | "warn" | "info"; text: string }[];

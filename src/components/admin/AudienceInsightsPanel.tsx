@@ -12,6 +12,7 @@ import {
 } from "@/lib/admin/client";
 import { AudiencePanel } from "@/components/admin/LeadsPanel";
 import PostLabPanel from "@/components/admin/PostLabPanel";
+import NeedsNumbersPanel from "@/components/admin/NeedsNumbersPanel";
 
 const CAD_LABEL: Record<string, string> = {
   youtube: "YouTube Shorts",
@@ -441,6 +442,7 @@ export default function AudienceInsightsPanel({
         onRefresh={refresh}
         busy={busy}
       />
+      <NeedsNumbersPanel />
       <PostLabPanel
         lab={(audience?.raw?.postLab as PostLabReport | undefined) ?? null}
       />
