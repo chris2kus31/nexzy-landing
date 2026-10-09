@@ -1683,12 +1683,17 @@ export async function makeShortFromLead(
 /** Kick off the pipeline for one beat, or all beats when beat is omitted. */
 export async function runPipeline(
   beat?: string,
+  opts: { images?: boolean } = {},
 ): Promise<{ enqueued: string[] }> {
   return handle(
     await fetch("/api/newsroom/admin/run-pipeline", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(beat ? { beat } : {}),
+      // `images` is opt-in: omitted = drafts get no AI hero image.
+      body: JSON.stringify({
+        ...(beat ? { beat } : {}),
+        ...(opts.images ? { images: true } : {}),
+      }),
     }),
   );
 }

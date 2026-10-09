@@ -17,8 +17,9 @@ import {
   commissionReview,
   getWriterNames,
 } from "@/lib/admin/client";
-import { BEATS } from "@/lib/blog/beats";
+import { PIPELINE_BEATS } from "@/lib/blog/beats";
 import { verdictTierFor } from "@/lib/blog/verdict";
+import { FiCheck } from "react-icons/fi";
 
 /**
  * "Commission" desk. Two roads:
@@ -30,7 +31,7 @@ import { verdictTierFor } from "@/lib/blog/verdict";
  */
 export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
   const [mode, setMode] = useState<"news" | "review">("news");
-  const [beat, setBeat] = useState(BEATS[0].key);
+  const [beat, setBeat] = useState(PIPELINE_BEATS[0].key);
   const [title, setTitle] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [angle, setAngle] = useState("");
@@ -61,7 +62,9 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
 
   const isReview = mode === "review";
   const clampR = (n: number) => Math.max(1, Math.min(10, Math.round(n)));
-  const tier = verdictTierFor(author || "Chuy", rating);
+  // Auto = the API picks the writer, so there's no tier to preview yet (it
+  // used to show Chuy's wording regardless of who ends up writing it).
+  const tier = author ? verdictTierFor(author, rating) : null;
   // News needs at least one real input: an angle, some notes, or an inspiration
   // link. Everything else (structure, directives, title) is optional.
   const newsHasSubstance =
@@ -223,7 +226,7 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
               Beat
             </Text>
             <HStack gap={2} wrap="wrap">
-              {BEATS.map((b) => {
+              {PIPELINE_BEATS.map((b) => {
                 const active = beat === b.key;
                 return (
                   <Button
@@ -382,13 +385,16 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
               >
                 +
               </Button>
-              <Text color="teal.300" fontWeight="700" fontSize="sm" ml={2}>
-                {tier}
-              </Text>
+              {tier && (
+                <Text color="teal.300" fontWeight="700" fontSize="sm" ml={2}>
+                  {tier}
+                </Text>
+              )}
             </HStack>
             <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
-              The tier is {author || "the assigned writer"}&apos;s wording for
-              this score; the number stays for the star rating.
+              {tier
+                ? `The tier is ${author}'s wording for this score; the number stays for the star rating.`
+                : "The verdict tier is worded by whichever writer gets assigned; pick a writer to preview it. The number stays for the star rating."}
             </Text>
           </Box>
         )}
@@ -476,7 +482,8 @@ export default function CommissionPanel({ onRan }: { onRan?: () => void }) {
           borderColor={genImage ? "nexzy.blue" : "whiteAlpha.300"}
           _hover={{ bg: genImage ? "nexzy.blue" : "whiteAlpha.100" }}
         >
-          {genImage ? "✓ Generate AI image" : "Generate AI image"}
+          {genImage && <FiCheck aria-hidden />}
+          Generate AI image
         </Button>
         <Text color="nexzy.gray.100" fontSize="xs" mt={-2}>
           Off by default — the post lands with no AI hero so you can drop your

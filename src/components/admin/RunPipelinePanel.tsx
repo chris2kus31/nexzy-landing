@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Box, Flex, HStack, Heading, Text, Button } from "@chakra-ui/react";
 import { runPipeline } from "@/lib/admin/client";
-import { BEATS } from "@/lib/blog/beats";
+import { PIPELINE_BEATS } from "@/lib/blog/beats";
 
-const SCOPES = [{ key: "all", label: "All beats" }, ...BEATS];
+// Only the beats the API researcher supports (others would 400).
+const SCOPES = [{ key: "all", label: "All beats" }, ...PIPELINE_BEATS];
 
 /**
  * On-demand pipeline trigger. Enqueues a research run for one beat (or all);
@@ -15,14 +16,25 @@ const SCOPES = [{ key: "all", label: "All beats" }, ...BEATS];
 export default function RunPipelinePanel({ onRan }: { onRan?: () => void }) {
   const [scope, setScope] = useState("all");
   const [running, setRunning] = useState(false);
+  // AI hero images are OPT-IN: an "All beats" run can produce up to ~12 drafts.
+  const [images, setImages] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const run = async () => {
+    if (
+      scope === "all" &&
+      !window.confirm(
+        `Run research for all ${PIPELINE_BEATS.length} beats? Each beat can produce up to 3 drafts (written, edited${images ? " and illustrated" : ""}), so this spends AI tokens.`,
+      )
+    ) {
+      return;
+    }
     setRunning(true);
     setMsg(null);
     try {
       const { enqueued } = await runPipeline(
         scope === "all" ? undefined : scope,
+        { images },
       );
       const n = enqueued.length;
       setMsg({
@@ -88,6 +100,18 @@ export default function RunPipelinePanel({ onRan }: { onRan?: () => void }) {
           Run now
         </Button>
       </Flex>
+
+      <HStack as="label" gap={2} mt={3} cursor="pointer">
+        <input
+          type="checkbox"
+          checked={images}
+          onChange={(e) => setImages(e.target.checked)}
+        />
+        <Text color="nexzy.gray.100" fontSize="xs">
+          Generate hero images (AI art for every new draft; spends image
+          tokens). Off = drafts land with no hero so you can add your own.
+        </Text>
+      </HStack>
 
       {msg && (
         <Text mt={4} fontSize="sm" color={msg.ok ? "green.300" : "red.300"}>

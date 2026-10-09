@@ -14,18 +14,33 @@ import { backfillAuthors, reprocessPublished } from "@/lib/admin/client";
 
 /**
  * Maintenance actions for the article archive:
- *  - "Assign authors" — fast: just stamps Chuy/Eli bylines onto legacy posts.
- *  - "Reprocess" — heavy: re-runs the writer over every published article to
- *    upgrade it to the current voice/structure + author, in the background.
- * Both change live articles, so they're gated behind a maintenance passphrase
- * (typed into the field below) as a deliberate speed-bump. This is a
- * client-side confirmation on top of admin auth, not a server secret.
+ *  - "Assign authors" — stamps a byline (from the Writers tab personas) onto
+ *    posts that have none. Existing bylines are kept.
+ *  - "Reprocess" — heavy: re-runs the writer over every published news article
+ *    to upgrade it to the current voice/structure, then the editor re-checks
+ *    it, in the background.
+ * Both change live articles, so they need the maintenance password, which the
+ * SERVER checks (NEWSROOM_MAINTENANCE_SECRET) on top of owner-only admin auth.
  */
+
+/** Reprocess response — tolerant of the older {published, queued} shape and of
+ *  the newer refusal/dedupe counts the API may return. */
+interface ReprocessResult {
+  published?: number;
+  queued?: number;
+  refused?: number;
+  skipped?: number;
+  alreadyRunning?: boolean | number;
+  message?: string;
+}
+
 export default function BackfillAuthorsButton() {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
   const [pass, setPass] = useState("");
-  const [routeReview, setRouteReview] = useState(false);
+  // Safer default: reprocessed articles go back through review (off the live
+  // site until re-approved) instead of being rewritten live.
+  const [routeReview, setRouteReview] = useState(true);
 
   // The password is validated server-side (against NEWSROOM_MAINTENANCE_SECRET);
   // here we only require a non-empty value so changing the server secret never
@@ -47,7 +62,9 @@ export default function BackfillAuthorsButton() {
     try {
       const r = await backfillAuthors(pass.trim());
       setMsg(
-        `Assigned authors to ${r.updated} of ${r.scanned} articles (instant).`,
+        r
+          ? `Assigned authors to ${r.updated} of ${r.scanned} articles.`
+          : "Assign authors started.",
       );
     } catch (e) {
       setMsg((e as Error)?.message || "Assign failed.");
@@ -60,17 +77,16 @@ export default function BackfillAuthorsButton() {
     if (!gate()) return;
     const warning = routeReview
       ? "Reprocess ALL published articles into the REVIEW QUEUE? Each is re-written in its author's voice and moved to review — it leaves the live site until you approve it again."
-      : "Reprocess ALL published articles? This re-writes each one in its author's voice (Chuy/Eli) and runs in the background. It changes live article text.";
+      : "Reprocess ALL published articles LIVE? This re-writes each one in its author's voice and runs in the background. It changes live article text before you see it.";
     if (!window.confirm(warning)) return;
     setBusy("reprocess");
     setMsg("");
     try {
-      const r = await reprocessPublished(pass.trim(), routeReview);
-      setMsg(
-        routeReview
-          ? `Queued ${r.queued} of ${r.published} articles — they'll land in the Review queue as jobs run.`
-          : `Queued ${r.queued} of ${r.published} published articles for reprocessing — they'll update over the next few minutes as jobs run.`,
-      );
+      const r = (await reprocessPublished(
+        pass.trim(),
+        routeReview,
+      )) as ReprocessResult | null;
+      setMsg(describeReprocess(r, routeReview));
     } catch (e) {
       setMsg((e as Error)?.message || "Reprocess failed.");
     } finally {
@@ -90,10 +106,12 @@ export default function BackfillAuthorsButton() {
         Article archive maintenance
       </Heading>
       <Text color="nexzy.gray.100" fontSize="sm" mb={3}>
-        Assign gives old posts a Chuy/Eli byline instantly. Reprocess re-writes
-        every published article in that author's voice + current structure (runs
-        in the background; changes live text). Both change live articles —
-        confirm with the maintenance password to unlock.
+        Assign gives posts without a byline one of your writers (from the
+        Writers tab); existing bylines are kept. Reprocess re-writes every
+        published news article in its author&apos;s voice + current structure,
+        then re-runs the editor (background jobs, after any breaking news in the
+        queue). Both change live articles — the maintenance password is checked
+        on the server.
       </Text>
 
       <Input
@@ -152,8 +170,8 @@ export default function BackfillAuthorsButton() {
           onChange={(e) => setRouteReview(e.target.checked)}
         />
         <Text color="nexzy.gray.100" fontSize="xs">
-          Route reprocessed articles through the review queue (they leave the
-          live site until you re-approve). Off = update live in place.
+          Route reprocessed articles through the review queue (recommended: they
+          leave the live site until you re-approve). Off = update live in place.
         </Text>
       </HStack>
       {msg && (
@@ -165,4 +183,32 @@ export default function BackfillAuthorsButton() {
       )}
     </Box>
   );
+}
+
+/** Human summary of a reprocess response (old + new API shapes). */
+function describeReprocess(
+  r: ReprocessResult | null,
+  routeReview: boolean,
+): string {
+  if (!r) return "Reprocess request sent.";
+  if (r.alreadyRunning) {
+    return (
+      r.message ||
+      "A reprocess run is already in progress — nothing new was queued. Wait for it to finish."
+    );
+  }
+  const queued = r.queued ?? 0;
+  const parts = [
+    r.published != null
+      ? `Queued ${queued} of ${r.published} published articles`
+      : `Queued ${queued} articles`,
+  ];
+  const refused = (r.refused ?? 0) + (r.skipped ?? 0);
+  if (refused > 0) {
+    parts.push(`${refused} skipped (already queued or not a news article)`);
+  }
+  const tail = routeReview
+    ? "they'll land in the Review queue as jobs run."
+    : "they'll update live as jobs run.";
+  return `${parts.join(", ")} — ${tail}`;
 }
