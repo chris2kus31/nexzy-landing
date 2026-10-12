@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOnReactivate } from "./useOnReactivate";
 import {
   Box,
   Flex,
@@ -2279,7 +2280,14 @@ export function AudiencePanel({
  * written (in that voice) and appear under Suggestions. Cards are collapsible so
  * you can scan the whole board.
  */
-export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
+export default function LeadsPanel({
+  isOwner,
+  active = true,
+}: {
+  isOwner: boolean;
+  /** False while Content Studio shows another sub-tab (panel stays mounted). */
+  active?: boolean;
+}) {
   const [leads, setLeads] = useState<ContentSuggestion[] | null>(null);
   const [writers, setWriters] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -2307,6 +2315,11 @@ export default function LeadsPanel({ isOwner }: { isOwner: boolean }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Coming back to Leads: refetch so leads consumed/created elsewhere show up.
+  useOnReactivate(active, () => {
+    void load();
+  });
 
   useEffect(() => {
     getAudienceProfile()

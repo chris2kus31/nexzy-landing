@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode, useEffect, useRef, useState } from "react";
+import { useOnReactivate } from "./useOnReactivate";
 import {
   Box,
   Flex,
@@ -4028,9 +4029,12 @@ function StoryGroup({
 
 export default function ContentPanel({
   isOwner = false,
+  active = true,
   onSendToCards,
 }: {
   isOwner?: boolean;
+  /** False while Content Studio shows another sub-tab (panel stays mounted). */
+  active?: boolean;
   onSendToCards?: (s: {
     format?: string;
     template?: string;
@@ -4056,6 +4060,16 @@ export default function ContentPanel({
       .then(setWriters)
       .catch(() => {});
   }, []);
+
+  // Coming back to Suggestions (e.g. after generating from Leads): refetch in
+  // the background. Keeps the current list on screen (no spinner) and keeps it
+  // if the request fails. Cards are keyed by id, so open cards keep their state.
+  useOnReactivate(active, () => {
+    getContentSuggestions()
+      .then(setItems)
+      .catch(() => {});
+    loadBudget();
+  });
 
   const remove = (id: string) =>
     setItems((xs) => (xs ? xs.filter((x) => x.id !== id) : xs));

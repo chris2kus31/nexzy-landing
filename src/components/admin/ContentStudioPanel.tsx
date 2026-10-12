@@ -155,10 +155,14 @@ export default function ContentStudioPanel({
         <CardStudioPanel isOwner={isOwner} seed={cardSeed} />
       </Pane>
       <Pane sub="leads" active={sub} visited={visited}>
-        <LeadsPanel isOwner={isOwner} />
+        <LeadsPanel isOwner={isOwner} active={sub === "leads"} />
       </Pane>
       <Pane sub="suggestions" active={sub} visited={visited}>
-        <ContentPanel isOwner={isOwner} onSendToCards={sendToCards} />
+        <ContentPanel
+          isOwner={isOwner}
+          active={sub === "suggestions"}
+          onSendToCards={sendToCards}
+        />
       </Pane>
       <Pane sub="library" active={sub} visited={visited}>
         <VideosPanel isOwner={isOwner} />
