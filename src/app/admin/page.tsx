@@ -443,7 +443,7 @@ function AdminContent() {
 
       {tab === "subscribers" && <SubscribersPanel />}
 
-      {tab === "marketing" && <MarketingPanel />}
+      {tab === "marketing" && <MarketingPanel isOwner={isOwner} />}
 
       {tab === "content-studio" && (
         <ContentStudioPanel isOwner={isOwner} onRefresh={load} />

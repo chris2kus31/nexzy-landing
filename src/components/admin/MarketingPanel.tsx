@@ -15,6 +15,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import QuickPostPanel from "@/components/admin/QuickPostPanel";
+import EmailCampaignPanel from "@/components/admin/EmailCampaignPanel";
 import {
   getMarketingChannels,
   getMarketingRecommendations,
@@ -627,10 +628,16 @@ const MKT_SUBS = [
   { key: "quick", label: "⚡ Quick Post" },
   { key: "recommended", label: "Recommended" },
   { key: "composer", label: "Composer" },
+  // Owner-only: announcement emails to users + subscribers.
+  { key: "email", label: "Email" },
 ] as const;
 type MktSub = (typeof MKT_SUBS)[number]["key"];
 
-export default function MarketingPanel() {
+export default function MarketingPanel({
+  isOwner = false,
+}: {
+  isOwner?: boolean;
+} = {}) {
   const [enabled, setEnabled] = useState<SocialChannel[]>([]);
   const [autoPost, setAutoPost] = useState(false);
   const [genChannels, setGenChannels] = useState<SocialChannel[]>([]);
@@ -695,7 +702,7 @@ export default function MarketingPanel() {
       </Box>
 
       <HStack gap={2} wrap="wrap">
-        {MKT_SUBS.map((sb) => {
+        {MKT_SUBS.filter((sb) => sb.key !== "email" || isOwner).map((sb) => {
           const active = sub === sb.key;
           return (
             <Button
@@ -716,79 +723,87 @@ export default function MarketingPanel() {
 
       {sub === "quick" && <QuickPostPanel />}
 
+      {sub === "email" && isOwner && <EmailCampaignPanel />}
+
       {sub === "recommended" && (
-      <Box>
-        <Flex align="center" justify="space-between" mb={2} gap={2} wrap="wrap">
-          <Heading size="sm" color="nexzy.white">
-            Recommended posts
-          </Heading>
-          <Button
-            size="sm"
-            colorPalette="blue"
-            onClick={generate}
-            loading={loading}
-            loadingText="Thinking…"
-            disabled={genChannels.length === 0}
+        <Box>
+          <Flex
+            align="center"
+            justify="space-between"
+            mb={2}
+            gap={2}
+            wrap="wrap"
           >
-            {recs ? "↻ Regenerate ideas" : "Generate ideas"}
-          </Button>
-        </Flex>
-
-        {/* Which channels to draft ideas for — keeps token spend to what you post. */}
-        <HStack gap={2} mb={3} wrap="wrap">
-          <Text color="nexzy.gray.100" fontSize="xs">
-            Draft for:
-          </Text>
-          {CHANNELS.map((c) => (
-            <ChannelToggle
-              key={c}
-              channel={c}
-              active={genChannels.includes(c)}
-              onClick={() =>
-                setGenChannels(
-                  genChannels.includes(c)
-                    ? genChannels.filter((x) => x !== c)
-                    : [...genChannels, c],
-                )
-              }
-            />
-          ))}
-        </HStack>
-
-        {err && (
-          <Text color="red.300" fontSize="sm" mb={2}>
-            {err}
-          </Text>
-        )}
-
-        {loading && !recs ? (
-          <Flex justify="center" py={8}>
-            <Spinner color="nexzy.blue" size="lg" />
+            <Heading size="sm" color="nexzy.white">
+              Recommended posts
+            </Heading>
+            <Button
+              size="sm"
+              colorPalette="blue"
+              onClick={generate}
+              loading={loading}
+              loadingText="Thinking…"
+              disabled={genChannels.length === 0}
+            >
+              {recs ? "↻ Regenerate ideas" : "Generate ideas"}
+            </Button>
           </Flex>
-        ) : recs === null ? (
-          <Text color="nexzy.gray.100" fontSize="sm">
-            Hit “Generate ideas” — the publicist scans your recent articles and
-            hot leads and drafts posts you can send.
-          </Text>
-        ) : recs.length === 0 ? (
-          <Text color="nexzy.gray.100" fontSize="sm">
-            No recommendations right now. Publish an article or run a desk scan,
-            then try again.
-          </Text>
-        ) : (
-          <VStack align="stretch" gap={4}>
-            {recs.map((rec) => (
-              <RecCard
-                key={rec.id}
-                rec={rec}
-                enabled={enabled}
-                onDone={removeRec}
-                writers={writers}
+
+          {/* Which channels to draft ideas for — keeps token spend to what you post. */}
+          <HStack gap={2} mb={3} wrap="wrap">
+            <Text color="nexzy.gray.100" fontSize="xs">
+              Draft for:
+            </Text>
+            {CHANNELS.map((c) => (
+              <ChannelToggle
+                key={c}
+                channel={c}
+                active={genChannels.includes(c)}
+                onClick={() =>
+                  setGenChannels(
+                    genChannels.includes(c)
+                      ? genChannels.filter((x) => x !== c)
+                      : [...genChannels, c],
+                  )
+                }
               />
             ))}
-          </VStack>
-        )}
-      </Box>
+          </HStack>
+
+          {err && (
+            <Text color="red.300" fontSize="sm" mb={2}>
+              {err}
+            </Text>
+          )}
+
+          {loading && !recs ? (
+            <Flex justify="center" py={8}>
+              <Spinner color="nexzy.blue" size="lg" />
+            </Flex>
+          ) : recs === null ? (
+            <Text color="nexzy.gray.100" fontSize="sm">
+              Hit “Generate ideas” — the publicist scans your recent articles
+              and hot leads and drafts posts you can send.
+            </Text>
+          ) : recs.length === 0 ? (
+            <Text color="nexzy.gray.100" fontSize="sm">
+              No recommendations right now. Publish an article or run a desk
+              scan, then try again.
+            </Text>
+          ) : (
+            <VStack align="stretch" gap={4}>
+              {recs.map((rec) => (
+                <RecCard
+                  key={rec.id}
+                  rec={rec}
+                  enabled={enabled}
+                  onDone={removeRec}
+                  writers={writers}
+                />
+              ))}
+            </VStack>
+          )}
+        </Box>
       )}
 
       {sub === "composer" && <Composer enabled={enabled} />}

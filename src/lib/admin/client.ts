@@ -4582,3 +4582,88 @@ export async function getAnnouncementSubmissions(
     await fetch(`/api/newsroom/admin/announcements/${id}/submissions`),
   );
 }
+
+// ---- Marketing > Email (owner-only announcement emails) ----
+
+export type EmailAudience = "both" | "users" | "subscribers";
+
+export interface EmailDraft {
+  subject: string;
+  body: string;
+  preheader?: string;
+  fromName?: string;
+  replyTo?: string;
+}
+
+export interface EmailJob {
+  startedAt: string;
+  finishedAt: string | null;
+  subject: string;
+  audience: EmailAudience;
+  total: number;
+  sent: number;
+  failed: number;
+  failures: string[];
+}
+
+export interface EmailAudienceSummary {
+  audiences: Record<
+    EmailAudience,
+    { count: number; suppressed: number; appleRelay: number }
+  >;
+  defaults: {
+    fromName: string;
+    fromEmail: string;
+    replyTo: string;
+    postalAddressSet: boolean;
+    unsubscribeReady: boolean;
+  };
+  job: EmailJob | null;
+}
+
+export async function getEmailAudience(): Promise<EmailAudienceSummary> {
+  return handle(await fetch("/api/newsroom/admin/marketing/email/audience"));
+}
+
+export async function previewEmail(
+  draft: EmailDraft,
+): Promise<{ subject: string; html: string; text: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft),
+    }),
+  );
+}
+
+export async function sendTestEmail(
+  draft: EmailDraft,
+): Promise<{ ok: boolean; to: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft),
+    }),
+  );
+}
+
+export async function sendEmailCampaign(
+  draft: EmailDraft & { audience: EmailAudience; expectedCount: number },
+): Promise<{ running: boolean; job: EmailJob | null }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft),
+    }),
+  );
+}
+
+export async function getEmailStatus(): Promise<{
+  running: boolean;
+  job: EmailJob | null;
+}> {
+  return handle(await fetch("/api/newsroom/admin/marketing/email/status"));
+}

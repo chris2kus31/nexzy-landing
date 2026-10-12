@@ -39,8 +39,8 @@ export default function UnsubscribePage({
             You&apos;re unsubscribed
           </Heading>
           <Text color="gray.300" mb={6}>
-            You won&apos;t receive the weekly gaming digest anymore. Changed
-            your mind? You can re-subscribe any time from the news page.
+            You won&apos;t receive Nexzy emails anymore. Changed your mind? You
+            can re-subscribe any time from the news page.
           </Text>
           <Link asChild color="nexzy.lightBlue">
             <NextLink href="/blog">← Back to Nexzy News</NextLink>
