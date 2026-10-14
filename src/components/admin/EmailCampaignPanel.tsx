@@ -184,9 +184,7 @@ export default function EmailCampaignPanel() {
   });
   const count = summary?.audiences[audience]?.count ?? 0;
   const info = summary?.audiences[audience];
-  const ready =
-    !!summary?.defaults.postalAddressSet &&
-    !!summary?.defaults.unsubscribeReady;
+  const ready = !!summary?.defaults.unsubscribeReady;
   const filled = subject.trim().length > 0 && body.trim().length > 0;
   const asksForReply = /reply/i.test(body);
 
@@ -278,12 +276,6 @@ export default function EmailCampaignPanel() {
           p={3}
           bg="whiteAlpha.50"
         >
-          {!summary.defaults.postalAddressSet && (
-            <Text color="red.300" fontSize="sm">
-              Set ANNOUNCE_POSTAL_ADDRESS on the API before sending. US law
-              (CAN-SPAM) requires a mailing address in marketing emails.
-            </Text>
-          )}
           {!summary.defaults.unsubscribeReady && (
             <Text color="red.300" fontSize="sm">
               Set EMAIL_UNSUB_SECRET on the API (unsubscribe links need it).
@@ -410,7 +402,7 @@ export default function EmailCampaignPanel() {
             <Text color="whiteAlpha.600" fontSize="2xs" mt={1}>
               Blank line = new paragraph. [Text](https://link) = a link. A line
               with only [Text](https://link) becomes a button. The unsubscribe
-              link and mailing address are added automatically.
+              link is added automatically.
             </Text>
           </Box>
 
