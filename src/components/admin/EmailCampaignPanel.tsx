@@ -15,21 +15,27 @@ import {
 } from "@chakra-ui/react";
 import {
   getEmailAudience,
-  previewEmail,
-  sendTestEmail,
-  sendEmailCampaign,
   getEmailStatus,
+  getSendgridTemplates,
+  previewEmail,
+  sendEmailCampaign,
+  sendTestEmail,
   type EmailAudience,
   type EmailAudienceSummary,
   type EmailDraft,
   type EmailJob,
+  type EmailMode,
+  type SendgridTemplate,
 } from "@/lib/admin/client";
+import { EMAIL_PRESETS, NEXZY_EMAIL_HTML } from "./emailTemplates";
 
 /**
- * Marketing > Email: owner-only announcement emails (launch teaser, launch
- * day). Each person gets their own copy - nobody sees anyone else's address -
- * with a personal unsubscribe link. Sent through the API's existing SendGrid
- * SMTP setup. Unsubscribed people are skipped automatically.
+ * Marketing > Email: owner-only announcement emails. Three ways to build one:
+ *  - Simple message (plain text with links/buttons)
+ *  - Custom HTML (paste your own, or load the Nexzy design)
+ *  - SendGrid template (design it in SendGrid, pick it here)
+ * Everyone gets their own copy (nobody sees other addresses), a personal
+ * unsubscribe link, and unsubscribed people are skipped.
  */
 
 const inputProps = {
@@ -58,56 +64,13 @@ const AUDIENCE_LABEL: Record<EmailAudience, string> = {
   subscribers: "Newsletter subscribers only",
 };
 
-const TEMPLATES: { key: string; label: string; draft: EmailDraft }[] = [
-  {
-    key: "teaser",
-    label: "Email 1 - teaser (Oct 13)",
-    draft: {
-      subject: "The new Nexzy arrives Oct 21",
-      preheader: "Follow the games you love. And the gamers who get them.",
-      body: `Hey,
-
-It's Chris, the guy building Nexzy.
-
-The new Nexzy lands Wednesday, October 21. I rebuilt it around one idea: follow the games you love, and their news, trailers and updates come to you in one feed.
-
-You can also keep your library and wishlist in one place, get a price alert when a wishlisted game goes on sale, and meet gamers who play what you play.
-
-On iPhone? Tap below and hit "Notify me" to get pinged the moment it's live.
-
-[Get notified on the App Store](https://apps.apple.com/us/app/id6744055635?eventid=6817727328)
-
-Want a sneak peek first? [See what's coming](https://www.nexzyapp.com/follow).
-
-Already have Nexzy? The update arrives automatically on iPhone and Android.
-
-Hit reply and tell me which game you'll follow first. I read every one.
-
-Chris`,
-    },
-  },
-  {
-    key: "launch",
-    label: "Email 2 - launch day (Oct 21)",
-    draft: {
-      subject: "Your gaming feed is live",
-      preheader: "Follow a game and watch your feed fill up.",
-      body: `Hey,
-
-The new Nexzy is live on iPhone and Android.
-
-Follow a few games and your feed fills up with their news, trailers and updates. Your library and wishlist live in the same place, and you'll get a price alert when a wishlisted game drops.
-
-[Get it on the App Store](https://apps.apple.com/us/app/id6744055635)
-
-[Get it on Google Play](https://play.google.com/store/apps/details?id=com.nexzy.app)
-
-Follow three games, then hit reply and tell me what your feed got right and what it got wrong. I'm fixing things fast this week.
-
-Chris`,
-    },
-  },
+const MODES: { key: EmailMode; label: string }[] = [
+  { key: "text", label: "Simple message" },
+  { key: "html", label: "Custom HTML" },
+  { key: "sendgrid", label: "SendGrid template" },
 ];
+
+const AUTO_VARS = ["subject", "preheader", "unsubscribe_url"];
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -117,21 +80,128 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+function OutlineBtn(props: React.ComponentProps<typeof Button>) {
+  return (
+    <Button
+      size="xs"
+      variant="outline"
+      color="nexzy.gray.100"
+      borderColor="whiteAlpha.300"
+      _hover={{ bg: "whiteAlpha.100" }}
+      {...props}
+    />
+  );
+}
+
+/** Editable list of template variables ({{key}} -> value). */
+function DataEditor({
+  data,
+  setData,
+}: {
+  data: Record<string, string>;
+  setData: (d: Record<string, string>) => void;
+}) {
+  const [newKey, setNewKey] = useState("");
+  const entries = Object.entries(data);
+  return (
+    <Box>
+      <Label>Template variables</Label>
+      <Text color="whiteAlpha.600" fontSize="2xs" mb={2}>
+        Each one fills {"{{name}}"} in the template.{" "}
+        {AUTO_VARS.map((v) => `{{${v}}}`).join(", ")} are filled automatically.
+      </Text>
+      <VStack align="stretch" gap={2}>
+        {entries.length === 0 && (
+          <Text color="whiteAlpha.600" fontSize="xs">
+            No variables yet. Load a preset or add one.
+          </Text>
+        )}
+        {entries.map(([k, v]) => (
+          <Flex key={k} gap={2} align="flex-start">
+            <Text
+              color="nexzy.lightBlue"
+              fontSize="xs"
+              fontFamily="mono"
+              w="140px"
+              flexShrink={0}
+              pt={2}
+            >
+              {`{{${k}}}`}
+            </Text>
+            <Textarea
+              {...inputProps}
+              size="sm"
+              rows={v.length > 70 ? 3 : 1}
+              value={v}
+              onChange={(e) => setData({ ...data, [k]: e.target.value })}
+            />
+            <OutlineBtn
+              mt={1}
+              onClick={() => {
+                const next = { ...data };
+                delete next[k];
+                setData(next);
+              }}
+            >
+              Remove
+            </OutlineBtn>
+          </Flex>
+        ))}
+        <Flex gap={2}>
+          <Input
+            {...inputProps}
+            size="sm"
+            maxW="220px"
+            placeholder="new_variable"
+            value={newKey}
+            onChange={(e) =>
+              setNewKey(e.target.value.replace(/[^\w.]/g, "").slice(0, 64))
+            }
+          />
+          <OutlineBtn
+            mt={1}
+            disabled={!newKey || newKey in data || AUTO_VARS.includes(newKey)}
+            onClick={() => {
+              setData({ ...data, [newKey]: "" });
+              setNewKey("");
+            }}
+          >
+            Add variable
+          </OutlineBtn>
+        </Flex>
+      </VStack>
+    </Box>
+  );
+}
+
 export default function EmailCampaignPanel() {
   const [summary, setSummary] = useState<EmailAudienceSummary | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [audience, setAudience] = useState<EmailAudience>("both");
+  const [mode, setMode] = useState<EmailMode>("text");
   const [fromName, setFromName] = useState("");
   const [replyTo, setReplyTo] = useState("");
   const [subject, setSubject] = useState("");
   const [preheader, setPreheader] = useState("");
   const [body, setBody] = useState("");
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [html, setHtml] = useState("");
+  const [data, setData] = useState<Record<string, string>>({});
+  const [templateId, setTemplateId] = useState("");
+  const [sgTemplates, setSgTemplates] = useState<SendgridTemplate[] | null>(
+    null,
+  );
+  const [sgErr, setSgErr] = useState("");
+  const [preview, setPreview] = useState<{
+    html: string;
+    subject: string;
+    warnings: string[];
+  } | null>(null);
   const [busy, setBusy] = useState<"" | "preview" | "test" | "send">("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [job, setJob] = useState<EmailJob | null>(null);
   const [running, setRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
@@ -157,6 +227,20 @@ export default function EmailCampaignPanel() {
       .catch(() => {});
   }, [load]);
 
+  // Load the SendGrid template list the first time that mode is opened.
+  useEffect(() => {
+    if (mode !== "sendgrid" || sgTemplates !== null) return;
+    getSendgridTemplates()
+      .then((r) => {
+        setSgTemplates(r.templates);
+        setSgErr(r.ok ? "" : r.error || "Could not list templates.");
+      })
+      .catch((e) => {
+        setSgTemplates([]);
+        setSgErr((e as Error)?.message || "Could not list templates.");
+      });
+  }, [mode, sgTemplates]);
+
   // Poll progress while a send is running.
   useEffect(() => {
     if (!running) return;
@@ -177,23 +261,54 @@ export default function EmailCampaignPanel() {
 
   const draft = (): EmailDraft => ({
     subject,
-    body,
     preheader,
     fromName,
     replyTo,
+    mode,
+    ...(mode === "text" ? { body } : {}),
+    ...(mode === "html" ? { html, data } : {}),
+    ...(mode === "sendgrid" ? { templateId: templateId.trim(), data } : {}),
   });
+
   const count = summary?.audiences[audience]?.count ?? 0;
   const info = summary?.audiences[audience];
   const ready = !!summary?.defaults.unsubscribeReady;
-  const filled = subject.trim().length > 0 && body.trim().length > 0;
-  const asksForReply = /reply/i.test(body);
+  const sendgridReady = !!summary?.defaults.sendgridReady;
+  const contentReady =
+    mode === "text"
+      ? body.trim().length > 0
+      : mode === "html"
+        ? html.trim().length > 0
+        : /^d-[a-z0-9]{10,}$/i.test(templateId.trim()) && sendgridReady;
+  const filled = subject.trim().length > 0 && contentReady;
+  const asksForReply = /reply/i.test(
+    mode === "text" ? body : Object.values(data).join(" "),
+  );
+  const invalidate = () => {
+    setConfirming(false);
+    setPreview(null);
+  };
 
-  const applyTemplate = (d: EmailDraft) => {
-    setSubject(d.subject);
-    setPreheader(d.preheader || "");
-    setBody(d.body);
-    setPreviewHtml(null);
+  const applyPreset = (key: string, withDesign: boolean) => {
+    const p = EMAIL_PRESETS.find((x) => x.key === key);
+    if (!p) return;
+    setSubject(p.subject);
+    setPreheader(p.preheader);
+    setBody(p.body);
+    setData({ ...p.data });
+    if (withDesign) setHtml(NEXZY_EMAIL_HTML);
+    invalidate();
     setMsg(null);
+  };
+
+  const copyDesign = async () => {
+    try {
+      await navigator.clipboard.writeText(NEXZY_EMAIL_HTML);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setMsg({ ok: false, text: "Could not copy - your browser blocked it." });
+    }
   };
 
   const doPreview = async () => {
@@ -201,7 +316,11 @@ export default function EmailCampaignPanel() {
     setMsg(null);
     try {
       const r = await previewEmail(draft());
-      setPreviewHtml(r.html);
+      setPreview({
+        html: r.html,
+        subject: r.subject,
+        warnings: r.warnings ?? [],
+      });
     } catch (e) {
       setMsg({ ok: false, text: (e as Error)?.message || "Preview failed." });
     } finally {
@@ -255,9 +374,9 @@ export default function EmailCampaignPanel() {
           Email your users
         </Heading>
         <Text color="nexzy.gray.100" fontSize="sm">
-          Everyone gets their own copy: they see your name as the sender and
-          only their own address. Each email has a personal unsubscribe link,
-          and anyone who unsubscribed is skipped.
+          Everyone gets their own copy: they see Nexzy as the sender and only
+          their own address. Each email has a personal unsubscribe link, and
+          anyone who unsubscribed is skipped.
         </Text>
       </Box>
 
@@ -269,19 +388,9 @@ export default function EmailCampaignPanel() {
       {!summary && !loadErr && <Spinner color="nexzy.blue" />}
 
       {summary && !ready && (
-        <Box
-          borderWidth="1px"
-          borderColor="red.400"
-          borderRadius="md"
-          p={3}
-          bg="whiteAlpha.50"
-        >
-          {!summary.defaults.unsubscribeReady && (
-            <Text color="red.300" fontSize="sm">
-              Set EMAIL_UNSUB_SECRET on the API (unsubscribe links need it).
-            </Text>
-          )}
-        </Box>
+        <Text color="red.300" fontSize="sm">
+          Set EMAIL_UNSUB_SECRET on the API (unsubscribe links need it).
+        </Text>
       )}
 
       {summary && (
@@ -317,22 +426,43 @@ export default function EmailCampaignPanel() {
             </Text>
           </Flex>
 
+          <Box>
+            <Label>Build the email with</Label>
+            <HStack gap={2} wrap="wrap">
+              {MODES.map((m) => {
+                const active = mode === m.key;
+                return (
+                  <Button
+                    key={m.key}
+                    size="sm"
+                    bg={active ? "nexzy.blue" : "transparent"}
+                    color={active ? "white" : "nexzy.gray.100"}
+                    borderWidth="1px"
+                    borderColor={active ? "nexzy.blue" : "whiteAlpha.300"}
+                    _hover={{ bg: active ? "nexzy.blue" : "whiteAlpha.100" }}
+                    onClick={() => {
+                      setMode(m.key);
+                      invalidate();
+                    }}
+                  >
+                    {m.label}
+                  </Button>
+                );
+              })}
+            </HStack>
+          </Box>
+
           <HStack gap={2} wrap="wrap">
             <Text color="nexzy.gray.100" fontSize="xs">
-              Start from:
+              Load preset:
             </Text>
-            {TEMPLATES.map((t) => (
-              <Button
-                key={t.key}
-                size="xs"
-                variant="outline"
-                color="nexzy.gray.100"
-                borderColor="whiteAlpha.300"
-                _hover={{ bg: "whiteAlpha.100" }}
-                onClick={() => applyTemplate(t.draft)}
+            {EMAIL_PRESETS.map((p) => (
+              <OutlineBtn
+                key={p.key}
+                onClick={() => applyPreset(p.key, mode === "html")}
               >
-                {t.label}
-              </Button>
+                {p.label}
+              </OutlineBtn>
             ))}
           </HStack>
 
@@ -354,7 +484,7 @@ export default function EmailCampaignPanel() {
               <Input
                 size="sm"
                 {...inputProps}
-                placeholder="you@yourdomain.com"
+                placeholder="support@nexzyapp.com"
                 value={replyTo}
                 onChange={(e) => setReplyTo(e.target.value)}
               />
@@ -374,7 +504,7 @@ export default function EmailCampaignPanel() {
               value={subject}
               onChange={(e) => {
                 setSubject(e.target.value);
-                setConfirming(false);
+                invalidate();
               }}
             />
           </Box>
@@ -384,54 +514,195 @@ export default function EmailCampaignPanel() {
               size="sm"
               {...inputProps}
               value={preheader}
-              onChange={(e) => setPreheader(e.target.value)}
-            />
-          </Box>
-          <Box>
-            <Label>Message</Label>
-            <Textarea
-              {...inputProps}
-              rows={16}
-              fontSize="sm"
-              value={body}
               onChange={(e) => {
-                setBody(e.target.value);
-                setConfirming(false);
+                setPreheader(e.target.value);
+                invalidate();
               }}
             />
-            <Text color="whiteAlpha.600" fontSize="2xs" mt={1}>
-              Blank line = new paragraph. [Text](https://link) = a link. A line
-              with only [Text](https://link) becomes a button. The unsubscribe
-              link is added automatically.
-            </Text>
           </Box>
 
+          {mode === "text" && (
+            <Box>
+              <Label>Message</Label>
+              <Textarea
+                {...inputProps}
+                rows={16}
+                fontSize="sm"
+                value={body}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  invalidate();
+                }}
+              />
+              <Text color="whiteAlpha.600" fontSize="2xs" mt={1}>
+                Blank line = new paragraph. [Text](https://link) = a link. A
+                line with only [Text](https://link) becomes a button. The
+                unsubscribe link is added automatically.
+              </Text>
+            </Box>
+          )}
+
+          {mode === "html" && (
+            <>
+              <Box>
+                <Flex justify="space-between" align="center" mb={1} gap={2}>
+                  <Label>HTML</Label>
+                  <OutlineBtn
+                    onClick={() => {
+                      setHtml(NEXZY_EMAIL_HTML);
+                      invalidate();
+                    }}
+                  >
+                    Load the Nexzy design
+                  </OutlineBtn>
+                </Flex>
+                <Textarea
+                  {...inputProps}
+                  rows={14}
+                  fontSize="xs"
+                  fontFamily="mono"
+                  placeholder="Paste a full HTML email, or load the Nexzy design."
+                  value={html}
+                  onChange={(e) => {
+                    setHtml(e.target.value);
+                    invalidate();
+                  }}
+                />
+                <Text color="whiteAlpha.600" fontSize="2xs" mt={1}>
+                  Use {"{{variable}}"} for values below ({"{{{variable}}}"}{" "}
+                  inserts raw HTML). Put {"{{unsubscribe_url}}"} where you want
+                  the unsubscribe link; if it is missing, a standard footer is
+                  added.
+                </Text>
+              </Box>
+              <DataEditor
+                data={data}
+                setData={(d) => {
+                  setData(d);
+                  invalidate();
+                }}
+              />
+            </>
+          )}
+
+          {mode === "sendgrid" && (
+            <>
+              <Box
+                borderWidth="1px"
+                borderColor="whiteAlpha.200"
+                borderRadius="md"
+                p={3}
+                bg="whiteAlpha.50"
+              >
+                <Text color="nexzy.white" fontSize="sm" fontWeight="600" mb={1}>
+                  How SendGrid templates work here
+                </Text>
+                <Text color="nexzy.gray.100" fontSize="xs" lineHeight="1.6">
+                  1. In SendGrid: Email API, then Dynamic Templates, then Create
+                  a Dynamic Template. Add a version with the Code Editor (or the
+                  Design Editor).
+                  <br />
+                  2. Set the version Subject to {"{{subject}}"} so the subject
+                  here is used, and include a link to {"{{unsubscribe_url}}"}.
+                  <br />
+                  3. Pick the template below, fill the variables, Preview, send
+                  yourself a test, then send.
+                </Text>
+                <HStack mt={2} gap={2}>
+                  <OutlineBtn onClick={copyDesign}>
+                    {copied
+                      ? "Copied - paste it into SendGrid's Code Editor"
+                      : "Copy the Nexzy design HTML"}
+                  </OutlineBtn>
+                </HStack>
+              </Box>
+
+              {!sendgridReady && (
+                <Text color="red.300" fontSize="sm">
+                  No SendGrid API key found on the API. Set SENDGRID_API_KEY (an
+                  API key with Mail Send + Template Engine access).
+                </Text>
+              )}
+
+              <Box>
+                <Label>SendGrid template</Label>
+                {sgTemplates === null && sendgridReady ? (
+                  <Spinner size="sm" color="nexzy.blue" />
+                ) : (
+                  <Flex gap={3} wrap="wrap" align="center">
+                    {sgTemplates && sgTemplates.length > 0 && (
+                      <select
+                        style={SELECT_STYLE}
+                        value={
+                          sgTemplates.some((t) => t.id === templateId)
+                            ? templateId
+                            : ""
+                        }
+                        onChange={(e) => {
+                          setTemplateId(e.target.value);
+                          invalidate();
+                        }}
+                      >
+                        <option value="">Choose a template</option>
+                        {sgTemplates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                            {t.activeVersion ? "" : " (no active version)"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <Input
+                      size="sm"
+                      {...inputProps}
+                      maxW="360px"
+                      fontFamily="mono"
+                      placeholder="or paste a template ID (d-...)"
+                      value={templateId}
+                      onChange={(e) => {
+                        setTemplateId(e.target.value.trim());
+                        invalidate();
+                      }}
+                    />
+                    <OutlineBtn onClick={() => setSgTemplates(null)}>
+                      Refresh list
+                    </OutlineBtn>
+                  </Flex>
+                )}
+                {sgErr && (
+                  <Text color="orange.300" fontSize="2xs" mt={1}>
+                    {sgErr}
+                  </Text>
+                )}
+              </Box>
+              <DataEditor
+                data={data}
+                setData={(d) => {
+                  setData(d);
+                  invalidate();
+                }}
+              />
+            </>
+          )}
+
           <Flex gap={2} wrap="wrap">
-            <Button
+            <OutlineBtn
               size="sm"
-              variant="outline"
-              color="nexzy.gray.100"
-              borderColor="whiteAlpha.300"
-              _hover={{ bg: "whiteAlpha.100" }}
               onClick={doPreview}
               loading={busy === "preview"}
               disabled={!filled}
             >
               Preview
-            </Button>
-            <Button
+            </OutlineBtn>
+            <OutlineBtn
               size="sm"
-              variant="outline"
-              color="nexzy.gray.100"
-              borderColor="whiteAlpha.300"
-              _hover={{ bg: "whiteAlpha.100" }}
               onClick={doTest}
               loading={busy === "test"}
               loadingText="Sending test"
               disabled={!filled || !ready}
             >
               Send me a test
-            </Button>
+            </OutlineBtn>
             <Button
               size="sm"
               bg={confirming ? "orange.500" : "nexzy.blue"}
@@ -478,21 +749,28 @@ export default function EmailCampaignPanel() {
             </Box>
           )}
 
-          {previewHtml && (
+          {preview && (
             <Box>
-              <Label>Preview (as you would receive it)</Label>
-              <iframe
-                title="Email preview"
-                srcDoc={previewHtml}
-                sandbox=""
-                style={{
-                  width: "100%",
-                  height: 560,
-                  background: "#fff",
-                  border: 0,
-                  borderRadius: 8,
-                }}
-              />
+              <Label>Preview - subject: {preview.subject}</Label>
+              {preview.warnings.map((w, i) => (
+                <Text key={i} color="orange.300" fontSize="xs" mb={1}>
+                  {w}
+                </Text>
+              ))}
+              {preview.html && (
+                <iframe
+                  title="Email preview"
+                  srcDoc={preview.html}
+                  sandbox=""
+                  style={{
+                    width: "100%",
+                    height: 640,
+                    background: "#fff",
+                    border: 0,
+                    borderRadius: 8,
+                  }}
+                />
+              )}
             </Box>
           )}
         </>

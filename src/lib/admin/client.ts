@@ -4587,12 +4587,24 @@ export async function getAnnouncementSubmissions(
 
 export type EmailAudience = "both" | "users" | "subscribers";
 
+export type EmailMode = "text" | "html" | "sendgrid";
+
 export interface EmailDraft {
   subject: string;
-  body: string;
+  mode?: EmailMode;
+  body?: string;
+  html?: string;
+  templateId?: string;
+  data?: Record<string, string>;
   preheader?: string;
   fromName?: string;
   replyTo?: string;
+}
+
+export interface SendgridTemplate {
+  id: string;
+  name: string;
+  activeVersion: { id: string; name: string; subject: string } | null;
 }
 
 export interface EmailJob {
@@ -4600,6 +4612,7 @@ export interface EmailJob {
   finishedAt: string | null;
   subject: string;
   audience: EmailAudience;
+  mode?: EmailMode;
   total: number;
   sent: number;
   failed: number;
@@ -4617,6 +4630,7 @@ export interface EmailAudienceSummary {
     replyTo: string;
     postalAddressSet: boolean;
     unsubscribeReady: boolean;
+    sendgridReady?: boolean;
   };
   job: EmailJob | null;
 }
@@ -4625,9 +4639,22 @@ export async function getEmailAudience(): Promise<EmailAudienceSummary> {
   return handle(await fetch("/api/newsroom/admin/marketing/email/audience"));
 }
 
-export async function previewEmail(
-  draft: EmailDraft,
-): Promise<{ subject: string; html: string; text: string }> {
+export async function getSendgridTemplates(): Promise<{
+  ok: boolean;
+  templates: SendgridTemplate[];
+  error?: string;
+}> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/sendgrid-templates"),
+  );
+}
+
+export async function previewEmail(draft: EmailDraft): Promise<{
+  subject: string;
+  html: string;
+  text: string;
+  warnings?: string[];
+}> {
   return handle(
     await fetch("/api/newsroom/admin/marketing/email/preview", {
       method: "POST",
