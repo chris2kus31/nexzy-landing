@@ -4585,7 +4585,9 @@ export async function getAnnouncementSubmissions(
 
 // ---- Marketing > Email (owner-only announcement emails) ----
 
-export type EmailAudience = "both" | "users" | "subscribers";
+/** Saved audiences; "custom" = a pasted list of specific addresses. */
+export type EmailListAudience = "both" | "users" | "subscribers";
+export type EmailAudience = EmailListAudience | "custom";
 
 export type EmailMode = "text" | "html" | "sendgrid";
 
@@ -4621,7 +4623,7 @@ export interface EmailJob {
 
 export interface EmailAudienceSummary {
   audiences: Record<
-    EmailAudience,
+    EmailListAudience,
     { count: number; suppressed: number; appleRelay: number }
   >;
   defaults: {
@@ -4654,6 +4656,8 @@ export async function previewEmail(draft: EmailDraft): Promise<{
   html: string;
   text: string;
   warnings?: string[];
+  /** Custom {{names}} the template uses (auto-filled ones excluded). */
+  variables?: string[];
 }> {
   return handle(
     await fetch("/api/newsroom/admin/marketing/email/preview", {
@@ -4664,20 +4668,48 @@ export async function previewEmail(draft: EmailDraft): Promise<{
   );
 }
 
+/** Test copies to `testTo` (up to 5, comma separated), or the owner when blank. */
 export async function sendTestEmail(
   draft: EmailDraft,
+  testTo?: string,
 ): Promise<{ ok: boolean; to: string }> {
   return handle(
     await fetch("/api/newsroom/admin/marketing/email/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
+      body: JSON.stringify({ ...draft, testTo: testTo?.trim() || undefined }),
+    }),
+  );
+}
+
+export interface EmailListCheck {
+  count: number;
+  invalid: string[];
+  duplicates: number;
+  unsubscribed: string[];
+  unsubscribedCount: number;
+  appleRelay: number;
+  max: number;
+}
+
+/** Check a pasted list of specific addresses before sending. */
+export async function checkEmailList(emails: string): Promise<EmailListCheck> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/check-list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emails }),
     }),
   );
 }
 
 export async function sendEmailCampaign(
-  draft: EmailDraft & { audience: EmailAudience; expectedCount: number },
+  draft: EmailDraft & {
+    audience: EmailAudience;
+    expectedCount: number;
+    /** Required when audience is "custom". */
+    emails?: string;
+  },
 ): Promise<{ running: boolean; job: EmailJob | null }> {
   return handle(
     await fetch("/api/newsroom/admin/marketing/email/send", {
