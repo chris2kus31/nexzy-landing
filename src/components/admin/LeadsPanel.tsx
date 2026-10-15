@@ -41,6 +41,7 @@ import {
 } from "react-icons/fi";
 import Paginated from "@/components/admin/Paginated";
 import ManualLeadForm from "@/components/admin/ManualLeadForm";
+import KeyOfferBox from "@/components/admin/KeyOfferBox";
 import YouTubePerformance, {
   type YtSource,
 } from "@/components/admin/YouTubePerformance";
@@ -765,7 +766,12 @@ function LeadCard({
   const [memeErr, setMemeErr] = useState<string | null>(null);
   const [memeOk, setMemeOk] = useState(false);
   // MANUAL (at-will) leads only: inline "Edit context" form.
-  const manual = s.sourceType === "manual" ? s.payload?.manual : undefined;
+  // Key-offer leads carry the same payload.manual context (edit + Generate).
+  const manual =
+    s.sourceType === "manual" || s.sourceType === "key_offer"
+      ? s.payload?.manual
+      : undefined;
+  const keyOffer = s.payload?.keyOffer;
   const [editingManual, setEditingManual] = useState(false);
 
   // The analyst's recommended plan (platformFormats + xFormat), normalized to
@@ -998,6 +1004,15 @@ function LeadCard({
             {manual?.lane === "meme" ? "MANUAL · FUN" : "MANUAL"}
           </Badge>
         )}
+        {keyOffer && (
+          <Badge
+            colorPalette={keyOffer.state === "claimed" ? "green" : "teal"}
+            variant="solid"
+          >
+            {keyOffer.state === "claimed" ? "KEY CLAIMED" : "KEY OFFER"} ·{" "}
+            {keyOffer.fit}/10
+          </Badge>
+        )}
         {whenBadge && (
           <Badge
             colorPalette={
@@ -1056,6 +1071,9 @@ function LeadCard({
 
       {open && (
         <Box px={4} pb={4}>
+          {keyOffer && (
+            <KeyOfferBox s={s} isOwner={isOwner} onChanged={reload} />
+          )}
           {manual && (
             <Box mt={3} mb={3}>
               {editingManual ? (
@@ -2295,6 +2313,8 @@ export default function LeadsPanel({
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   // Filter the board by the lead's writer (null = all).
   const [writerFilter, setWriterFilter] = useState<string | null>(null);
+  // Source filter: everything, or only key offers (sorted by fit).
+  const [keyOffersOnly, setKeyOffersOnly] = useState(false);
   // "+ New suggestion" (manual, at-will lead) form toggle — owner-only.
   const [showNew, setShowNew] = useState(false);
 
@@ -2372,9 +2392,20 @@ export default function LeadsPanel({
   const writerChips = Array.from(
     new Set([...writers, ...leads.map((l) => l.author).filter(Boolean)]),
   ) as string[];
-  const visibleLeads = writerFilter
+  const keyOfferCount = leads.filter(
+    (l) => l.sourceType === "key_offer",
+  ).length;
+  const byWriter = writerFilter
     ? leads.filter((l) => (l.author || "") === writerFilter)
     : leads;
+  const visibleLeads = keyOffersOnly
+    ? byWriter
+        .filter((l) => l.sourceType === "key_offer")
+        .sort(
+          (a, b) =>
+            (b.payload?.keyOffer?.fit ?? 0) - (a.payload?.keyOffer?.fit ?? 0),
+        )
+    : byWriter;
 
   return (
     <VStack align="stretch" gap={4}>
@@ -2440,6 +2471,33 @@ export default function LeadsPanel({
         />
       )}
 
+      {keyOfferCount > 0 && (
+        <HStack gap={2} wrap="wrap">
+          <Button
+            size="xs"
+            variant={!keyOffersOnly ? "solid" : "outline"}
+            bg={!keyOffersOnly ? "nexzy.blue" : "transparent"}
+            color={!keyOffersOnly ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: !keyOffersOnly ? "nexzy.blue" : "whiteAlpha.100" }}
+            onClick={() => setKeyOffersOnly(false)}
+          >
+            All leads
+          </Button>
+          <Button
+            size="xs"
+            variant={keyOffersOnly ? "solid" : "outline"}
+            bg={keyOffersOnly ? "teal.600" : "transparent"}
+            color={keyOffersOnly ? "white" : "nexzy.gray.100"}
+            borderColor="whiteAlpha.300"
+            _hover={{ bg: keyOffersOnly ? "teal.700" : "whiteAlpha.100" }}
+            onClick={() => setKeyOffersOnly(true)}
+          >
+            Key offers ({keyOfferCount})
+          </Button>
+        </HStack>
+      )}
+
       {leads.length > 0 && writerChips.length > 1 && (
         <HStack gap={2} wrap="wrap">
           <Button
@@ -2480,7 +2538,9 @@ export default function LeadsPanel({
         </Text>
       ) : visibleLeads.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          No open leads for {writerFilter}.
+          {keyOffersOnly
+            ? `No open key offers${writerFilter ? ` for ${writerFilter}` : ""}.`
+            : `No open leads for ${writerFilter}.`}
         </Text>
       ) : (
         <Paginated items={visibleLeads} pageSize={20}>

@@ -675,6 +675,9 @@ export interface ContentSuggestion {
     // MANUAL (at-will) lead input — present only on leads created with
     // "+ New suggestion" (sourceType "manual"). Generate grounds on `context`.
     manual?: ManualLeadInput;
+    // KEY OFFER lead (sourceType "key_offer"): a key / review-copy offer from a
+    // press platform email. Also carries `manual` (the context Generate uses).
+    keyOffer?: KeyOfferInfo;
     // GAMING MEME card (format === "meme"): 5 film-clip options, each verified
     // against Clip.Cafe / Wikiquote. Lead side: memeGenerating / memeError /
     // memeCardId while (and after) a meme is made from that lead.
@@ -4023,6 +4026,43 @@ export async function getHashtagAb(): Promise<HashtagAbRollup> {
 }
 
 /** A manual (at-will) lead's topic + context — `context` is the only source of truth. */
+/** payload.keyOffer on a key-offer lead (see KeyOfferService in the API). */
+export interface KeyOfferInfo {
+  platform: "keymailer" | "terminals" | "pressengine";
+  platformLabel: string;
+  game: string;
+  subject: string;
+  claimUrl: string;
+  platforms: string[];
+  releasePhrase: string | null;
+  release: string | null;
+  embargoPhrase: string | null;
+  embargo: string | null;
+  fit: number;
+  fitGenres: string[];
+  fitReasons: string[];
+  receivedAt: string;
+  lastSeenAt: string;
+  seenCount: number;
+  state: "offered" | "claimed";
+  claimedAt?: string | null;
+  contextAdded: boolean;
+}
+
+/** Mark a key-offer lead's key as requested/claimed (or undo). Zero-token. */
+export async function setKeyOfferClaimed(
+  id: string,
+  claimed: boolean,
+): Promise<{ ok: boolean; card: ContentSuggestion }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/content/${id}/key-offer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claimed }),
+    }),
+  );
+}
+
 export interface ManualLeadInput {
   title: string;
   context: string;
