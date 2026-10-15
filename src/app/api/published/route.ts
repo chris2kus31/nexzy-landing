@@ -6,8 +6,13 @@
 // instead of waiting out their cache window, and (2) on PUBLISH only, an
 // IndexNow + WebSub ping so engines crawl the URL within hours.
 //
-// Body: { slug, type, indexable, event? } — event is "publish" (default when
-// omitted, so older API builds keep today's behavior), "update" or "unpublish".
+// Body: { slug, type, indexable, event?, path?, parentPath? } — event is
+// "publish" (default when omitted, so older API builds keep today's behavior),
+// "update" or "unpublish". `path` is the content's FULL public path when the
+// API knows it (a walkthrough chapter lives at /walkthroughs/<parent>/<slug>,
+// which type+slug alone cannot reconstruct); `parentPath` is an extra page to
+// refresh (a chapter's parent overview). Both optional — older callers without
+// them keep the type+slug behavior.
 //
 // Auth: shared secret in the `x-webhook-secret` header (NEWSROOM_WEBHOOK_SECRET).
 import { NextRequest, NextResponse } from "next/server";
@@ -32,9 +37,18 @@ export async function POST(req: NextRequest): Promise<Response> {
   let indexable = true;
   // "publish" (default) pings engines; "update"/"unpublish" only revalidate.
   let event: "publish" | "update" | "unpublish" = "publish";
+  // Full public path from the API (chapter-aware); must be a safe local path.
+  let path = "";
+  let parentPath = "";
+  const localPath = (v: unknown): string =>
+    typeof v === "string" && /^\/[a-z0-9\-/]+$/i.test(v) && !v.includes("//")
+      ? v.replace(/\/+$/, "")
+      : "";
   try {
     const body = await req.json();
     slug = typeof body?.slug === "string" ? body.slug : "";
+    path = localPath(body?.path);
+    parentPath = localPath(body?.parentPath);
     if (
       body?.type === "guide" ||
       body?.type === "list" ||
@@ -54,8 +68,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   // (a guide lives at /guides/<slug>, a review at /reviews/<slug>, not /blog).
   const base = publicPathForType(type);
 
-  // Refresh the affected page + its index + feeds.
-  if (slug) revalidatePath(`${base}/${slug}`);
+  // Refresh the affected page + its index + feeds. The API's own `path` wins
+  // over the type+slug guess (a chapter's real URL is nested under its parent);
+  // `parentPath` additionally refreshes the page that lists it (the overview).
+  const pagePath = path || (slug ? `${base}/${slug}` : "");
+  if (pagePath) revalidatePath(pagePath);
+  if (parentPath) revalidatePath(parentPath);
   revalidatePath(base);
   revalidatePath("/sitemap.xml");
   revalidatePath("/news-sitemap.xml");
@@ -89,7 +107,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (event !== "publish") {
     return NextResponse.json({ ok: true, revalidated: true, event });
   }
-  const urls = slug && indexable ? [`${SITE_URL}${base}/${slug}`] : [];
+  const urls = pagePath && indexable ? [`${SITE_URL}${pagePath}`] : [];
   const [indexNowStatus, webSubStatus] = await Promise.all([
     pingIndexNow(urls),
     pingWebSub(),
