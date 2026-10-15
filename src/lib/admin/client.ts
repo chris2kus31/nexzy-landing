@@ -4064,6 +4064,31 @@ export interface KeyOfferInfo {
   contextAdded: boolean;
 }
 
+/** "Create more from this" — spin a guide/review/video lead off a post. */
+export async function spinoffPost(
+  id: string,
+  body: {
+    type: "guide" | "review" | "video_lead";
+    game?: string;
+    focus?: string;
+    notes?: string;
+    rating?: number;
+  },
+): Promise<{
+  ok: boolean;
+  kind: string;
+  reason?: string;
+  existingId?: string;
+}> {
+  return handle(
+    await fetch(`/api/newsroom/admin/posts/${id}/spinoff`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
 /** Mark a key-offer lead's key as requested/claimed (or undo). Zero-token. */
 export async function setKeyOfferClaimed(
   id: string,

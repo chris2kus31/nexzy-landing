@@ -27,6 +27,7 @@ import { prepareImageDataUrl } from "@/lib/admin/imagePrep";
 import { labelProps, inputProps } from "./shared";
 import type { PostEditor } from "./usePostEditor";
 import ReviewVerdictEditor from "./ReviewVerdictEditor";
+import SpinoffBox from "@/components/admin/editor/SpinoffBox";
 import CollageBuilder from "./CollageBuilder";
 import ArticleImages from "./ArticleImages";
 
@@ -262,6 +263,8 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
   return (
     <VStack align="stretch" gap={4}>
       {post.type === "review" && <ReviewVerdictEditor ed={ed} />}
+
+      <SpinoffBox post={post} />
       <Box
         bg="whiteAlpha.50"
         border="1px solid"
