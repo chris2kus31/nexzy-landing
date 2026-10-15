@@ -678,6 +678,9 @@ export interface ContentSuggestion {
     // KEY OFFER lead (sourceType "key_offer"): a key / review-copy offer from a
     // press platform email. Also carries `manual` (the context Generate uses).
     keyOffer?: KeyOfferInfo;
+    // LONG-FORM SUGGESTION lead (sourceType "longform_suggest"): the Monday
+    // cron's proposed long-form topic. Commission runs the existing generators.
+    longformSuggest?: LongFormSuggestInfo;
     // GAMING MEME card (format === "meme"): 5 film-clip options, each verified
     // against Clip.Cafe / Wikiquote. Lead side: memeGenerating / memeError /
     // memeCardId while (and after) a meme is made from that lead.
@@ -4026,6 +4029,18 @@ export async function getHashtagAb(): Promise<HashtagAbRollup> {
 }
 
 /** A manual (at-will) lead's topic + context — `context` is the only source of truth. */
+/** payload.longform on a long-form suggestion lead (Monday cron). */
+export interface LongFormSuggestInfo {
+  kind: "explainer" | "countdown" | "chronicles";
+  subject: string;
+  templateKey?: string;
+  arc?: string;
+  arcKind?: string;
+  nextEpisode?: number;
+  reason: string;
+  suggestedAt: string;
+}
+
 /** payload.keyOffer on a key-offer lead (see KeyOfferService in the API). */
 export interface KeyOfferInfo {
   platform: "keymailer" | "terminals" | "pressengine";

@@ -42,6 +42,7 @@ import {
 import Paginated from "@/components/admin/Paginated";
 import ManualLeadForm from "@/components/admin/ManualLeadForm";
 import KeyOfferBox from "@/components/admin/KeyOfferBox";
+import LongFormSuggestBox from "@/components/admin/LongFormSuggestBox";
 import YouTubePerformance, {
   type YtSource,
 } from "@/components/admin/YouTubePerformance";
@@ -1073,6 +1074,9 @@ function LeadCard({
         <Box px={4} pb={4}>
           {keyOffer && (
             <KeyOfferBox s={s} isOwner={isOwner} onChanged={reload} />
+          )}
+          {s.payload?.longformSuggest && (
+            <LongFormSuggestBox s={s} isOwner={isOwner} onDone={onDone} />
           )}
           {manual && (
             <Box mt={3} mb={3}>
