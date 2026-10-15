@@ -31,6 +31,7 @@ import {
   previewEmail,
   sendEmailCampaign,
   sendTestEmail,
+  sendWelcomeTestEmail,
   type EmailAudience,
   type EmailAudienceSummary,
   type EmailDraft,
@@ -475,7 +476,11 @@ export default function EmailCampaignPanel() {
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
-  const [busy, setBusy] = useState<"" | "test" | "send">("");
+  const [busy, setBusy] = useState<"" | "test" | "send" | "welcome">("");
+  const [welcomeMsg, setWelcomeMsg] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
   const [sendMsg, setSendMsg] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
@@ -815,6 +820,22 @@ export default function EmailCampaignPanel() {
       setTestMsg({ ok: true, text: `Test sent to ${r.to}. Check the inbox.` });
     } catch (e) {
       setTestMsg({ ok: false, text: (e as Error)?.message || "Test failed." });
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const doWelcomeTest = async () => {
+    setBusy("welcome");
+    setWelcomeMsg(null);
+    try {
+      const r = await sendWelcomeTestEmail(testTo);
+      setWelcomeMsg({ ok: true, text: `Welcome email sent to ${r.to}.` });
+    } catch (e) {
+      setWelcomeMsg({
+        ok: false,
+        text: (e as Error)?.message || "Welcome test failed.",
+      });
     } finally {
       setBusy("");
     }
@@ -1433,6 +1454,41 @@ export default function EmailCampaignPanel() {
                 </Box>
               )}
             </StepCard>
+
+            {/* Automatic welcome email */}
+            <Box
+              bg="whiteAlpha.50"
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              borderRadius="lg"
+              p={{ base: 3, md: 4 }}
+            >
+              <Text color="nexzy.white" fontWeight="700" fontSize="sm">
+                Welcome email (automatic)
+              </Text>
+              <Text color="nexzy.gray.100" fontSize="xs" mt={1}>
+                Every new account gets this once: after email sign-up is
+                verified, or on the first Apple or Google sign-in. Send it to
+                yourself to see what new users get (uses the address in step 4,
+                or yours if blank).
+              </Text>
+              <Box mt={3}>
+                <OutlineBtn
+                  size="sm"
+                  onClick={doWelcomeTest}
+                  loading={busy === "welcome"}
+                  loadingText="Sending"
+                  disabled={busy !== ""}
+                >
+                  Send me the welcome email
+                </OutlineBtn>
+              </Box>
+              {welcomeMsg && (
+                <Hint tone={welcomeMsg.ok ? "ok" : "error"}>
+                  {welcomeMsg.text}
+                </Hint>
+              )}
+            </Box>
           </VStack>
 
           {/* ---------------- RIGHT: live preview ---------------- */}

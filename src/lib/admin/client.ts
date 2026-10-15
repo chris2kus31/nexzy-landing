@@ -4772,6 +4772,19 @@ export interface EmailListCheck {
   max: number;
 }
 
+/** Send the automatic sign-up welcome email as a test (testTo or the owner). */
+export async function sendWelcomeTestEmail(
+  testTo?: string,
+): Promise<{ ok: boolean; to: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/marketing/email/welcome-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ testTo: testTo?.trim() || undefined }),
+    }),
+  );
+}
+
 /** Check a pasted list of specific addresses before sending. */
 export async function checkEmailList(emails: string): Promise<EmailListCheck> {
   return handle(
