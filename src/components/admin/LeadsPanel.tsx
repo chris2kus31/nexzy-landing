@@ -52,6 +52,12 @@ import CrossPlatformPerformance, {
 import InstagramPerformance, {
   type IgSource,
 } from "@/components/admin/InstagramPerformance";
+import FacebookPerformance, {
+  type FbSource,
+} from "@/components/admin/FacebookPerformance";
+import ThreadsPerformance, {
+  type ThSource,
+} from "@/components/admin/ThreadsPerformance";
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -2276,6 +2282,22 @@ export function AudiencePanel({
             <Box mt={3}>
               <InstagramPerformance
                 src={audience.raw.instagramPerformance as IgSource}
+              />
+            </Box>
+          ) : null}
+
+          {audience?.raw?.facebookPerformance ? (
+            <Box mt={3}>
+              <FacebookPerformance
+                src={audience.raw.facebookPerformance as FbSource}
+              />
+            </Box>
+          ) : null}
+
+          {audience?.raw?.threadsPerformance ? (
+            <Box mt={3}>
+              <ThreadsPerformance
+                src={audience.raw.threadsPerformance as ThSource}
               />
             </Box>
           ) : null}
