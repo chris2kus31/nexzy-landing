@@ -73,7 +73,7 @@ export default function FacebookPerformance({ src }: { src?: FbSource }) {
             </Text>
           )}
           <Text color="nexzy.gray.100" fontSize="xs">
-            {fmt(src.follows)} follows
+            {fmt(src.follows)} page followers
           </Text>
         </Flex>
       </Flex>
