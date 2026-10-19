@@ -3948,6 +3948,10 @@ export interface PostLabPost {
   excluded: string | null;
   /** Content kind from the Posts log (absent/null = not logged). */
   kind?: string | null;
+  /** Instagram Reels only (additive): plays, avg watch (s), 3s skip rate (%). */
+  views?: number | null;
+  avgWatchSec?: number | null;
+  skipRate?: number | null;
 }
 export interface PostLabKind {
   kind: string;

@@ -194,6 +194,8 @@ function PostRow({ p, metric }: { p: PostLabPost; metric: string }) {
           {p.dayCt} {fmtDate(p.at)} CT · {FORMAT_LABEL[p.format] ?? p.format}
           {p.kind ? ` · ${kindLabel(p.kind)}` : ""}
           {p.engRate != null ? ` · ${fmtPct(p.engRate)} engagement` : ""}
+          {p.avgWatchSec != null ? ` · ${p.avgWatchSec}s avg watch` : ""}
+          {p.skipRate != null ? ` · ${p.skipRate}% skipped in 3s` : ""}
         </Text>
       </Box>
       <Text

@@ -49,6 +49,9 @@ import YouTubePerformance, {
 import CrossPlatformPerformance, {
   type PlatformStat,
 } from "@/components/admin/CrossPlatformPerformance";
+import InstagramPerformance, {
+  type IgSource,
+} from "@/components/admin/InstagramPerformance";
 
 const LANE_COLOR: Record<string, string> = {
   deal: "orange",
@@ -2265,6 +2268,14 @@ export function AudiencePanel({
                     PlatformStat
                   >
                 }
+              />
+            </Box>
+          ) : null}
+
+          {audience?.raw?.instagramPerformance ? (
+            <Box mt={3}>
+              <InstagramPerformance
+                src={audience.raw.instagramPerformance as IgSource}
               />
             </Box>
           ) : null}
