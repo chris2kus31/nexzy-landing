@@ -404,7 +404,7 @@ export default async function ReviewPage({
             variant="inline"
             location="reviews"
             heading="Love the games behind the screen? Get Nexzy."
-            subtext="Track every game these adaptations are based on, get price-drop alerts, and AI help when you're stuck — free on iOS & Android."
+            subtext="Follow the games behind these adaptations and their news, trailers and updates land in one feed. Free on iOS & Android."
           />
         </Box>
 

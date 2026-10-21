@@ -361,7 +361,7 @@ export default async function ListPage({
             variant="inline"
             location="lists"
             heading="Never miss a release — get Nexzy."
-            subtext="Track every game on this list, get price-drop alerts, and AI help when you're stuck — free on iOS & Android."
+            subtext="Follow the games on this list and their news, trailers and release updates land in one feed. Free on iOS & Android."
           />
         </Box>
 

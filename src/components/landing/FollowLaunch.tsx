@@ -1,6 +1,6 @@
 // ============================================
 // FILE: components/landing/FollowLaunch.tsx
-// Body of the /follow pre-launch page (Nexzy 1.1.10, "Follow the games you
+// Body of the /app page (formerly the /follow pre-launch page) (Nexzy 1.1.10, "Follow the games you
 // love"). Written for someone who has never heard of Nexzy, in this order:
 //   1. Hero: what Nexzy is (plain words) + the real feed on a phone
 //   2. How it works: 3 steps, each next to the real screen
@@ -133,7 +133,9 @@ const NOW = [
 
 /** Client-only launch state so the static page flips to "Out now" on Oct 21. */
 function useLive(): [boolean, () => void] {
-  const [live, setLive] = useState(false);
+  // Initialized from the clock (not false) so builds after launch render the
+  // live state straight away, with no countdown flash on load.
+  const [live, setLive] = useState(isLive);
   useEffect(() => setLive(isLive()), []);
   return [live, useCallback(() => setLive(true), [])];
 }
@@ -869,14 +871,15 @@ function Carousel({ shots }: { shots: Shots }) {
   );
 }
 
-function ShareRow() {
+function ShareRow({ live }: { live: boolean }) {
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
   }, []);
-  const text =
-    "The new Nexzy drops Oct 21: follow the games you love and the gamers who get them.";
+  const text = live
+    ? "The new Nexzy is out: follow the games you love and the gamers who get them."
+    : "The new Nexzy drops Oct 21: follow the games you love and the gamers who get them.";
   const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(
     text,
   )}&url=${encodeURIComponent(FOLLOW_URL)}`;
@@ -982,7 +985,7 @@ export default function FollowLaunch({ shots }: { shots: Shots }) {
               </Heading>
             </Stack>
             <LaunchCard source="follow_cta" live={live} onLive={goLive} big />
-            <ShareRow />
+            <ShareRow live={live} />
           </Stack>
         </Container>
       </Box>

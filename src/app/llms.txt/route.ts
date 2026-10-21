@@ -8,7 +8,9 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 export function GET(): Response {
   const body = `# Nexzy
 
-> Nexzy is an AI-powered gaming companion app. Nexzy News is its editorial team
+> Nexzy is a free gaming app for iPhone and Android: follow any game and get its
+> news, trailers and updates in one feed, keep a library and wishlist, and meet
+> gamers who play what you play. Nexzy News is its editorial team
 > — real writers with human review — covering video game news, console and PC
 > hardware, game-to-screen adaptations, and gaming deals.
 

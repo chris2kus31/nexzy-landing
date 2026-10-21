@@ -22,7 +22,8 @@ export function getAppUrl(src: string): string {
   return `/get?src=${encodeURIComponent(src)}`;
 }
 
-export const FOLLOW_URL = "https://www.nexzyapp.com/follow";
+/** Public share/landing URL for the new Nexzy (was /follow before launch). */
+export const FOLLOW_URL = "https://www.nexzyapp.com/app";
 
 export function isLive(now: number = Date.now()): boolean {
   return now >= LAUNCH_AT;

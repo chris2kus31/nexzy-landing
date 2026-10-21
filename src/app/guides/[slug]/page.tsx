@@ -420,7 +420,7 @@ export default async function GuidePage({
               variant="inline"
               location="guides"
               heading={`Playing ${post.appGame.name || post.title}? Get Nexzy.`}
-              subtext={`Track ${post.appGame.name || "this game"}, get step-by-step AI help for any stuck moment, and earn coins — free on iOS & Android.`}
+              subtext={`Follow ${post.appGame.name || "this game"} in the app and its news, trailers and updates land in one feed. Free on iOS & Android.`}
             />
           ) : (
             <AppCta variant="inline" location="guides" />

@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
         destination: "https://www.nexzyapp.com/:path*",
         permanent: true,
       },
+      // Launch day (Oct 21, 2026): the pre-launch /follow page moved to /app.
+      { source: "/follow", destination: "/app", permanent: true },
     ];
   },
   // Serve the app-link verification files at the exact well-known paths Apple

@@ -91,7 +91,7 @@ export default function AboutPage() {
           Nexzy News is a gaming newsroom covering the stories players actually
           care about — across PC and every console, plus hardware,
           game-to-screen adaptations, and the best deals. It&apos;s the newsroom
-          behind Nexzy, the AI-powered gaming companion app.
+          behind Nexzy, the free gaming app where you follow the games you love.
         </Text>
 
         <Stack gap={8}>
@@ -114,10 +114,11 @@ export default function AboutPage() {
             </Text>
             <Text>
               The Nexzy app takes that same no-nonsense experience and puts it
-              in your pocket, with an AI assistant that actually helps instead
-              of wasting your afternoon. Whether you are a kid stuck on your
-              first boss or a veteran who remembers blowing into cartridges, you
-              are welcome here. One clean gamer experience, minus the nonsense.
+              in your pocket: follow the games you love and their news, trailers
+              and updates land in one feed, next to gamers who play them.
+              Whether you are a kid stuck on your first boss or a veteran who
+              remembers blowing into cartridges, you are welcome here. One clean
+              gamer experience, minus the nonsense.
             </Text>
           </Section>
 

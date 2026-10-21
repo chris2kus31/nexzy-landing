@@ -8,7 +8,7 @@
 // When it appears (pre-launch and live phases are tracked separately):
 //   - on the visitor's 2nd page view this session (after 4s), or
 //   - after 25s on a page once they've scrolled 35% of it
-//   - never on /follow, admin, auth, embeds or legal pages
+//   - never on /app, /follow, admin, auth, embeds or legal pages
 //   - closed: hidden for 7 days; subscribed: never again pre-launch
 // Pre-launch: countdown + "Notify me" email (joins the newsletter list,
 // source=launch_popup). From LAUNCH_AT: "It's live" + smart store link.
@@ -25,6 +25,7 @@ import Countdown from "@/components/launch/Countdown";
 import EmailCapture from "@/components/landing/EmailCapture";
 
 const EXCLUDED = [
+  "/app",
   "/follow",
   "/admin",
   "/auth",
@@ -288,7 +289,7 @@ export default function LaunchPopup() {
               _hover={{ bg: "transparent", textDecoration: "underline" }}
             >
               <NextLink
-                href="/follow"
+                href="/app"
                 onClick={() =>
                   track("launch_popup_click", { phase, target: "follow" })
                 }

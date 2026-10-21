@@ -408,8 +408,8 @@ export default async function GameHubPage({
         <AppCta
           variant="inline"
           location="game-hub"
-          heading={`Playing ${game.name}? Get Nexzy.`}
-          subtext={`Track ${game.name}, get real-time step-by-step help from the in-app AI, and earn coins — free on iOS & Android.`}
+          heading={`Follow ${game.name} on Nexzy`}
+          subtext={`Get ${game.name} news, trailers and updates in one feed, add it to your library or wishlist in one tap, and meet players who play it. Free on iOS & Android.`}
         />
       </Container>
     </Box>

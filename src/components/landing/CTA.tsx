@@ -18,7 +18,7 @@ import {
   Flex,
   Image,
 } from "@chakra-ui/react";
-import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
+import { FaApple, FaGooglePlay, FaNewspaper } from "react-icons/fa";
 import { HiSparkles } from "react-icons/hi";
 import { IoGameController, IoGift } from "react-icons/io5";
 import EmailCapture from "./EmailCapture";
@@ -107,7 +107,7 @@ export default function CTA() {
                 Make Nexzy yours.
                 <br />
                 <Text as="span" color="nexzy.yellow">
-                  Your games. Your news. Your AI.
+                  Your games. Your feed. Your people.
                 </Text>
               </Heading>
 
@@ -116,8 +116,8 @@ export default function CTA() {
                 color="nexzy.gray.100"
                 maxW="lg"
               >
-                Add the games you actually play, get news and help tuned to you,
-                and Ask Nexzy whenever you&apos;re stuck.
+                Follow the games you love and their news, trailers and updates
+                land in one feed. Then meet gamers who play what you play.
               </Text>
 
               {/* Value props */}
@@ -128,10 +128,10 @@ export default function CTA() {
               >
                 <HStack gap={2}>
                   <Icon color="nexzy.yellow" boxSize={5}>
-                    <FaRobot />
+                    <FaNewspaper />
                   </Icon>
                   <Text color="nexzy.white" fontSize="sm" fontWeight="medium">
-                    Ask Nexzy AI
+                    Your gaming feed
                   </Text>
                 </HStack>
                 <HStack gap={2}>

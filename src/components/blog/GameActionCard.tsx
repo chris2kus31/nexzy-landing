@@ -7,8 +7,7 @@ import type { PublicPost } from "@/lib/blog/api";
  * "Make it yours" game card — the article's linked game with a deep link to
  * /games/{slug}. That URL opens the game inside the Nexzy app for installed
  * users (Universal / App Link) and the web game hub for everyone else. This is
- * the per-article flywheel: read the story, then track the game / ask Nexzy /
- * watch deals. Rendered on every game-linked article (all beats) in place of the
+ * the per-article flywheel: read the story, then follow the game in the app. Rendered on every game-linked article (all beats) in place of the
  * generic app CTA, so the funnel is about the game you just read about.
  */
 export default function GameActionCard({
@@ -74,10 +73,11 @@ export default function GameActionCard({
               ))}
             </HStack>
             <Text fontSize="sm" color="white" fontWeight="600">
-              Add {game.name} to your library →
+              Follow {game.name} on Nexzy →
             </Text>
             <Text fontSize="xs" color="gray.400" mt={1}>
-              Track it, watch for deals, and ask Nexzy for help — in the app.
+              Its news, trailers and updates land in your feed. Add it to your
+              library or wishlist in one tap.
             </Text>
           </Box>
         </Flex>

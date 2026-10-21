@@ -100,9 +100,9 @@ export default function PressPage() {
               p={3}
               color="gray.200"
             >
-              Nexzy is a gaming companion app and newsroom that covers game
-              news, guides, and deals, kept short and to the point, with an
-              in-app AI assistant, for players of every age.
+              Nexzy is a free gaming app and newsroom: follow any game and get
+              its news, trailers and updates in one feed, kept short and to the
+              point, for players of every age.
             </Text>
             <Text color="gray.400" fontSize="sm" mt={2}>
               One paragraph:
@@ -118,9 +118,10 @@ export default function PressPage() {
               Nexzy was built for players who are tired of ad-mazes, ten-minute
               videos, and endless articles that never get to the point. It
               delivers gaming news, guides, and deals short and straight, and
-              the Nexzy app puts that same no-nonsense experience in your pocket
-              with an AI assistant that actually helps. From first-timers to
-              veterans, everyone is welcome.
+              the Nexzy app puts that same no-nonsense experience in your
+              pocket: follow the games you love, get their news, trailers and
+              updates in one feed, and meet gamers who play what you play. From
+              first-timers to veterans, everyone is welcome.
             </Text>
           </Section>
 
@@ -142,8 +143,8 @@ export default function PressPage() {
                 <Text as="span" color="white" fontWeight="600">
                   What it is:
                 </Text>{" "}
-                Gaming news, guides, walkthroughs, and deals, plus an AI-powered
-                companion app.
+                Gaming news, guides, walkthroughs, and deals, plus a free app
+                where you follow the games you love.
               </Text>
               <Text>
                 <Text as="span" color="white" fontWeight="600">

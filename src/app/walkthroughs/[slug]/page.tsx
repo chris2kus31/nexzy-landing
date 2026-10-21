@@ -255,7 +255,7 @@ export default async function WalkthroughOverviewPage({
             variant="inline"
             location="walkthroughs"
             heading={`Playing ${w.game.name}? Get Nexzy.`}
-            subtext={`Get step-by-step AI help for ${w.game.name}, track it, and earn coins — free on iOS & Android.`}
+            subtext={`Follow ${w.game.name} in the app and its news, trailers and updates land in one feed. Free on iOS & Android.`}
           />
         ) : (
           <AppCta variant="inline" location="walkthroughs" />

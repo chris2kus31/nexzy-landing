@@ -71,7 +71,7 @@ export default function AppCta({
         </Heading>
         <Text color="gray.300" fontSize="sm" mb={5}>
           {subtext ??
-            "The app turns this newsroom into your own — track the games you play, get news and guides tuned to you, and an AI that actually knows your games. Free on iOS & Android."}
+            "Follow the games you love in the Nexzy app and their news, trailers and updates land in one feed. Free on iOS & Android."}
         </Text>
         <HStack gap={3} justify="center" flexWrap="wrap">
           <Button

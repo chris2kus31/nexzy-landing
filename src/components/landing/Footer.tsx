@@ -15,7 +15,7 @@ import {
   Image,
   Icon,
 } from "@chakra-ui/react";
-import { FaApple, FaGooglePlay, FaRobot } from "react-icons/fa";
+import { FaApple, FaGooglePlay, FaNewspaper } from "react-icons/fa";
 import { IoGameController } from "react-icons/io5";
 import { HiMail } from "react-icons/hi";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
@@ -294,10 +294,10 @@ export default function Footer() {
             </HStack>
             <HStack gap={2}>
               <Icon color="nexzy.blue" boxSize={4}>
-                <FaRobot />
+                <FaNewspaper />
               </Icon>
               <Text fontSize="xs" color="gray.400">
-                Ask Nexzy in the app
+                Follow any game in the app
               </Text>
             </HStack>
           </HStack>

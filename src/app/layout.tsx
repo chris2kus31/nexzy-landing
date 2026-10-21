@@ -47,9 +47,9 @@ export const metadata: Metadata = {
     template: "%s | Nexzy",
   },
   description:
-    "Nexzy is the independent gaming newsroom — news, guides, and walkthroughs for the games you play, updated all day. Get the app to make it yours: track the games you play, get updates tuned to you, and Ask Nexzy when you're stuck.",
+    "Nexzy is the independent gaming newsroom — news, guides, and walkthroughs for the games you play, updated all day. Get the free Nexzy app to follow the games you love: their news, trailers and updates in one feed.",
   keywords:
-    "gaming news, video game guides, game walkthroughs, how to beat, game news site, gaming news today, game lists, AI game assistant",
+    "gaming news, video game guides, game walkthroughs, how to beat, game news site, gaming news today, game lists, gaming app, follow games",
   authors: [{ name: "Nexzy" }],
   creator: "Nexzy",
   publisher: "Nexzy",
@@ -120,7 +120,7 @@ const orgJsonLd = {
       name: "Nexzy",
       url: SITE_URL,
       description:
-        "Nexzy is an independent gaming newsroom — game news, guides, and walkthroughs for the games you play — paired with a companion app that makes it yours, including an AI assistant (Ask Nexzy) that knows the games you play. For players of every age.",
+        "Nexzy is an independent gaming newsroom — game news, guides, and walkthroughs for the games you play — paired with a free gaming app where you follow the games you love, get their news, trailers and updates in one feed, and meet gamers who play what you play. For players of every age.",
       foundingDate: "2026-06",
       logo: {
         "@type": "ImageObject",

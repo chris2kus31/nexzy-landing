@@ -171,7 +171,7 @@ export default function Hero({
                   fontWeight="700"
                   fontSize={{ base: "md", md: "lg" }}
                 >
-                  Get the app — make it yours.
+                  The new Nexzy app is here.
                 </Text>
                 <Text
                   color="gray.300"
@@ -179,9 +179,13 @@ export default function Hero({
                   lineHeight="1.5"
                   mt={1}
                 >
-                  Your gaming home: track the games you play, get news &amp;
-                  deals tuned to you, and an AI that actually knows your
-                  library.
+                  Follow the games you love and their news, trailers and updates
+                  land in one feed. Free on iPhone and Android.{" "}
+                  <NextLink href="/app">
+                    <Text as="span" color="nexzy.gold" fontWeight="600">
+                      See what&apos;s new
+                    </Text>
+                  </NextLink>
                 </Text>
               </Box>
               <HStack gap={3} flexWrap="wrap">

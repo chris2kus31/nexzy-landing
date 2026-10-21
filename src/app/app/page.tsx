@@ -1,65 +1,84 @@
 // ============================================
 // FILE: app/app/page.tsx
-// The dedicated APP page. The newsroom home only nudges toward the app; this is
-// the deep pitch — what Nexzy the app is, everything it does, and how to get it.
-// This is also where the app-feature SEO keywords live (they were pulled off the
-// newsroom homepage). ISR-cached; mostly static so it's fully crawlable.
+// The dedicated APP page, rebuilt for the 1.1.10 launch ("Follow the games you
+// love. And the gamers who get them."). Same body as the old /follow pre-launch
+// page (which now 308-redirects here), in its live state: store buttons, no
+// countdown. The FAQ below doubles as FAQPage JSON-LD for answer engines.
+// Fully static: the screenshot folder is read once at build time.
 // ============================================
 import type { Metadata } from "next";
+import { readdirSync } from "node:fs";
+import path from "node:path";
 import { Box, Container, Heading, Text, Stack, VStack } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
-import AppHero from "@/components/landing/AppHero";
-import Features from "@/components/landing/Features";
-import HowItWorks from "@/components/landing/HowItWorks";
-import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
+import FollowLaunch from "@/components/landing/FollowLaunch";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
-export const revalidate = 3600;
+export const dynamic = "force-static";
 
-// The app page owns the app-feature keywords (assistant, library, deals) that we
-// deliberately took off the newsroom homepage title.
+const IMG_RE = /\.(png|jpe?g|webp|avif)$/i;
+
+/** Map of screenshot name (no extension, lowercase) -> public URL. */
+function readShots(): Record<string, string> {
+  const out: Record<string, string> = {};
+  try {
+    for (const f of readdirSync(
+      path.join(process.cwd(), "public", "follow", "shots"),
+    )) {
+      if (!IMG_RE.test(f)) continue;
+      out[f.replace(IMG_RE, "").toLowerCase()] =
+        `/follow/shots/${encodeURIComponent(f)}`;
+    }
+  } catch {
+    // folder missing: sections fall back gracefully
+  }
+  return out;
+}
+
+const TITLE = "Nexzy App: Follow the Games You Love | Free Gaming Feed";
+const DESCRIPTION =
+  "Nexzy is a free gaming app for iPhone and Android. Follow any game and get its news, trailers and updates in one feed, keep your library and wishlist, and meet gamers who play what you play.";
+const SHARE_TITLE = "The new Nexzy: follow the games you love";
+
 export const metadata: Metadata = {
-  title: {
-    absolute: "Nexzy App — Your Gaming Home | Library, Deals & Ask Nexzy AI",
-  },
-  description:
-    "Make it yours: keep your whole library across Steam, PlayStation & Xbox in one place, get news and deals tuned to you, and an AI that actually knows the games you play. Free on iOS & Android.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
   keywords:
-    "gaming app, game library tracker, cross-platform game library, wishlist price tracker, game deal alerts, what to play next, personalized gaming, Ask Nexzy, AI that knows your games",
+    "gaming app, gaming feed, follow games, game news app, game trailers, game library app, wishlist, gaming community app, gaming social app",
   alternates: { canonical: "/app" },
   openGraph: {
-    title: "Get the Nexzy app — your gaming home",
-    description:
-      "Make it yours: your library, news and deals tuned to you, and an AI that knows your games. Free on iOS & Android.",
+    title: SHARE_TITLE,
+    description: DESCRIPTION,
     url: `${SITE_URL}/app`,
     type: "website",
+    images: [{ url: "/follow/og.jpg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Get the Nexzy app — your gaming home",
-    description:
-      "Make it yours: your library, deals tuned to you, and an AI that knows your games. Free on iOS & Android.",
+    title: SHARE_TITLE,
+    description: DESCRIPTION,
+    images: ["/follow/og.jpg"],
   },
 };
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Is Nexzy free?",
-    a: "Yes. Nexzy is free to download on iOS and Android — read the newsroom, track your library, and use the core features at no cost. Optional extras unlock more AI help when you want it.",
+    a: "Yes. Nexzy is free to download on iPhone and Android.",
   },
   {
-    q: "What is Ask Nexzy?",
-    a: "Ask Nexzy is your AI gaming assistant. Get step-by-step help to get unstuck in any game, and it gets more personal the more it learns the games you actually play.",
+    q: "What does following a game do?",
+    a: "Follow a game and its news, trailers and updates land in your feed, next to posts from players who play it. Follow a few and your feed is built from your games.",
   },
   {
-    q: "Which platforms and stores does Nexzy work with?",
-    a: "Add the games you play and track deals and wishlist price drops across Steam, Epic, PlayStation, and Xbox — your whole library in one place.",
+    q: "Can I keep a game library and wishlist?",
+    a: "Yes. Add a game to your library or wishlist in one tap from its page, and it shows on your Gamer Card.",
   },
   {
-    q: "Does Nexzy have mods or cheats?",
-    a: "No. Nexzy is about guides, walkthroughs, news, and legit help — not mods or cheats.",
+    q: "Can I post and meet other gamers?",
+    a: "Yes. Post screenshots, GIFs and polls, tag the game so the right players see it, reply, and follow gamers who share your taste.",
   },
   {
     q: "What devices does the app run on?",
@@ -67,7 +86,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How is the app different from the Nexzy website?",
-    a: "The website is the newsroom — news, guides, and walkthroughs anyone can read. The app makes it yours: your library, updates tuned to the games you play, and Ask Nexzy in your pocket.",
+    a: "The website is the newsroom: news, guides and walkthroughs anyone can read. The app is your feed: the games you follow, their news and trailers, and the gamers who play them.",
   },
 ];
 
@@ -86,11 +105,9 @@ export default function AppPage() {
     <>
       <Navigation />
       <main>
-        <AppHero />
-        <Features />
-        <HowItWorks />
+        <FollowLaunch shots={readShots()} />
 
-        {/* FAQ — visible copy matches the FAQPage JSON-LD below (AEO/GEO). */}
+        {/* FAQ: visible copy matches the FAQPage JSON-LD below (AEO/GEO). */}
         <Box as="section" py={{ base: 16, md: 24 }} bg="nexzy.navy">
           <Container maxW="container.md" px={{ base: 5, md: 6 }}>
             <Stack gap={4} textAlign="center" mb={{ base: 8, md: 12 }}>
@@ -128,8 +145,6 @@ export default function AppPage() {
             </VStack>
           </Container>
         </Box>
-
-        <CTA />
       </main>
       <Footer />
 
