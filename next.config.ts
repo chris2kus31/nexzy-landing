@@ -54,6 +54,29 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Baseline security headers. Deliberately NOT a full CSP (that's a bigger,
+  // riskier project): HSTS without includeSubDomains so cdn./api. subdomains
+  // are unaffected, nosniff, a sane referrer policy, and anti-clickjacking on
+  // the admin only.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
+        source: "/admin/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+        ],
+      },
+    ];
+  },
   // Force the old landing.nexzyapp.com subdomain to 301-redirect to the
   // canonical www domain (Netlify auto-redirects the apex, but not plain
   // subdomain aliases — this avoids duplicate-content on two live URLs).

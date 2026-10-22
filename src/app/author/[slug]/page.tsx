@@ -17,6 +17,7 @@ import { beatLabel } from "@/lib/blog/beats";
 import BlogCard from "@/components/blog/BlogCard";
 import AuthorAvatar from "@/components/blog/AuthorAvatar";
 import Pager from "@/components/blog/Pager";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
@@ -226,11 +227,11 @@ export default async function AuthorPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(personLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Container>
   );

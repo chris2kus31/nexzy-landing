@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -248,7 +249,7 @@ export default function PressPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
     </Box>
   );

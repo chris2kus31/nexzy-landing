@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGamesPage } from "@/lib/blog/api";
 import GamesGrid from "@/components/games/GamesGrid";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -53,11 +54,11 @@ export default async function GamesIndexPage() {
     <Box position="relative" overflow="hidden">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
 
       {/* Ambient brand glow */}

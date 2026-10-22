@@ -46,6 +46,7 @@ import EssentialsBlock from "@/components/blog/EssentialsBlock";
 import PollBlock from "@/components/blog/PollBlock";
 import SourcesBlock from "@/components/blog/SourcesBlock";
 import GamesRail from "@/components/blog/GamesRail";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // ISR: article pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
@@ -488,11 +489,11 @@ export default async function BlogArticlePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Box>
   );

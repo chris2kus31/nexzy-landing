@@ -12,6 +12,7 @@ import SiteAnnouncementBanner from "@/components/SiteAnnouncementBanner";
 import LaunchPopup from "@/components/launch/LaunchPopup";
 import React from "react";
 import { APP_STORE_URL, GOOGLE_PLAY_URL } from "@/lib/storeUrls";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // Nexzy type system: Chakra Petch = titles + wordmark (gaming edge),
 // Space Grotesk = section headings, Inter = body/UI. Loaded once here and
@@ -167,7 +168,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#1a1f3a" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(orgJsonLd) }}
         />
       </head>
       <body className={inter.className} suppressHydrationWarning>

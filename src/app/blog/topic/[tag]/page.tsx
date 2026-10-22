@@ -15,6 +15,7 @@ import { fetchPosts, fetchTags } from "@/lib/blog/api";
 import { slugifyTag, MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import BlogCard from "@/components/blog/BlogCard";
 import Pager from "@/components/blog/Pager";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // ISR: hub pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
@@ -190,11 +191,11 @@ export default async function TopicHubPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Container>
   );

@@ -3,6 +3,7 @@ import { Box, Container, Heading, Text, SimpleGrid } from "@chakra-ui/react";
 import { fetchWalkthroughs } from "@/lib/blog/api";
 import BlogCard from "@/components/blog/BlogCard";
 import AppCta from "@/components/blog/AppCta";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -30,7 +31,7 @@ export default async function WalkthroughsIndexPage() {
     <Box>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <Container maxW="container.xl" py={{ base: 10, md: 14 }}>
         <Box maxW="2xl" mb={{ base: 8, md: 10 }}>

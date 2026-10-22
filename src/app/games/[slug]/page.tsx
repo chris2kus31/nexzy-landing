@@ -31,6 +31,7 @@ import HubTabs, { type HubTab } from "@/components/games/HubTabs";
 import GameMedia from "@/components/games/GameMedia";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 21600; // 6 h; the publish webhook refreshes every hub instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -308,15 +309,15 @@ export default async function GameHubPage({
       <GameViewPing slug={game.slug} />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(videoGameLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(videoGameLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
 
       <Container maxW="5xl" py={{ base: 8, md: 12 }}>

@@ -14,6 +14,7 @@ import { HiArrowLeft, HiArrowRight } from "react-icons/hi";
 import { fetchGuides } from "@/lib/blog/api";
 import BlogCard from "@/components/blog/BlogCard";
 import AppCta from "@/components/blog/AppCta";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
@@ -174,7 +175,7 @@ export default async function GuidesIndexPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
     </Box>
   );

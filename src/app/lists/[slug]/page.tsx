@@ -28,6 +28,7 @@ import MoreOnGame from "@/components/blog/MoreOnGame";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import SourcesBlock from "@/components/blog/SourcesBlock";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // ISR: list pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
@@ -402,11 +403,11 @@ export default async function ListPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(listLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Box>
   );

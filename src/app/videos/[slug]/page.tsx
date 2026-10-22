@@ -22,6 +22,7 @@ import VideoTile from "@/components/blog/VideoTile";
 import PlatformLinks from "@/components/blog/PlatformLinks";
 import VideoViewPing from "@/components/blog/VideoViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // ISR: video pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 1800; // 30 min
@@ -360,12 +361,12 @@ export default async function VideoPage({
       {videoLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(videoLd) }}
         />
       )}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Box>
   );

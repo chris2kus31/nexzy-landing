@@ -10,6 +10,7 @@ import {
   Separator,
 } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -145,7 +146,7 @@ export default function EditorialStandardsPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
     </Box>
   );

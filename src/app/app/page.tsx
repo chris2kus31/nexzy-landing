@@ -13,6 +13,7 @@ import { Box, Container, Heading, Text, Stack, VStack } from "@chakra-ui/react";
 import Navigation from "@/components/landing/Navigation";
 import Footer from "@/components/landing/Footer";
 import FollowLaunch from "@/components/landing/FollowLaunch";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -150,7 +151,7 @@ export default function AppPage() {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(faqLd) }}
       />
     </>
   );

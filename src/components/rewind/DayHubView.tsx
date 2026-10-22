@@ -3,6 +3,7 @@ import TrackedLink from "@/components/TrackedLink";
 import RewindDayNav from "@/components/rewind/RewindDayNav";
 import type { RewindDayHub } from "@/lib/blog/api";
 import { monthName, dateSlug } from "@/lib/rewind/era";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 const GOLD = "#f5b53d";
@@ -317,11 +318,11 @@ export default function DayHubView({ hub }: { hub: RewindDayHub }) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Container>
   );

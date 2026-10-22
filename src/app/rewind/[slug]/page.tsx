@@ -21,6 +21,7 @@ import ContentComments from "@/components/comments/ContentComments";
 import AppCta from "@/components/blog/AppCta";
 import PollBlock from "@/components/blog/PollBlock";
 import RewindLightbox from "@/components/rewind/RewindLightbox";
+import { jsonLdString } from "@/lib/seo/jsonld";
 import {
   eraForYear,
   yearsAgo,
@@ -347,11 +348,11 @@ export default async function RewindEpisodePage({
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
         />
       </Box>
     );
@@ -931,11 +932,11 @@ export default async function RewindEpisodePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Box>
   );

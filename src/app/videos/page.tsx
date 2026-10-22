@@ -16,6 +16,7 @@ import VideoTile from "@/components/blog/VideoTile";
 import VideoShelf from "@/components/blog/VideoShelf";
 import FeaturedVideo from "@/components/blog/FeaturedVideo";
 import AppCta from "@/components/blog/AppCta";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min
 
@@ -269,11 +270,11 @@ export default async function VideosIndexPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
     </Box>
   );

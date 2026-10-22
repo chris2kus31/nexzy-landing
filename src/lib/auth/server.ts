@@ -15,6 +15,15 @@ export const USER_RT_COOKIE = "nexzy_user_rt";
 
 /** Best-effort real client IP, forwarded to the API. */
 export function clientIp(req: NextRequest): string {
+  // Trust platform-set headers over x-forwarded-for: the FIRST XFF entry is
+  // whatever the caller typed, so it must never drive IP binding/rate limits.
+  // cf-connecting-ip: set by Cloudflare (fronting www); clients can't forge it
+  // through the CF edge. x-nf-client-connection-ip: set by Netlify from the
+  // actual TCP connection. XFF stays only as a local-dev fallback.
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const nf = req.headers.get("x-nf-client-connection-ip");
+  if (nf) return nf.trim();
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return req.headers.get("x-real-ip") || "127.0.0.1";

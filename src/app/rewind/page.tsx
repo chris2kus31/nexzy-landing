@@ -4,6 +4,7 @@ import Navigation from "@/components/landing/Navigation";
 import Footer from "@/components/landing/Footer";
 import RewindSeriesLanding from "@/components/rewind/RewindSeriesLanding";
 import { fetchRewindDay, fetchRewindRecent } from "@/lib/blog/api";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
@@ -78,7 +79,7 @@ export default async function RewindSeriesPage() {
       <Footer />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(collectionLd) }}
       />
     </Box>
   );

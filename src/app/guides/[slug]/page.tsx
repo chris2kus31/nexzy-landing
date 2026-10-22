@@ -31,6 +31,7 @@ import MoreOnGame from "@/components/blog/MoreOnGame";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import SourcesBlock from "@/components/blog/SourcesBlock";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 // ISR: guide pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
@@ -464,16 +465,16 @@ export default async function GuidePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(guideLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(guideLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
       {faqLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(faqLd) }}
         />
       )}
     </Box>

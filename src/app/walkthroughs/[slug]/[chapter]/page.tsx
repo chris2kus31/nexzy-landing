@@ -23,6 +23,7 @@ import Byline from "@/components/blog/Byline";
 import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
+import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -163,11 +164,11 @@ export default async function WalkthroughChapterPage({
     <Box>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(chapterLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(chapterLd) }}
       />
       <Container maxW="6xl" py={{ base: 8, md: 12 }}>
         <HStack gap={2} mb={6} fontSize="sm" color="gray.400" flexWrap="wrap">
