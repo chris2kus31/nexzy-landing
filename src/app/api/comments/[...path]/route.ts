@@ -4,6 +4,7 @@
 // GET (listing) also forwards the token when present so each viewer gets their
 // own `myVote`, but works fine unauthenticated.
 import { NextRequest, NextResponse } from "next/server";
+import { crossSiteBlocked } from "@/lib/http/origin";
 import { USER_API_URL, USER_AT_COOKIE, clientIp } from "@/lib/auth/server";
 
 type Ctx = { params: Promise<{ path: string[] }> };
@@ -30,6 +31,9 @@ function safeSegments(path: string[]): boolean {
 }
 
 async function proxy(req: NextRequest, ctx: Ctx) {
+  if (crossSiteBlocked(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { path } = await ctx.params;
   if (!safeSegments(path)) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });

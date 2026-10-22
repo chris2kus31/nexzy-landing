@@ -8,7 +8,7 @@
 // Default hosts are OUR media only: the CDN, our bucket, and the site itself
 // (a host also matches its subdomains). Override with CARD_IMAGE_PROXY_HOSTS.
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE } from "@/lib/admin/server";
+import { ADMIN_COOKIE, NEWSROOM_API_URL } from "@/lib/admin/server";
 
 const ALLOW = (
   process.env.CARD_IMAGE_PROXY_HOSTS ||
@@ -19,8 +19,21 @@ const ALLOW = (
   .filter(Boolean);
 
 export async function GET(req: NextRequest) {
-  if (!req.cookies.get(ADMIN_COOKIE)?.value)
-    return new NextResponse("unauthorized", { status: 401 });
+  const token = req.cookies.get(ADMIN_COOKIE)?.value;
+  if (!token) return new NextResponse("unauthorized", { status: 401 });
+  // The cookie's PRESENCE is caller-controlled, so verify the JWT against the
+  // API before proxying — otherwise anyone who sets a dummy cookie can burn
+  // Netlify compute/bandwidth through this route.
+  try {
+    const me = await fetch(`${NEWSROOM_API_URL}/newsroom/admin/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!me.ok) return new NextResponse("unauthorized", { status: 401 });
+  } catch {
+    return new NextResponse("auth check failed", { status: 502 });
+  }
   const raw = req.nextUrl.searchParams.get("url");
   if (!raw) return new NextResponse("missing url", { status: 400 });
 

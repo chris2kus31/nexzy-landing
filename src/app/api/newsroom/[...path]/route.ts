@@ -4,6 +4,7 @@
 // relays to nexzy-api. No token ever touches client-side JS, and there is no
 // cross-origin request from the browser.
 import { NextRequest, NextResponse } from "next/server";
+import { crossSiteBlocked } from "@/lib/http/origin";
 import { ADMIN_COOKIE, NEWSROOM_API_URL, clientIp } from "@/lib/admin/server";
 
 type Ctx = { params: Promise<{ path: string[] }> };
@@ -36,6 +37,9 @@ function isTimeout(err: unknown): boolean {
 }
 
 async function proxy(req: NextRequest, ctx: Ctx) {
+  if (crossSiteBlocked(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { path } = await ctx.params;
   if (!safeSegments(path)) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });

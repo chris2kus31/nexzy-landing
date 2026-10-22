@@ -16,6 +16,7 @@
 //
 // Auth: shared secret in the `x-webhook-secret` header (NEWSROOM_WEBHOOK_SECRET).
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { revalidatePath } from "next/cache";
 import { pingIndexNow } from "@/lib/seo/indexnow";
 import { pingWebSub } from "@/lib/seo/websub";
@@ -27,7 +28,12 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
 export async function POST(req: NextRequest): Promise<Response> {
   const secret = process.env.NEWSROOM_WEBHOOK_SECRET;
-  if (!secret || req.headers.get("x-webhook-secret") !== secret) {
+  // Constant-time compare so the secret can't be guessed byte-by-byte from
+  // response timing. Length check first: timingSafeEqual throws on mismatch.
+  const given = req.headers.get("x-webhook-secret") || "";
+  const a = Buffer.from(given);
+  const b = Buffer.from(secret || "");
+  if (!secret || a.length !== b.length || !timingSafeEqual(a, b)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
