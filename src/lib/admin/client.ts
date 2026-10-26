@@ -4823,3 +4823,49 @@ export async function getEmailStatus(): Promise<{
 }> {
   return handle(await fetch("/api/newsroom/admin/marketing/email/status"));
 }
+
+// --- Official @nexzy account (owner-only) ---
+
+export interface OfficialStatus {
+  configured: boolean;
+  user: { id: string; username: string } | null;
+  followers: number;
+  gamesFollowed: number;
+  autoFollowEnabled: boolean;
+  welcomeEnabled: boolean;
+}
+
+export async function getOfficialStatus(): Promise<OfficialStatus> {
+  return handle(await fetch("/api/newsroom/admin/official/status"));
+}
+
+/** Publish a feed post as @nexzy (same rules as any user post). */
+export async function createOfficialPost(payload: {
+  type: "text" | "game" | "poll";
+  content: string;
+  gameId?: string;
+  options?: string[];
+}): Promise<{ id: string; flagged: boolean }> {
+  return handle(
+    await fetch("/api/newsroom/admin/official/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+/** Reply to a feed post (or a comment on it) as @nexzy. */
+export async function createOfficialComment(payload: {
+  postId: string;
+  content: string;
+  parentCommentId?: string;
+}): Promise<{ id: string }> {
+  return handle(
+    await fetch("/api/newsroom/admin/official/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
+}
