@@ -40,10 +40,12 @@ import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
 import AnnouncementsPanel from "@/components/admin/AnnouncementsPanel";
 import OfficialPanel from "@/components/admin/OfficialPanel";
+import CommunityPulsePanel from "@/components/admin/CommunityPulsePanel";
 import { getStats, getMe, type AdminStats } from "@/lib/admin/client";
 
 type Tab =
   | "leads"
+  | "pulse"
   | "queue"
   | "published"
   | "subscribers"
@@ -277,6 +279,11 @@ function AdminContent() {
             onClick={() => setTab("leads")}
           />
           <TabButton
+            label="Pulse"
+            active={tab === "pulse"}
+            onClick={() => setTab("pulse")}
+          />
+          <TabButton
             label="Rewind"
             active={tab === "rewind"}
             onClick={() => setTab("rewind")}
@@ -420,6 +427,8 @@ function AdminContent() {
       </Flex>
 
       {tab === "leads" && <LeadsBoard isOwner={isOwner} />}
+
+      {tab === "pulse" && <CommunityPulsePanel isOwner={isOwner} />}
 
       {tab === "rewind" && <RewindPanel isOwner={isOwner} />}
 

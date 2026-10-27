@@ -4869,3 +4869,114 @@ export async function createOfficialComment(payload: {
     }),
   );
 }
+
+/** Heart a feed post as @nexzy (owner-only). Idempotent. */
+export async function likeAsOfficial(
+  postId: string,
+): Promise<{ liked: boolean; likeCount: number }> {
+  return handle(
+    await fetch("/api/newsroom/admin/official/likes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId }),
+    }),
+  );
+}
+
+/** Remove @nexzy's heart from a feed post (owner-only). Idempotent. */
+export async function unlikeAsOfficial(
+  postId: string,
+): Promise<{ liked: boolean; likeCount: number }> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/official/likes/${encodeURIComponent(postId)}`,
+      { method: "DELETE" },
+    ),
+  );
+}
+
+// --- Community Pulse (any admin can read) ---
+
+export type PulseKind =
+  | "post"
+  | "comment"
+  | "article_comment"
+  | "signup"
+  | "follow";
+
+export interface PulseItem {
+  kind: PulseKind;
+  id: string;
+  createdAt: string;
+  actor: {
+    id: string;
+    username: string;
+    avatarUrl: string | null;
+    joinedAt: string;
+    isNew: boolean;
+    isTeam: boolean;
+  };
+  content: string | null;
+  status: "visible" | "flagged" | "deleted" | null;
+  post: {
+    id: string;
+    type: string;
+    snippet: string;
+    authorUsername: string | null;
+    game: { name: string; slug: string } | null;
+    isFirstPost: boolean;
+    stats: {
+      views: number;
+      hearts: number;
+      comments: number;
+      heartedByOfficial: boolean;
+      repliedByOfficial: boolean;
+    };
+  } | null;
+  parentCommentId: string | null;
+  article: { id: string; title: string; slug: string } | null;
+  target: { id: string; username: string } | null;
+}
+
+export interface PulseStreamPage {
+  items: PulseItem[];
+  nextCursor: { before: string; beforeId: string } | null;
+}
+
+export interface PulseStats {
+  todayStart: string;
+  signupsToday: number;
+  signups7d: number;
+  postsToday: number;
+  posts7d: number;
+  commentsToday: number;
+  comments7d: number;
+  followsToday: number;
+  activeToday: number;
+  active7d: number;
+  returning7d: number;
+  totalUsers: number;
+  generatedAt: string;
+}
+
+export async function getPulseStream(opts: {
+  kinds?: PulseKind[];
+  hideTeam?: boolean;
+  before?: string;
+  beforeId?: string;
+  limit?: number;
+}): Promise<PulseStreamPage> {
+  const q = new URLSearchParams();
+  if (opts.kinds?.length) q.set("kinds", opts.kinds.join(","));
+  q.set("hideTeam", opts.hideTeam === false ? "false" : "true");
+  if (opts.before && opts.beforeId) {
+    q.set("before", opts.before);
+    q.set("beforeId", opts.beforeId);
+  }
+  if (opts.limit) q.set("limit", String(opts.limit));
+  return handle(await fetch(`/api/newsroom/admin/pulse/stream?${q}`));
+}
+
+export async function getPulseStats(): Promise<PulseStats> {
+  return handle(await fetch("/api/newsroom/admin/pulse/stats"));
+}
