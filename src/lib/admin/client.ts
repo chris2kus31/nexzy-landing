@@ -5066,3 +5066,31 @@ export async function renameUserAccount(payload: {
 }): Promise<{ id: string; username: string }> {
   return handle(await fetch(`${USERNAMES}/rename`, jsonPost(payload)));
 }
+
+export interface ModerationCheckResult {
+  keyConfigured: boolean;
+  working: boolean;
+  latencyMs: number;
+  samples: Array<{
+    key: string;
+    label: string;
+    expect: "pass" | "block";
+    blocked: boolean | null;
+    topCategory: string | null;
+    topScore: number | null;
+    ok: boolean;
+    error: string | null;
+  }>;
+  last7d: {
+    feedPosts: number;
+    feedPostsHidden: number;
+    commentsHidden: number;
+    articleCommentsHidden: number;
+  };
+  checkedAt: string;
+}
+
+/** Owner: run the moderation self-check (on demand only). */
+export async function runModerationCheck(): Promise<ModerationCheckResult> {
+  return handle(await fetch("/api/newsroom/admin/pulse/moderation-check"));
+}

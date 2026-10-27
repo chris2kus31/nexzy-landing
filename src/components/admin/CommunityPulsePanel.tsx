@@ -32,6 +32,7 @@ import {
   type PulseKind,
   type PulseStats,
 } from "@/lib/admin/client";
+import ModerationCheckCard from "./ModerationCheckCard";
 
 const PAGE = 30;
 
@@ -238,6 +239,8 @@ export default function CommunityPulsePanel({ isOwner }: { isOwner: boolean }) {
           <Stat label="Total users" value={stats.totalUsers} />
         </SimpleGrid>
       )}
+
+      {isOwner && <ModerationCheckCard />}
 
       <Flex gap={2} wrap="wrap" align="center">
         {FILTERS.map((f, i) => (
