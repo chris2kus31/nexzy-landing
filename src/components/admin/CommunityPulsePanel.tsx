@@ -134,6 +134,9 @@ export default function CommunityPulsePanel({ isOwner }: { isOwner: boolean }) {
     const kinds = FILTERS[filter].kinds ?? undefined;
     setLoading(true);
     setErr("");
+    // Drop the old cursor right away so "Load older" can't pair the previous
+    // filter's cursor with the new filter while this load is in flight.
+    setCursor(null);
     try {
       const [page, s] = await Promise.all([
         getPulseStream({ kinds, hideTeam: !showTeam, limit: PAGE }),
@@ -338,7 +341,8 @@ function PulseRow({
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState("");
   const post = item.post;
-  const live = item.status !== "deleted";
+  // Deleted or moderation-hidden: no hearts/replies from the admin.
+  const live = item.status === "visible";
   const canAct =
     isOwner &&
     live &&

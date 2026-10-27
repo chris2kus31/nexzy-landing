@@ -73,9 +73,10 @@ const card = {
 };
 
 /**
- * Admin → Usernames (owner). Our own words are blocked anywhere in a username;
- * a short list of big brands is blocked only as the exact name. Everything
- * else goes through impersonation reports + the rename tool here.
+ * Admin → Usernames (owner). "nexzy" is blocked anywhere in a username;
+ * system words only as the exact name; brands as the bare name or joined with
+ * official/hq/team/staff/support/news/verified/app. Everything else goes
+ * through impersonation reports + the rename tool here.
  */
 export default function UsernamesPanel() {
   const [rows, setRows] = useState<ReservedUsernameRow[] | null>(null);
