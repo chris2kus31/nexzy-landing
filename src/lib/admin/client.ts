@@ -4980,3 +4980,89 @@ export async function getPulseStream(opts: {
 export async function getPulseStats(): Promise<PulseStats> {
   return handle(await fetch("/api/newsroom/admin/pulse/stats"));
 }
+
+// --- Reserved usernames (owner-only) ---
+
+export type ReservedMatchType = "exact" | "contains" | "brand";
+export type ReservedCategory =
+  | "nexzy"
+  | "system"
+  | "platform"
+  | "publisher"
+  | "press"
+  | "franchise"
+  | "creator"
+  | "other";
+
+export interface ReservedUsernameRow {
+  id: string;
+  name: string;
+  matchType: ReservedMatchType;
+  category: ReservedCategory;
+  note: string | null;
+  releasedToUserId: string | null;
+  releasedToUsername: string | null;
+  createdAt: string;
+}
+
+export interface ReservedConflict {
+  userId: string;
+  username: string;
+  createdAt: string;
+  reservedName: string;
+  matchType: ReservedMatchType;
+}
+
+const USERNAMES = "/api/newsroom/admin/usernames";
+const jsonPost = (body: unknown): RequestInit => ({
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+export async function getReservedUsernames(): Promise<ReservedUsernameRow[]> {
+  return handle(await fetch(`${USERNAMES}/reserved`));
+}
+
+export async function addReservedUsername(payload: {
+  name: string;
+  matchType: ReservedMatchType;
+  category: ReservedCategory;
+  note?: string;
+}): Promise<ReservedUsernameRow> {
+  return handle(await fetch(`${USERNAMES}/reserved`, jsonPost(payload)));
+}
+
+export async function removeReservedUsername(
+  id: string,
+): Promise<{ ok: true }> {
+  return handle(
+    await fetch(`${USERNAMES}/reserved/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+/** Let one account use a reserved name; null clears it. */
+export async function releaseReservedUsername(
+  id: string,
+  username: string | null,
+): Promise<ReservedUsernameRow> {
+  return handle(
+    await fetch(
+      `${USERNAMES}/reserved/${encodeURIComponent(id)}/release`,
+      jsonPost({ username }),
+    ),
+  );
+}
+
+export async function getReservedConflicts(): Promise<ReservedConflict[]> {
+  return handle(await fetch(`${USERNAMES}/reserved/conflicts`));
+}
+
+export async function renameUserAccount(payload: {
+  username: string;
+  newUsername: string;
+}): Promise<{ id: string; username: string }> {
+  return handle(await fetch(`${USERNAMES}/rename`, jsonPost(payload)));
+}

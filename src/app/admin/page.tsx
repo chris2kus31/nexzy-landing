@@ -41,6 +41,7 @@ import RewindPanel from "@/components/admin/RewindPanel";
 import AnnouncementsPanel from "@/components/admin/AnnouncementsPanel";
 import OfficialPanel from "@/components/admin/OfficialPanel";
 import CommunityPulsePanel from "@/components/admin/CommunityPulsePanel";
+import UsernamesPanel from "@/components/admin/UsernamesPanel";
 import { getStats, getMe, type AdminStats } from "@/lib/admin/client";
 
 type Tab =
@@ -67,7 +68,8 @@ type Tab =
   | "insights"
   | "rewind"
   | "announcements"
-  | "official";
+  | "official"
+  | "usernames";
 
 function StatCard({
   label,
@@ -409,6 +411,13 @@ function AdminContent() {
               onClick={() => setTab("official")}
             />
           )}
+          {isOwner && (
+            <TabButton
+              label="Usernames"
+              active={tab === "usernames"}
+              onClick={() => setTab("usernames")}
+            />
+          )}
         </HStack>
         {(tab === "queue" || tab === "published") && (
           <Button
@@ -557,6 +566,8 @@ function AdminContent() {
       {tab === "announcements" && isOwner && <AnnouncementsPanel />}
 
       {tab === "official" && isOwner && <OfficialPanel />}
+
+      {tab === "usernames" && isOwner && <UsernamesPanel />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>
