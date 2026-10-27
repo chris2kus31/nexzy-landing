@@ -5070,12 +5070,14 @@ export async function renameUserAccount(payload: {
 export interface ModerationCheckResult {
   keyConfigured: boolean;
   working: boolean;
+  callFailed: boolean;
   latencyMs: number;
   samples: Array<{
     key: string;
     label: string;
     expect: "pass" | "block";
     blocked: boolean | null;
+    reasons: string[];
     topCategory: string | null;
     topScore: number | null;
     ok: boolean;
@@ -5090,7 +5092,62 @@ export interface ModerationCheckResult {
   checkedAt: string;
 }
 
+const MODERATION = "/api/newsroom/admin/moderation";
+
 /** Owner: run the moderation self-check (on demand only). */
 export async function runModerationCheck(): Promise<ModerationCheckResult> {
-  return handle(await fetch("/api/newsroom/admin/pulse/moderation-check"));
+  return handle(await fetch(`${MODERATION}/check`));
+}
+
+export interface ModerationSettingRow {
+  category: string;
+  label: string;
+  description: string;
+  threshold: number;
+  useOpenAiFlag: boolean;
+  defaultThreshold: number;
+  defaultUseOpenAiFlag: boolean;
+  min: number;
+  max: number;
+  flagLocked: boolean;
+  isDefault: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+export interface ModerationSettingChangeRow {
+  id: string;
+  category: string;
+  oldThreshold: number | null;
+  newThreshold: number;
+  oldUseOpenAiFlag: boolean | null;
+  newUseOpenAiFlag: boolean;
+  changedBy: string;
+  createdAt: string;
+}
+
+export async function getModerationSettings(): Promise<ModerationSettingRow[]> {
+  return handle(await fetch(`${MODERATION}/settings`));
+}
+
+export async function saveModerationSettings(
+  changes: Array<{
+    category: string;
+    threshold: number;
+    useOpenAiFlag: boolean;
+  }>,
+): Promise<ModerationSettingRow[]> {
+  return handle(
+    await fetch(`${MODERATION}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ changes }),
+    }),
+  );
+}
+
+export async function getModerationHistory(): Promise<
+  ModerationSettingChangeRow[]
+> {
+  return handle(await fetch(`${MODERATION}/history?limit=50`));
 }

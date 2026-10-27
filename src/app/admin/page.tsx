@@ -42,6 +42,7 @@ import AnnouncementsPanel from "@/components/admin/AnnouncementsPanel";
 import OfficialPanel from "@/components/admin/OfficialPanel";
 import CommunityPulsePanel from "@/components/admin/CommunityPulsePanel";
 import UsernamesPanel from "@/components/admin/UsernamesPanel";
+import ModerationPanel from "@/components/admin/ModerationPanel";
 import { getStats, getMe, type AdminStats } from "@/lib/admin/client";
 
 type Tab =
@@ -69,7 +70,8 @@ type Tab =
   | "rewind"
   | "announcements"
   | "official"
-  | "usernames";
+  | "usernames"
+  | "moderation";
 
 function StatCard({
   label,
@@ -418,6 +420,13 @@ function AdminContent() {
               onClick={() => setTab("usernames")}
             />
           )}
+          {isOwner && (
+            <TabButton
+              label="Moderation"
+              active={tab === "moderation"}
+              onClick={() => setTab("moderation")}
+            />
+          )}
         </HStack>
         {(tab === "queue" || tab === "published") && (
           <Button
@@ -568,6 +577,8 @@ function AdminContent() {
       {tab === "official" && isOwner && <OfficialPanel />}
 
       {tab === "usernames" && isOwner && <UsernamesPanel />}
+
+      {tab === "moderation" && isOwner && <ModerationPanel />}
 
       {tab === "tools" && isOwner && (
         <VStack align="stretch" gap={6}>
