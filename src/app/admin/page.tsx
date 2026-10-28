@@ -23,6 +23,7 @@ import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
 import DiscoveryPanel from "@/components/admin/DiscoveryPanel";
 import GameHubPanel from "@/components/admin/GameHubPanel";
+import MegaHubsPanel from "@/components/admin/MegaHubsPanel";
 import FeaturedPanel from "@/components/admin/FeaturedPanel";
 import NotifyPanel from "@/components/admin/NotifyPanel";
 import TrendingPanel from "@/components/admin/TrendingPanel";
@@ -61,6 +62,7 @@ type Tab =
   | "games"
   | "discovery"
   | "gamehub"
+  | "megahubs"
   | "featured"
   | "writers"
   | "tools"
@@ -364,6 +366,11 @@ function AdminContent() {
             active={tab === "gamehub"}
             onClick={() => setTab("gamehub")}
           />
+          <TabButton
+            label="Mega hubs"
+            active={tab === "megahubs"}
+            onClick={() => setTab("megahubs")}
+          />
           {isOwner && (
             <TabButton
               label="Featured"
@@ -564,6 +571,7 @@ function AdminContent() {
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
       {tab === "discovery" && <DiscoveryPanel isOwner={isOwner} />}
       {tab === "gamehub" && <GameHubPanel />}
+      {tab === "megahubs" && <MegaHubsPanel />}
       {tab === "featured" && isOwner && <FeaturedPanel isOwner={isOwner} />}
 
       {tab === "writers" && isOwner && <WritersPanel />}

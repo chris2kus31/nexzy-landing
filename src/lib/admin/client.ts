@@ -3,6 +3,15 @@
 // admin JWT is in an httpOnly cookie, so these calls carry no token directly.
 "use client";
 
+import type {
+  HubEdition,
+  HubFact,
+  HubFaq,
+  HubLink,
+  HubLive,
+  HubModules,
+} from "@/lib/hubs/types";
+
 /** One embedded video in an article's media gallery (multi-video support). */
 export interface ArticleMedia {
   type: "youtube" | "streamable";
@@ -5150,4 +5159,71 @@ export async function getModerationHistory(): Promise<
   ModerationSettingChangeRow[]
 > {
   return handle(await fetch(`${MODERATION}/history?limit=50`));
+}
+
+// ── Mega hubs (Phase 1): per-game profile editor ─────────────────────────────
+
+
+export interface GameProfileRow {
+  gameId: string;
+  name: string;
+  slug: string;
+  enabled: boolean;
+  launchAt: string | null;
+  factCount: number;
+  dayOne: number;
+  predictions: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface GameProfileInput {
+  enabled: boolean;
+  launchAt: string | null;
+  launchNote: string | null;
+  headline: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  summary: string | null;
+  aliases: string[];
+  publisher: string | null;
+  officialLinks: HubLink[];
+  editor: string | null;
+  modules: HubModules;
+  facts: HubFact[];
+  faqs: HubFaq[];
+  editions: HubEdition[];
+}
+
+export interface GameProfileDetail {
+  game: { id: string; name: string; slug: string; released: string | null };
+  profile: GameProfileInput & { factsUpdatedAt: string | null };
+  live: HubLive;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export async function listGameProfiles(): Promise<GameProfileRow[]> {
+  return handle(await fetch(`/api/newsroom/admin/game-profiles`));
+}
+
+export async function getGameProfile(
+  gameId: string,
+): Promise<GameProfileDetail> {
+  return handle(
+    await fetch(`/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`),
+  );
+}
+
+export async function saveGameProfile(
+  gameId: string,
+  input: GameProfileInput,
+): Promise<GameProfileDetail> {
+  return handle(
+    await fetch(`/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
 }

@@ -12,10 +12,14 @@ export default function SignInModal({
   open,
   onClose,
   onSignedIn,
+  title = "Join the conversation",
+  subtitle = "Sign in or create an account to comment, reply, and vote.",
 }: {
   open: boolean;
   onClose: () => void;
   onSignedIn?: () => void;
+  title?: string;
+  subtitle?: string;
 }) {
   if (!open) return null;
   return (
@@ -63,10 +67,10 @@ export default function SignInModal({
           textAlign="center"
           mb={1}
         >
-          Join the conversation
+          {title}
         </Text>
         <Text fontSize="sm" color="whiteAlpha.700" textAlign="center" mb={5}>
-          Sign in or create an account to comment, reply, and vote.
+          {subtitle}
         </Text>
         <SignInPanel
           onDone={() => {

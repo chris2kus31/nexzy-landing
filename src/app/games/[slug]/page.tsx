@@ -32,6 +32,21 @@ import GameMedia from "@/components/games/GameMedia";
 import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
 import { jsonLdString } from "@/lib/seo/jsonld";
+import { authorJsonLd } from "@/lib/blog/authors";
+import type { DayOnePlatform, HubProfile } from "@/lib/hubs/types";
+import HubLiveProvider from "@/components/games/hub/HubLiveProvider";
+import LaunchCountdown from "@/components/games/hub/LaunchCountdown";
+import DayOneCard from "@/components/games/hub/DayOneCard";
+import PredictScore from "@/components/games/hub/PredictScore";
+import {
+  EditionsTable,
+  EverythingWeKnow,
+  HubFaqList,
+  HubPanel,
+  LatestNews,
+  ShortVersion,
+  fmtHubDate,
+} from "@/components/games/hub/HubSections";
 
 export const revalidate = 21600; // 6 h; the publish webhook refreshes every hub instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -75,6 +90,30 @@ function platformIcons(platforms: string[]): IconType[] {
   return [...set.values()];
 }
 
+/** Game platform names -> the Day One platform picks we offer. */
+function dayOnePlatforms(platforms: string[]): DayOnePlatform[] {
+  const out = new Set<DayOnePlatform>();
+  for (const p of platforms) {
+    const s = p.toLowerCase();
+    if (s.includes("playstation 5")) out.add("ps5");
+    else if (s.includes("xbox series")) out.add("xbox");
+    else if (s.includes("switch 2")) out.add("switch2");
+    else if (s.includes("switch")) out.add("switch");
+    else if (s === "pc" || s.includes("windows")) out.add("pc");
+  }
+  return [...out];
+}
+
+/** Title for an enabled mega hub: entity first, under 60 with " | Nexzy". */
+function megaTitle(name: string, profile: HubProfile): string {
+  if (profile.seoTitle) return profile.seoTitle;
+  const short = profile.aliases[0] || name;
+  const full = `${short}: Release Date, Price & Everything We Know`;
+  if (full.length <= 52) return full;
+  const mid = `${short}: Release Date & Everything We Know`;
+  return mid.length <= 52 ? mid : short;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -84,6 +123,22 @@ export async function generateMetadata({
   const hub = await fetchGameHub(slug);
   if (!hub) return { title: "Game not found — Nexzy" };
   const { game } = hub;
+  const profile = hub.profile ?? null;
+  if (profile) {
+    const title = megaTitle(game.name, profile);
+    const description = (
+      profile.seoDescription ||
+      profile.summary ||
+      `Everything we know about ${game.name}: release date, price, editions and every confirmed detail, sourced.`
+    ).slice(0, 160);
+    return {
+      title,
+      description,
+      alternates: { canonical: `/games/${game.slug}` },
+      openGraph: { title, description, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
+    };
+  }
   const description =
     (game.description
       ? stripHtml(game.description).slice(0, 155)
@@ -180,7 +235,9 @@ export default async function GameHubPage({
   const hub = await fetchGameHub(slug);
   if (!hub) notFound();
   const { game, content } = hub;
+  const profile = hub.profile ?? null;
   const hubUrl = `${SITE_URL}/games/${game.slug}`;
+  const gameId = `${hubUrl}#game`;
   const icons = platformIcons(game.platforms);
   const releasedFuture = game.released
     ? new Date(game.released).getTime() > Date.now()
@@ -205,8 +262,16 @@ export default async function GameHubPage({
   const videoGameLd = {
     "@context": "https://schema.org",
     "@type": "VideoGame",
+    "@id": gameId,
     name: game.name,
     url: hubUrl,
+    ...(profile?.aliases.length ? { alternateName: profile.aliases } : {}),
+    ...(profile?.publisher
+      ? { publisher: { "@type": "Organization", name: profile.publisher } }
+      : {}),
+    ...(profile?.officialLinks.length
+      ? { sameAs: profile.officialLinks.map((l) => l.url) }
+      : {}),
     ...(game.backgroundImage ? { image: game.backgroundImage } : {}),
     ...(game.genres.length ? { genre: game.genres } : {}),
     ...(game.platforms.length ? { gamePlatform: game.platforms } : {}),
@@ -234,8 +299,13 @@ export default async function GameHubPage({
   const collectionLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${game.name} — guides, walkthroughs & news`,
+    name: profile
+      ? `${game.name}: everything we know`
+      : `${game.name} — guides, walkthroughs & news`,
     url: hubUrl,
+    about: { "@id": gameId },
+    ...(profile?.factsUpdatedAt ? { dateModified: profile.factsUpdatedAt } : {}),
+    ...(profile?.editor ? { author: authorJsonLd(profile.editor, SITE_URL) } : {}),
     isPartOf: { "@type": "WebSite", name: "Nexzy", url: SITE_URL },
     mainEntity: {
       "@type": "ItemList",
@@ -262,6 +332,21 @@ export default async function GameHubPage({
       { "@type": "ListItem", position: 3, name: game.name, item: hubUrl },
     ],
   };
+
+  // Visible FAQ only (Google retired FAQ rich results in 2026; the markup is
+  // kept because it mirrors the page text exactly and other engines read it).
+  const faqLd =
+    profile?.modules.faq && profile.faqs.length
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: profile.faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }
+      : null;
 
   const contentTabs = [
     { key: "walkthroughs", label: "Walkthroughs", items: content.walkthroughs },
@@ -319,8 +404,14 @@ export default async function GameHubPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbLd) }}
       />
+      {faqLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdString(faqLd) }}
+        />
+      )}
 
-      <Container maxW="5xl" py={{ base: 8, md: 12 }}>
+      <Container maxW={profile ? "6xl" : "5xl"} py={{ base: 8, md: 12 }}>
         <HStack gap={2} mb={5} fontSize="sm" color="gray.400" flexWrap="wrap">
           <Link asChild color="nexzy.lightBlue">
             <NextLink href="/games">Games</NextLink>
@@ -331,78 +422,105 @@ export default async function GameHubPage({
           </Text>
         </HStack>
 
-        {/* Contained hero banner */}
-        <Box
-          position="relative"
-          borderRadius="2xl"
-          overflow="hidden"
-          border="1px solid"
-          borderColor="whiteAlpha.100"
-          aspectRatio={{ base: 16 / 9, md: 2.6 }}
-          mb={6}
-        >
-          {game.backgroundImage && (
-            <NextImage
-              src={game.backgroundImage}
-              alt={game.name}
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 960px"
-              style={{ objectFit: "cover" }}
+        {profile ? (
+          <HubLiveProvider
+            slug={game.slug}
+            gameName={profile.aliases[0] || game.name}
+            initial={profile.live}
+          >
+            <MegaHub
+              game={game}
+              profile={profile}
+              news={content.news.slice(0, 4)}
             />
-          )}
+          </HubLiveProvider>
+        ) : (
+          <>
+          {/* Contained hero banner */}
           <Box
-            position="absolute"
-            inset={0}
-            style={{
-              background:
-                "linear-gradient(to top, rgba(16,18,34,0.9) 0%, rgba(16,18,34,0.25) 45%, rgba(16,18,34,0) 75%)",
-            }}
-          />
-          {icons.length > 0 && (
-            <HStack position="absolute" bottom={4} left={5} gap={3}>
-              {icons.map((Ic, i) => (
-                <Icon key={i} boxSize={5} color="whiteAlpha.900">
-                  <Ic />
-                </Icon>
-              ))}
-            </HStack>
+            position="relative"
+            borderRadius="2xl"
+            overflow="hidden"
+            border="1px solid"
+            borderColor="whiteAlpha.100"
+            aspectRatio={{ base: 16 / 9, md: 2.6 }}
+            mb={6}
+          >
+            {game.backgroundImage && (
+              <NextImage
+                src={game.backgroundImage}
+                alt={game.name}
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 960px"
+                style={{ objectFit: "cover" }}
+              />
+            )}
+            <Box
+              position="absolute"
+              inset={0}
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(16,18,34,0.9) 0%, rgba(16,18,34,0.25) 45%, rgba(16,18,34,0) 75%)",
+              }}
+            />
+            {icons.length > 0 && (
+              <HStack position="absolute" bottom={4} left={5} gap={3}>
+                {icons.map((Ic, i) => (
+                  <Icon key={i} boxSize={5} color="whiteAlpha.900">
+                    <Ic />
+                  </Icon>
+                ))}
+              </HStack>
+            )}
+          </Box>
+
+          <Heading
+            as="h1"
+            fontFamily="title"
+            size={{ base: "2xl", md: "3xl" }}
+            color="white"
+            lineHeight="1.1"
+            mb={2}
+          >
+            {game.name}
+          </Heading>
+
+          {metaBits.length > 0 && (
+            <Text color="gray.400" fontSize={{ base: "sm", md: "md" }} mb={4}>
+              {metaBits.join("  ·  ")}
+            </Text>
           )}
-        </Box>
 
-        <Heading
-          as="h1"
-          fontFamily="title"
-          size={{ base: "2xl", md: "3xl" }}
-          color="white"
-          lineHeight="1.1"
-          mb={2}
-        >
-          {game.name}
-        </Heading>
-
-        {metaBits.length > 0 && (
-          <Text color="gray.400" fontSize={{ base: "sm", md: "md" }} mb={4}>
-            {metaBits.join("  ·  ")}
-          </Text>
+          <HStack gap={2} flexWrap="wrap" mb={8}>
+            {game.genres.slice(0, 4).map((g) => (
+              <Badge key={g} colorPalette="blue" variant="subtle">
+                {g}
+              </Badge>
+            ))}
+            {game.released && (
+              <Badge colorPalette="yellow" variant="subtle">
+                {releasedFuture
+                  ? `Coming ${fmtDate(game.released)}`
+                  : `Released ${fmtDate(game.released)}`}
+              </Badge>
+            )}
+          </HStack>
+          </>
         )}
 
-        <HStack gap={2} flexWrap="wrap" mb={8}>
-          {game.genres.slice(0, 4).map((g) => (
-            <Badge key={g} colorPalette="blue" variant="subtle">
-              {g}
-            </Badge>
-          ))}
-          {game.released && (
-            <Badge colorPalette="yellow" variant="subtle">
-              {releasedFuture
-                ? `Coming ${fmtDate(game.released)}`
-                : `Released ${fmtDate(game.released)}`}
-            </Badge>
-          )}
-        </HStack>
-
         <Box mb={12}>
+          {profile && tabs.length > 0 && (
+            <Heading
+              as="h2"
+              fontFamily="heading"
+              fontSize={{ base: "xl", md: "2xl" }}
+              color="white"
+              mb={2}
+            >
+              {game.name} guides, news and media
+            </Heading>
+          )}
           <HubTabs tabs={tabs} panels={panels} />
         </Box>
 
@@ -413,6 +531,132 @@ export default async function GameHubPage({
           subtext={`Get ${game.name} news, trailers and updates in one feed, add it to your library or wishlist in one tap, and meet players who play it. Free on iOS & Android.`}
         />
       </Container>
+    </Box>
+  );
+}
+
+/** Phase 1 mega hub: hero (countdown + Day One), the short version, predict,
+ *  everything we know, editions, latest news and FAQ. Modules follow the
+ *  game's profile switches. */
+function MegaHub({
+  game,
+  profile,
+  news,
+}: {
+  game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
+  profile: HubProfile;
+  news: GameHubItem[];
+}) {
+  const m = profile.modules;
+  const short = profile.aliases[0] || game.name;
+  const launchAt =
+    profile.launchAt ||
+    (game.released ? `${game.released}T12:00:00.000Z` : null);
+  const platformLine = game.platforms.slice(0, 4).join(" · ");
+  const picks = dayOnePlatforms(game.platforms);
+  return (
+    <Box display="flex" flexDirection="column" gap={7} mb={12}>
+      <Box
+        display="grid"
+        gridTemplateColumns={{ base: "1fr", lg: "minmax(0, 1.1fr) minmax(0, 1fr)" }}
+        gap={{ base: 6, lg: 8 }}
+        alignItems="stretch"
+      >
+        <Box display="flex" flexDirection="column" gap={5}>
+          <HStack gap={2} flexWrap="wrap">
+            <Badge
+              bg="rgba(255,215,0,0.14)"
+              color="#FFD700"
+              borderRadius="999px"
+              px={3}
+              py={1}
+              letterSpacing="0.05em"
+            >
+              OFFICIAL NEXZY HUB
+            </Badge>
+            {platformLine && (
+              <Badge bg="whiteAlpha.100" color="#EDF2F7" borderRadius="999px" px={3} py={1}>
+                {platformLine}
+              </Badge>
+            )}
+          </HStack>
+          <Heading
+            as="h1"
+            fontFamily="title"
+            fontSize={{ base: "4xl", md: "6xl" }}
+            color="white"
+            lineHeight="1"
+          >
+            {profile.headline || game.name}
+          </Heading>
+          {m.countdown && launchAt && (
+            <LaunchCountdown
+              launchAt={launchAt}
+              launchLabel={fmtHubDate(launchAt)}
+            />
+          )}
+          {profile.launchNote && (
+            <Text fontSize="sm" color="#9aa3bf" mt={-2}>
+              {profile.launchNote}
+            </Text>
+          )}
+          {m.dayOne && <DayOneCard platforms={picks} />}
+        </Box>
+        <Box
+          position="relative"
+          borderRadius="18px"
+          overflow="hidden"
+          border="1px solid"
+          borderColor="whiteAlpha.100"
+          minH={{ base: "200px", lg: "100%" }}
+          aspectRatio={{ base: 16 / 9, lg: "auto" }}
+          bg="#11152b"
+        >
+          {game.backgroundImage && (
+            <NextImage
+              src={game.backgroundImage}
+              alt={`${game.name} key art`}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 560px"
+              style={{ objectFit: "cover" }}
+            />
+          )}
+        </Box>
+      </Box>
+
+      {profile.summary && (
+        <ShortVersion
+          gameName={short}
+          summary={profile.summary}
+          updatedAt={profile.factsUpdatedAt}
+          editor={profile.editor}
+        />
+      )}
+
+      {m.predict && (
+        <HubPanel
+          id="predict"
+          title="Predict the Nexzy Players score"
+          aside="Real score unlocks after launch"
+        >
+          <PredictScore />
+        </HubPanel>
+      )}
+
+      {m.facts && (
+        <EverythingWeKnow
+          gameName={short}
+          facts={profile.facts}
+          updatedAt={profile.factsUpdatedAt}
+        />
+      )}
+
+      {m.editions && <EditionsTable gameName={short} editions={profile.editions} />}
+
+      <LatestNews gameName={short} items={news} />
+
+      {m.faq && <HubFaqList gameName={short} faqs={profile.faqs} />}
     </Box>
   );
 }

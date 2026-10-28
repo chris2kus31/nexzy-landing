@@ -3,6 +3,7 @@
 // components (SSR/SEO).
 import "server-only";
 import type { TagInfo } from "./tags";
+import type { HubProfile } from "@/lib/hubs/types";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
@@ -681,6 +682,8 @@ export interface GameHub {
     lists: GameHubItem[];
   };
   videos: GameHubVideo[];
+  /** Phase 1 mega hub profile; null/absent = plain hub. */
+  profile?: HubProfile | null;
   counts: {
     guides: number;
     walkthroughs: number;

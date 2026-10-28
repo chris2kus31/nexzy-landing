@@ -539,9 +539,8 @@ function CheckSection() {
                   <Text color={C.faint} fontSize="xs">
                     {s.reasons.length
                       ? `by ${s.reasons.join(", ")}`
-                      : s.topCategory
-                        ? `highest: ${s.topCategory} ${s.topScore}`
-                        : ""}
+                      : "highest"}
+                    {s.topCategory ? `: ${s.topCategory} ${s.topScore}` : ""}
                   </Text>
                 </>
               )}
