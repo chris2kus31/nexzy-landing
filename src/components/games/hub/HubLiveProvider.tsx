@@ -205,7 +205,7 @@ export default function HubLiveProvider({
         }
         subtitle={
           pending?.kind === "predict"
-            ? "Sign in so we can tell you if you called it at launch."
+            ? "Sign in so we can tell you if you called it once the player score settles."
             : "Sign in to count yourself in and get your Day One badge."
         }
       />

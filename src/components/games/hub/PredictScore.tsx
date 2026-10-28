@@ -79,7 +79,7 @@ export default function PredictScore() {
           ? `Predictions are locked. ${tally.total.toLocaleString("en-US")} players called it.`
           : picked
             ? `Your pick is in. You can change it until launch. ${tally.total.toLocaleString("en-US")} predictions so far.`
-            : "Pick one. Results show after you vote, and we'll tell you at launch if you called it."}
+            : "Pick one. Results show after you vote, and we'll tell you if you called it once the player score settles."}
       </Text>
       {error && (
         <Text fontSize="xs" color="red.300" mt={2}>

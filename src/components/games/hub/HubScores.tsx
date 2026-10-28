@@ -426,6 +426,12 @@ export default function HubScores({
         </Box>
       )}
 
+      <Text fontSize="xs" color={C.muted} mt={5}>
+        <a href="/how-player-scores-work" style={{ color: C.muted, textDecoration: "underline" }}>
+          How player scores work
+        </a>
+      </Text>
+
       <SignInModal
         open={signIn}
         onClose={() => setSignIn(false)}

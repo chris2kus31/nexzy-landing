@@ -23,6 +23,7 @@ import {
   FiHeart,
   FiMessageCircle,
   FiRefreshCw,
+  FiStar,
   FiUserCheck,
   FiUserPlus,
   FiUsers,
@@ -56,6 +57,7 @@ const KIND: Record<PulseKind, { color: string; icon: IconType }> = {
   article_comment: { color: "#B39DFF", icon: FiFileText },
   signup: { color: "#7EE2A0", icon: FiUserPlus },
   follow: { color: "#9AA3BF", icon: FiUserCheck },
+  review: { color: "#FFD700", icon: FiStar },
 };
 
 const PAGE = 30;
@@ -65,6 +67,7 @@ const FILTERS: Array<{ label: string; kinds: PulseKind[] | null }> = [
   { label: "Comments", kinds: ["comment", "article_comment"] },
   { label: "Signups", kinds: ["signup"] },
   { label: "Follows", kinds: ["follow"] },
+  { label: "Ratings", kinds: ["review"] },
 ];
 
 const itemKey = (i: PulseItem) => `${i.kind}:${i.id}`;
@@ -562,7 +565,35 @@ function verb(item: PulseItem): string {
       return "joined Nexzy";
     case "follow":
       return `followed @${item.target?.username ?? "user"}`;
+    case "review":
+      return `rated ${item.review?.game.name ?? "a game"}${
+        item.review ? ` ${item.review.score.toFixed(1)}` : ""
+      }`;
   }
+}
+
+const HOLD_LABEL: Record<string, string> = {
+  straight_line: "held: all 1s or all 5s",
+  velocity: "held: burst from one network",
+  bomb_hold: "held: review-bomb pause",
+};
+
+/** A rating's moderation state; decisions live in Admin -> Reviews. */
+function ReviewTags({ item }: { item: PulseItem }) {
+  const r = item.review;
+  if (!r) return null;
+  return (
+    <>
+      {r.status === "held" && (
+        <Tag color="#FFB86B">{HOLD_LABEL[r.holdReason ?? ""] ?? "held"}</Tag>
+      )}
+      {r.status === "removed" && <Tag color="#FF8A80">removed</Tag>}
+      {r.status === "excluded" && <Tag color={C.muted}>not counted</Tag>}
+      {item.status === "flagged" && r.status !== "held" && (
+        <Tag color="#FFB86B">text hidden by moderation</Tag>
+      )}
+    </>
+  );
 }
 
 function Avatar({ item }: { item: PulseItem }) {
@@ -683,10 +714,16 @@ function TimelineItem({
         {firstPost && <Tag color={C.gold}>first post</Tag>}
         {item.actor.isNew && <Tag color={KIND.signup.color}>new member</Tag>}
         {item.actor.isTeam && <Tag color={C.muted}>team</Tag>}
-        {item.status === "flagged" && (
-          <Tag color="#FFB86B">hidden by moderation</Tag>
+        {item.kind === "review" ? (
+          <ReviewTags item={item} />
+        ) : (
+          <>
+            {item.status === "flagged" && (
+              <Tag color="#FFB86B">hidden by moderation</Tag>
+            )}
+            {item.status === "deleted" && <Tag color="#FF8A80">deleted</Tag>}
+          </>
         )}
-        {item.status === "deleted" && <Tag color="#FF8A80">deleted</Tag>}
         <Text
           fontSize="xs"
           color={C.faint}
@@ -740,6 +777,24 @@ function TimelineItem({
           }}
         >
           {item.article.title} <FiExternalLink />
+        </a>
+      )}
+
+      {item.kind === "review" && item.review && (
+        <a
+          href={`/games/${encodeURIComponent(item.review.game.slug)}#scores`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 8,
+            fontSize: 13,
+            color: KIND.review.color,
+          }}
+        >
+          {item.review.game.name} hub <FiExternalLink />
         </a>
       )}
 

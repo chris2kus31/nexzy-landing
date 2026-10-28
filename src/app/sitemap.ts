@@ -36,6 +36,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // doesn't churn on every ISR regeneration (which trains crawlers to ignore
   // lastmod). Bump when a static page's content meaningfully changes.
   const STATIC_LAST_MOD = new Date("2026-07-01T00:00:00Z");
+  const STATIC_LAST_MOD_BY_PATH: Record<string, Date> = {
+    "/how-player-scores-work": new Date("2026-10-28T00:00:00Z"),
+  };
   const staticRoutes = [
     "",
     "/about",
@@ -43,6 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/terms",
     "/guidelines",
     "/editorial-standards",
+    "/how-player-scores-work",
     "/press",
     "/blog",
     "/guides",
@@ -67,7 +71,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
   const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((path) => ({
     url: `${SITE_URL}${path}`,
-    lastModified: path === "" || hubRoutes.has(path) ? now : STATIC_LAST_MOD,
+    lastModified:
+      path === "" || hubRoutes.has(path)
+        ? now
+        : (STATIC_LAST_MOD_BY_PATH[path] ?? STATIC_LAST_MOD),
     changeFrequency: path === "" || hubRoutes.has(path) ? "daily" : "monthly",
     priority: path === "" ? 1 : hubRoutes.has(path) ? 0.8 : 0.5,
   }));

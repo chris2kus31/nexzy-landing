@@ -4911,7 +4911,8 @@ export type PulseKind =
   | "comment"
   | "article_comment"
   | "signup"
-  | "follow";
+  | "follow"
+  | "review";
 
 export interface PulseItem {
   kind: PulseKind;
@@ -4945,6 +4946,15 @@ export interface PulseItem {
   parentCommentId: string | null;
   article: { id: string; title: string; slug: string } | null;
   target: { id: string; username: string } | null;
+  /** review only (Nexzy Players rating). */
+  review: {
+    score: number;
+    platform: string;
+    hours: string;
+    status: string;
+    holdReason: string | null;
+    game: { name: string; slug: string };
+  } | null;
 }
 
 export interface PulseStreamPage {
@@ -5225,5 +5235,99 @@ export async function saveGameProfile(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  );
+}
+
+// --- Reviews: Nexzy Players ratings (Phase 2; any admin) ---
+
+export type ReviewQueueView = "held" | "hidden_text" | "removed";
+
+export interface AdminReviewRow {
+  id: string;
+  gameId: string;
+  userId: string;
+  score: number;
+  fun: number;
+  performance: number;
+  value: number;
+  presentation: number;
+  story: number | null;
+  platform: string;
+  hours: string;
+  body: string | null;
+  bodyHidden: boolean;
+  status: "counted" | "held" | "removed" | "excluded";
+  holdReason: "straight_line" | "velocity" | "bomb_hold" | null;
+  decidedBy: string | null;
+  editCount: number;
+  createdAt: string;
+  updatedAt: string;
+  gameName: string;
+  gameSlug: string;
+  username: string;
+  userCreatedAt: string;
+}
+
+export interface AdminReviewQueuePage {
+  items: AdminReviewRow[];
+  nextCursor: string | null;
+}
+
+export interface AdminReviewGame {
+  gameId: string;
+  name: string;
+  slug: string;
+  score: number | null;
+  rawScore: number | null;
+  count: number;
+  frozen: boolean;
+  frozenAt: string | null;
+  settledScore: number | null;
+  settledAt: string | null;
+  held: number;
+}
+
+export interface AdminReviewOverview {
+  games: AdminReviewGame[];
+  flags: Array<{ key: string; env: string; enabled: boolean }>;
+  rules: Record<string, number>;
+}
+
+export async function getReviewOverview(): Promise<AdminReviewOverview> {
+  return handle(await fetch("/api/newsroom/admin/reviews/overview"));
+}
+
+export async function getReviewQueue(opts: {
+  view: ReviewQueueView;
+  gameId?: string;
+  cursor?: string;
+}): Promise<AdminReviewQueuePage> {
+  const q = new URLSearchParams({ view: opts.view });
+  if (opts.gameId) q.set("gameId", opts.gameId);
+  if (opts.cursor) q.set("cursor", opts.cursor);
+  return handle(await fetch(`/api/newsroom/admin/reviews/queue?${q}`));
+}
+
+export async function decideReview(
+  id: string,
+  action: "approve" | "remove",
+): Promise<{ id: string; status: string }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/reviews/${encodeURIComponent(id)}/decision`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    }),
+  );
+}
+
+export async function unfreezeReviews(
+  gameId: string,
+): Promise<{ gameId: string; released: number }> {
+  return handle(
+    await fetch(
+      `/api/newsroom/admin/reviews/games/${encodeURIComponent(gameId)}/unfreeze`,
+      { method: "POST" },
+    ),
   );
 }
