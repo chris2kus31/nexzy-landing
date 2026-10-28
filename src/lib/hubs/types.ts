@@ -3,6 +3,7 @@
 export const HUB_MODULES = [
   "countdown",
   "dayOne",
+  "trailers",
   "facts",
   "predict",
   "editions",

@@ -23,7 +23,11 @@ import {
   FaGamepad,
 } from "react-icons/fa";
 import type { IconType } from "react-icons";
-import { fetchGameHub, type GameHubItem } from "@/lib/blog/api";
+import {
+  fetchGameHub,
+  type GameHubItem,
+  type GameHubVideo,
+} from "@/lib/blog/api";
 import AppCta from "@/components/blog/AppCta";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import GameViewPing from "@/components/games/GameViewPing";
@@ -38,6 +42,7 @@ import HubLiveProvider from "@/components/games/hub/HubLiveProvider";
 import LaunchCountdown from "@/components/games/hub/LaunchCountdown";
 import DayOneCard from "@/components/games/hub/DayOneCard";
 import PredictScore from "@/components/games/hub/PredictScore";
+import HubTrailers, { type HubTrailer } from "@/components/games/hub/HubTrailers";
 import {
   EditionsTable,
   EverythingWeKnow,
@@ -102,6 +107,30 @@ function dayOnePlatforms(platforms: string[]): DayOnePlatform[] {
     else if (s === "pc" || s.includes("windows")) out.add("pc");
   }
   return [...out];
+}
+
+/**
+ * Official trailers for the hub: videos linked to the game from outside Nexzy
+ * (trailer monitor approvals / Admin -> Game hub) plus the game's trailer
+ * field. Nexzy's own clips and article embeds stay in the Media tab.
+ */
+function hubTrailers(
+  videos: GameHubVideo[],
+  name: string,
+): HubTrailer[] {
+  return videos
+    .filter(
+      (v) =>
+        (v.source === "external" || v.source === "rawg") &&
+        !v.isShort &&
+        !!v.youtubeId,
+    )
+    .slice(0, 8)
+    .map((v) => ({
+      youtubeId: v.youtubeId as string,
+      title: v.title?.trim() || `${name}: official video`,
+      thumbnailUrl: v.thumbnailUrl,
+    }));
 }
 
 /** Title for an enabled mega hub: entity first, under 60 with " | Nexzy". */
@@ -348,6 +377,11 @@ export default async function GameHubPage({
         }
       : null;
 
+  // Trailers. No VideoObject markup yet: we only know when a video was added
+  // to Nexzy, not its YouTube upload date, and we never publish a wrong date.
+  const trailers =
+    profile && profile.modules.trailers ? hubTrailers(videos, game.name) : [];
+
   const contentTabs = [
     { key: "walkthroughs", label: "Walkthroughs", items: content.walkthroughs },
     { key: "guides", label: "Guides", items: content.guides },
@@ -432,6 +466,7 @@ export default async function GameHubPage({
               game={game}
               profile={profile}
               news={content.news.slice(0, 4)}
+              trailers={trailers}
             />
           </HubLiveProvider>
         ) : (
@@ -542,10 +577,12 @@ function MegaHub({
   game,
   profile,
   news,
+  trailers,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
   profile: HubProfile;
   news: GameHubItem[];
+  trailers: HubTrailer[];
 }) {
   const m = profile.modules;
   const short = profile.aliases[0] || game.name;
@@ -632,6 +669,16 @@ function MegaHub({
           updatedAt={profile.factsUpdatedAt}
           editor={profile.editor}
         />
+      )}
+
+      {trailers.length > 0 && (
+        <HubPanel
+          id="trailers"
+          title={`${short} trailers`}
+          aside="Official videos"
+        >
+          <HubTrailers slug={game.slug} trailers={trailers} />
+        </HubPanel>
       )}
 
       {m.predict && (
