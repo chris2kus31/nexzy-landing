@@ -10,6 +10,9 @@ import { useHubLive } from "./HubLiveProvider";
 import type { DayOnePlatform } from "@/lib/hubs/types";
 import { track } from "@/lib/analytics";
 
+/** Below this, a small number reads as an empty room: show a call instead. */
+const SHOW_COUNT_AT = 25;
+
 const PLATFORM_LABEL: Record<DayOnePlatform, string> = {
   ps5: "PS5",
   xbox: "Xbox",
@@ -55,22 +58,39 @@ export default function DayOneCard({
       p={{ base: 4, md: 5 }}
     >
       <HStack justify="space-between" align="center" gap={4} flexWrap="wrap">
-        <Box>
-          <Text
-            fontFamily="title"
-            fontSize={{ base: "3xl", md: "4xl" }}
-            color="#FFD700"
-            lineHeight="1"
-            style={{ fontVariantNumeric: "tabular-nums" }}
-            aria-live="polite"
-          >
-            {live.dayOne.toLocaleString("en-US")}
-          </Text>
-          <Text fontSize="sm" color="#c7cde0" mt={1}>
-            {live.dayOne === 1 ? "player is" : "players are"} playing{" "}
-            {gameName} day one
-          </Text>
-        </Box>
+        {live.dayOne >= SHOW_COUNT_AT ? (
+          <Box>
+            <Text
+              fontFamily="title"
+              fontSize={{ base: "3xl", md: "4xl" }}
+              color="#FFD700"
+              lineHeight="1"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+              aria-live="polite"
+            >
+              {live.dayOne.toLocaleString("en-US")}
+            </Text>
+            <Text fontSize="sm" color="#c7cde0" mt={1}>
+              players are playing {gameName} day one
+            </Text>
+          </Box>
+        ) : (
+          <Box>
+            <Text
+              fontFamily="title"
+              fontSize={{ base: "xl", md: "2xl" }}
+              color="#FFD700"
+              lineHeight="1.15"
+            >
+              {inIt ? "You're one of the first" : "Be one of the first"}
+            </Text>
+            <Text fontSize="sm" color="#c7cde0" mt={1}>
+              {inIt
+                ? `You're playing ${gameName} day one. Bring your squad.`
+                : `Say you're playing ${gameName} day one.`}
+            </Text>
+          </Box>
+        )}
         <HStack gap={2} flexWrap="wrap">
           {inIt ? (
             <Button
