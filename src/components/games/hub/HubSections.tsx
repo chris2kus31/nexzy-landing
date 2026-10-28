@@ -4,7 +4,7 @@
 // engines can read and quote it. Visual style follows the approved mock.
 import NextLink from "next/link";
 import NextImage from "next/image";
-import { Badge, Box, HStack, Heading, Link, Text, chakra } from "@chakra-ui/react";
+import { Badge, Box, HStack, Heading, Link, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import {
   FACT_SECTIONS,
@@ -245,6 +245,8 @@ function money(price: number, currency: string): string {
   }
 }
 
+const cell = { padding: "12px 16px 12px 0", verticalAlign: "top" } as const;
+
 export function EditionsTable({
   gameName,
   editions,
@@ -256,32 +258,22 @@ export function EditionsTable({
   return (
     <HubPanel id="editions" title={`${gameName} editions and price`}>
       <Box overflowX="auto">
-        <chakra.table w="full" fontSize="sm" borderCollapse="collapse">
-          <chakra.thead>
-            <chakra.tr color="#9aa3bf" textAlign="left">
-              <chakra.th scope="col" py={2} pr={4} fontWeight="600">
-                Edition
-              </chakra.th>
-              <chakra.th scope="col" py={2} pr={4} fontWeight="600">
-                Price
-              </chakra.th>
-              <chakra.th scope="col" py={2} fontWeight="600">
+        {/* Plain HTML table: this is a server component, and Chakra's
+            `chakra.*` factory is not available on the server. */}
+        <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ color: "#9aa3bf", textAlign: "left" }}>
+              <th scope="col" style={{ ...cell, fontWeight: 600 }}>Edition</th>
+              <th scope="col" style={{ ...cell, fontWeight: 600 }}>Price</th>
+              <th scope="col" style={{ ...cell, fontWeight: 600, paddingRight: 0 }}>
                 What&apos;s included
-              </chakra.th>
-            </chakra.tr>
-          </chakra.thead>
-          <chakra.tbody>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
             {editions.map((e) => (
-              <chakra.tr key={e.id} borderTop="1px solid" borderColor="whiteAlpha.100">
-                <chakra.th
-                  scope="row"
-                  py={3}
-                  pr={4}
-                  textAlign="left"
-                  color="white"
-                  fontWeight="600"
-                  verticalAlign="top"
-                >
+              <tr key={e.id} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                <th scope="row" style={{ ...cell, color: "#fff", fontWeight: 600, textAlign: "left" }}>
                   {e.url ? (
                     <Link href={e.url} target="_blank" rel="noopener sponsored" color="white">
                       {e.name}
@@ -289,24 +281,17 @@ export function EditionsTable({
                   ) : (
                     e.name
                   )}
-                </chakra.th>
-                <chakra.td
-                  py={3}
-                  pr={4}
-                  color="#FFD700"
-                  fontFamily="title"
-                  verticalAlign="top"
-                  whiteSpace="nowrap"
-                >
+                </th>
+                <td style={{ ...cell, color: "#FFD700", whiteSpace: "nowrap", fontFamily: "var(--chakra-fonts-title)" }}>
                   {e.price != null ? money(e.price, e.currency) : "Not announced"}
-                </chakra.td>
-                <chakra.td py={3} color="#c7cde0" verticalAlign="top">
+                </td>
+                <td style={{ ...cell, color: "#c7cde0", paddingRight: 0 }}>
                   {e.includes.length ? e.includes.join(" · ") : "Base game"}
-                </chakra.td>
-              </chakra.tr>
+                </td>
+              </tr>
             ))}
-          </chakra.tbody>
-        </chakra.table>
+          </tbody>
+        </table>
       </Box>
     </HubPanel>
   );
