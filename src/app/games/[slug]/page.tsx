@@ -25,6 +25,8 @@ import {
 import type { IconType } from "react-icons";
 import {
   fetchGameHub,
+  fetchHubReviews,
+  fetchHubScores,
   type GameHubItem,
   type GameHubVideo,
 } from "@/lib/blog/api";
@@ -43,6 +45,8 @@ import LaunchCountdown from "@/components/games/hub/LaunchCountdown";
 import DayOneCard from "@/components/games/hub/DayOneCard";
 import PredictScore from "@/components/games/hub/PredictScore";
 import HubTrailers, { type HubTrailer } from "@/components/games/hub/HubTrailers";
+import HubScores from "@/components/games/hub/HubScores";
+import type { HubReviewPage, HubScores as HubScoresData } from "@/lib/hubs/reviews";
 import {
   EditionsTable,
   EverythingWeKnow,
@@ -265,6 +269,24 @@ export default async function GameHubPage({
   if (!hub) notFound();
   const { game, content } = hub;
   const profile = hub.profile ?? null;
+  // Ratings (Phase 2): only for mega hubs with the Scores module on.
+  const emptyReviews: HubReviewPage = { items: [], nextCursor: null };
+  const [scores, reviews] = profile?.modules.scores
+    ? await Promise.all([fetchHubScores(game.slug), fetchHubReviews(game.slug)])
+    : [null, emptyReviews];
+  // AggregateRating = Nexzy Players only, and only once the score is shown on
+  // the page (10+ ratings). Critics are never marked up (not our ratings).
+  const players = scores?.players;
+  const aggregateRating =
+    players && players.score != null && players.count > 0
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: players.score.toFixed(1),
+          bestRating: "10",
+          worstRating: "1",
+          ratingCount: players.count,
+        }
+      : null;
   const hubUrl = `${SITE_URL}/games/${game.slug}`;
   const gameId = `${hubUrl}#game`;
   const icons = platformIcons(game.platforms);
@@ -306,6 +328,7 @@ export default async function GameHubPage({
     ...(game.platforms.length ? { gamePlatform: game.platforms } : {}),
     ...(game.released ? { datePublished: game.released } : {}),
     ...(desc ? { description: desc.slice(0, 300) } : {}),
+    ...(aggregateRating ? { aggregateRating } : {}),
     // Trailer as a VideoObject so the embed is a first-class video entity for
     // AI/GEO. uploadDate is intentionally omitted (RAWG clip data carries no
     // true upload date and we never fabricate one), so it won't chase the video
@@ -467,6 +490,8 @@ export default async function GameHubPage({
               profile={profile}
               news={content.news.slice(0, 4)}
               trailers={trailers}
+              scores={scores}
+              reviews={reviews}
             />
           </HubLiveProvider>
         ) : (
@@ -578,11 +603,15 @@ function MegaHub({
   profile,
   news,
   trailers,
+  scores,
+  reviews,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
   profile: HubProfile;
   news: GameHubItem[];
   trailers: HubTrailer[];
+  scores: HubScoresData | null;
+  reviews: HubReviewPage;
 }) {
   const m = profile.modules;
   const short = profile.aliases[0] || game.name;
@@ -591,6 +620,22 @@ function MegaHub({
     (game.released ? `${game.released}T12:00:00.000Z` : null);
   const platformLine = game.platforms.slice(0, 4).join(" · ");
   const picks = dayOnePlatforms(game.platforms);
+  // After launch the ratings lead the page; before it, they sit under Predict.
+  const scoresPanel =
+    m.scores && scores ? (
+      <HubPanel
+        id="scores"
+        title={`${short} review scores: critics vs players`}
+        aside={scores.open ? "Rated by real players" : "Opens at launch"}
+      >
+        <HubScores
+          slug={game.slug}
+          gameName={short}
+          initialScores={scores}
+          initialReviews={reviews}
+        />
+      </HubPanel>
+    ) : null;
   return (
     <Box display="flex" flexDirection="column" gap={7} mb={12}>
       <Box
@@ -671,6 +716,8 @@ function MegaHub({
         />
       )}
 
+      {scores?.open && scoresPanel}
+
       {trailers.length > 0 && (
         <HubPanel
           id="trailers"
@@ -690,6 +737,8 @@ function MegaHub({
           <PredictScore />
         </HubPanel>
       )}
+
+      {!scores?.open && scoresPanel}
 
       {m.facts && (
         <EverythingWeKnow

@@ -4,6 +4,7 @@
 import "server-only";
 import type { TagInfo } from "./tags";
 import type { HubProfile } from "@/lib/hubs/types";
+import type { HubReviewPage, HubScores } from "@/lib/hubs/reviews";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
@@ -709,6 +710,35 @@ export async function fetchGameHub(slug: string): Promise<GameHub | null> {
   );
   if (!res.ok) return null;
   return res.json();
+}
+
+/** Critics vs Nexzy Players for a mega hub (null when ratings are off).
+ *  Same revalidate as the hub page so it never shortens the page's ISR
+ *  window; the client refreshes the numbers on mount. */
+export async function fetchHubScores(slug: string): Promise<HubScores | null> {
+  try {
+    const res = await fetch(
+      `${API}/game-hubs/${encodeURIComponent(slug)}/scores`,
+      cacheInit(CACHE_HUB),
+    );
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** First page of written player reviews for a mega hub. */
+export async function fetchHubReviews(slug: string): Promise<HubReviewPage> {
+  const empty: HubReviewPage = { items: [], nextCursor: null };
+  try {
+    const res = await fetch(
+      `${API}/game-hubs/${encodeURIComponent(slug)}/reviews`,
+      cacheInit(CACHE_HUB),
+    );
+    return res.ok ? res.json() : empty;
+  } catch {
+    return empty;
+  }
 }
 
 /** Every game that has a public hub (>=1 published linked content). Full list

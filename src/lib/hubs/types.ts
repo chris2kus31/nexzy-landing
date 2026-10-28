@@ -4,6 +4,7 @@ export const HUB_MODULES = [
   "countdown",
   "dayOne",
   "trailers",
+  "scores",
   "facts",
   "predict",
   "editions",
@@ -125,4 +126,19 @@ export function sectionQuestion(section: FactSection, game: string): string {
     default:
       return `What else do we know about ${game}?`;
   }
+}
+
+/** Hub dates are Eastern Time (US launches), on the server and in the
+ *  browser alike, so a midnight-ET launch never reads as the day before and
+ *  hydration never mismatches. */
+export const HUB_TZ = "America/New_York";
+
+export function fmtHubDate(iso: string, withTime = false): string {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: HUB_TZ,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(withTime ? { hour: "numeric", minute: "2-digit", timeZoneName: "short" } : {}),
+  });
 }

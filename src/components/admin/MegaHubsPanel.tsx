@@ -64,6 +64,7 @@ const MODULE_LABEL: Record<HubModule, string> = {
   countdown: "Countdown",
   dayOne: "Day One (I'm in)",
   trailers: "Trailers",
+  scores: "Critics vs Players (ratings)",
   facts: "Everything we know",
   predict: "Predict the score",
   editions: "Editions and price",

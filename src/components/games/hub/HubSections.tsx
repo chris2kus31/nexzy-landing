@@ -17,17 +17,8 @@ import {
 import type { GameHubItem } from "@/lib/blog/api";
 import { getAuthorByName } from "@/lib/blog/authors";
 
-export const HUB_TZ = "America/New_York";
-
-export function fmtHubDate(iso: string, withTime = false): string {
-  return new Date(iso).toLocaleString("en-US", {
-    timeZone: HUB_TZ,
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    ...(withTime ? { hour: "numeric", minute: "2-digit", timeZoneName: "short" } : {}),
-  });
-}
+export { HUB_TZ, fmtHubDate } from "@/lib/hubs/types";
+import { fmtHubDate } from "@/lib/hubs/types";
 
 const STATUS: Record<FactStatus, { label: string; palette: string; note: string }> = {
   confirmed: { label: "Confirmed", palette: "green", note: "Official source" },
