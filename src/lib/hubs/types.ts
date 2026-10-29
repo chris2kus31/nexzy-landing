@@ -101,6 +101,8 @@ export interface HubProfile {
   faqs: HubFaq[];
   editions: HubEdition[];
   factsUpdatedAt: string | null;
+  /** Pinned @nexzyofficial launch-night post (null = none). */
+  launchThreadPostId: string | null;
   live: HubLive;
 }
 

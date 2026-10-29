@@ -46,6 +46,8 @@ import DayOneCard from "@/components/games/hub/DayOneCard";
 import PredictScore from "@/components/games/hub/PredictScore";
 import HubTrailers, { type HubTrailer } from "@/components/games/hub/HubTrailers";
 import HubScores from "@/components/games/hub/HubScores";
+import HubThread from "@/components/games/hub/HubThread";
+import WhosPlaying from "@/components/games/hub/WhosPlaying";
 import type { HubReviewPage, HubScores as HubScoresData } from "@/lib/hubs/reviews";
 import {
   EditionsTable,
@@ -707,6 +709,8 @@ function MegaHub({
         </Box>
       </Box>
 
+      {profile.launchThreadPostId && <HubThread slug={game.slug} gameName={short} />}
+
       {profile.summary && (
         <ShortVersion
           gameName={short}
@@ -739,6 +743,8 @@ function MegaHub({
       )}
 
       {!scores?.open && scoresPanel}
+
+      {(m.dayOne || m.scores) && <WhosPlaying slug={game.slug} gameName={short} />}
 
       {m.facts && (
         <EverythingWeKnow

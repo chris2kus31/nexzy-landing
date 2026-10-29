@@ -26,14 +26,19 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import {
+  createHubThread,
   getGameProfile,
+  getHubThreadAdmin,
   listGameProfiles,
+  pinHubThread,
+  unpinHubThread,
   listHubGames,
   saveGameProfile,
   type GameProfileDetail,
   type GameProfileInput,
   type GameProfileRow,
   type HubGameRow,
+  type HubThreadAdmin,
 } from "@/lib/admin/client";
 import {
   FACT_SECTIONS,
@@ -235,6 +240,190 @@ function problems(d: GameProfileInput): string[] {
     if (!l.label.trim() || !https(l.url)) out.push(`Official link ${i + 1}: label and https link.`);
   });
   return out;
+}
+
+/** Launch-night thread: write-and-pin as @nexzyofficial, or pin a recent
+ *  official post about this game. Separate from Save (takes effect now). */
+function LaunchThreadCard({
+  gameId,
+  gameSlug,
+  saved,
+  onDetail,
+}: {
+  gameId: string;
+  gameSlug: string;
+  saved: boolean;
+  onDetail: (d: GameProfileDetail) => void;
+}) {
+  const [data, setData] = useState<HubThreadAdmin | null>(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setData(await getHubThreadAdmin(gameId));
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    }
+  }, [gameId]);
+  useEffect(() => {
+    setData(null);
+    setText("");
+    setMsg(null);
+    void load();
+  }, [load]);
+
+  const run = async (fn: () => Promise<GameProfileDetail>, ok: string) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      onDetail(await fn());
+      setMsg({ ok: true, text: ok });
+      await load();
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pinned = data?.candidates.find((c) => c.id === data.pinnedId) ?? null;
+
+  return (
+    <Card
+      title="Launch-night thread"
+      hint="Pinned at the top of the hub. Replies are normal feed comments, so they also show in the app. Changes here take effect right away (no Save needed)."
+    >
+      {!saved ? (
+        <Text fontSize="sm" color={C.muted}>
+          Save the hub once, then you can pin a thread.
+        </Text>
+      ) : !data ? (
+        <Spinner size="sm" color={C.muted} />
+      ) : !data.officialConfigured ? (
+        <Text fontSize="sm" color={C.warn}>
+          The official account isn&apos;t configured on the API (NEXZY_OFFICIAL_USER_ID).
+        </Text>
+      ) : (
+        <Flex direction="column" gap={4}>
+          {data.pinnedId ? (
+            <Box bg={C.raised} borderRadius="10px" p={3} border="1px solid" borderColor={C.gold}>
+              <Flex justify="space-between" gap={3} wrap="wrap" align="start">
+                <Box minW={0} flex="1">
+                  <Text fontSize="xs" color={C.gold} fontWeight="700" mb={1}>
+                    PINNED
+                  </Text>
+                  <Text fontSize="sm" color={C.text} whiteSpace="pre-wrap">
+                    {pinned ? pinned.content : "Pinned post (older than the 10 most recent)"}
+                  </Text>
+                  {pinned && (
+                    <Text fontSize="xs" color={C.muted} mt={1}>
+                      {pinned.comments.toLocaleString()} replies
+                    </Text>
+                  )}
+                </Box>
+                <HStack gap={2}>
+                  <a href={`/games/${gameSlug}#launch-thread`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 13 }}>
+                    View <FiExternalLink style={{ display: "inline", verticalAlign: "-2px" }} />
+                  </a>
+                  <Button
+                    size="xs"
+                    bg="transparent"
+                    color={C.bad}
+                    border="1px solid"
+                    borderColor={C.bad}
+                    disabled={busy}
+                    onClick={() => void run(() => unpinHubThread(gameId), "Unpinned.")}
+                  >
+                    Unpin
+                  </Button>
+                </HStack>
+              </Flex>
+            </Box>
+          ) : (
+            <Text fontSize="sm" color={C.muted}>
+              Nothing pinned.
+            </Text>
+          )}
+
+          <Field label="New post as @nexzyofficial" hint={<Counter n={text.length} max={2000} />}>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value.slice(0, 2000))}
+              placeholder="It's out. How's it running for you? Tell us your platform."
+              rows={3}
+              bg={C.raised}
+              color={C.text}
+              borderColor={C.line}
+            />
+          </Field>
+          <Box>
+            <Button
+              size="sm"
+              bg={C.gold}
+              color="#0b0e1d"
+              fontWeight="700"
+              disabled={busy || !text.trim()}
+              onClick={() =>
+                void run(async () => {
+                  const d = await createHubThread(gameId, text.trim());
+                  setText("");
+                  return d;
+                }, "Posted as @nexzyofficial and pinned.")
+              }
+            >
+              Post and pin
+            </Button>
+          </Box>
+
+          {data.candidates.length > 0 && (
+            <Box>
+              <Text fontSize="xs" color={C.muted} fontWeight="600" mb={2}>
+                Or pin a recent @nexzyofficial post about this game
+              </Text>
+              <Flex direction="column" gap={2}>
+                {data.candidates.map((c) => (
+                  <Flex key={c.id} gap={3} align="start" justify="space-between" bg={C.raised} borderRadius="10px" p={3}>
+                    <Box minW={0} flex="1">
+                      <Text fontSize="sm" color={C.text} lineClamp={2}>
+                        {c.content}
+                      </Text>
+                      <Text fontSize="xs" color={C.muted}>
+                        {new Date(c.createdAt).toLocaleString()} · {c.comments.toLocaleString()} replies
+                      </Text>
+                    </Box>
+                    {c.id === data.pinnedId ? (
+                      <Text fontSize="xs" color={C.gold} fontWeight="700">
+                        Pinned
+                      </Text>
+                    ) : (
+                      <Button
+                        size="xs"
+                        bg={C.raised}
+                        color={C.text}
+                        border="1px solid"
+                        borderColor={C.line}
+                        disabled={busy}
+                        onClick={() => void run(() => pinHubThread(gameId, c.id), "Pinned.")}
+                      >
+                        Pin
+                      </Button>
+                    )}
+                  </Flex>
+                ))}
+              </Flex>
+            </Box>
+          )}
+          {msg && (
+            <Text fontSize="sm" color={msg.ok ? C.good : C.bad}>
+              {msg.text}
+            </Text>
+          )}
+        </Flex>
+      )}
+    </Card>
+  );
 }
 
 export default function MegaHubsPanel() {
@@ -498,6 +687,21 @@ export default function MegaHubsPanel() {
                   </Box>
                 </Flex>
               </Card>
+
+              <LaunchThreadCard
+                gameId={detail.game.id}
+                gameSlug={detail.game.slug}
+                saved={!!detail.updatedAt}
+                onDetail={(d) => {
+                  setDetail(d);
+                  // Keep unsaved edits; only the pin moved.
+                  setDraft((prev) =>
+                    prev
+                      ? ({ ...prev, launchThreadPostId: d.profile.launchThreadPostId ?? null } as GameProfileInput)
+                      : prev,
+                  );
+                }}
+              />
 
               <Card
                 title="Search and answer engines"

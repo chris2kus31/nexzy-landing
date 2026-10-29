@@ -5207,7 +5207,11 @@ export interface GameProfileInput {
 
 export interface GameProfileDetail {
   game: { id: string; name: string; slug: string; released: string | null };
-  profile: GameProfileInput & { factsUpdatedAt: string | null };
+  profile: GameProfileInput & {
+    factsUpdatedAt: string | null;
+    /** Pinned launch-night thread (managed by its own calls, not saves). */
+    launchThreadPostId?: string | null;
+  };
   live: HubLive;
   updatedAt: string | null;
   updatedBy: string | null;
@@ -5223,6 +5227,58 @@ export async function getGameProfile(
   return handle(
     await fetch(`/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`),
   );
+}
+
+export interface HubThreadCandidate {
+  id: string;
+  content: string;
+  createdAt: string;
+  comments: number;
+}
+
+export interface HubThreadAdmin {
+  pinnedId: string | null;
+  candidates: HubThreadCandidate[];
+  officialConfigured: boolean;
+}
+
+const hubThreadUrl = (gameId: string) =>
+  `/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}/thread`;
+
+/** Launch-night thread: what's pinned + recent @nexzyofficial posts about the game. */
+export async function getHubThreadAdmin(gameId: string): Promise<HubThreadAdmin> {
+  return handle(await fetch(hubThreadUrl(gameId)));
+}
+
+/** Write a new @nexzyofficial post about the game and pin it. */
+export async function createHubThread(
+  gameId: string,
+  content: string,
+): Promise<GameProfileDetail> {
+  return handle(
+    await fetch(hubThreadUrl(gameId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    }),
+  );
+}
+
+export async function pinHubThread(
+  gameId: string,
+  postId: string,
+): Promise<GameProfileDetail> {
+  return handle(
+    await fetch(hubThreadUrl(gameId), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId }),
+    }),
+  );
+}
+
+export async function unpinHubThread(gameId: string): Promise<GameProfileDetail> {
+  return handle(await fetch(hubThreadUrl(gameId), { method: "DELETE" }));
 }
 
 export async function saveGameProfile(

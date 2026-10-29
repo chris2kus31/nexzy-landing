@@ -14,11 +14,19 @@ import { crossSiteBlocked } from "@/lib/http/origin";
 import { USER_API_URL, USER_AT_COOKIE, clientIp } from "@/lib/auth/server";
 
 type Ctx = { params: Promise<{ path: string[] }> };
-type Rule = { auth: boolean; publicCache?: boolean; signIp?: boolean };
+/** auth: token required. optionalAuth: token forwarded when present (the
+ *  API tailors the answer to the viewer; never publicly cached). */
+type Rule = {
+  auth: boolean;
+  optionalAuth?: boolean;
+  publicCache?: boolean;
+  signIp?: boolean;
+  query?: "cursor";
+};
 
 const SLUG_RE = /^[a-z0-9-]{1,200}$/;
 const CURSOR_RE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?\|[0-9a-f-]{36}$/i;
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z?\|[0-9a-f-]{36}$/i;
 const MAX_BODY = 16 * 1024;
 
 /** "<action> <METHOD>" -> rule. Public reads never forward the token. */
@@ -29,11 +37,14 @@ const ROUTES: Record<string, Rule> = {
   "day-one DELETE": { auth: true },
   "prediction PUT": { auth: true },
   "scores GET": { auth: false, publicCache: true },
-  "reviews GET": { auth: false, publicCache: true },
+  "reviews GET": { auth: false, publicCache: true, query: "cursor" },
   "reviews/me GET": { auth: true },
   "reviews/start POST": { auth: true },
   "reviews PUT": { auth: true, signIp: true },
   "reviews DELETE": { auth: true },
+  "thread GET": { auth: false, optionalAuth: true, query: "cursor" },
+  "thread/comments POST": { auth: true },
+  "players GET": { auth: false, optionalAuth: true, query: "cursor" },
 };
 
 async function proxy(req: NextRequest, ctx: Ctx) {
@@ -50,9 +61,9 @@ async function proxy(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 
-  // Only the review list takes a query (its keyset cursor).
+  // Only paged reads take a query (their keyset cursor).
   let query = "";
-  if (action === "reviews" && method === "GET") {
+  if (rule.query === "cursor") {
     const cursor = req.nextUrl.searchParams.get("cursor");
     if (cursor) {
       if (!CURSOR_RE.test(cursor)) {
@@ -71,7 +82,9 @@ async function proxy(req: NextRequest, ctx: Ctx) {
     "Content-Type": "application/json",
     "x-forwarded-for": ip,
   };
-  if (rule.auth && token) headers["Authorization"] = `Bearer ${token}`;
+  if ((rule.auth || rule.optionalAuth) && token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   if (rule.signIp) {
     const secret = process.env.NEWSROOM_WEBHOOK_SECRET;
     if (!secret) {
