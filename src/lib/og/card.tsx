@@ -183,3 +183,123 @@ export function brandCard({
     </div>
   );
 }
+
+export interface RatingCardProps {
+  /** "@linkmain" or "A Nexzy player". */
+  who: string;
+  game: string;
+  /** 1..10, shown with one decimal. */
+  score: number;
+  /** e.g. "Day One reviewer  ·  Switch 2  ·  10-30h". */
+  detail?: string | null;
+  backgroundImage?: string | null;
+}
+
+/** "I gave <game> a 9.1 on Nexzy" share card (Phase 2): the player's score
+ *  big on the right, over the game's key art. Same 1200x630 template rules. */
+export function ratingCard({ who, game, score, detail, backgroundImage }: RatingCardProps) {
+  const gameSize = game.length > 40 ? "52px" : game.length > 24 ? "62px" : "76px";
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        background: BRAND_GRADIENT,
+        fontFamily: "sans-serif",
+      }}
+    >
+      {backgroundImage ? (
+        <img
+          src={backgroundImage}
+          alt=""
+          width={OG_SIZE.width}
+          height={OG_SIZE.height}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: `${OG_SIZE.width}px`,
+            height: `${OG_SIZE.height}px`,
+            objectFit: "cover",
+          }}
+        />
+      ) : null}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          display: "flex",
+          width: `${OG_SIZE.width}px`,
+          height: `${OG_SIZE.height}px`,
+          background:
+            "linear-gradient(100deg, rgba(16,20,40,0.97) 0%, rgba(16,20,40,0.9) 55%, rgba(16,20,40,0.7) 100%)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          height: "100%",
+          padding: "64px 80px",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", maxWidth: "720px", height: "100%", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", color: AMBER, fontSize: "30px", fontWeight: 700, letterSpacing: "4px" }}>
+            NEXZY PLAYERS
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", color: LIGHT, fontSize: "34px", marginBottom: "14px" }}>
+              {`${who} rated`}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                color: "#FFFFFF",
+                fontSize: gameSize,
+                fontWeight: 800,
+                lineHeight: 1.05,
+              }}
+            >
+              {game}
+            </div>
+            {detail ? (
+              <div style={{ display: "flex", color: SUBTLE, fontSize: "28px", marginTop: "22px" }}>
+                {detail}
+              </div>
+            ) : null}
+          </div>
+          <div style={{ display: "flex", color: SUBTLE, fontSize: "26px" }}>
+            Rate it on nexzyapp.com
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "300px",
+            height: "300px",
+            borderRadius: "999px",
+            border: `8px solid ${AMBER}`,
+            background: "rgba(16,20,40,0.85)",
+          }}
+        >
+          <div style={{ display: "flex", color: AMBER, fontSize: "120px", fontWeight: 800, lineHeight: 1 }}>
+            {score.toFixed(1)}
+          </div>
+          <div style={{ display: "flex", color: LIGHT, fontSize: "30px", marginTop: "6px" }}>
+            out of 10
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

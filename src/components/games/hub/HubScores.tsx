@@ -105,6 +105,7 @@ export default function HubScores({
   const [error, setError] = useState<string | null>(null);
   const [signIn, setSignIn] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const token = useRef<{ value: string; at: number } | null>(null);
 
   const refreshPublic = useCallback(async () => {
@@ -267,6 +268,29 @@ export default function HubScores({
     }
   }, [confirmDelete, slug, refreshPublic]);
 
+  /** Native share sheet where there is one, else copy the link. */
+  const share = useCallback(
+    async (reviewId: string, score: number) => {
+      const url = `${window.location.origin}/games/${slug}/rated/${reviewId}`;
+      const text = `I gave ${gameName} a ${score.toFixed(1)} on Nexzy`;
+      setShareNote(null);
+      try {
+        if (typeof navigator.share === "function") {
+          await navigator.share({ title: text, text, url });
+          track("hub_review_share", { slug, method: "native" });
+          return;
+        }
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        setShareNote("Link copied. Paste it anywhere.");
+        track("hub_review_share", { slug, method: "copy" });
+      } catch (e) {
+        // Closing the share sheet is not an error worth showing.
+        if ((e as Error)?.name !== "AbortError") setShareNote(url);
+      }
+    },
+    [slug, gameName],
+  );
+
   const loadMore = useCallback(async () => {
     if (!cursor) return;
     const r = await fetch(`/api/hubs/${slug}/reviews?cursor=${encodeURIComponent(cursor)}`).catch(() => null);
@@ -353,7 +377,12 @@ export default function HubScores({
                   {fmt1(mine.score)}
                 </Text>
               </Text>
-              <HStack gap={2}>
+              <HStack gap={2} flexWrap="wrap">
+                {mine.status !== "removed" && (
+                  <PrimaryButton onClick={() => void share(mine.id, mine.score)} disabled={busy}>
+                    Share
+                  </PrimaryButton>
+                )}
                 {me?.canReview && (
                   <GhostButton onClick={() => void startForm(me)} disabled={busy}>
                     Edit
@@ -364,6 +393,16 @@ export default function HubScores({
                 </GhostButton>
               </HStack>
             </HStack>
+            {mine.dayOne && mine.status !== "removed" && (
+              <Box mt={2}>
+                <Tag color={C.gold}>Day One reviewer</Tag>
+              </Box>
+            )}
+            {shareNote && (
+              <Text fontSize="sm" color={C.muted} mt={2} wordBreak="break-all">
+                {shareNote}
+              </Text>
+            )}
             {mine.status === "held" && (
               <Text fontSize="sm" color={C.muted} mt={2}>
                 Your rating is being checked and will count once it clears.

@@ -735,10 +735,16 @@ function MegaHub({
       {m.predict && (
         <HubPanel
           id="predict"
-          title="Predict the Nexzy Players score"
-          aside="Real score unlocks after launch"
+          title={scores?.settled ? "Did the crowd call it?" : "Predict the Nexzy Players score"}
+          aside={scores?.settled ? "The verdict is in" : "Real score unlocks after launch"}
         >
-          <PredictScore />
+          <PredictScore
+            settled={
+              scores?.settled
+                ? { score: scores.settled.score, band: scores.settled.band }
+                : null
+            }
+          />
         </HubPanel>
       )}
 

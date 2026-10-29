@@ -4,7 +4,7 @@
 import "server-only";
 import type { TagInfo } from "./tags";
 import type { HubProfile } from "@/lib/hubs/types";
-import type { HubReviewPage, HubScores } from "@/lib/hubs/reviews";
+import type { HubReview, HubReviewPage, HubScores } from "@/lib/hubs/reviews";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 
@@ -738,6 +738,22 @@ export async function fetchHubReviews(slug: string): Promise<HubReviewPage> {
     return res.ok ? res.json() : empty;
   } catch {
     return empty;
+  }
+}
+
+/** One public player review (share page + its image). Null when gone. */
+export async function fetchHubReview(
+  slug: string,
+  id: string,
+): Promise<(HubReview & { game: { name: string; slug: string } }) | null> {
+  try {
+    const res = await fetch(
+      `${API}/game-hubs/${encodeURIComponent(slug)}/reviews/${encodeURIComponent(id)}`,
+      cacheInit(CACHE_LIST),
+    );
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
   }
 }
 
