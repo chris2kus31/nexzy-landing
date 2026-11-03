@@ -45,6 +45,9 @@ const ROUTES: Record<string, Rule> = {
   "thread GET": { auth: false, optionalAuth: true, query: "cursor" },
   "thread/comments POST": { auth: true },
   "players GET": { auth: false, optionalAuth: true, query: "cursor" },
+  // Squad Rooms showcase: public rooms only, anonymous so the CDN can cache
+  // one copy for everyone (30s).
+  "rooms GET": { auth: false, publicCache: true },
 };
 
 async function proxy(req: NextRequest, ctx: Ctx) {

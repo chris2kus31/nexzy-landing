@@ -50,6 +50,7 @@ import {
   type HubFaq,
   type HubModule,
 } from "@/lib/hubs/types";
+import RoomProfileCard from "@/components/admin/RoomProfileCard";
 
 const C = {
   surface: "#222849",
@@ -702,6 +703,8 @@ export default function MegaHubsPanel() {
                   );
                 }}
               />
+
+              <RoomProfileCard key={detail.game.id} gameId={detail.game.id} gameName={detail.game.name} />
 
               <Card
                 title="Search and answer engines"

@@ -20,8 +20,10 @@ import {
   FiExternalLink,
   FiEye,
   FiFileText,
+  FiFlag,
   FiHeart,
   FiMessageCircle,
+  FiPlayCircle,
   FiRefreshCw,
   FiStar,
   FiUserCheck,
@@ -58,6 +60,9 @@ const KIND: Record<PulseKind, { color: string; icon: IconType }> = {
   signup: { color: "#7EE2A0", icon: FiUserPlus },
   follow: { color: "#9AA3BF", icon: FiUserCheck },
   review: { color: "#FFD700", icon: FiStar },
+  room_created: { color: "#5EC8FF", icon: FiUsers },
+  room_started: { color: "#3DD6B0", icon: FiPlayCircle },
+  room_report: { color: "#FF8A80", icon: FiFlag },
 };
 
 const PAGE = 30;
@@ -68,6 +73,7 @@ const FILTERS: Array<{ label: string; kinds: PulseKind[] | null }> = [
   { label: "Signups", kinds: ["signup"] },
   { label: "Follows", kinds: ["follow"] },
   { label: "Ratings", kinds: ["review"] },
+  { label: "Rooms", kinds: ["room_created", "room_started", "room_report"] },
 ];
 
 const itemKey = (i: PulseItem) => `${i.kind}:${i.id}`;
@@ -569,8 +575,26 @@ function verb(item: PulseItem): string {
       return `rated ${item.review?.game.name ?? "a game"}${
         item.review ? ` ${item.review.score.toFixed(1)}` : ""
       }`;
+    case "room_created":
+      return `opened a ${item.room?.kind ?? ""} room for ${item.room?.game.name ?? "a game"}`;
+    case "room_started":
+      return `started a room for ${item.room?.game.name ?? "a game"}`;
+    case "room_report":
+      return `reported a ${item.report?.targetType ?? "room"} in a room`;
   }
 }
+
+const REPORT_REASON: Record<string, string> = {
+  harassment: "harassment",
+  hate: "hate",
+  sexual: "sexual",
+  child_safety: "child safety",
+  self_harm: "self-harm",
+  spam: "spam",
+  scam: "scam",
+  personal_info: "personal info",
+  other: "other",
+};
 
 const HOLD_LABEL: Record<string, string> = {
   straight_line: "held: all 1s or all 5s",
@@ -714,9 +738,15 @@ function TimelineItem({
         {firstPost && <Tag color={C.gold}>first post</Tag>}
         {item.actor.isNew && <Tag color={KIND.signup.color}>new member</Tag>}
         {item.actor.isTeam && <Tag color={C.muted}>team</Tag>}
+        {item.kind === "room_report" && item.report && (
+          <Tag color={item.report.childSafety ? "#FF8A80" : C.muted}>
+            {REPORT_REASON[item.report.reason] ?? item.report.reason}
+            {item.report.status !== "open" ? `, ${item.report.status}` : ""}
+          </Tag>
+        )}
         {item.kind === "review" ? (
           <ReviewTags item={item} />
-        ) : (
+        ) : item.room ? null : (
           <>
             {item.status === "flagged" && (
               <Tag color="#FFB86B">hidden by moderation</Tag>
@@ -748,7 +778,7 @@ function TimelineItem({
         </Text>
       )}
 
-      {item.content && (
+      {item.content && item.kind !== "room_created" && item.kind !== "room_started" && (
         <Text
           fontSize="sm"
           color={C.text}
@@ -795,6 +825,22 @@ function TimelineItem({
           }}
         >
           {item.review.game.name} hub <FiExternalLink />
+        </a>
+      )}
+
+      {item.room && (
+        <a
+          href={`/admin?tab=rooms&room=${encodeURIComponent(item.room.id)}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 8,
+            fontSize: 13,
+            color: KIND[item.kind].color,
+          }}
+        >
+          {item.room.title} ({item.room.status}, {item.room.visibility}) in Rooms
         </a>
       )}
 

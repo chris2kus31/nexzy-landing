@@ -48,6 +48,7 @@ import HubTrailers, { type HubTrailer } from "@/components/games/hub/HubTrailers
 import HubScores from "@/components/games/hub/HubScores";
 import HubThread from "@/components/games/hub/HubThread";
 import WhosPlaying from "@/components/games/hub/WhosPlaying";
+import HubRooms from "@/components/games/hub/HubRooms";
 import type { HubReviewPage, HubScores as HubScoresData } from "@/lib/hubs/reviews";
 import {
   EditionsTable,
@@ -751,6 +752,8 @@ function MegaHub({
       {!scores?.open && scoresPanel}
 
       {(m.dayOne || m.scores) && <WhosPlaying slug={game.slug} gameName={short} />}
+
+      <HubRooms slug={game.slug} gameName={short} />
 
       {m.facts && (
         <EverythingWeKnow

@@ -4912,7 +4912,10 @@ export type PulseKind =
   | "article_comment"
   | "signup"
   | "follow"
-  | "review";
+  | "review"
+  | "room_created"
+  | "room_started"
+  | "room_report";
 
 export interface PulseItem {
   kind: PulseKind;
@@ -4954,6 +4957,23 @@ export interface PulseItem {
     status: string;
     holdReason: string | null;
     game: { name: string; slug: string };
+  } | null;
+  /** room_created / room_started / room_report: the room (actor = host, or
+   *  the reporter for reports). Room kinds are opt-in (the Rooms filter). */
+  room?: {
+    id: string;
+    title: string;
+    kind: string;
+    status: string;
+    visibility: string;
+    game: { name: string; slug: string };
+  } | null;
+  /** room_report only. content = the reporter's note. */
+  report?: {
+    reason: string;
+    targetType: string;
+    status: string;
+    childSafety: boolean;
   } | null;
 }
 

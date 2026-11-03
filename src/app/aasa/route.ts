@@ -6,7 +6,8 @@
 // /.well-known/apple-app-site-association via a rewrite in next.config.ts
 // (a rewrite, not a redirect — Apple rejects redirects on this file).
 //
-// /blog/* is always on. /games/* is GATED behind GAMES_DEEPLINK_ENABLED:
+// /blog/* is always on. /games/* is GATED behind GAMES_DEEPLINK_ENABLED and
+// /r/* (room invites) behind ROOM_INVITES_DEEPLINK_ENABLED, for the same reason:
 // the server AASA is read by ALREADY-INSTALLED apps, so adding /games before
 // the app build that ships app/games/[slug].tsx is live in the App Store would
 // make installed OLD apps grab game links with no route to show. The mobile app
@@ -23,6 +24,11 @@ function buildAasa() {
   // Game-hub Universal Links — only once the games-capable app build is live.
   if (process.env.GAMES_DEEPLINK_ENABLED === "true") {
     components.push({ "/": "/games/*", comment: "Game hubs" });
+  }
+  // Room invites (/r/<code>) — only once the app build that handles them
+  // (1.1.11) is live in the store; older installed apps have no room screen.
+  if (process.env.ROOM_INVITES_DEEPLINK_ENABLED === "true") {
+    components.push({ "/": "/r/*", comment: "Squad Room invites" });
   }
   return {
     applinks: {

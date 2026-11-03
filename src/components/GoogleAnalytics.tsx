@@ -18,7 +18,11 @@ const DISABLE_KEY = `ga-disable-${GA_MEASUREMENT_ID}`;
 
 export default function GoogleAnalytics() {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith("/admin") ?? false;
+  // Room invite pages (/r/<code>) are excluded like admin: the invite code in
+  // the URL is the only key to a private room, so it must never reach GA or
+  // Clarity.
+  const isAdmin =
+    (pathname?.startsWith("/admin") || pathname?.startsWith("/r/")) ?? false;
   const isProdHost = useIsProdHost();
 
   // Toggle GA's kill-switch on EVERY render — including the render triggered by
@@ -58,7 +62,7 @@ export default function GoogleAnalytics() {
           function gtag(){dataLayer.push(arguments);}
           // Respect the kill-switch from the very first hit (e.g. a hard load
           // that resolves under /admin before React hydrates).
-          window['${DISABLE_KEY}'] = location.pathname.indexOf('/admin') === 0;
+          window['${DISABLE_KEY}'] = location.pathname.indexOf('/admin') === 0 || location.pathname.indexOf('/r/') === 0;
           gtag('js', new Date());
           // fbclid fallback: Facebook's in-app browser strips the referrer, so
           // FB clicks without a UTM would land as "Direct". If we see fbclid and
