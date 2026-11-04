@@ -44,12 +44,20 @@ import HubLiveProvider from "@/components/games/hub/HubLiveProvider";
 import LaunchCountdown from "@/components/games/hub/LaunchCountdown";
 import DayOneCard from "@/components/games/hub/DayOneCard";
 import PredictScore from "@/components/games/hub/PredictScore";
-import HubTrailers, { type HubTrailer } from "@/components/games/hub/HubTrailers";
+import HubTrailers, {
+  type HubTrailer,
+} from "@/components/games/hub/HubTrailers";
 import HubScores from "@/components/games/hub/HubScores";
 import HubThread from "@/components/games/hub/HubThread";
 import WhosPlaying from "@/components/games/hub/WhosPlaying";
 import HubRooms from "@/components/games/hub/HubRooms";
-import type { HubReviewPage, HubScores as HubScoresData } from "@/lib/hubs/reviews";
+import GuideSections from "@/components/games/guide/GuideSections";
+import { fetchEnginePage } from "@/lib/hub-engine/server";
+import type { HubEnginePage } from "@/lib/hub-engine/types";
+import type {
+  HubReviewPage,
+  HubScores as HubScoresData,
+} from "@/lib/hubs/reviews";
 import {
   EditionsTable,
   EverythingWeKnow,
@@ -121,10 +129,7 @@ function dayOnePlatforms(platforms: string[]): DayOnePlatform[] {
  * (trailer monitor approvals / Admin -> Game hub) plus the game's trailer
  * field. Nexzy's own clips and article embeds stay in the Media tab.
  */
-function hubTrailers(
-  videos: GameHubVideo[],
-  name: string,
-): HubTrailer[] {
+function hubTrailers(videos: GameHubVideo[], name: string): HubTrailer[] {
   return videos
     .filter(
       (v) =>
@@ -277,6 +282,8 @@ export default async function GameHubPage({
   const [scores, reviews] = profile?.modules.scores
     ? await Promise.all([fetchHubScores(game.slug), fetchHubReviews(game.slug)])
     : [null, emptyReviews];
+  // Guide engine (Phase 4): only mega hubs can have one; off = nothing shown.
+  const guide = profile ? await fetchEnginePage(game.slug) : null;
   // AggregateRating = Nexzy Players only, and only once the score is shown on
   // the page (10+ ratings). Critics are never marked up (not our ratings).
   const players = scores?.players;
@@ -359,8 +366,12 @@ export default async function GameHubPage({
       : `${game.name} — guides, walkthroughs & news`,
     url: hubUrl,
     about: { "@id": gameId },
-    ...(profile?.factsUpdatedAt ? { dateModified: profile.factsUpdatedAt } : {}),
-    ...(profile?.editor ? { author: authorJsonLd(profile.editor, SITE_URL) } : {}),
+    ...(profile?.factsUpdatedAt
+      ? { dateModified: profile.factsUpdatedAt }
+      : {}),
+    ...(profile?.editor
+      ? { author: authorJsonLd(profile.editor, SITE_URL) }
+      : {}),
     isPartOf: { "@type": "WebSite", name: "Nexzy", url: SITE_URL },
     mainEntity: {
       "@type": "ItemList",
@@ -495,80 +506,81 @@ export default async function GameHubPage({
               trailers={trailers}
               scores={scores}
               reviews={reviews}
+              guide={guide}
             />
           </HubLiveProvider>
         ) : (
           <>
-          {/* Contained hero banner */}
-          <Box
-            position="relative"
-            borderRadius="2xl"
-            overflow="hidden"
-            border="1px solid"
-            borderColor="whiteAlpha.100"
-            aspectRatio={{ base: 16 / 9, md: 2.6 }}
-            mb={6}
-          >
-            {game.backgroundImage && (
-              <NextImage
-                src={game.backgroundImage}
-                alt={game.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 960px"
-                style={{ objectFit: "cover" }}
-              />
-            )}
+            {/* Contained hero banner */}
             <Box
-              position="absolute"
-              inset={0}
-              style={{
-                background:
-                  "linear-gradient(to top, rgba(16,18,34,0.9) 0%, rgba(16,18,34,0.25) 45%, rgba(16,18,34,0) 75%)",
-              }}
-            />
-            {icons.length > 0 && (
-              <HStack position="absolute" bottom={4} left={5} gap={3}>
-                {icons.map((Ic, i) => (
-                  <Icon key={i} boxSize={5} color="whiteAlpha.900">
-                    <Ic />
-                  </Icon>
-                ))}
-              </HStack>
+              position="relative"
+              borderRadius="2xl"
+              overflow="hidden"
+              border="1px solid"
+              borderColor="whiteAlpha.100"
+              aspectRatio={{ base: 16 / 9, md: 2.6 }}
+              mb={6}
+            >
+              {game.backgroundImage && (
+                <NextImage
+                  src={game.backgroundImage}
+                  alt={game.name}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 960px"
+                  style={{ objectFit: "cover" }}
+                />
+              )}
+              <Box
+                position="absolute"
+                inset={0}
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(16,18,34,0.9) 0%, rgba(16,18,34,0.25) 45%, rgba(16,18,34,0) 75%)",
+                }}
+              />
+              {icons.length > 0 && (
+                <HStack position="absolute" bottom={4} left={5} gap={3}>
+                  {icons.map((Ic, i) => (
+                    <Icon key={i} boxSize={5} color="whiteAlpha.900">
+                      <Ic />
+                    </Icon>
+                  ))}
+                </HStack>
+              )}
+            </Box>
+
+            <Heading
+              as="h1"
+              fontFamily="title"
+              size={{ base: "2xl", md: "3xl" }}
+              color="white"
+              lineHeight="1.1"
+              mb={2}
+            >
+              {game.name}
+            </Heading>
+
+            {metaBits.length > 0 && (
+              <Text color="gray.400" fontSize={{ base: "sm", md: "md" }} mb={4}>
+                {metaBits.join("  ·  ")}
+              </Text>
             )}
-          </Box>
 
-          <Heading
-            as="h1"
-            fontFamily="title"
-            size={{ base: "2xl", md: "3xl" }}
-            color="white"
-            lineHeight="1.1"
-            mb={2}
-          >
-            {game.name}
-          </Heading>
-
-          {metaBits.length > 0 && (
-            <Text color="gray.400" fontSize={{ base: "sm", md: "md" }} mb={4}>
-              {metaBits.join("  ·  ")}
-            </Text>
-          )}
-
-          <HStack gap={2} flexWrap="wrap" mb={8}>
-            {game.genres.slice(0, 4).map((g) => (
-              <Badge key={g} colorPalette="blue" variant="subtle">
-                {g}
-              </Badge>
-            ))}
-            {game.released && (
-              <Badge colorPalette="yellow" variant="subtle">
-                {releasedFuture
-                  ? `Coming ${fmtDate(game.released)}`
-                  : `Released ${fmtDate(game.released)}`}
-              </Badge>
-            )}
-          </HStack>
+            <HStack gap={2} flexWrap="wrap" mb={8}>
+              {game.genres.slice(0, 4).map((g) => (
+                <Badge key={g} colorPalette="blue" variant="subtle">
+                  {g}
+                </Badge>
+              ))}
+              {game.released && (
+                <Badge colorPalette="yellow" variant="subtle">
+                  {releasedFuture
+                    ? `Coming ${fmtDate(game.released)}`
+                    : `Released ${fmtDate(game.released)}`}
+                </Badge>
+              )}
+            </HStack>
           </>
         )}
 
@@ -608,6 +620,7 @@ function MegaHub({
   trailers,
   scores,
   reviews,
+  guide,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
   profile: HubProfile;
@@ -615,6 +628,7 @@ function MegaHub({
   trailers: HubTrailer[];
   scores: HubScoresData | null;
   reviews: HubReviewPage;
+  guide: HubEnginePage | null;
 }) {
   const m = profile.modules;
   const short = profile.aliases[0] || game.name;
@@ -643,7 +657,10 @@ function MegaHub({
     <Box display="flex" flexDirection="column" gap={7} mb={12}>
       <Box
         display="grid"
-        gridTemplateColumns={{ base: "1fr", lg: "minmax(0, 1.1fr) minmax(0, 1fr)" }}
+        gridTemplateColumns={{
+          base: "1fr",
+          lg: "minmax(0, 1.1fr) minmax(0, 1fr)",
+        }}
         gap={{ base: 6, lg: 8 }}
         alignItems="stretch"
       >
@@ -660,7 +677,13 @@ function MegaHub({
               OFFICIAL NEXZY HUB
             </Badge>
             {platformLine && (
-              <Badge bg="whiteAlpha.100" color="#EDF2F7" borderRadius="999px" px={3} py={1}>
+              <Badge
+                bg="whiteAlpha.100"
+                color="#EDF2F7"
+                borderRadius="999px"
+                px={3}
+                py={1}
+              >
                 {platformLine}
               </Badge>
             )}
@@ -710,7 +733,9 @@ function MegaHub({
         </Box>
       </Box>
 
-      {profile.launchThreadPostId && <HubThread slug={game.slug} gameName={short} />}
+      {profile.launchThreadPostId && (
+        <HubThread slug={game.slug} gameName={short} />
+      )}
 
       {profile.summary && (
         <ShortVersion
@@ -720,6 +745,8 @@ function MegaHub({
           editor={profile.editor}
         />
       )}
+
+      {guide?.enabled && <GuideSections slug={game.slug} initial={guide} />}
 
       {scores?.open && scoresPanel}
 
@@ -736,8 +763,16 @@ function MegaHub({
       {m.predict && (
         <HubPanel
           id="predict"
-          title={scores?.settled ? "Did the crowd call it?" : "Predict the Nexzy Players score"}
-          aside={scores?.settled ? "The verdict is in" : "Real score unlocks after launch"}
+          title={
+            scores?.settled
+              ? "Did the crowd call it?"
+              : "Predict the Nexzy Players score"
+          }
+          aside={
+            scores?.settled
+              ? "The verdict is in"
+              : "Real score unlocks after launch"
+          }
         >
           <PredictScore
             settled={
@@ -751,7 +786,9 @@ function MegaHub({
 
       {!scores?.open && scoresPanel}
 
-      {(m.dayOne || m.scores) && <WhosPlaying slug={game.slug} gameName={short} />}
+      {(m.dayOne || m.scores) && (
+        <WhosPlaying slug={game.slug} gameName={short} />
+      )}
 
       <HubRooms slug={game.slug} gameName={short} />
 
@@ -763,7 +800,9 @@ function MegaHub({
         />
       )}
 
-      {m.editions && <EditionsTable gameName={short} editions={profile.editions} />}
+      {m.editions && (
+        <EditionsTable gameName={short} editions={profile.editions} />
+      )}
 
       <LatestNews gameName={short} items={news} />
 
