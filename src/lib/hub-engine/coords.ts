@@ -63,3 +63,17 @@ export function imageCorners(
     pxToLngLat(0, height, width, height),
   ];
 }
+
+/** How far readers may pan: the art plus `pad` of its size on every side.
+ *  A tight limit forces MapLibre to zoom in on screens wider (or taller)
+ *  than the art, cropping it; this margin lets the whole map fit. */
+export function panBounds(
+  width: number,
+  height: number,
+  pad = 0.5,
+): [[number, number], [number, number]] {
+  return [
+    pxToLngLat(-width * pad, height * (1 + pad), width, height),
+    pxToLngLat(width * (1 + pad), -height * pad, width, height),
+  ];
+}

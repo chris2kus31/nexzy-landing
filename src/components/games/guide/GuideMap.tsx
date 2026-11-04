@@ -25,7 +25,17 @@ import type {
   GeoJSONSource,
   MapLayerMouseEvent,
 } from "maplibre-gl";
-import { baseZoom, imageCorners, pxToLngLat } from "@/lib/hub-engine/coords";
+import {
+  baseZoom,
+  imageCorners,
+  panBounds,
+  pxToLngLat,
+} from "@/lib/hub-engine/coords";
+import {
+  fitWholeArt,
+  loadMapLibre,
+  mapArtUrl,
+} from "@/lib/hub-engine/maplibre";
 import {
   entryPath,
   eraVisible,
@@ -161,7 +171,7 @@ export default function GuideMap({
     let instance: MlMap | null = null;
     (async () => {
       try {
-        const maplibregl = await import("maplibre-gl");
+        const maplibregl = await loadMapLibre();
         if (!alive || !box.current) return;
         const z0 = baseZoom(map.width, map.height);
         const corners = imageCorners(map.width, map.height);
@@ -173,7 +183,11 @@ export default function GuideMap({
           style: {
             version: 8,
             sources: {
-              art: { type: "image", url: map.url, coordinates: corners },
+              art: {
+                type: "image",
+                url: mapArtUrl(map.url),
+                coordinates: corners,
+              },
             },
             layers: [
               {
@@ -193,10 +207,7 @@ export default function GuideMap({
           fitBoundsOptions: { padding: 12 },
           minZoom: Math.max(-2, z0 + map.minZoom),
           maxZoom: Math.max(0, z0 + map.maxZoom),
-          maxBounds: [
-            [corners[3][0] - 2, corners[3][1] - 2],
-            [corners[1][0] + 2, corners[1][1] + 2],
-          ],
+          maxBounds: panBounds(map.width, map.height),
           renderWorldCopies: false,
           attributionControl: false,
           dragRotate: false,
@@ -204,6 +215,7 @@ export default function GuideMap({
           cooperativeGestures: preview,
         });
         instance = m0;
+        fitWholeArt(m0, corners[3], corners[1]);
         m0.touchZoomRotate.disableRotation();
         m0.addControl(
           new maplibregl.NavigationControl({ showCompass: false }),

@@ -8,6 +8,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { FiTrash2, FiX } from "react-icons/fi";
+import {
+  fitWholeArt,
+  loadMapLibre,
+  mapArtUrl,
+} from "@/lib/hub-engine/maplibre";
 import type { GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import type { HubTemplateConfig } from "@/lib/hub-engine/types";
 import {
@@ -126,7 +131,7 @@ export default function GuideMapEditor({
     let alive = true;
     let instance: MlMap | null = null;
     (async () => {
-      const maplibregl = await import("maplibre-gl");
+      const maplibregl = await loadMapLibre();
       lib.current = maplibregl;
       if (!alive || !box.current) return;
       const corners = imageCorners(map.width, map.height);
@@ -139,7 +144,11 @@ export default function GuideMapEditor({
         style: {
           version: 8,
           sources: {
-            art: { type: "image", url: map.url, coordinates: corners },
+            art: {
+              type: "image",
+              url: mapArtUrl(map.url),
+              coordinates: corners,
+            },
           },
           layers: [
             {
@@ -158,6 +167,7 @@ export default function GuideMapEditor({
         dragRotate: false,
       });
       instance = m0;
+      fitWholeArt(m0, corners[3], corners[1]);
       m0.addControl(
         new maplibregl.NavigationControl({ showCompass: false }),
         "top-right",
