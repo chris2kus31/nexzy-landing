@@ -20,6 +20,8 @@ import {
 import {
   FiArrowDown,
   FiArrowUp,
+  FiChevronDown,
+  FiChevronRight,
   FiExternalLink,
   FiPlus,
   FiSearch,
@@ -51,6 +53,89 @@ import {
   type HubModule,
 } from "@/lib/hubs/types";
 import RoomProfileCard from "@/components/admin/RoomProfileCard";
+import { SubTabs } from "@/components/admin/guide/ui";
+
+type HubTab =
+  | "overview"
+  | "seo"
+  | "facts"
+  | "editions"
+  | "faq"
+  | "thread"
+  | "rooms";
+const TAB_KEY = "nexzy-admin-megahubs-tab";
+const HUB_TABS: HubTab[] = [
+  "overview",
+  "seo",
+  "facts",
+  "editions",
+  "faq",
+  "thread",
+  "rooms",
+];
+
+/** Which tab a save problem lives on (problems() wording). */
+function tabOf(problem: string): HubTab {
+  if (problem.startsWith("Fact")) return "facts";
+  if (problem.startsWith("FAQ")) return "faq";
+  if (problem.startsWith("Edition")) return "editions";
+  return "seo";
+}
+
+/** One row of a long list, collapsed to a single summary line until opened. */
+function Fold({
+  open,
+  onToggle,
+  summary,
+  warn,
+  tools,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  summary: React.ReactNode;
+  warn?: boolean;
+  tools: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Box
+      bg={C.raised}
+      borderRadius="10px"
+      border="1px solid"
+      borderColor={warn ? C.warn : "transparent"}
+    >
+      <Flex align="center" gap={2} px={3} py={2}>
+        <Flex
+          as="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          flex="1"
+          minW={0}
+          align="center"
+          gap={2}
+          textAlign="left"
+          color={C.text}
+        >
+          {open ? (
+            <FiChevronDown aria-hidden />
+          ) : (
+            <FiChevronRight aria-hidden />
+          )}
+          <Box flex="1" minW={0}>
+            {summary}
+          </Box>
+        </Flex>
+        {tools}
+      </Flex>
+      {open && (
+        <Box px={3} pb={3}>
+          {children}
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 const C = {
   surface: "#222849",
@@ -100,8 +185,20 @@ function Card({
   right?: React.ReactNode;
 }) {
   return (
-    <Box bg={C.surface} borderRadius="14px" p={5} border="1px solid" borderColor={C.line}>
-      <Flex justify="space-between" align="start" gap={3} mb={hint ? 1 : 4} wrap="wrap">
+    <Box
+      bg={C.surface}
+      borderRadius="14px"
+      p={5}
+      border="1px solid"
+      borderColor={C.line}
+    >
+      <Flex
+        justify="space-between"
+        align="start"
+        gap={3}
+        mb={hint ? 1 : 4}
+        wrap="wrap"
+      >
         <Text fontWeight="700" color={C.text}>
           {title}
         </Text>
@@ -170,7 +267,11 @@ function Sel({
         color={C.text}
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} style={{ background: "#1a1f3a" }}>
+          <option
+            key={o.value}
+            value={o.value}
+            style={{ background: "#1a1f3a" }}
+          >
             {o.label}
           </option>
         ))}
@@ -182,7 +283,11 @@ function Sel({
 
 function Counter({ n, max, min }: { n: number; max: number; min?: number }) {
   const color = n > max ? C.bad : min && n < min ? C.warn : C.faint;
-  return <span style={{ color }}>{min ? `${n} (aim ${min}-${max})` : `${n}/${max}`}</span>;
+  return (
+    <span style={{ color }}>
+      {min ? `${n} (aim ${min}-${max})` : `${n}/${max}`}
+    </span>
+  );
 }
 
 function RowTools({
@@ -196,13 +301,33 @@ function RowTools({
 }) {
   return (
     <HStack gap={1}>
-      <Button size="xs" variant="ghost" color={C.muted} onClick={onUp} disabled={!onUp} aria-label="Move up">
+      <Button
+        size="xs"
+        variant="ghost"
+        color={C.muted}
+        onClick={onUp}
+        disabled={!onUp}
+        aria-label="Move up"
+      >
         <FiArrowUp />
       </Button>
-      <Button size="xs" variant="ghost" color={C.muted} onClick={onDown} disabled={!onDown} aria-label="Move down">
+      <Button
+        size="xs"
+        variant="ghost"
+        color={C.muted}
+        onClick={onDown}
+        disabled={!onDown}
+        aria-label="Move down"
+      >
         <FiArrowDown />
       </Button>
-      <Button size="xs" variant="ghost" color={C.bad} onClick={onDelete} aria-label="Delete">
+      <Button
+        size="xs"
+        variant="ghost"
+        color={C.bad}
+        onClick={onDelete}
+        aria-label="Delete"
+      >
         <FiTrash2 />
       </Button>
     </HStack>
@@ -221,11 +346,13 @@ function move<T>(arr: T[], i: number, d: -1 | 1): T[] {
 function problems(d: GameProfileInput): string[] {
   const out: string[] = [];
   const https = (u: string) => /^https:\/\/[^\s]+\.[^\s]+/.test(u);
-  if (d.seoTitle && d.seoTitle.length > 60) out.push("SEO title is over 60 characters.");
+  if (d.seoTitle && d.seoTitle.length > 60)
+    out.push("SEO title is over 60 characters.");
   if (d.seoDescription && d.seoDescription.length > 160)
     out.push("Meta description is over 160 characters.");
   d.facts.forEach((f, i) => {
-    if (!f.label.trim() || !f.value.trim()) out.push(`Fact ${i + 1}: label and text are required.`);
+    if (!f.label.trim() || !f.value.trim())
+      out.push(`Fact ${i + 1}: label and text are required.`);
     if (!f.sourceName.trim() || !https(f.sourceUrl))
       out.push(`Fact ${i + 1}: needs a source name and an https link.`);
   });
@@ -235,10 +362,12 @@ function problems(d: GameProfileInput): string[] {
   });
   d.editions.forEach((e, i) => {
     if (!e.name.trim()) out.push(`Edition ${i + 1}: name is required.`);
-    if (e.url && !https(e.url)) out.push(`Edition ${i + 1}: link must be https.`);
+    if (e.url && !https(e.url))
+      out.push(`Edition ${i + 1}: link must be https.`);
   });
   d.officialLinks.forEach((l, i) => {
-    if (!l.label.trim() || !https(l.url)) out.push(`Official link ${i + 1}: label and https link.`);
+    if (!l.label.trim() || !https(l.url))
+      out.push(`Official link ${i + 1}: label and https link.`);
   });
   return out;
 }
@@ -304,19 +433,28 @@ function LaunchThreadCard({
         <Spinner size="sm" color={C.muted} />
       ) : !data.officialConfigured ? (
         <Text fontSize="sm" color={C.warn}>
-          The official account isn&apos;t configured on the API (NEXZY_OFFICIAL_USER_ID).
+          The official account isn&apos;t configured on the API
+          (NEXZY_OFFICIAL_USER_ID).
         </Text>
       ) : (
         <Flex direction="column" gap={4}>
           {data.pinnedId ? (
-            <Box bg={C.raised} borderRadius="10px" p={3} border="1px solid" borderColor={C.gold}>
+            <Box
+              bg={C.raised}
+              borderRadius="10px"
+              p={3}
+              border="1px solid"
+              borderColor={C.gold}
+            >
               <Flex justify="space-between" gap={3} wrap="wrap" align="start">
                 <Box minW={0} flex="1">
                   <Text fontSize="xs" color={C.gold} fontWeight="700" mb={1}>
                     PINNED
                   </Text>
                   <Text fontSize="sm" color={C.text} whiteSpace="pre-wrap">
-                    {pinned ? pinned.content : "Pinned post (older than the 10 most recent)"}
+                    {pinned
+                      ? pinned.content
+                      : "Pinned post (older than the 10 most recent)"}
                   </Text>
                   {pinned && (
                     <Text fontSize="xs" color={C.muted} mt={1}>
@@ -325,8 +463,16 @@ function LaunchThreadCard({
                   )}
                 </Box>
                 <HStack gap={2}>
-                  <a href={`/games/${gameSlug}#launch-thread`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 13 }}>
-                    View <FiExternalLink style={{ display: "inline", verticalAlign: "-2px" }} />
+                  <a
+                    href={`/games/${gameSlug}#launch-thread`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: C.accent, fontSize: 13 }}
+                  >
+                    View{" "}
+                    <FiExternalLink
+                      style={{ display: "inline", verticalAlign: "-2px" }}
+                    />
                   </a>
                   <Button
                     size="xs"
@@ -335,7 +481,9 @@ function LaunchThreadCard({
                     border="1px solid"
                     borderColor={C.bad}
                     disabled={busy}
-                    onClick={() => void run(() => unpinHubThread(gameId), "Unpinned.")}
+                    onClick={() =>
+                      void run(() => unpinHubThread(gameId), "Unpinned.")
+                    }
                   >
                     Unpin
                   </Button>
@@ -348,7 +496,10 @@ function LaunchThreadCard({
             </Text>
           )}
 
-          <Field label="New post as @nexzyofficial" hint={<Counter n={text.length} max={2000} />}>
+          <Field
+            label="New post as @nexzyofficial"
+            hint={<Counter n={text.length} max={2000} />}
+          >
             <Textarea
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, 2000))}
@@ -385,13 +536,22 @@ function LaunchThreadCard({
               </Text>
               <Flex direction="column" gap={2}>
                 {data.candidates.map((c) => (
-                  <Flex key={c.id} gap={3} align="start" justify="space-between" bg={C.raised} borderRadius="10px" p={3}>
+                  <Flex
+                    key={c.id}
+                    gap={3}
+                    align="start"
+                    justify="space-between"
+                    bg={C.raised}
+                    borderRadius="10px"
+                    p={3}
+                  >
                     <Box minW={0} flex="1">
                       <Text fontSize="sm" color={C.text} lineClamp={2}>
                         {c.content}
                       </Text>
                       <Text fontSize="xs" color={C.muted}>
-                        {new Date(c.createdAt).toLocaleString()} · {c.comments.toLocaleString()} replies
+                        {new Date(c.createdAt).toLocaleString()} ·{" "}
+                        {c.comments.toLocaleString()} replies
                       </Text>
                     </Box>
                     {c.id === data.pinnedId ? (
@@ -406,7 +566,9 @@ function LaunchThreadCard({
                         border="1px solid"
                         borderColor={C.line}
                         disabled={busy}
-                        onClick={() => void run(() => pinHubThread(gameId, c.id), "Pinned.")}
+                        onClick={() =>
+                          void run(() => pinHubThread(gameId, c.id), "Pinned.")
+                        }
                       >
                         Pin
                       </Button>
@@ -437,6 +599,33 @@ export default function MegaHubsPanel() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tab, setTabState] = useState<HubTab>("overview");
+  const [openRows, setOpenRows] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const t = window.localStorage.getItem(TAB_KEY) as HubTab | null;
+      if (t && HUB_TABS.includes(t)) setTabState(t);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const setTab = (t: HubTab) => {
+    setTabState(t);
+    try {
+      window.localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* ignore */
+    }
+  };
+  const toggleRow = (id: string) =>
+    setOpenRows((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const openRow = (id: string) => setOpenRows((prev) => new Set(prev).add(id));
 
   const loadRows = useCallback(async () => {
     try {
@@ -486,9 +675,17 @@ export default function MegaHubsPanel() {
   }, [detail]);
   const dirty = !!draft && JSON.stringify(draft) !== original;
   const issues = draft ? problems(draft) : [];
+  const issueTabs = new Set(issues.map(tabOf));
+  // Row-level problems, so a bad row is outlined and can be found collapsed.
+  const badFact = (i: number) =>
+    issues.some((p) => p.startsWith(`Fact ${i + 1}:`));
+  const badFaq = (i: number) =>
+    issues.some((p) => p.startsWith(`FAQ ${i + 1}:`));
 
-  const set = <K extends keyof GameProfileInput>(k: K, v: GameProfileInput[K]) =>
-    setDraft((d) => (d ? { ...d, [k]: v } : d));
+  const set = <K extends keyof GameProfileInput>(
+    k: K,
+    v: GameProfileInput[K],
+  ) => setDraft((d) => (d ? { ...d, [k]: v } : d));
 
   async function save() {
     if (!detail || !draft || issues.length) return;
@@ -499,7 +696,10 @@ export default function MegaHubsPanel() {
       setDetail(d);
       const { factsUpdatedAt: _f, ...input } = d.profile;
       setDraft(input);
-      setMsg({ ok: true, text: "Saved. The hub page refreshes in a few seconds." });
+      setMsg({
+        ok: true,
+        text: "Saved. The hub page refreshes in a few seconds.",
+      });
       loadRows();
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -509,18 +709,36 @@ export default function MegaHubsPanel() {
   }
 
   const updFact = (i: number, patch: Partial<HubFact>) =>
-    set("facts", draft!.facts.map((f, j) => (j === i ? { ...f, ...patch } : f)));
+    set(
+      "facts",
+      draft!.facts.map((f, j) => (j === i ? { ...f, ...patch } : f)),
+    );
   const updFaq = (i: number, patch: Partial<HubFaq>) =>
-    set("faqs", draft!.faqs.map((f, j) => (j === i ? { ...f, ...patch } : f)));
+    set(
+      "faqs",
+      draft!.faqs.map((f, j) => (j === i ? { ...f, ...patch } : f)),
+    );
   const updEd = (i: number, patch: Partial<HubEdition>) =>
-    set("editions", draft!.editions.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+    set(
+      "editions",
+      draft!.editions.map((e, j) => (j === i ? { ...e, ...patch } : e)),
+    );
 
   return (
     <Box color={C.text} pb={24}>
       <Flex gap={6} direction={{ base: "column", xl: "row" }} align="start">
         {/* Left: hubs + add */}
-        <Box w={{ base: "full", xl: "300px" }} flexShrink={0} display="flex" flexDirection="column" gap={4}>
-          <Card title="Mega hubs" hint="Games with a hub profile. Off = plain hub.">
+        <Box
+          w={{ base: "full", xl: "300px" }}
+          flexShrink={0}
+          display="flex"
+          flexDirection="column"
+          gap={4}
+        >
+          <Card
+            title="Mega hubs"
+            hint="Games with a hub profile. Off = plain hub."
+          >
             {rows === null ? (
               <Spinner size="sm" />
             ) : rows.length === 0 ? (
@@ -537,7 +755,9 @@ export default function MegaHubsPanel() {
                     onClick={() => open(r.gameId)}
                     bg={detail?.game.id === r.gameId ? C.raised : "transparent"}
                     border="1px solid"
-                    borderColor={detail?.game.id === r.gameId ? C.accent : C.line}
+                    borderColor={
+                      detail?.game.id === r.gameId ? C.accent : C.line
+                    }
                     borderRadius="10px"
                     p={3}
                     _hover={{ bg: C.raised }}
@@ -546,13 +766,17 @@ export default function MegaHubsPanel() {
                       <Text fontWeight="600" fontSize="sm" lineClamp={1}>
                         {r.name}
                       </Text>
-                      <Badge colorPalette={r.enabled ? "green" : "gray"} variant="subtle">
+                      <Badge
+                        colorPalette={r.enabled ? "green" : "gray"}
+                        variant="subtle"
+                      >
                         {r.enabled ? "Live" : "Off"}
                       </Badge>
                     </HStack>
                     <Text fontSize="xs" color={C.muted} mt={1}>
-                      {r.dayOne.toLocaleString()} day one · {r.predictions.toLocaleString()} picks ·{" "}
-                      {r.factCount} facts
+                      {r.dayOne.toLocaleString()} day one ·{" "}
+                      {r.predictions.toLocaleString()} picks · {r.factCount}{" "}
+                      facts
                     </Text>
                   </Box>
                 ))}
@@ -568,7 +792,13 @@ export default function MegaHubsPanel() {
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && search()}
               />
-              <Button size="sm" onClick={search} loading={searching} bg={C.accent} color="white">
+              <Button
+                size="sm"
+                onClick={search}
+                loading={searching}
+                bg={C.accent}
+                color="white"
+              >
                 <FiSearch />
               </Button>
             </HStack>
@@ -598,10 +828,23 @@ export default function MegaHubsPanel() {
         </Box>
 
         {/* Right: editor */}
-        <Box flex="1" minW={0} display="flex" flexDirection="column" gap={4} w="full">
+        <Box
+          flex="1"
+          minW={0}
+          display="flex"
+          flexDirection="column"
+          gap={4}
+          w="full"
+        >
           {loading && <Spinner />}
           {!loading && !draft && (
-            <Box bg={C.surface} borderRadius="14px" p={8} textAlign="center" color={C.muted}>
+            <Box
+              bg={C.surface}
+              borderRadius="14px"
+              p={8}
+              textAlign="center"
+              color={C.muted}
+            >
               Pick a hub on the left, or add a game.
             </Box>
           )}
@@ -615,7 +858,13 @@ export default function MegaHubsPanel() {
                       href={`/games/${detail.game.slug}`}
                       target="_blank"
                       rel="noopener"
-                      style={{ color: C.accent, fontSize: 13, display: "inline-flex", gap: 4, alignItems: "center" }}
+                      style={{
+                        color: C.accent,
+                        fontSize: 13,
+                        display: "inline-flex",
+                        gap: 4,
+                        alignItems: "center",
+                      }}
                     >
                       View hub <FiExternalLink />
                     </a>
@@ -623,18 +872,27 @@ export default function MegaHubsPanel() {
                 }
               >
                 <Flex gap={6} wrap="wrap" align="center">
-                  <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={draft.enabled}
                       onChange={(e) => set("enabled", e.target.checked)}
                       style={{ accentColor: C.good, width: 18, height: 18 }}
                     />
-                    <Text fontWeight="600">{draft.enabled ? "Hub is live" : "Hub is off"}</Text>
+                    <Text fontWeight="600">
+                      {draft.enabled ? "Hub is live" : "Hub is off"}
+                    </Text>
                   </label>
                   <Text fontSize="sm" color={C.muted}>
-                    {detail.live.dayOne.toLocaleString()} day one · {detail.live.predictions.total.toLocaleString()}{" "}
-                    predictions
+                    {detail.live.dayOne.toLocaleString()} day one ·{" "}
+                    {detail.live.predictions.total.toLocaleString()} predictions
                   </Text>
                   <Text fontSize="sm" color={C.muted}>
                     Last updated:{" "}
@@ -646,390 +904,714 @@ export default function MegaHubsPanel() {
                 </Flex>
               </Card>
 
-              <Card title="Modules" hint="Turn sections on or off for this game.">
-                <Flex gap={5} wrap="wrap">
-                  {HUB_MODULES.map((k) => (
-                    <label key={k} style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: 14 }}>
-                      <input
-                        type="checkbox"
-                        checked={draft.modules[k]}
-                        onChange={(e) => set("modules", { ...draft.modules, [k]: e.target.checked })}
-                        style={{ accentColor: C.accent, width: 16, height: 16 }}
-                      />
-                      {MODULE_LABEL[k]}
-                    </label>
-                  ))}
-                </Flex>
-              </Card>
+              <SubTabs
+                value={tab}
+                onChange={setTab}
+                tabs={[
+                  { key: "overview", label: "Overview" },
+                  {
+                    key: "seo",
+                    label: "Search and SEO",
+                    warn: issueTabs.has("seo"),
+                  },
+                  {
+                    key: "facts",
+                    label: "Everything we know",
+                    count: draft.facts.length,
+                    warn: issueTabs.has("facts"),
+                  },
+                  {
+                    key: "editions",
+                    label: "Editions",
+                    count: draft.editions.length,
+                    warn: issueTabs.has("editions"),
+                  },
+                  {
+                    key: "faq",
+                    label: "FAQ",
+                    count: draft.faqs.length,
+                    warn: issueTabs.has("faq"),
+                  },
+                  { key: "thread", label: "Launch thread" },
+                  { key: "rooms", label: "Rooms" },
+                ]}
+              />
 
-              <Card title="Launch" hint="The exact launch moment drives the countdown and locks predictions. Entered in your local time.">
-                <Flex gap={4} wrap="wrap">
-                  <Box flex="1" minW="220px">
-                    <Field label="Launch date and time">
+              {tab === "overview" && (
+                <>
+                  <Card
+                    title="Modules"
+                    hint="Turn sections on or off for this game."
+                  >
+                    <Flex gap={5} wrap="wrap">
+                      {HUB_MODULES.map((k) => (
+                        <label
+                          key={k}
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            alignItems: "center",
+                            cursor: "pointer",
+                            fontSize: 14,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={draft.modules[k]}
+                            onChange={(e) =>
+                              set("modules", {
+                                ...draft.modules,
+                                [k]: e.target.checked,
+                              })
+                            }
+                            style={{
+                              accentColor: C.accent,
+                              width: 16,
+                              height: 16,
+                            }}
+                          />
+                          {MODULE_LABEL[k]}
+                        </label>
+                      ))}
+                    </Flex>
+                  </Card>
+
+                  <Card
+                    title="Launch"
+                    hint="The exact launch moment drives the countdown and locks predictions. Entered in your local time."
+                  >
+                    <Flex gap={4} wrap="wrap">
+                      <Box flex="1" minW="220px">
+                        <Field label="Launch date and time">
+                          <Input
+                            {...inputProps}
+                            type="datetime-local"
+                            value={toLocalInput(draft.launchAt)}
+                            onChange={(e) =>
+                              set(
+                                "launchAt",
+                                e.target.value
+                                  ? new Date(e.target.value).toISOString()
+                                  : null,
+                              )
+                            }
+                          />
+                        </Field>
+                      </Box>
+                      <Box flex="2" minW="260px">
+                        <Field
+                          label="Launch note"
+                          hint={
+                            <Counter
+                              n={(draft.launchNote ?? "").length}
+                              max={160}
+                            />
+                          }
+                        >
+                          <Input
+                            {...inputProps}
+                            placeholder="Midnight local time on PS5 and Xbox Series X|S"
+                            value={draft.launchNote ?? ""}
+                            onChange={(e) => set("launchNote", e.target.value)}
+                          />
+                        </Field>
+                      </Box>
+                    </Flex>
+                  </Card>
+                </>
+              )}
+
+              {tab === "thread" && (
+                <LaunchThreadCard
+                  gameId={detail.game.id}
+                  gameSlug={detail.game.slug}
+                  saved={!!detail.updatedAt}
+                  onDetail={(d) => {
+                    setDetail(d);
+                    // Keep unsaved edits; only the pin moved.
+                    setDraft((prev) =>
+                      prev
+                        ? ({
+                            ...prev,
+                            launchThreadPostId:
+                              d.profile.launchThreadPostId ?? null,
+                          } as GameProfileInput)
+                        : prev,
+                    );
+                  }}
+                />
+              )}
+
+              {tab === "rooms" && (
+                <RoomProfileCard
+                  key={detail.game.id}
+                  gameId={detail.game.id}
+                  gameName={detail.game.name}
+                />
+              )}
+
+              {tab === "seo" && (
+                <Card
+                  title="Search and answer engines"
+                  hint="Short version = the 30 to 45 word direct answer at the top. Name the game in it. AI answers quote this."
+                >
+                  <Box
+                    display="grid"
+                    gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }}
+                    gap={4}
+                  >
+                    <Field label="Page H1 (blank = game name)">
                       <Input
                         {...inputProps}
-                        type="datetime-local"
-                        value={toLocalInput(draft.launchAt)}
+                        value={draft.headline ?? ""}
+                        onChange={(e) => set("headline", e.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label="Other names (comma separated)"
+                      hint="First one is used in titles"
+                    >
+                      <Input
+                        {...inputProps}
+                        placeholder="GTA 6, GTA VI"
+                        value={draft.aliases.join(", ")}
                         onChange={(e) =>
-                          set("launchAt", e.target.value ? new Date(e.target.value).toISOString() : null)
+                          set(
+                            "aliases",
+                            e.target.value
+                              .split(",")
+                              .map((s) => s.trimStart())
+                              .slice(0, 8),
+                          )
+                        }
+                        onBlur={() =>
+                          set(
+                            "aliases",
+                            draft.aliases.map((s) => s.trim()).filter(Boolean),
+                          )
                         }
                       />
                     </Field>
-                  </Box>
-                  <Box flex="2" minW="260px">
-                    <Field label="Launch note" hint={<Counter n={(draft.launchNote ?? "").length} max={160} />}>
+                    <Field
+                      label="SEO title (blank = auto)"
+                      hint={
+                        <Counter n={(draft.seoTitle ?? "").length} max={60} />
+                      }
+                    >
                       <Input
                         {...inputProps}
-                        placeholder="Midnight local time on PS5 and Xbox Series X|S"
-                        value={draft.launchNote ?? ""}
-                        onChange={(e) => set("launchNote", e.target.value)}
+                        placeholder="GTA 6: Release Date, Price & Everything We Know"
+                        value={draft.seoTitle ?? ""}
+                        onChange={(e) => set("seoTitle", e.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label="Meta description"
+                      hint={
+                        <Counter
+                          n={(draft.seoDescription ?? "").length}
+                          max={160}
+                        />
+                      }
+                    >
+                      <Input
+                        {...inputProps}
+                        value={draft.seoDescription ?? ""}
+                        onChange={(e) => set("seoDescription", e.target.value)}
                       />
                     </Field>
                   </Box>
-                </Flex>
-              </Card>
-
-              <LaunchThreadCard
-                gameId={detail.game.id}
-                gameSlug={detail.game.slug}
-                saved={!!detail.updatedAt}
-                onDetail={(d) => {
-                  setDetail(d);
-                  // Keep unsaved edits; only the pin moved.
-                  setDraft((prev) =>
-                    prev
-                      ? ({ ...prev, launchThreadPostId: d.profile.launchThreadPostId ?? null } as GameProfileInput)
-                      : prev,
-                  );
-                }}
-              />
-
-              <RoomProfileCard key={detail.game.id} gameId={detail.game.id} gameName={detail.game.name} />
-
-              <Card
-                title="Search and answer engines"
-                hint="Short version = the 30 to 45 word direct answer at the top. Name the game in it. AI answers quote this."
-              >
-                <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                  <Field label="Page H1 (blank = game name)">
-                    <Input {...inputProps} value={draft.headline ?? ""} onChange={(e) => set("headline", e.target.value)} />
-                  </Field>
-                  <Field label="Other names (comma separated)" hint="First one is used in titles">
-                    <Input
-                      {...inputProps}
-                      placeholder="GTA 6, GTA VI"
-                      value={draft.aliases.join(", ")}
-                      onChange={(e) =>
-                        set(
-                          "aliases",
-                          e.target.value.split(",").map((s) => s.trimStart()).slice(0, 8),
-                        )
+                  <Box mt={4}>
+                    <Field
+                      label="The short version"
+                      hint={
+                        <Counter
+                          n={words(draft.summary ?? "")}
+                          max={45}
+                          min={30}
+                        />
                       }
-                      onBlur={() => set("aliases", draft.aliases.map((s) => s.trim()).filter(Boolean))}
-                    />
-                  </Field>
-                  <Field label="SEO title (blank = auto)" hint={<Counter n={(draft.seoTitle ?? "").length} max={60} />}>
-                    <Input
-                      {...inputProps}
-                      placeholder="GTA 6: Release Date, Price & Everything We Know"
-                      value={draft.seoTitle ?? ""}
-                      onChange={(e) => set("seoTitle", e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Meta description" hint={<Counter n={(draft.seoDescription ?? "").length} max={160} />}>
-                    <Input
-                      {...inputProps}
-                      value={draft.seoDescription ?? ""}
-                      onChange={(e) => set("seoDescription", e.target.value)}
-                    />
-                  </Field>
-                </Box>
-                <Box mt={4}>
-                  <Field label="The short version" hint={<Counter n={words(draft.summary ?? "")} max={45} min={30} />}>
-                    <Textarea
-                      {...inputProps}
-                      rows={3}
-                      value={draft.summary ?? ""}
-                      onChange={(e) => set("summary", e.target.value)}
-                    />
-                  </Field>
-                </Box>
-                <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4} mt={4}>
-                  <Field label="Publisher">
-                    <Input {...inputProps} value={draft.publisher ?? ""} onChange={(e) => set("publisher", e.target.value)} />
-                  </Field>
-                  <Field label="Byline">
-                    <Sel
-                      value={draft.editor ?? ""}
-                      onChange={(v) => set("editor", v || null)}
-                      options={[{ value: "", label: "None" }, ...HUB_EDITORS.map((e) => ({ value: e, label: e }))]}
-                    />
-                  </Field>
-                </Box>
-                <Box mt={4}>
-                  <Field label="Official links (publisher, store pages). Real pages only.">
-                    <Box display="flex" flexDirection="column" gap={2}>
-                      {draft.officialLinks.map((l, i) => (
-                        <HStack key={i} gap={2}>
-                          <Input
-                            {...inputProps}
-                            maxW="180px"
-                            placeholder="Rockstar Games"
-                            value={l.label}
-                            onChange={(e) =>
-                              set("officialLinks", draft.officialLinks.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))
-                            }
-                          />
-                          <Input
-                            {...inputProps}
-                            placeholder="https://"
-                            value={l.url}
-                            onChange={(e) =>
-                              set("officialLinks", draft.officialLinks.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))
-                            }
-                          />
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            color={C.bad}
-                            onClick={() => set("officialLinks", draft.officialLinks.filter((_, j) => j !== i))}
-                            aria-label="Remove link"
-                          >
-                            <FiTrash2 />
-                          </Button>
-                        </HStack>
-                      ))}
-                      {draft.officialLinks.length < 8 && (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          color={C.text}
-                          borderColor={C.line}
-                          alignSelf="start"
-                          onClick={() => set("officialLinks", [...draft.officialLinks, { label: "", url: "" }])}
-                        >
-                          <FiPlus /> Add link
-                        </Button>
-                      )}
-                    </Box>
-                  </Field>
-                </Box>
-              </Card>
-
-              <Card
-                title={`Everything we know (${draft.facts.length})`}
-                hint="One fact per row. Confirmed = official source. Reported = credible outlet. Leaked = unverified (never link leaked footage). Grouped on the page by section."
-                right={
-                  <Button
-                    size="xs"
-                    bg={C.accent}
-                    color="white"
-                    disabled={draft.facts.length >= 80}
-                    onClick={() =>
-                      set("facts", [
-                        ...draft.facts,
-                        {
-                          id: newId("f"),
-                          section: "release",
-                          label: "",
-                          value: "",
-                          status: "confirmed",
-                          sourceName: "",
-                          sourceUrl: "",
-                        },
-                      ])
-                    }
-                  >
-                    <FiPlus /> Add fact
-                  </Button>
-                }
-              >
-                <Box display="flex" flexDirection="column" gap={3}>
-                  {draft.facts.map((f, i) => (
-                    <Box key={f.id} bg={C.raised} borderRadius="10px" p={3}>
-                      <Flex gap={2} wrap="wrap" mb={2} align="center">
-                        <Box w="140px">
-                          <Sel
-                            value={f.section}
-                            onChange={(v) => updFact(i, { section: v as HubFact["section"] })}
-                            options={FACT_SECTIONS.map((s) => ({ value: s, label: s }))}
-                          />
-                        </Box>
-                        <Box w="130px">
-                          <Sel
-                            value={f.status}
-                            onChange={(v) => updFact(i, { status: v as HubFact["status"] })}
-                            options={FACT_STATUSES.map((s) => ({ value: s, label: s }))}
-                          />
-                        </Box>
-                        <Input
-                          {...inputProps}
-                          flex="1"
-                          minW="160px"
-                          placeholder="Label, e.g. Release date"
-                          value={f.label}
-                          onChange={(e) => updFact(i, { label: e.target.value })}
-                        />
-                        {f.updatedOn && (
-                          <Text fontSize="xs" color={C.faint}>
-                            {f.updatedOn}
-                          </Text>
-                        )}
-                        <RowTools
-                          onUp={i > 0 ? () => set("facts", move(draft.facts, i, -1)) : undefined}
-                          onDown={i < draft.facts.length - 1 ? () => set("facts", move(draft.facts, i, 1)) : undefined}
-                          onDelete={() => set("facts", draft.facts.filter((_, j) => j !== i))}
-                        />
-                      </Flex>
+                    >
                       <Textarea
                         {...inputProps}
-                        rows={2}
-                        placeholder="What we know, in one or two sentences with the hard numbers."
-                        value={f.value}
-                        onChange={(e) => updFact(i, { value: e.target.value })}
+                        rows={3}
+                        value={draft.summary ?? ""}
+                        onChange={(e) => set("summary", e.target.value)}
                       />
-                      <Flex gap={2} mt={2} wrap="wrap">
-                        <Input
-                          {...inputProps}
-                          maxW="200px"
-                          placeholder="Source name"
-                          value={f.sourceName}
-                          onChange={(e) => updFact(i, { sourceName: e.target.value })}
-                        />
-                        <Input
-                          {...inputProps}
-                          flex="1"
-                          minW="200px"
-                          placeholder="https:// source link"
-                          value={f.sourceUrl}
-                          onChange={(e) => updFact(i, { sourceUrl: e.target.value })}
-                        />
-                      </Flex>
-                    </Box>
-                  ))}
-                </Box>
-              </Card>
-
-              <Card
-                title={`Editions and price (${draft.editions.length})`}
-                right={
-                  <Button
-                    size="xs"
-                    bg={C.accent}
-                    color="white"
-                    disabled={draft.editions.length >= 8}
-                    onClick={() =>
-                      set("editions", [
-                        ...draft.editions,
-                        { id: newId("e"), name: "", price: null, currency: "USD", includes: [], url: null },
-                      ])
-                    }
+                    </Field>
+                  </Box>
+                  <Box
+                    display="grid"
+                    gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }}
+                    gap={4}
+                    mt={4}
                   >
-                    <FiPlus /> Add edition
-                  </Button>
-                }
-              >
-                <Box display="flex" flexDirection="column" gap={3}>
-                  {draft.editions.map((e, i) => (
-                    <Box key={e.id} bg={C.raised} borderRadius="10px" p={3}>
-                      <Flex gap={2} wrap="wrap" align="center">
-                        <Input
+                    <Field label="Publisher">
+                      <Input
+                        {...inputProps}
+                        value={draft.publisher ?? ""}
+                        onChange={(e) => set("publisher", e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Byline">
+                      <Sel
+                        value={draft.editor ?? ""}
+                        onChange={(v) => set("editor", v || null)}
+                        options={[
+                          { value: "", label: "None" },
+                          ...HUB_EDITORS.map((e) => ({ value: e, label: e })),
+                        ]}
+                      />
+                    </Field>
+                  </Box>
+                  <Box mt={4}>
+                    <Field label="Official links (publisher, store pages). Real pages only.">
+                      <Box display="flex" flexDirection="column" gap={2}>
+                        {draft.officialLinks.map((l, i) => (
+                          <HStack key={i} gap={2}>
+                            <Input
+                              {...inputProps}
+                              maxW="180px"
+                              placeholder="Rockstar Games"
+                              value={l.label}
+                              onChange={(e) =>
+                                set(
+                                  "officialLinks",
+                                  draft.officialLinks.map((x, j) =>
+                                    j === i
+                                      ? { ...x, label: e.target.value }
+                                      : x,
+                                  ),
+                                )
+                              }
+                            />
+                            <Input
+                              {...inputProps}
+                              placeholder="https://"
+                              value={l.url}
+                              onChange={(e) =>
+                                set(
+                                  "officialLinks",
+                                  draft.officialLinks.map((x, j) =>
+                                    j === i ? { ...x, url: e.target.value } : x,
+                                  ),
+                                )
+                              }
+                            />
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              color={C.bad}
+                              onClick={() =>
+                                set(
+                                  "officialLinks",
+                                  draft.officialLinks.filter((_, j) => j !== i),
+                                )
+                              }
+                              aria-label="Remove link"
+                            >
+                              <FiTrash2 />
+                            </Button>
+                          </HStack>
+                        ))}
+                        {draft.officialLinks.length < 8 && (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            color={C.text}
+                            borderColor={C.line}
+                            alignSelf="start"
+                            onClick={() =>
+                              set("officialLinks", [
+                                ...draft.officialLinks,
+                                { label: "", url: "" },
+                              ])
+                            }
+                          >
+                            <FiPlus /> Add link
+                          </Button>
+                        )}
+                      </Box>
+                    </Field>
+                  </Box>
+                </Card>
+              )}
+
+              {tab === "facts" && (
+                <Card
+                  title={`Everything we know (${draft.facts.length})`}
+                  hint="One fact per row. Confirmed = official source. Reported = credible outlet. Leaked = unverified (never link leaked footage). Grouped on the page by section."
+                  right={
+                    <Button
+                      size="xs"
+                      bg={C.accent}
+                      color="white"
+                      disabled={draft.facts.length >= 80}
+                      onClick={() => {
+                        const id = newId("f");
+                        openRow(id);
+                        set("facts", [
+                          ...draft.facts,
+                          {
+                            id,
+                            section: "release",
+                            label: "",
+                            value: "",
+                            status: "confirmed",
+                            sourceName: "",
+                            sourceUrl: "",
+                          },
+                        ]);
+                      }}
+                    >
+                      <FiPlus /> Add fact
+                    </Button>
+                  }
+                >
+                  <Box display="flex" flexDirection="column" gap={3}>
+                    {draft.facts.map((f, i) => (
+                      <Fold
+                        key={f.id}
+                        open={openRows.has(f.id)}
+                        onToggle={() => toggleRow(f.id)}
+                        warn={badFact(i)}
+                        summary={
+                          <Flex gap={2} align="center" minW={0}>
+                            <Badge
+                              variant="subtle"
+                              colorPalette={
+                                f.status === "confirmed"
+                                  ? "green"
+                                  : f.status === "reported"
+                                    ? "blue"
+                                    : "orange"
+                              }
+                              flexShrink={0}
+                            >
+                              {f.status}
+                            </Badge>
+                            <Text
+                              fontSize="xs"
+                              color={C.faint}
+                              flexShrink={0}
+                              w="72px"
+                              lineClamp={1}
+                            >
+                              {f.section}
+                            </Text>
+                            <Text
+                              fontSize="sm"
+                              fontWeight="600"
+                              flexShrink={0}
+                              maxW="200px"
+                              lineClamp={1}
+                            >
+                              {f.label || "New fact"}
+                            </Text>
+                            <Text fontSize="sm" color={C.muted} lineClamp={1}>
+                              {f.value}
+                            </Text>
+                          </Flex>
+                        }
+                        tools={
+                          <RowTools
+                            onUp={
+                              i > 0
+                                ? () => set("facts", move(draft.facts, i, -1))
+                                : undefined
+                            }
+                            onDown={
+                              i < draft.facts.length - 1
+                                ? () => set("facts", move(draft.facts, i, 1))
+                                : undefined
+                            }
+                            onDelete={() =>
+                              set(
+                                "facts",
+                                draft.facts.filter((_, j) => j !== i),
+                              )
+                            }
+                          />
+                        }
+                      >
+                        <Flex gap={2} wrap="wrap" mb={2} align="center">
+                          <Box w="140px">
+                            <Sel
+                              value={f.section}
+                              onChange={(v) =>
+                                updFact(i, { section: v as HubFact["section"] })
+                              }
+                              options={FACT_SECTIONS.map((s) => ({
+                                value: s,
+                                label: s,
+                              }))}
+                            />
+                          </Box>
+                          <Box w="130px">
+                            <Sel
+                              value={f.status}
+                              onChange={(v) =>
+                                updFact(i, { status: v as HubFact["status"] })
+                              }
+                              options={FACT_STATUSES.map((s) => ({
+                                value: s,
+                                label: s,
+                              }))}
+                            />
+                          </Box>
+                          <Input
+                            {...inputProps}
+                            flex="1"
+                            minW="160px"
+                            placeholder="Label, e.g. Release date"
+                            value={f.label}
+                            onChange={(e) =>
+                              updFact(i, { label: e.target.value })
+                            }
+                          />
+                          {f.updatedOn && (
+                            <Text fontSize="xs" color={C.faint}>
+                              {f.updatedOn}
+                            </Text>
+                          )}
+                        </Flex>
+                        <Textarea
                           {...inputProps}
-                          flex="1"
-                          minW="160px"
-                          placeholder="Standard Edition"
-                          value={e.name}
-                          onChange={(ev) => updEd(i, { name: ev.target.value })}
-                        />
-                        <Input
-                          {...inputProps}
-                          w="110px"
-                          type="number"
-                          step="0.01"
-                          placeholder="Price"
-                          value={e.price ?? ""}
-                          onChange={(ev) => updEd(i, { price: ev.target.value === "" ? null : Number(ev.target.value) })}
-                        />
-                        <Input
-                          {...inputProps}
-                          w="80px"
-                          value={e.currency}
-                          onChange={(ev) => updEd(i, { currency: ev.target.value.toUpperCase().slice(0, 3) })}
-                        />
-                        <RowTools
-                          onUp={i > 0 ? () => set("editions", move(draft.editions, i, -1)) : undefined}
-                          onDown={i < draft.editions.length - 1 ? () => set("editions", move(draft.editions, i, 1)) : undefined}
-                          onDelete={() => set("editions", draft.editions.filter((_, j) => j !== i))}
-                        />
-                      </Flex>
-                      <Flex gap={2} mt={2} wrap="wrap">
-                        <Input
-                          {...inputProps}
-                          flex="2"
-                          minW="200px"
-                          placeholder="What's included, separated by ;"
-                          value={e.includes.join("; ")}
-                          onChange={(ev) =>
-                            updEd(i, { includes: ev.target.value.split(";").map((s) => s.trimStart()).slice(0, 12) })
+                          rows={2}
+                          placeholder="What we know, in one or two sentences with the hard numbers."
+                          value={f.value}
+                          onChange={(e) =>
+                            updFact(i, { value: e.target.value })
                           }
-                          onBlur={() => updEd(i, { includes: e.includes.map((s) => s.trim()).filter(Boolean) })}
                         />
-                        <Input
-                          {...inputProps}
-                          flex="1"
-                          minW="180px"
-                          placeholder="https:// store link (optional)"
-                          value={e.url ?? ""}
-                          onChange={(ev) => updEd(i, { url: ev.target.value || null })}
-                        />
-                      </Flex>
-                    </Box>
-                  ))}
-                </Box>
-              </Card>
+                        <Flex gap={2} mt={2} wrap="wrap">
+                          <Input
+                            {...inputProps}
+                            maxW="200px"
+                            placeholder="Source name"
+                            value={f.sourceName}
+                            onChange={(e) =>
+                              updFact(i, { sourceName: e.target.value })
+                            }
+                          />
+                          <Input
+                            {...inputProps}
+                            flex="1"
+                            minW="200px"
+                            placeholder="https:// source link"
+                            value={f.sourceUrl}
+                            onChange={(e) =>
+                              updFact(i, { sourceUrl: e.target.value })
+                            }
+                          />
+                        </Flex>
+                      </Fold>
+                    ))}
+                  </Box>
+                </Card>
+              )}
 
-              <Card
-                title={`FAQ (${draft.faqs.length})`}
-                hint="Real questions people search. Answer in the first sentence."
-                right={
-                  <Button
-                    size="xs"
-                    bg={C.accent}
-                    color="white"
-                    disabled={draft.faqs.length >= 20}
-                    onClick={() => set("faqs", [...draft.faqs, { id: newId("q"), q: "", a: "" }])}
-                  >
-                    <FiPlus /> Add question
-                  </Button>
-                }
-              >
-                <Box display="flex" flexDirection="column" gap={3}>
-                  {draft.faqs.map((f, i) => (
-                    <Box key={f.id} bg={C.raised} borderRadius="10px" p={3}>
-                      <Flex gap={2} align="center" mb={2}>
+              {tab === "editions" && (
+                <Card
+                  title={`Editions and price (${draft.editions.length})`}
+                  right={
+                    <Button
+                      size="xs"
+                      bg={C.accent}
+                      color="white"
+                      disabled={draft.editions.length >= 8}
+                      onClick={() =>
+                        set("editions", [
+                          ...draft.editions,
+                          {
+                            id: newId("e"),
+                            name: "",
+                            price: null,
+                            currency: "USD",
+                            includes: [],
+                            url: null,
+                          },
+                        ])
+                      }
+                    >
+                      <FiPlus /> Add edition
+                    </Button>
+                  }
+                >
+                  <Box display="flex" flexDirection="column" gap={3}>
+                    {draft.editions.map((e, i) => (
+                      <Box key={e.id} bg={C.raised} borderRadius="10px" p={3}>
+                        <Flex gap={2} wrap="wrap" align="center">
+                          <Input
+                            {...inputProps}
+                            flex="1"
+                            minW="160px"
+                            placeholder="Standard Edition"
+                            value={e.name}
+                            onChange={(ev) =>
+                              updEd(i, { name: ev.target.value })
+                            }
+                          />
+                          <Input
+                            {...inputProps}
+                            w="110px"
+                            type="number"
+                            step="0.01"
+                            placeholder="Price"
+                            value={e.price ?? ""}
+                            onChange={(ev) =>
+                              updEd(i, {
+                                price:
+                                  ev.target.value === ""
+                                    ? null
+                                    : Number(ev.target.value),
+                              })
+                            }
+                          />
+                          <Input
+                            {...inputProps}
+                            w="80px"
+                            value={e.currency}
+                            onChange={(ev) =>
+                              updEd(i, {
+                                currency: ev.target.value
+                                  .toUpperCase()
+                                  .slice(0, 3),
+                              })
+                            }
+                          />
+                          <RowTools
+                            onUp={
+                              i > 0
+                                ? () =>
+                                    set("editions", move(draft.editions, i, -1))
+                                : undefined
+                            }
+                            onDown={
+                              i < draft.editions.length - 1
+                                ? () =>
+                                    set("editions", move(draft.editions, i, 1))
+                                : undefined
+                            }
+                            onDelete={() =>
+                              set(
+                                "editions",
+                                draft.editions.filter((_, j) => j !== i),
+                              )
+                            }
+                          />
+                        </Flex>
+                        <Flex gap={2} mt={2} wrap="wrap">
+                          <Input
+                            {...inputProps}
+                            flex="2"
+                            minW="200px"
+                            placeholder="What's included, separated by ;"
+                            value={e.includes.join("; ")}
+                            onChange={(ev) =>
+                              updEd(i, {
+                                includes: ev.target.value
+                                  .split(";")
+                                  .map((s) => s.trimStart())
+                                  .slice(0, 12),
+                              })
+                            }
+                            onBlur={() =>
+                              updEd(i, {
+                                includes: e.includes
+                                  .map((s) => s.trim())
+                                  .filter(Boolean),
+                              })
+                            }
+                          />
+                          <Input
+                            {...inputProps}
+                            flex="1"
+                            minW="180px"
+                            placeholder="https:// store link (optional)"
+                            value={e.url ?? ""}
+                            onChange={(ev) =>
+                              updEd(i, { url: ev.target.value || null })
+                            }
+                          />
+                        </Flex>
+                      </Box>
+                    ))}
+                  </Box>
+                </Card>
+              )}
+
+              {tab === "faq" && (
+                <Card
+                  title={`FAQ (${draft.faqs.length})`}
+                  hint="Real questions people search. Answer in the first sentence."
+                  right={
+                    <Button
+                      size="xs"
+                      bg={C.accent}
+                      color="white"
+                      disabled={draft.faqs.length >= 20}
+                      onClick={() => {
+                        const id = newId("q");
+                        openRow(id);
+                        set("faqs", [...draft.faqs, { id, q: "", a: "" }]);
+                      }}
+                    >
+                      <FiPlus /> Add question
+                    </Button>
+                  }
+                >
+                  <Box display="flex" flexDirection="column" gap={3}>
+                    {draft.faqs.map((f, i) => (
+                      <Fold
+                        key={f.id}
+                        open={openRows.has(f.id)}
+                        onToggle={() => toggleRow(f.id)}
+                        warn={badFaq(i)}
+                        summary={
+                          <Text fontSize="sm" fontWeight="600" lineClamp={1}>
+                            {f.q || "New question"}
+                          </Text>
+                        }
+                        tools={
+                          <RowTools
+                            onUp={
+                              i > 0
+                                ? () => set("faqs", move(draft.faqs, i, -1))
+                                : undefined
+                            }
+                            onDown={
+                              i < draft.faqs.length - 1
+                                ? () => set("faqs", move(draft.faqs, i, 1))
+                                : undefined
+                            }
+                            onDelete={() =>
+                              set(
+                                "faqs",
+                                draft.faqs.filter((_, j) => j !== i),
+                              )
+                            }
+                          />
+                        }
+                      >
                         <Input
                           {...inputProps}
-                          flex="1"
+                          mb={2}
                           placeholder="When does GTA 6 come out?"
                           value={f.q}
                           onChange={(e) => updFaq(i, { q: e.target.value })}
                         />
-                        <RowTools
-                          onUp={i > 0 ? () => set("faqs", move(draft.faqs, i, -1)) : undefined}
-                          onDown={i < draft.faqs.length - 1 ? () => set("faqs", move(draft.faqs, i, 1)) : undefined}
-                          onDelete={() => set("faqs", draft.faqs.filter((_, j) => j !== i))}
+                        <Textarea
+                          {...inputProps}
+                          rows={3}
+                          value={f.a}
+                          onChange={(e) => updFaq(i, { a: e.target.value })}
                         />
-                      </Flex>
-                      <Textarea
-                        {...inputProps}
-                        rows={2}
-                        value={f.a}
-                        onChange={(e) => updFaq(i, { a: e.target.value })}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </Card>
+                      </Fold>
+                    ))}
+                  </Box>
+                </Card>
+              )}
             </>
           )}
           {msg && !dirty && (
@@ -1053,10 +1635,24 @@ export default function MegaHubsPanel() {
           px={6}
           py={3}
         >
-          <Flex maxW="1200px" mx="auto" justify="space-between" align="center" gap={4} wrap="wrap">
+          <Flex
+            maxW="1200px"
+            mx="auto"
+            justify="space-between"
+            align="center"
+            gap={4}
+            wrap="wrap"
+          >
             <Box>
               {issues.length ? (
-                <Text fontSize="sm" color={C.warn}>
+                <Text
+                  as="button"
+                  fontSize="sm"
+                  color={C.warn}
+                  textAlign="left"
+                  textDecoration="underline"
+                  onClick={() => setTab(tabOf(issues[0]))}
+                >
                   {issues[0]}
                   {issues.length > 1 ? ` (+${issues.length - 1} more)` : ""}
                 </Text>

@@ -28,6 +28,7 @@ import {
   C,
   Card,
   Check,
+  SubTabs,
   Gold,
   Labeled,
   LongIn,
@@ -134,216 +135,263 @@ export default function GuideTemplateEditor({
       ),
   );
 
+  const [tab, setTab] = useState<SetupTab>("basics");
+
   return (
     <Stack gap={4}>
-      <Card
-        title="Quick start"
-        aside={
-          <HStack gap={2} wrap="wrap">
-            <Plain onClick={() => onChange(ocarinaPreset(draft))}>
-              Ocarina of Time starter
-            </Plain>
-          </HStack>
-        }
-      >
-        <Text fontSize="sm" color={C.muted}>
-          Fills in entry types, checklists and sections for a fast start.
-          Everything stays editable. It replaces the current draft (maps you
-          uploaded are kept), so use it before you customize.
-        </Text>
-      </Card>
-
-      <Card title="Switches">
-        <Stack gap={3}>
-          <Flex gap={5} wrap="wrap">
-            <Check
-              label="Era switch (for example Young / Adult)"
-              checked={draft.features.eraSwitch}
-              onChange={(v) =>
-                set({ features: { ...draft.features, eraSwitch: v } })
-              }
-            />
-            <Check
-              label="Spoiler control"
-              checked={draft.features.spoilers}
-              onChange={(v) =>
-                set({ features: { ...draft.features, spoilers: v } })
-              }
-            />
-            <Check
-              label="Search"
-              checked={draft.features.search}
-              onChange={(v) =>
-                set({ features: { ...draft.features, search: v } })
-              }
-            />
-          </Flex>
-          <Labeled
-            label="Label on unconfirmed entries"
-            hint="Shown on cards, pins and pages of entries marked Unconfirmed."
-          >
-            <TextIn
-              value={draft.features.unconfirmedLabel}
-              maxLength={80}
-              onChange={(v) =>
-                set({ features: { ...draft.features, unconfirmedLabel: v } })
-              }
-            />
-          </Labeled>
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            <Labeled
-              label="Eras (one per line, key: Label)"
-              hint="Up to 6. Entries can belong to one or more eras."
-            >
-              <LongIn
-                rows={3}
-                value={optsToText(draft.eras)}
-                onChange={(v) => set({ eras: textToOpts(v) })}
-                placeholder={"child: Young Link\nadult: Adult Link"}
-              />
-            </Labeled>
-            <Labeled
-              label="Spoiler stages, in story order (key: Label)"
-              hint="Readers pick how far they are; later stages stay hidden."
-            >
-              <LongIn
-                rows={3}
-                value={optsToText(draft.spoilerStages)}
-                onChange={(v) => set({ spoilerStages: textToOpts(v) })}
-                placeholder={"forest-temple: Forest Temple"}
-              />
-            </Labeled>
-          </SimpleGrid>
-        </Stack>
-      </Card>
-
-      <TypesEditor
-        gameId={gameId}
-        types={draft.types}
-        onChange={(types) => set({ types })}
-      />
-      <MapsEditor
-        gameId={gameId}
-        maps={draft.maps}
-        onChange={(maps) => set({ maps })}
+      <SubTabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: "basics", label: "Basics" },
+          { key: "types", label: "Entry types", count: draft.types.length },
+          {
+            key: "maps",
+            label: "Maps",
+            count: draft.maps.length,
+            warn: draft.maps.some((m) => !m.url),
+          },
+          {
+            key: "checklists",
+            label: "Checklists",
+            count: draft.checklists.length,
+          },
+          {
+            key: "sections",
+            label: "Hub sections",
+            count: draft.sections.length,
+          },
+        ]}
       />
 
-      <Card
-        title={`Checklists (${draft.checklists.length})`}
-        aside={
-          <Plain
-            onClick={() =>
-              set({
-                checklists: [
-                  ...draft.checklists,
-                  {
-                    key: "",
-                    title: "",
-                    description: null,
-                    filter: { ...EMPTY_FILTER },
-                  },
-                ],
-              })
+      {tab === "basics" && (
+        <>
+          <Card
+            title="Quick start"
+            aside={
+              <HStack gap={2} wrap="wrap">
+                <Plain onClick={() => onChange(ocarinaPreset(draft))}>
+                  Ocarina of Time starter
+                </Plain>
+              </HStack>
             }
           >
-            Add checklist
-          </Plain>
-        }
-      >
-        <Stack gap={3}>
-          {draft.checklists.map((c, i) => (
-            <ChecklistRow
-              key={i}
-              c={c}
-              typeOpts={typeOpts}
-              tagOpts={tagOpts}
-              onChange={(n) =>
-                set({
-                  checklists: draft.checklists.map((x, j) => (j === i ? n : x)),
-                })
-              }
-              tools={
-                <RowTools
-                  onUp={() =>
-                    set({ checklists: move(draft.checklists, i, -1) })
+            <Text fontSize="sm" color={C.muted}>
+              Fills in entry types, checklists and sections for a fast start.
+              Everything stays editable. It replaces the current draft (maps you
+              uploaded are kept), so use it before you customize.
+            </Text>
+          </Card>
+
+          <Card title="Switches">
+            <Stack gap={3}>
+              <Flex gap={5} wrap="wrap">
+                <Check
+                  label="Era switch (for example Young / Adult)"
+                  checked={draft.features.eraSwitch}
+                  onChange={(v) =>
+                    set({ features: { ...draft.features, eraSwitch: v } })
                   }
-                  onDown={() =>
-                    set({ checklists: move(draft.checklists, i, 1) })
+                />
+                <Check
+                  label="Spoiler control"
+                  checked={draft.features.spoilers}
+                  onChange={(v) =>
+                    set({ features: { ...draft.features, spoilers: v } })
                   }
-                  onRemove={() =>
+                />
+                <Check
+                  label="Search"
+                  checked={draft.features.search}
+                  onChange={(v) =>
+                    set({ features: { ...draft.features, search: v } })
+                  }
+                />
+              </Flex>
+              <Labeled
+                label="Label on unconfirmed entries"
+                hint="Shown on cards, pins and pages of entries marked Unconfirmed."
+              >
+                <TextIn
+                  value={draft.features.unconfirmedLabel}
+                  maxLength={80}
+                  onChange={(v) =>
                     set({
-                      checklists: draft.checklists.filter((_, j) => j !== i),
+                      features: { ...draft.features, unconfirmedLabel: v },
                     })
                   }
                 />
-              }
-            />
-          ))}
-          {!draft.checklists.length && (
-            <Text fontSize="sm" color={C.faint}>
-              No checklists yet. A checklist is a filter (for example all Gold
-              Skulltulas) that readers tick off.
-            </Text>
-          )}
-        </Stack>
-      </Card>
+              </Labeled>
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                <Labeled
+                  label="Eras (one per line, key: Label)"
+                  hint="Up to 6. Entries can belong to one or more eras."
+                >
+                  <LongIn
+                    rows={3}
+                    value={optsToText(draft.eras)}
+                    onChange={(v) => set({ eras: textToOpts(v) })}
+                    placeholder={"child: Young Link\nadult: Adult Link"}
+                  />
+                </Labeled>
+                <Labeled
+                  label="Spoiler stages, in story order (key: Label)"
+                  hint="Readers pick how far they are; later stages stay hidden."
+                >
+                  <LongIn
+                    rows={3}
+                    value={optsToText(draft.spoilerStages)}
+                    onChange={(v) => set({ spoilerStages: textToOpts(v) })}
+                    placeholder={"forest-temple: Forest Temple"}
+                  />
+                </Labeled>
+              </SimpleGrid>
+            </Stack>
+          </Card>
+        </>
+      )}
 
-      <Card
-        title={`Hub sections (${draft.sections.length}), shown in this order`}
-        aside={
-          <Plain
-            onClick={() =>
-              set({
-                sections: [
-                  ...draft.sections,
-                  {
-                    key: "",
-                    title: "",
-                    style: "cards",
-                    filter: { ...EMPTY_FILTER },
-                    mapKey: null,
-                    checklistKey: null,
-                    entrySlug: null,
-                    limit: 8,
-                    sort: "order",
-                  },
-                ],
-              })
-            }
-          >
-            Add section
-          </Plain>
-        }
-      >
-        <Stack gap={3}>
-          {draft.sections.map((s, i) => (
-            <SectionRow
-              key={i}
-              s={s}
-              draft={draft}
-              typeOpts={typeOpts}
-              tagOpts={tagOpts}
-              onChange={(n) =>
+      {tab === "types" && (
+        <TypesEditor
+          gameId={gameId}
+          types={draft.types}
+          onChange={(types) => set({ types })}
+        />
+      )}
+      {tab === "maps" && (
+        <MapsEditor
+          gameId={gameId}
+          maps={draft.maps}
+          onChange={(maps) => set({ maps })}
+        />
+      )}
+
+      {tab === "checklists" && (
+        <Card
+          title={`Checklists (${draft.checklists.length})`}
+          aside={
+            <Plain
+              onClick={() =>
                 set({
-                  sections: draft.sections.map((x, j) => (j === i ? n : x)),
+                  checklists: [
+                    ...draft.checklists,
+                    {
+                      key: "",
+                      title: "",
+                      description: null,
+                      filter: { ...EMPTY_FILTER },
+                    },
+                  ],
                 })
               }
-              tools={
-                <RowTools
-                  onUp={() => set({ sections: move(draft.sections, i, -1) })}
-                  onDown={() => set({ sections: move(draft.sections, i, 1) })}
-                  onRemove={() =>
-                    set({ sections: draft.sections.filter((_, j) => j !== i) })
-                  }
-                />
+            >
+              Add checklist
+            </Plain>
+          }
+        >
+          <Stack gap={3}>
+            {draft.checklists.map((c, i) => (
+              <ChecklistRow
+                key={i}
+                c={c}
+                typeOpts={typeOpts}
+                tagOpts={tagOpts}
+                onChange={(n) =>
+                  set({
+                    checklists: draft.checklists.map((x, j) =>
+                      j === i ? n : x,
+                    ),
+                  })
+                }
+                tools={
+                  <RowTools
+                    onUp={() =>
+                      set({ checklists: move(draft.checklists, i, -1) })
+                    }
+                    onDown={() =>
+                      set({ checklists: move(draft.checklists, i, 1) })
+                    }
+                    onRemove={() =>
+                      set({
+                        checklists: draft.checklists.filter((_, j) => j !== i),
+                      })
+                    }
+                  />
+                }
+              />
+            ))}
+            {!draft.checklists.length && (
+              <Text fontSize="sm" color={C.faint}>
+                No checklists yet. A checklist is a filter (for example all Gold
+                Skulltulas) that readers tick off.
+              </Text>
+            )}
+          </Stack>
+        </Card>
+      )}
+
+      {tab === "sections" && (
+        <Card
+          title={`Hub sections (${draft.sections.length}), shown in this order`}
+          aside={
+            <Plain
+              onClick={() =>
+                set({
+                  sections: [
+                    ...draft.sections,
+                    {
+                      key: "",
+                      title: "",
+                      style: "cards",
+                      filter: { ...EMPTY_FILTER },
+                      mapKey: null,
+                      checklistKey: null,
+                      entrySlug: null,
+                      limit: 8,
+                      sort: "order",
+                    },
+                  ],
+                })
               }
-            />
-          ))}
-        </Stack>
-      </Card>
+            >
+              Add section
+            </Plain>
+          }
+        >
+          <Stack gap={3}>
+            {draft.sections.map((s, i) => (
+              <SectionRow
+                key={i}
+                s={s}
+                draft={draft}
+                typeOpts={typeOpts}
+                tagOpts={tagOpts}
+                onChange={(n) =>
+                  set({
+                    sections: draft.sections.map((x, j) => (j === i ? n : x)),
+                  })
+                }
+                tools={
+                  <RowTools
+                    onUp={() => set({ sections: move(draft.sections, i, -1) })}
+                    onDown={() => set({ sections: move(draft.sections, i, 1) })}
+                    onRemove={() =>
+                      set({
+                        sections: draft.sections.filter((_, j) => j !== i),
+                      })
+                    }
+                  />
+                }
+              />
+            ))}
+          </Stack>
+        </Card>
+      )}
     </Stack>
   );
 }
+
+type SetupTab = "basics" | "types" | "maps" | "checklists" | "sections";
 
 // ───────────────────────── types + fields ─────────────────────────
 

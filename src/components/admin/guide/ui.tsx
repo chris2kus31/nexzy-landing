@@ -286,3 +286,75 @@ export function Problems({ lines }: { lines: string[] }) {
     </Box>
   );
 }
+
+/** Sub-tabs inside an admin editor: one panel at a time instead of one long
+ *  scroll. Gold = active (dark text for contrast). A warn dot marks a tab
+ *  with problems so nothing hidden on another tab blocks a save silently. */
+export function SubTabs<K extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: { key: K; label: string; count?: number; warn?: boolean }[];
+  value: K;
+  onChange: (k: K) => void;
+}) {
+  return (
+    <HStack
+      gap={1}
+      wrap="wrap"
+      bg={C.surface}
+      border="1px solid"
+      borderColor={C.line}
+      borderRadius="12px"
+      p={1}
+      role="tablist"
+    >
+      {tabs.map((t) => {
+        const on = t.key === value;
+        return (
+          <Box
+            key={t.key}
+            as="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(t.key)}
+            px={3}
+            py={1.5}
+            borderRadius="9px"
+            fontSize="sm"
+            fontWeight={on ? "700" : "500"}
+            bg={on ? C.gold : "transparent"}
+            color={on ? C.ink : C.text}
+            _hover={on ? {} : { bg: C.raised }}
+            display="inline-flex"
+            alignItems="center"
+            gap={1.5}
+          >
+            {t.label}
+            {t.count != null && (
+              <Text
+                as="span"
+                fontSize="xs"
+                color={on ? C.ink : C.muted}
+                fontWeight="600"
+              >
+                {t.count}
+              </Text>
+            )}
+            {t.warn && (
+              <Box
+                as="span"
+                w="7px"
+                h="7px"
+                borderRadius="full"
+                bg={C.warn}
+                aria-label="Has problems"
+              />
+            )}
+          </Box>
+        );
+      })}
+    </HStack>
+  );
+}
