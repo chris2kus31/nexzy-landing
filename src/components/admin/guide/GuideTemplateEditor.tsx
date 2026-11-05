@@ -421,7 +421,21 @@ function TypesEditor({
             onChange={(v) => {
               setPreset("");
               const p = TYPE_PRESETS.find((x) => x.key === v);
-              if (p) add(JSON.parse(JSON.stringify(p)));
+              if (!p) return;
+              // A preset's link fields may name types this game doesn't
+              // have (e.g. Mission -> "location"); keep only real ones so
+              // publish never fails on a link the screen can't show.
+              const copy: HubEntryType = JSON.parse(JSON.stringify(p));
+              const known = new Set([...types.map((x) => x.key), copy.key]);
+              copy.fields = copy.fields.map((fd) =>
+                fd.targetTypes
+                  ? {
+                      ...fd,
+                      targetTypes: fd.targetTypes.filter((k) => known.has(k)),
+                    }
+                  : fd,
+              );
+              add(copy);
             }}
             options={[
               { value: "", label: "Add from preset..." },
@@ -772,13 +786,18 @@ function FieldForm({
                     key={t.key}
                     label={t.plural || t.key}
                     checked={(f.targetTypes ?? []).includes(t.key)}
-                    onChange={(on) =>
+                    onChange={(on) => {
+                      // Drop links to types that no longer exist, so a
+                      // hidden bad link can always be cleared from here.
+                      const live = (f.targetTypes ?? []).filter((x) =>
+                        allTypes.some((a) => a.key === x),
+                      );
                       set({
                         targetTypes: on
-                          ? [...(f.targetTypes ?? []), t.key]
-                          : (f.targetTypes ?? []).filter((x) => x !== t.key),
-                      })
-                    }
+                          ? [...live, t.key]
+                          : live.filter((x) => x !== t.key),
+                      });
+                    }}
                   />
                 ))}
             </Flex>
