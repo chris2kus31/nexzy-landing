@@ -20,10 +20,21 @@ import { getAuthorByName } from "@/lib/blog/authors";
 export { HUB_TZ, fmtHubDate } from "@/lib/hubs/types";
 import { fmtHubDate } from "@/lib/hubs/types";
 
-const STATUS: Record<FactStatus, { label: string; palette: string; note: string }> = {
+const STATUS: Record<
+  FactStatus,
+  { label: string; palette: string; note: string }
+> = {
   confirmed: { label: "Confirmed", palette: "green", note: "Official source" },
-  reported: { label: "Reported", palette: "blue", note: "Credible report, not official" },
-  leaked: { label: "Leaked", palette: "orange", note: "Unverified, treat with care" },
+  reported: {
+    label: "Reported",
+    palette: "blue",
+    note: "Credible report, not official",
+  },
+  leaked: {
+    label: "Leaked",
+    palette: "orange",
+    note: "Unverified, treat with care",
+  },
 };
 
 export function HubPanel({
@@ -45,9 +56,15 @@ export function HubPanel({
       bg="#1a1f3a"
       borderRadius="18px"
       p={{ base: 5, md: 6 }}
-      scrollMarginTop="80px"
+      scrollMarginTop="140px"
     >
-      <HStack justify="space-between" align="baseline" flexWrap="wrap" gap={2} mb={4}>
+      <HStack
+        justify="space-between"
+        align="baseline"
+        flexWrap="wrap"
+        gap={2}
+        mb={4}
+      >
         <Heading
           as="h2"
           id={`${id}-h`}
@@ -90,7 +107,13 @@ export function ShortVersion({
       borderRadius="0 14px 14px 0"
       p={{ base: 4, md: 5 }}
     >
-      <Text fontSize="xs" fontWeight="700" letterSpacing="0.08em" color="#FFD700" mb={2}>
+      <Text
+        fontSize="xs"
+        fontWeight="700"
+        letterSpacing="0.08em"
+        color="#FFD700"
+        mb={2}
+      >
         THE SHORT VERSION
       </Text>
       <Text color="white" fontSize={{ base: "md", md: "lg" }} lineHeight="1.6">
@@ -110,7 +133,8 @@ export function ShortVersion({
         {persona && updatedAt && <Text>·</Text>}
         {updatedAt && (
           <Text>
-            Updated <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time>
+            Updated{" "}
+            <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time>
           </Text>
         )}
       </HStack>
@@ -118,43 +142,47 @@ export function ShortVersion({
   );
 }
 
+/** One fact as a compact row: label, the fact, then status and source. */
 function FactCard({ fact }: { fact: HubFact }) {
   const st = STATUS[fact.status] ?? STATUS.reported;
   return (
     <Box
       as="li"
       listStyleType="none"
-      bg="#11152b"
-      borderRadius="12px"
-      p={4}
-      borderLeft={fact.status === "leaked" ? "2px solid" : undefined}
-      borderColor="orange.400"
+      display="grid"
+      gridTemplateColumns={{ base: "1fr", md: "170px minmax(0, 1fr) auto" }}
+      gap={{ base: 1, md: 4 }}
+      py={3}
+      borderTop="1px solid rgba(255,255,255,0.06)"
+      alignItems="baseline"
     >
-      <HStack justify="space-between" align="start" gap={2}>
-        <Text fontSize="xs" fontWeight="700" letterSpacing="0.06em" color="#FFD700">
-          {fact.label.toUpperCase()}
-        </Text>
-        <Badge colorPalette={st.palette} variant="subtle" title={st.note} flexShrink={0}>
-          {st.label}
-        </Badge>
-      </HStack>
-      <Text mt={2} color="white" fontSize="md" lineHeight="1.55">
+      <Text
+        fontSize="xs"
+        fontWeight="700"
+        letterSpacing="0.06em"
+        color="#FFD700"
+      >
+        {fact.label.toUpperCase()}
+      </Text>
+      <Text color="white" fontSize="md" lineHeight="1.55">
         {fact.value}
       </Text>
-      <HStack mt={2} gap={2} fontSize="xs" color="#9aa3bf" flexWrap="wrap">
-        <Text>
-          Source:{" "}
-          <Link href={fact.sourceUrl} target="_blank" rel="noopener" color="#4DA3FF">
-            {fact.sourceName}
-          </Link>
-        </Text>
+      <HStack gap={2} fontSize="xs" color="#9aa3bf" flexWrap="wrap">
+        <Badge colorPalette={st.palette} variant="subtle" title={st.note}>
+          {st.label}
+        </Badge>
+        <Link
+          href={fact.sourceUrl}
+          target="_blank"
+          rel="noopener"
+          color="#4DA3FF"
+        >
+          {fact.sourceName}
+        </Link>
         {fact.updatedOn && (
-          <>
-            <Text>·</Text>
-            <time dateTime={fact.updatedOn}>
-              {fmtHubDate(`${fact.updatedOn}T12:00:00Z`)}
-            </time>
-          </>
+          <time dateTime={fact.updatedOn}>
+            {fmtHubDate(`${fact.updatedOn}T12:00:00Z`)}
+          </time>
         )}
       </HStack>
     </Box>
@@ -183,7 +211,8 @@ export function EverythingWeKnow({
       aside={
         updatedAt ? (
           <>
-            Updated <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time> ·
+            Updated{" "}
+            <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time> ·
             every fact sourced
           </>
         ) : (
@@ -191,27 +220,19 @@ export function EverythingWeKnow({
         )
       }
     >
-      <Box
-        display="grid"
-        gridTemplateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }}
-        gap={6}
-      >
+      <Box display="flex" flexDirection="column" gap={6}>
         {groups.map((g) => (
-          <Box key={g.section} gridColumn={g.items.length > 2 ? { md: "span 2" } : undefined}>
-            <Heading as="h3" fontSize="md" color="#EDF2F7" mb={3} fontFamily="heading">
+          <Box key={g.section}>
+            <Heading
+              as="h3"
+              fontSize="md"
+              color="#EDF2F7"
+              mb={1}
+              fontFamily="heading"
+            >
               {sectionQuestion(g.section, gameName)}
             </Heading>
-            <Box
-              as="ul"
-              m={0}
-              p={0}
-              display="grid"
-              gridTemplateColumns={{
-                base: "1fr",
-                md: g.items.length > 2 ? "repeat(2, minmax(0, 1fr))" : "1fr",
-              }}
-              gap={3}
-            >
+            <Box as="ul" m={0} p={0}>
               {g.items.map((f) => (
                 <FactCard key={f.id} fact={f} />
               ))}
@@ -220,9 +241,9 @@ export function EverythingWeKnow({
         ))}
       </Box>
       <Text fontSize="xs" color="#9aa3bf" mt={5}>
-        Confirmed = from {gameName}&apos;s publisher or platform holder. Reported = a
-        credible outlet, not yet official. Leaked = unverified; we never show leaked
-        footage.
+        Confirmed = from {gameName}&apos;s publisher or platform holder.
+        Reported = a credible outlet, not yet official. Leaked = unverified; we
+        never show leaked footage.
       </Text>
     </HubPanel>
   );
@@ -230,7 +251,10 @@ export function EverythingWeKnow({
 
 function money(price: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(price);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(price);
   } catch {
     return `${price} ${currency}`;
   }
@@ -251,30 +275,64 @@ export function EditionsTable({
       <Box overflowX="auto">
         {/* Plain HTML table: this is a server component, and Chakra's
             `chakra.*` factory is not available on the server. */}
-        <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
+        <table
+          style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}
+        >
           <thead>
             <tr style={{ color: "#9aa3bf", textAlign: "left" }}>
-              <th scope="col" style={{ ...cell, fontWeight: 600 }}>Edition</th>
-              <th scope="col" style={{ ...cell, fontWeight: 600 }}>Price</th>
-              <th scope="col" style={{ ...cell, fontWeight: 600, paddingRight: 0 }}>
+              <th scope="col" style={{ ...cell, fontWeight: 600 }}>
+                Edition
+              </th>
+              <th scope="col" style={{ ...cell, fontWeight: 600 }}>
+                Price
+              </th>
+              <th
+                scope="col"
+                style={{ ...cell, fontWeight: 600, paddingRight: 0 }}
+              >
                 What&apos;s included
               </th>
             </tr>
           </thead>
           <tbody>
             {editions.map((e) => (
-              <tr key={e.id} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <th scope="row" style={{ ...cell, color: "#fff", fontWeight: 600, textAlign: "left" }}>
+              <tr
+                key={e.id}
+                style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <th
+                  scope="row"
+                  style={{
+                    ...cell,
+                    color: "#fff",
+                    fontWeight: 600,
+                    textAlign: "left",
+                  }}
+                >
                   {e.url ? (
-                    <Link href={e.url} target="_blank" rel="noopener sponsored" color="white">
+                    <Link
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener sponsored"
+                      color="white"
+                    >
                       {e.name}
                     </Link>
                   ) : (
                     e.name
                   )}
                 </th>
-                <td style={{ ...cell, color: "#FFD700", whiteSpace: "nowrap", fontFamily: "var(--chakra-fonts-title)" }}>
-                  {e.price != null ? money(e.price, e.currency) : "Not announced"}
+                <td
+                  style={{
+                    ...cell,
+                    color: "#FFD700",
+                    whiteSpace: "nowrap",
+                    fontFamily: "var(--chakra-fonts-title)",
+                  }}
+                >
+                  {e.price != null
+                    ? money(e.price, e.currency)
+                    : "Not announced"}
                 </td>
                 <td style={{ ...cell, color: "#c7cde0", paddingRight: 0 }}>
                   {e.includes.length ? e.includes.join(" · ") : "Base game"}
@@ -301,7 +359,13 @@ export function HubFaqList({
       <Box display="flex" flexDirection="column" gap={5}>
         {faqs.map((f) => (
           <Box key={f.id}>
-            <Heading as="h3" fontSize="md" color="white" mb={1} fontFamily="heading">
+            <Heading
+              as="h3"
+              fontSize="md"
+              color="white"
+              mb={1}
+              fontFamily="heading"
+            >
               {f.q}
             </Heading>
             <Text color="#c7cde0" lineHeight="1.7" whiteSpace="pre-line">
@@ -337,8 +401,21 @@ export function LatestNews({
                 transition="background 0.15s"
               >
                 {it.heroImageUrl && (
-                  <Box position="relative" w="96px" h="54px" flexShrink={0} borderRadius="8px" overflow="hidden">
-                    <NextImage src={it.heroImageUrl} alt="" fill sizes="96px" style={{ objectFit: "cover" }} />
+                  <Box
+                    position="relative"
+                    w="96px"
+                    h="54px"
+                    flexShrink={0}
+                    borderRadius="8px"
+                    overflow="hidden"
+                  >
+                    <NextImage
+                      src={it.heroImageUrl}
+                      alt=""
+                      fill
+                      sizes="96px"
+                      style={{ objectFit: "cover" }}
+                    />
                   </Box>
                 )}
                 <Box minW={0}>
@@ -347,7 +424,9 @@ export function LatestNews({
                   </Text>
                   {it.publishedAt && (
                     <Text fontSize="xs" color="#9aa3bf" mt={1}>
-                      <time dateTime={it.publishedAt}>{fmtHubDate(it.publishedAt)}</time>
+                      <time dateTime={it.publishedAt}>
+                        {fmtHubDate(it.publishedAt)}
+                      </time>
                     </Text>
                   )}
                 </Box>

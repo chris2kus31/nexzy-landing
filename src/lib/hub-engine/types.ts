@@ -147,6 +147,8 @@ export interface HubEnginePage {
   contentVersion: number;
   config: HubTemplateConfig | null;
   sections: HubResolvedSection[];
+  /** Public entries per type (API 2026-11-05+; older APIs omit it). */
+  typeCounts?: Record<string, number>;
 }
 
 /** [pinId, entryId, typeKey, x, y, title, confirmed, spoilerStage, eras,
@@ -170,6 +172,10 @@ export interface HubChecklistPage {
   description: string | null;
   items: HubCard[];
 }
+
+/** A checklist with this key is the story walkthrough: the hub shows it as
+ *  steps and the page bar links to it. Plain module (server-safe). */
+export const WALKTHROUGH_KEY = "walkthrough";
 
 export const typeOf = (c: HubTemplateConfig, key: string) =>
   c.types.find((t) => t.key === key);

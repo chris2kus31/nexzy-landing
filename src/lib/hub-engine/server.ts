@@ -10,6 +10,7 @@
 // or exhaust, one per-IP bucket.
 import { createHmac } from "crypto";
 import type {
+  HubCard,
   HubChecklistPage,
   HubEnginePage,
   HubEntryFull,
@@ -74,9 +75,30 @@ export async function fetchEngineEntry(
 export async function fetchEngineChecklist(
   slug: string,
   key: string,
+  revalidate = 300,
 ): Promise<HubChecklistPage | null> {
   return get<HubChecklistPage>(
     `/game-hubs/${enc(slug)}/engine/checklists/${enc(key)}`,
-    300,
+    revalidate,
   );
+}
+
+/** Every public entry of one type, in guide order (pages of 50, up to 500).
+ *  For the type's list page. */
+export async function fetchEngineTypeEntries(
+  slug: string,
+  type: string,
+): Promise<HubCard[]> {
+  const out: HubCard[] = [];
+  let cursor: string | null = null;
+  for (let i = 0; i < 10; i++) {
+    const qs: string = `type=${enc(type)}&limit=50${cursor ? `&cursor=${enc(cursor)}` : ""}`;
+    const page: { items: HubCard[]; nextCursor: string | null } | null =
+      await get(`/game-hubs/${enc(slug)}/engine/entries?${qs}`, 300);
+    if (!page) break;
+    out.push(...page.items);
+    cursor = page.nextCursor;
+    if (!cursor) break;
+  }
+  return out;
 }

@@ -52,8 +52,13 @@ import HubThread from "@/components/games/hub/HubThread";
 import WhosPlaying from "@/components/games/hub/WhosPlaying";
 import HubRooms from "@/components/games/hub/HubRooms";
 import GuideSections from "@/components/games/guide/GuideSections";
-import { fetchEnginePage } from "@/lib/hub-engine/server";
-import type { HubEnginePage } from "@/lib/hub-engine/types";
+import HubNav, { type HubNavItem } from "@/components/games/hub/HubNav";
+import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
+import {
+  WALKTHROUGH_KEY,
+  type HubChecklistPage,
+  type HubEnginePage,
+} from "@/lib/hub-engine/types";
 import type {
   HubReviewPage,
   HubScores as HubScoresData,
@@ -146,6 +151,17 @@ function hubTrailers(videos: GameHubVideo[], name: string): HubTrailer[] {
 }
 
 /** Title for an enabled mega hub: entity first, under 60 with " | Nexzy". */
+function priceText(price: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(price);
+  } catch {
+    return `${price} ${currency}`;
+  }
+}
+
 function megaTitle(name: string, profile: HubProfile): string {
   if (profile.seoTitle) return profile.seoTitle;
   const short = profile.aliases[0] || name;
@@ -284,6 +300,25 @@ export default async function GameHubPage({
     : [null, emptyReviews];
   // Guide engine (Phase 4): only mega hubs can have one; off = nothing shown.
   const guide = profile ? await fetchEnginePage(game.slug) : null;
+  // Every checklist of the guide (progress card + walkthrough), in parallel,
+  // on the hub's own 6 h window (a shorter one would re-render every hub
+  // every few minutes). They only feed the progress card and walkthrough, so
+  // a failed one is left out instead of failing the whole hub. The
+  // walkthrough always makes the cut.
+  const checklistKeys =
+    guide?.enabled && guide.config
+      ? [
+          ...guide.config.checklists.filter((c) => c.key === WALKTHROUGH_KEY),
+          ...guide.config.checklists.filter((c) => c.key !== WALKTHROUGH_KEY),
+        ]
+          .slice(0, 8)
+          .map((c) => c.key)
+      : [];
+  const checklists: HubChecklistPage[] = (
+    await Promise.allSettled(
+      checklistKeys.map((k) => fetchEngineChecklist(game.slug, k, 21600)),
+    )
+  ).flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []));
   // AggregateRating = Nexzy Players only, and only once the score is shown on
   // the page (10+ ratings). Critics are never marked up (not our ratings).
   const players = scores?.players;
@@ -507,6 +542,7 @@ export default async function GameHubPage({
               scores={scores}
               reviews={reviews}
               guide={guide}
+              checklists={checklists}
             />
           </HubLiveProvider>
         ) : (
@@ -621,6 +657,7 @@ function MegaHub({
   scores,
   reviews,
   guide,
+  checklists,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
   profile: HubProfile;
@@ -629,6 +666,7 @@ function MegaHub({
   scores: HubScoresData | null;
   reviews: HubReviewPage;
   guide: HubEnginePage | null;
+  checklists: HubChecklistPage[];
 }) {
   const m = profile.modules;
   const short = profile.aliases[0] || game.name;
@@ -637,6 +675,44 @@ function MegaHub({
     (game.released ? `${game.released}T12:00:00.000Z` : null);
   const platformLine = game.platforms.slice(0, 4).join(" · ");
   const picks = dayOnePlatforms(game.platforms);
+  const hasGuide = !!guide?.enabled && !!guide.config;
+  const launched = !!launchAt && new Date(launchAt).getTime() <= Date.now();
+  const prices = profile.editions
+    .filter((e) => e.price != null)
+    .map((e) => ({ p: e.price as number, c: e.currency }));
+  const cheapest = prices.sort((a, b) => a.p - b.p)[0];
+  const facts = [
+    launchAt ? { label: "RELEASE", value: fmtHubDate(launchAt) } : null,
+    game.platforms[0]
+      ? { label: "PLATFORM", value: game.platforms.slice(0, 2).join(", ") }
+      : null,
+    cheapest
+      ? { label: "PRICE", value: priceText(cheapest.p, cheapest.c) }
+      : null,
+    game.genres[0] ? { label: "GENRE", value: game.genres[0] } : null,
+  ].filter((x): x is { label: string; value: string } => !!x);
+  // The "on this page" bar lists only what this hub shows, in page order.
+  const walkthrough = checklists.some(
+    (c) => c.key === WALKTHROUGH_KEY && c.items.length > 0,
+  );
+  const navItems: HubNavItem[] = [
+    ...(hasGuide ? [{ id: "guide", label: "Guide" }] : []),
+    ...(hasGuide && guide?.config?.maps.length
+      ? [{ id: "guide-map", label: "Map" }]
+      : []),
+    ...(walkthrough ? [{ id: "guide-walkthrough", label: "Walkthrough" }] : []),
+    // Same order as the page: ratings lead after launch, follow Predict before.
+    ...(m.scores && scores?.open ? [{ id: "scores", label: "Reviews" }] : []),
+    ...(trailers.length ? [{ id: "trailers", label: "Trailers" }] : []),
+    ...(m.scores && scores && !scores.open
+      ? [{ id: "scores", label: "Reviews" }]
+      : []),
+    ...(m.facts && profile.facts.length
+      ? [{ id: "everything-we-know", label: "Everything we know" }]
+      : []),
+    ...(m.faq && profile.faqs.length ? [{ id: "faq", label: "FAQ" }] : []),
+    ...(news.length ? [{ id: "latest", label: "News" }] : []),
+  ];
   // After launch the ratings lead the page; before it, they sit under Predict.
   const scoresPanel =
     m.scores && scores ? (
@@ -697,7 +773,8 @@ function MegaHub({
           >
             {profile.headline || game.name}
           </Heading>
-          {m.countdown && launchAt && (
+          {/* Before launch only: once it's out, the facts row has the date. */}
+          {m.countdown && launchAt && !launched && (
             <LaunchCountdown
               launchAt={launchAt}
               launchLabel={fmtHubDate(launchAt)}
@@ -707,6 +784,67 @@ function MegaHub({
             <Text fontSize="sm" color="#9aa3bf" mt={-2}>
               {profile.launchNote}
             </Text>
+          )}
+          {facts.length > 0 && (
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                base: "repeat(2, minmax(0, 1fr))",
+                md: `repeat(${facts.length}, minmax(0, 1fr))`,
+              }}
+              gap="1px"
+              bg="whiteAlpha.100"
+              borderRadius="12px"
+              overflow="hidden"
+            >
+              {facts.map((f) => (
+                <Box key={f.label} bg="#1a1f3a" px={3.5} py={3}>
+                  <Text
+                    fontSize="11px"
+                    fontWeight="700"
+                    letterSpacing="0.05em"
+                    color="#9aa3bf"
+                  >
+                    {f.label}
+                  </Text>
+                  <Text fontWeight="700" color="white" lineHeight="1.3">
+                    {f.value}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
+          )}
+          {(hasGuide || scores?.open) && (
+            <HStack gap={3} flexWrap="wrap">
+              {hasGuide && (
+                <a
+                  href="#guide"
+                  style={{
+                    background: "#FFD700",
+                    color: "#0b0e1d",
+                    fontWeight: 700,
+                    padding: "12px 20px",
+                    borderRadius: 999,
+                  }}
+                >
+                  Open the guide
+                </a>
+              )}
+              {scores?.open && (
+                <a
+                  href="#scores"
+                  style={{
+                    color: "#EDF2F7",
+                    fontWeight: 600,
+                    padding: "11px 20px",
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.22)",
+                  }}
+                >
+                  Rate {short}
+                </a>
+              )}
+            </HStack>
           )}
           {m.dayOne && <DayOneCard platforms={picks} />}
         </Box>
@@ -746,7 +884,15 @@ function MegaHub({
         />
       )}
 
-      {guide?.enabled && <GuideSections slug={game.slug} initial={guide} />}
+      <HubNav items={navItems} />
+
+      {hasGuide && guide && (
+        <GuideSections
+          slug={game.slug}
+          initial={guide}
+          checklists={checklists}
+        />
+      )}
 
       {scores?.open && scoresPanel}
 
@@ -800,13 +946,31 @@ function MegaHub({
         />
       )}
 
-      {m.editions && (
-        <EditionsTable gameName={short} editions={profile.editions} />
+      {((m.editions && profile.editions.length > 0) ||
+        (m.faq && profile.faqs.length > 0)) && (
+        <Box
+          display="grid"
+          gridTemplateColumns={{
+            base: "1fr",
+            lg:
+              m.editions &&
+              profile.editions.length &&
+              m.faq &&
+              profile.faqs.length
+                ? "minmax(0, 1fr) minmax(0, 1.5fr)"
+                : "1fr",
+          }}
+          gap={7}
+          alignItems="start"
+        >
+          {m.editions && (
+            <EditionsTable gameName={short} editions={profile.editions} />
+          )}
+          {m.faq && <HubFaqList gameName={short} faqs={profile.faqs} />}
+        </Box>
       )}
 
       <LatestNews gameName={short} items={news} />
-
-      {m.faq && <HubFaqList gameName={short} faqs={profile.faqs} />}
     </Box>
   );
 }

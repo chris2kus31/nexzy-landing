@@ -5,6 +5,7 @@
 import NextLink from "next/link";
 import NextImage from "next/image";
 import type { ReactNode } from "react";
+import { FiHelpCircle } from "react-icons/fi";
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import {
   entryPath,
@@ -415,7 +416,18 @@ export function GuideCard({
           <HStack gap={2} mb={1} wrap="wrap">
             <TypeChip config={config} type={card.type} />
             {card.status === "unconfirmed" && (
-              <UnconfirmedBadge label={config.features.unconfirmedLabel} />
+              // Cards stay quiet: a small mark with the template's label as
+              // its name; the full label shows on the entry page and panel.
+              <Box
+                as="span"
+                display="inline-flex"
+                color={G.warn}
+                role="img"
+                title={config.features.unconfirmedLabel}
+                aria-label={config.features.unconfirmedLabel}
+              >
+                <FiHelpCircle size={13} />
+              </Box>
             )}
           </HStack>
           {title}

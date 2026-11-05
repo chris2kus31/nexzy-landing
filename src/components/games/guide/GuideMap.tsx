@@ -356,7 +356,9 @@ export default function GuideMap({
           instance.addSource("pins", {
             type: "geojson",
             data: dataRef.current.main,
-            cluster: true,
+            // The small preview shows every pin as a dot: cluster bubbles
+            // read as big yellow blobs at that size.
+            cluster: !preview,
             clusterRadius: 36,
             clusterMaxZoom: Math.floor(z0 + map.maxZoom - 1),
           });
@@ -392,7 +394,7 @@ export default function GuideMap({
               "#1f7a4a",
               colorMatch,
             ] as never,
-            "circle-radius": 8,
+            "circle-radius": preview ? 4.5 : 8,
             "circle-opacity": [
               "case",
               ["==", ["get", "f"], 1],
@@ -430,6 +432,7 @@ export default function GuideMap({
               ],
               layout: {
                 "icon-image": "found-check",
+                "icon-size": preview ? 0.6 : 1,
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
               },
@@ -465,6 +468,7 @@ export default function GuideMap({
               filter: ["==", ["get", "f"], 1],
               layout: {
                 "icon-image": "found-check",
+                "icon-size": preview ? 0.6 : 1,
                 "icon-allow-overlap": true,
                 "icon-ignore-placement": true,
               },

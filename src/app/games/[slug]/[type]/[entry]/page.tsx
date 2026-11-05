@@ -110,12 +110,8 @@ export default async function GuideEntryPage({ params }: Params) {
         "@type": "ListItem",
         position: 2,
         name: t.plural,
-        // Only when the game HAS a map and this type sits on it; a crumb
-        // must never point crawlers at a 404.
-        item:
-          config.maps.length && t.pinnable
-            ? `${SITE_URL}/games/${slug}/map`
-            : `${SITE_URL}/games/${slug}`,
+        // The type's own list page (every page: true type has one).
+        item: `${SITE_URL}/games/${slug}/${type}`,
       },
       { "@type": "ListItem", position: 3, name: entry.title, item: url },
     ],
@@ -128,7 +124,8 @@ export default async function GuideEntryPage({ params }: Params) {
         dangerouslySetInnerHTML={{ __html: jsonLdString(crumbs) }}
       />
       <Text fontSize="sm" color={G.muted} mb={2}>
-        <NextLink href={`/games/${slug}`}>{d.short}</NextLink> / {t.plural}
+        <NextLink href={`/games/${slug}`}>{d.short}</NextLink> /{" "}
+        <NextLink href={`/games/${slug}/${type}`}>{t.plural}</NextLink>
       </Text>
       <HStack gap={2} mb={2} wrap="wrap">
         <TypeChip config={config} type={entry.type} />
