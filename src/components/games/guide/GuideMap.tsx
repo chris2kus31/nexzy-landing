@@ -8,7 +8,6 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NextLink from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Box,
   Button,
@@ -49,6 +48,11 @@ import {
 } from "@/lib/hub-engine/types";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { G } from "@/components/games/guide/GuideBits";
+import GuideEntryPanel from "@/components/games/guide/GuideEntryPanel";
+
+// Desktop = the details panel sits over the right side of the map.
+const WIDE = "(min-width: 48em)";
+const PANEL_W = 380;
 
 type Props = {
   slug: string;
@@ -77,7 +81,10 @@ export default function GuideMap({
   const [off, setOff] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HubCard[] | null>(null);
-  const router = useRouter();
+  // Entry slug whose details are open on the map (full map only).
+  const [detail, setDetail] = useState<string | null>(null);
+  const popupRef = useRef<import("maplibre-gl").Popup | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const { found, toggle, era, setEra, spoiler, setSpoiler } =
     useGuideProgress();
   const foundRef = useRef(found);
@@ -220,7 +227,8 @@ export default function GuideMap({
         m0.touchZoomRotate.disableRotation();
         m0.addControl(
           new maplibregl.NavigationControl({ showCompass: false }),
-          "top-right",
+          // The details panel covers the right side of the full map.
+          preview ? "top-right" : "top-left",
         );
         ml.current = m0;
         // Art failure self-heals through the same-origin copy; only when
@@ -341,11 +349,31 @@ export default function GuideMap({
     if (!ready || !pins || !focusPin || !ml.current) return;
     const row = pins.find((p) => p[0] === focusPin);
     if (!row) return;
+    // The full map opens the pin's details (a shared ?pin= link); a preview
+    // just frames the pin.
+    if (!preview && row[9]) {
+      openDetailRef.current(row[9]);
+      return;
+    }
     ml.current.flyTo({
       center: pxToLngLat(row[3], row[4], map.width, map.height),
-      zoom: baseZoom(map.width, map.height) + Math.min(1, map.maxZoom),
+      zoom: focusZoom(),
     });
-  }, [ready, pins, focusPin, map.width, map.height, map.maxZoom]);
+    // Only when the pin or the loaded pins change, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pins, focusPin]);
+
+  // A pin's close-up: about 3x the whole-map view of THIS box, so a small
+  // box (entry page) and a big one (full map) frame the spot the same way.
+  const focusZoom = useCallback(() => {
+    const m = ml.current;
+    if (!m) return 0;
+    const c = imageCorners(map.width, map.height);
+    const fit = m.cameraForBounds([c[3], c[1]], { padding: 12 })?.zoom;
+    const base =
+      typeof fit === "number" && Number.isFinite(fit) ? fit : m.getZoom();
+    return Math.min(m.getMaxZoom(), base + 1.6);
+  }, [map.width, map.height]);
 
   type PinProps = {
     pid: string;
@@ -397,10 +425,25 @@ export default function GuideMap({
         paint(next);
       };
       row.append(btn);
-      if (t?.page && p.s) {
+      if (p.s) {
         const a = document.createElement("a");
         a.textContent = "Details";
-        a.href = entryPath(slug, p.type, p.s);
+        // Preview maps go to the full map with this pin open; the full map
+        // opens the details beside the pin (a new-tab click still gets the
+        // entry's own page when it has one).
+        a.href = preview
+          ? `/games/${slug}/map?pin=${encodeURIComponent(p.pid)}`
+          : t?.page
+            ? entryPath(slug, p.type, p.s)
+            : "#";
+        if (!preview)
+          a.onclick = (ev) => {
+            if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) {
+              if (t?.page) return;
+            }
+            ev.preventDefault();
+            openDetailRef.current(p.s);
+          };
         a.style.cssText =
           "font-size:12px;color:#FFD700;text-decoration:underline";
         row.append(a);
@@ -415,6 +458,8 @@ export default function GuideMap({
         .setLngLat(at)
         .setDOMContent(el)
         .addTo(m);
+      popupRef.current?.remove();
+      popupRef.current = pop;
       // MapLibre's default popup chrome is WHITE; ours carries light text and
       // a gold link, so the chrome is restyled here (no global CSS to forget).
       const chrome = pop.getElement();
@@ -440,12 +485,70 @@ export default function GuideMap({
         .querySelectorAll<HTMLElement>(".maplibregl-popup-tip")
         .forEach((tip) => (tip.style.display = "none"));
     },
-    [config, slug, toggle],
+    [config, slug, toggle, preview],
   );
   // Map click handlers are bound once; they call the latest popup builder
   // through this ref (fresh toggle, signed-in state, config).
   const openPopupRef = useRef(openPopup);
   openPopupRef.current = openPopup;
+
+  // Open an entry's details on the map: close the popup, bring its pin into
+  // view beside the panel, and put ?pin= in the address so it can be shared.
+  const openDetail = useCallback(
+    (entrySlug: string) => {
+      popupRef.current?.remove();
+      popupRef.current = null;
+      setResults(null);
+      setDetail(entrySlug);
+      const row = pins?.find((p) => p[9] === entrySlug);
+      const m = ml.current;
+      const wide = window.matchMedia(WIDE).matches;
+      if (row && m) {
+        m.easeTo({
+          center: pxToLngLat(row[3], row[4], map.width, map.height),
+          zoom: Math.max(m.getZoom(), focusZoom()),
+          padding: wide
+            ? { right: PANEL_W + 24, left: 0, top: 0, bottom: 0 }
+            : 0,
+          duration: 500,
+        });
+      }
+      const u = new URL(window.location.href);
+      if (row) u.searchParams.set("pin", row[0]);
+      else u.searchParams.delete("pin");
+      window.history.replaceState(window.history.state, "", u);
+      if (!wide)
+        requestAnimationFrame(() =>
+          panelRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          }),
+        );
+    },
+    [pins, map.width, map.height, focusZoom],
+  );
+  const openDetailRef = useRef(openDetail);
+  openDetailRef.current = openDetail;
+
+  const closeDetail = useCallback(() => {
+    setDetail(null);
+    ml.current?.easeTo({
+      padding: { right: 0, left: 0, top: 0, bottom: 0 },
+      duration: 300,
+    });
+    const u = new URL(window.location.href);
+    if (u.searchParams.has("pin")) {
+      u.searchParams.delete("pin");
+      window.history.replaceState(window.history.state, "", u);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeDetail();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detail, closeDetail]);
 
   // Search: titles in this game's guide, then fly to the hit's pin.
   useEffect(() => {
@@ -492,16 +595,6 @@ export default function GuideMap({
     config.spoilerStages,
   ]);
 
-  const flyToEntry = (entryId: string) => {
-    const row = pins?.find((p) => p[1] === entryId);
-    if (!row || !ml.current) return;
-    setResults(null);
-    ml.current.flyTo({
-      center: pxToLngLat(row[3], row[4], map.width, map.height),
-      zoom: baseZoom(map.width, map.height) + Math.min(1, map.maxZoom),
-    });
-  };
-
   const counts = useMemo(() => {
     const c = new Map<string, number>();
     (pins ?? []).forEach((p) => c.set(p[2], (c.get(p[2]) ?? 0) + 1));
@@ -519,31 +612,31 @@ export default function GuideMap({
     <Flex gap={2} wrap="wrap" mb={3} align="center">
       {chips.length > 1 &&
         chips.map((t) => {
-        const on = !off.has(t.key);
-        return (
-          <Button
-            key={t.key}
-            size="xs"
-            borderRadius="999px"
-            variant="outline"
-            borderColor={on ? t.color : G.line}
-            color={on ? "white" : G.muted}
-            bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
-            onClick={() =>
-              setOff((prev) => {
-                const n = new Set(prev);
-                if (n.has(t.key)) n.delete(t.key);
-                else n.add(t.key);
-                return n;
-              })
-            }
-            aria-pressed={on}
-          >
-            <Box w="8px" h="8px" borderRadius="full" bg={t.color} mr={1.5} />
-            {t.plural} ({counts.get(t.key)})
-          </Button>
-        );
-      })}
+          const on = !off.has(t.key);
+          return (
+            <Button
+              key={t.key}
+              size="xs"
+              borderRadius="999px"
+              variant="outline"
+              borderColor={on ? t.color : G.line}
+              color={on ? "white" : G.muted}
+              bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
+              onClick={() =>
+                setOff((prev) => {
+                  const n = new Set(prev);
+                  if (n.has(t.key)) n.delete(t.key);
+                  else n.add(t.key);
+                  return n;
+                })
+              }
+              aria-pressed={on}
+            >
+              <Box w="8px" h="8px" borderRadius="full" bg={t.color} mr={1.5} />
+              {t.plural} ({counts.get(t.key)})
+            </Button>
+          );
+        })}
       {eraSwitch && config.eras.length > 0 && (
         <NativeSelect.Root size="xs" width="auto">
           <NativeSelect.Field
@@ -630,8 +723,8 @@ export default function GuideMap({
               {results.map((r) => {
                 const onMap = pins?.some((p) => p[1] === r.id);
                 const hasPage = !!typeOf(config, r.type)?.page;
-                // A hit with no pin still opens its entry page; only a hit
-                // with neither a pin nor a page does nothing on tap.
+                // Every hit opens its details on the map (flying to its pin
+                // when it has one); only a hit with neither does nothing.
                 const dead = !onMap && !hasPage;
                 return (
                   <Flex
@@ -645,9 +738,7 @@ export default function GuideMap({
                     _hover={dead ? {} : { bg: "rgba(255,255,255,0.05)" }}
                     cursor={dead ? "default" : "pointer"}
                     onClick={() => {
-                      if (onMap) flyToEntry(r.id);
-                      else if (hasPage)
-                        router.push(entryPath(slug, r.type, r.slug));
+                      if (!dead) openDetail(r.slug);
                     }}
                     opacity={dead ? 0.6 : 1}
                   >
@@ -677,82 +768,116 @@ export default function GuideMap({
       )}
       <Box
         position="relative"
-        ref={box}
         // The full map keeps the art's shape (no empty bands above or
-        // below), capped so it still fits the screen.
+        // below), capped so it still fits the screen. The details panel
+        // sits inside this same frame.
         {...(preview
-          ? { h: { base: "280px", md: "380px" } }
+          ? {}
           : {
               w: "100%",
-              aspectRatio: `${map.width} / ${map.height}`,
               maxW: `calc(78vh * ${map.width / map.height})`,
               mx: "auto",
             })}
-        minH={preview ? "300px" : "200px"}
-        borderRadius="14px"
-        overflow="hidden"
-        bg="#0a0f22"
-        border="1px solid"
-        borderColor={G.line}
       >
-        {(!ready || pins === null) && !failed && (
-          <Flex
-            position="absolute"
-            inset={0}
-            align="center"
-            justify="center"
-            zIndex={1}
-            pointerEvents="none"
+        <Box
+          position="relative"
+          ref={box}
+          {...(preview
+            ? { h: { base: "280px", md: "380px" } }
+            : { w: "100%", aspectRatio: `${map.width} / ${map.height}` })}
+          minH={preview ? "300px" : "200px"}
+          borderRadius="14px"
+          overflow="hidden"
+          bg="#0a0f22"
+          border="1px solid"
+          borderColor={G.line}
+        >
+          {(!ready || pins === null) && !failed && (
+            <Flex
+              position="absolute"
+              inset={0}
+              align="center"
+              justify="center"
+              zIndex={1}
+              pointerEvents="none"
+            >
+              <Spinner color={G.gold} />
+            </Flex>
+          )}
+          {failed && (
+            <Flex
+              position="absolute"
+              inset={0}
+              align="center"
+              justify="center"
+              zIndex={1}
+            >
+              <Text color={G.muted}>
+                The map could not load on this device.
+              </Text>
+            </Flex>
+          )}
+          {!failed && ready && pinsFailed && (
+            <Flex
+              position="absolute"
+              top={3}
+              left="50%"
+              transform="translateX(-50%)"
+              zIndex={2}
+              bg={G.panel}
+              border="1px solid"
+              borderColor={G.line}
+              borderRadius="999px"
+              px={4}
+              py={1.5}
+            >
+              <Text color={G.muted} fontSize="sm">
+                Pins could not load. Refresh the page to try again.
+              </Text>
+            </Flex>
+          )}
+          {preview && (
+            <Box position="absolute" bottom={3} right={3} zIndex={2}>
+              <NextLink href={`/games/${slug}/map`}>
+                <HStack
+                  bg={G.gold}
+                  color={G.ink}
+                  fontWeight="700"
+                  fontSize="sm"
+                  px={3}
+                  py={1.5}
+                  borderRadius="999px"
+                >
+                  <FiMaximize2 aria-hidden />
+                  <Text>Open full map</Text>
+                </HStack>
+              </NextLink>
+            </Box>
+          )}
+        </Box>
+        {!preview && detail && (
+          <Box
+            ref={panelRef}
+            position={{ base: "static", md: "absolute" }}
+            top={{ md: 3 }}
+            right={{ md: 3 }}
+            bottom={{ md: 3 }}
+            w={{ base: "100%", md: `${PANEL_W}px` }}
+            maxW={{ md: "calc(100% - 24px)" }}
+            mt={{ base: 3, md: 0 }}
+            zIndex={4}
+            overflowY={{ md: "auto" }}
+            borderRadius="14px"
           >
-            <Spinner color={G.gold} />
-          </Flex>
-        )}
-        {failed && (
-          <Flex
-            position="absolute"
-            inset={0}
-            align="center"
-            justify="center"
-            zIndex={1}
-          >
-            <Text color={G.muted}>The map could not load on this device.</Text>
-          </Flex>
-        )}
-        {!failed && ready && pinsFailed && (
-          <Flex
-            position="absolute"
-            top={3}
-            left="50%"
-            transform="translateX(-50%)"
-            zIndex={2}
-            bg={G.panel}
-            border="1px solid"
-            borderColor={G.line}
-            borderRadius="999px"
-            px={4}
-            py={1.5}
-          >
-            <Text color={G.muted} fontSize="sm">
-              Pins could not load. Refresh the page to try again.
-            </Text>
-          </Flex>
-        )}
-        {preview && (
-          <Box position="absolute" bottom={3} right={3} zIndex={2}>
-            <NextLink href={`/games/${slug}/map`}>
-              <HStack
-                bg={G.gold}
-                color={G.ink}
-                fontWeight="700"
-                fontSize="sm"
-                px={3}
-                py={1.5}
-                borderRadius="999px"
-              >
-                <FiMaximize2 aria-hidden />
-                <Text>Open full map</Text>
-              </HStack>
-            </NextLink>
+            <GuideEntryPanel
+              slug={slug}
+              config={config}
+              entrySlug={detail}
+              found={found}
+              onToggleFound={toggle}
+              onOpenEntry={openDetail}
+              onClose={closeDetail}
+            />
           </Box>
         )}
       </Box>
