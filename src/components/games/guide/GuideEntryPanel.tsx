@@ -1,11 +1,12 @@
 "use client";
 
 // An entry's details opened ON the map (side panel on desktop, a sheet under
-// the map on phones), so reading about a pin never leaves the map. Links to
+// the map on phones), so reading about a pin never leaves the map:
+// photo first, a one-line summary of the short facts, the longer fields,
+// then what links here with found progress and "Show on map". Links to
 // other entries inside the panel open in the panel too. The entry pages
-// still exist for search engines and sharing; the map just doesn't send
-// readers to them.
-import { useEffect, useState, type MouseEvent } from "react";
+// still exist for search engines; the map just doesn't send readers there.
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import NextImage from "next/image";
 import {
   Box,
@@ -16,22 +17,25 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { FiCheck, FiX } from "react-icons/fi";
+import { FiCheck, FiCircle, FiLink, FiMapPin, FiX } from "react-icons/fi";
 import {
+  entryPath,
   typeOf,
   type HubEntryFull,
+  type HubFieldDef,
+  type HubImage,
   type HubTemplateConfig,
 } from "@/lib/hub-engine/types";
 import {
   FieldValue,
   G,
   hasFieldValue,
-  LinkChips,
   TypeChip,
   UnconfirmedBadge,
 } from "@/components/games/guide/GuideBits";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const GREEN = "#7EE2A0";
 
 // Entries already opened this visit (small; cleared on reload). Only
 // successful loads are kept, so a failed fetch is retried next time.
@@ -43,18 +47,78 @@ type Props = {
   entrySlug: string;
   /** Entry ids the reader has marked found. */
   found: ReadonlySet<string>;
+  /** Entry ids that have a pin on the open map. */
+  pinned: ReadonlySet<string>;
   onToggleFound: (entryId: string) => void;
   onOpenEntry: (entrySlug: string) => void;
+  /** Light up these entries' pins on the map. */
+  onShowOnMap: (entryIds: string[], label: string) => void;
   onClose: () => void;
 };
+
+/** Short facts that read well in one line ("When: Night · Needs: Bombs"). */
+function shortFact(f: HubFieldDef, v: unknown): string | null {
+  if (!hasFieldValue(f, v)) return null;
+  switch (f.kind) {
+    case "select":
+      return f.options?.find((o) => o.key === v)?.label ?? null;
+    case "number":
+      return typeof v === "number" ? v.toLocaleString("en-US") : null;
+    case "boolean":
+      return v ? "Yes" : "No";
+    case "text":
+      return typeof v === "string" && v.length <= 40 ? v : null;
+    default:
+      return null;
+  }
+}
+
+function isImage(v: unknown): v is HubImage {
+  return (
+    !!v &&
+    typeof v === "object" &&
+    typeof (v as HubImage).url === "string" &&
+    (v as HubImage).url.startsWith("https://")
+  );
+}
+
+function IconBtn({
+  label,
+  onClick,
+  children,
+  overlay = false,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  overlay?: boolean;
+}) {
+  return (
+    <Button
+      size="xs"
+      variant="ghost"
+      color={G.text}
+      bg={overlay ? "rgba(11,14,29,0.72)" : "transparent"}
+      _hover={{ bg: overlay ? "rgba(11,14,29,0.9)" : "rgba(255,255,255,0.08)" }}
+      borderRadius="999px"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </Button>
+  );
+}
 
 export default function GuideEntryPanel({
   slug,
   config,
   entrySlug,
   found,
+  pinned,
   onToggleFound,
   onOpenEntry,
+  onShowOnMap,
   onClose,
 }: Props) {
   const key = `${slug}/${entrySlug}`;
@@ -62,10 +126,14 @@ export default function GuideEntryPanel({
     cache.get(key) ?? null,
   );
   const [failed, setFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
     const hit = cache.get(key);
     setFailed(false);
+    setCopied(false);
     if (hit) {
       setEntry(hit);
       return;
@@ -86,8 +154,20 @@ export default function GuideEntryPanel({
     return () => ctl.abort();
   }, [key, slug, entrySlug]);
 
-  // Links to other entries of this game (field links, related chips) open
-  // here instead of navigating. New-tab clicks still go to the page.
+  // Keyboard users land on the details, not back at the top of the page.
+  useEffect(() => {
+    if (entry) titleRef.current?.focus({ preventScroll: true });
+  }, [entry]);
+
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
+
+  // Links to other entries of this game (field links) open here instead of
+  // navigating. New-tab clicks still go to the page.
   const keepOnMap = (e: MouseEvent<HTMLDivElement>) => {
     if (e.defaultPrevented || e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -110,8 +190,57 @@ export default function GuideEntryPanel({
   };
 
   const t = entry ? typeOf(config, entry.type) : undefined;
+
+  // The shared link: this map with the pin open when it has a pin here,
+  // otherwise the entry's own page (when its type has one).
+  const copyLink = async () => {
+    if (!entry) return;
+    const here = new URL(window.location.href);
+    const url =
+      here.searchParams.has("pin") || !t?.page
+        ? here.toString()
+        : new URL(entryPath(slug, entry.type, entry.slug), here).toString();
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked: nothing to show */
+    }
+  };
+
+  const hero = entry ? (entry.media[0] ?? entry.image) : null;
+  const gallery = entry ? entry.media.filter((m) => m.url !== hero?.url) : [];
+  const facts: Array<{ key: string; label: string; text: string }> = [];
+  const longFields: HubFieldDef[] = [];
+  for (const f of t?.fields ?? []) {
+    const v = entry?.fields[f.key];
+    const s = facts.length < 3 ? shortFact(f, v) : null;
+    if (s) facts.push({ key: f.key, label: f.label, text: s });
+    else if (entry && hasFieldValue(f, v)) longFields.push(f);
+  }
+  const eraLabels = (entry?.eras ?? [])
+    .map((k) => config.eras.find((e) => e.key === k)?.label)
+    .filter((l): l is string => !!l);
   const isFound = !!entry && found.has(entry.id);
-  const typeLabel = (k: string) => typeOf(config, k)?.plural ?? k;
+
+  const actions = (overlay: boolean) => (
+    <HStack gap={1}>
+      {entry && (
+        <IconBtn
+          label={copied ? "Link copied" : "Copy link"}
+          onClick={copyLink}
+          overlay={overlay}
+        >
+          {copied ? <FiCheck color={GREEN} /> : <FiLink />}
+        </IconBtn>
+      )}
+      <IconBtn label="Close details" onClick={onClose} overlay={overlay}>
+        <FiX />
+      </IconBtn>
+    </HStack>
+  );
 
   return (
     <Box
@@ -122,34 +251,36 @@ export default function GuideEntryPanel({
       borderColor={G.line}
       borderRadius="14px"
       boxShadow="0 12px 40px rgba(0,0,0,0.5)"
-      overflowY="auto"
+      overflow="hidden"
       onClickCapture={keepOnMap}
     >
-      <Flex
-        position="sticky"
-        top={0}
-        zIndex={1}
-        bg={G.panel}
-        justify="space-between"
-        align="center"
-        px={4}
-        pt={3}
-        pb={2}
-        borderBottom="1px solid"
-        borderColor={G.line}
-      >
-        {entry ? <TypeChip config={config} type={entry.type} /> : <Box />}
-        <Button
-          size="xs"
-          variant="ghost"
-          color={G.text}
-          _hover={{ bg: "rgba(255,255,255,0.08)" }}
-          onClick={onClose}
-          aria-label="Close details"
+      {hero && isImage(hero) ? (
+        <Box position="relative" w="100%" h="200px" bg={G.card}>
+          <NextImage
+            src={hero.url}
+            alt={hero.alt ?? entry?.title ?? ""}
+            fill
+            sizes="380px"
+            style={{ objectFit: "cover" }}
+          />
+          <Box position="absolute" top={2} right={2}>
+            {actions(true)}
+          </Box>
+        </Box>
+      ) : (
+        <Flex
+          justify="space-between"
+          align="center"
+          px={4}
+          pt={3}
+          pb={2}
+          borderBottom="1px solid"
+          borderColor={G.line}
         >
-          <FiX />
-        </Button>
-      </Flex>
+          {entry ? <TypeChip config={config} type={entry.type} /> : <Box />}
+          {actions(false)}
+        </Flex>
+      )}
 
       {!entry && !failed && (
         <Flex justify="center" py={10}>
@@ -165,8 +296,16 @@ export default function GuideEntryPanel({
       {entry && (
         <Stack gap={4} p={4}>
           <Box>
+            {hero && (
+              <Box mb={1.5}>
+                <TypeChip config={config} type={entry.type} />
+              </Box>
+            )}
             <Text
               as="h2"
+              ref={titleRef}
+              tabIndex={-1}
+              outline="none"
               color="white"
               fontWeight="800"
               fontSize="xl"
@@ -174,6 +313,14 @@ export default function GuideEntryPanel({
             >
               {entry.title}
             </Text>
+            {(eraLabels.length > 0 || facts.length > 0) && (
+              <Text color={G.muted} fontSize="sm" mt={1.5}>
+                {[
+                  ...eraLabels,
+                  ...facts.map((f) => `${f.label}: ${f.text}`),
+                ].join("  ·  ")}
+              </Text>
+            )}
             {entry.status === "unconfirmed" && (
               <Box mt={2}>
                 <UnconfirmedBadge label={config.features.unconfirmedLabel} />
@@ -186,7 +333,7 @@ export default function GuideEntryPanel({
             size="sm"
             borderRadius="999px"
             fontWeight="700"
-            bg={isFound ? "#7EE2A0" : G.gold}
+            bg={isFound ? GREEN : G.gold}
             color={G.ink}
             _hover={{ opacity: 0.9 }}
             onClick={() => onToggleFound(entry.id)}
@@ -202,45 +349,23 @@ export default function GuideEntryPanel({
             </Text>
           )}
 
-          {entry.media[0] && (
-            <Box
-              position="relative"
-              w="100%"
-              h="180px"
-              borderRadius="10px"
-              overflow="hidden"
-            >
-              <NextImage
-                src={entry.media[0].url}
-                alt={entry.media[0].alt ?? entry.title}
-                fill
-                sizes="380px"
-                style={{ objectFit: "cover" }}
+          {longFields.map((f) => (
+            <Box key={f.key}>
+              <Text fontSize="sm" color={G.muted} fontWeight="700" mb={1}>
+                {f.label}
+              </Text>
+              <FieldValue
+                field={f}
+                value={entry.fields[f.key]}
+                gameSlug={slug}
+                config={config}
               />
             </Box>
-          )}
+          ))}
 
-          {(t?.fields ?? []).map((f) => {
-            const v = entry.fields[f.key];
-            if (!hasFieldValue(f, v)) return null;
-            return (
-              <Box key={f.key}>
-                <Text fontSize="sm" color={G.muted} fontWeight="700" mb={1}>
-                  {f.label}
-                </Text>
-                <FieldValue
-                  field={f}
-                  value={v}
-                  gameSlug={slug}
-                  config={config}
-                />
-              </Box>
-            );
-          })}
-
-          {entry.media.length > 1 && (
-            <HStack gap={2} overflowX="auto">
-              {entry.media.slice(1).map((m) => (
+          {gallery.length > 0 && (
+            <HStack gap={2} overflowX="auto" pb={1}>
+              {gallery.map((m) => (
                 <Box
                   key={m.url}
                   position="relative"
@@ -261,14 +386,107 @@ export default function GuideEntryPanel({
             </HStack>
           )}
 
-          {entry.linkedFrom.map((g) => (
-            <Box key={`${g.type}-${g.field}`}>
-              <Text fontSize="sm" color={G.muted} fontWeight="700" mb={2}>
-                Related {typeLabel(g.type).toLowerCase()}
-              </Text>
-              <LinkChips refs={g.entries} gameSlug={slug} config={config} />
-            </Box>
-          ))}
+          {entry.linkedFrom.map((g) => {
+            const gt = typeOf(config, g.type);
+            const total = g.entries.length;
+            const done = g.entries.filter((r) => found.has(r.id)).length;
+            const onMap = g.entries.filter((r) => pinned.has(r.id));
+            const label = gt?.plural ?? g.type;
+            return (
+              <Box key={`${g.type}-${g.field}`}>
+                <Flex align="center" justify="space-between" mb={1.5}>
+                  <HStack gap={2}>
+                    <Box
+                      w="9px"
+                      h="9px"
+                      borderRadius="full"
+                      bg={gt?.color ?? G.muted}
+                    />
+                    <Text fontSize="sm" color="white" fontWeight="700">
+                      {label}
+                    </Text>
+                    <Text fontSize="sm" color={G.muted}>
+                      {done} / {total}
+                    </Text>
+                  </HStack>
+                  {onMap.length > 0 && (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      borderRadius="999px"
+                      borderColor={G.line}
+                      color={G.text}
+                      _hover={{ bg: "rgba(255,255,255,0.06)" }}
+                      onClick={() =>
+                        onShowOnMap(
+                          onMap.map((r) => r.id),
+                          `${label} in ${entry.title}`,
+                        )
+                      }
+                    >
+                      <FiMapPin aria-hidden />
+                      Show on map
+                    </Button>
+                  )}
+                </Flex>
+                <Box
+                  h="4px"
+                  bg="rgba(255,255,255,0.08)"
+                  borderRadius="999px"
+                  overflow="hidden"
+                  mb={2}
+                >
+                  <Box
+                    h="100%"
+                    w={`${total ? Math.round((done / total) * 100) : 0}%`}
+                    bg={GREEN}
+                  />
+                </Box>
+                <Stack gap={0}>
+                  {g.entries.map((r) => {
+                    const f = found.has(r.id);
+                    return (
+                      <Flex
+                        key={r.id}
+                        align="center"
+                        gap={2}
+                        py={1.5}
+                        borderBottom="1px solid"
+                        borderColor="rgba(255,255,255,0.05)"
+                      >
+                        <Box
+                          as="button"
+                          flex="1"
+                          textAlign="left"
+                          color={f ? G.muted : G.text}
+                          textDecoration={f ? "line-through" : "none"}
+                          fontSize="sm"
+                          _hover={{ color: "white" }}
+                          onClick={() => onOpenEntry(r.slug)}
+                        >
+                          {r.title}
+                        </Box>
+                        <Box
+                          as="button"
+                          aria-label={
+                            f ? `Unmark ${r.title}` : `Mark ${r.title} found`
+                          }
+                          aria-pressed={f}
+                          title={f ? "Found" : "Mark found"}
+                          color={f ? GREEN : G.muted}
+                          _hover={{ color: f ? GREEN : "white" }}
+                          p={1}
+                          onClick={() => onToggleFound(r.id)}
+                        >
+                          {f ? <FiCheck /> : <FiCircle />}
+                        </Box>
+                      </Flex>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            );
+          })}
         </Stack>
       )}
     </Box>

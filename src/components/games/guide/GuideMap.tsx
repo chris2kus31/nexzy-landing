@@ -16,9 +16,17 @@ import {
   Input,
   NativeSelect,
   Spinner,
+  Stack,
   Text,
 } from "@chakra-ui/react";
-import { FiCheck, FiMaximize2, FiSearch } from "react-icons/fi";
+import {
+  FiCheck,
+  FiEye,
+  FiEyeOff,
+  FiMaximize2,
+  FiSearch,
+  FiX,
+} from "react-icons/fi";
 import type {
   Map as MlMap,
   GeoJSONSource,
@@ -50,6 +58,62 @@ import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { G } from "@/components/games/guide/GuideBits";
 import GuideEntryPanel from "@/components/games/guide/GuideEntryPanel";
 
+const GREEN = "#7EE2A0";
+
+/** MapLibre's popup chrome is WHITE by default; ours carries light text, so
+ *  every popup (pin card and hover label) is restyled here, in code. */
+function darkChrome(pop: import("maplibre-gl").Popup, compact = false) {
+  const chrome = pop.getElement();
+  if (!chrome) return;
+  const content = chrome.querySelector(
+    ".maplibregl-popup-content",
+  ) as HTMLElement | null;
+  if (content) {
+    content.style.background = "#11162c";
+    content.style.color = "#EDF2F7";
+    content.style.border = "1px solid rgba(255,255,255,0.16)";
+    content.style.borderRadius = compact ? "8px" : "10px";
+    content.style.boxShadow = "0 10px 30px rgba(0,0,0,0.55)";
+    if (compact) {
+      content.style.padding = "5px 10px";
+      content.style.fontSize = "13px";
+      content.style.fontWeight = "700";
+    }
+  }
+  const close = chrome.querySelector(
+    ".maplibregl-popup-close-button",
+  ) as HTMLElement | null;
+  if (close) {
+    close.style.color = "#EDF2F7";
+    close.style.fontSize = "16px";
+  }
+  // The white arrow tip can't be recolored per anchor side reliably; the
+  // popup offset keeps it clear of the pin without it.
+  chrome
+    .querySelectorAll<HTMLElement>(".maplibregl-popup-tip")
+    .forEach((tip) => (tip.style.display = "none"));
+}
+
+/** White check mark drawn once on a canvas (no sprite sheet needed). */
+function checkIcon(): ImageData | null {
+  const sz = 48;
+  const cv = document.createElement("canvas");
+  cv.width = sz;
+  cv.height = sz;
+  const cx = cv.getContext("2d");
+  if (!cx) return null;
+  cx.strokeStyle = "#ffffff";
+  cx.lineWidth = 7;
+  cx.lineCap = "round";
+  cx.lineJoin = "round";
+  cx.beginPath();
+  cx.moveTo(13, 25);
+  cx.lineTo(21, 33);
+  cx.lineTo(35, 16);
+  cx.stroke();
+  return cx.getImageData(0, 0, sz, sz);
+}
+
 // Desktop = the details panel sits over the right side of the map.
 const WIDE = "(min-width: 48em)";
 const PANEL_W = 380;
@@ -79,11 +143,39 @@ export default function GuideMap({
   const [pins, setPins] = useState<HubPinRow[] | null>(null);
   const [pinsFailed, setPinsFailed] = useState(false);
   const [off, setOff] = useState<Set<string>>(new Set());
+  // Hide pins already marked found (remembered per game in this browser).
+  const hideKey = `nexzy-guide-hidefound:${slug}`;
+  const [hideFound, setHideFound] = useState(false);
+  useEffect(() => {
+    try {
+      setHideFound(window.localStorage.getItem(hideKey) === "1");
+    } catch {
+      /* storage blocked: default stays off */
+    }
+  }, [hideKey]);
+  const flipHideFound = () =>
+    setHideFound((v) => {
+      try {
+        window.localStorage.setItem(hideKey, v ? "0" : "1");
+      } catch {
+        /* storage blocked: still works for this visit */
+      }
+      return !v;
+    });
+  // Pins lit up by "Show on map" in the details panel.
+  const [highlight, setHighlight] = useState<{
+    ids: Set<string>;
+    label: string;
+  } | null>(null);
+  const frame = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<HubCard[] | null>(null);
   // Entry slug whose details are open on the map (full map only).
   const [detail, setDetail] = useState<string | null>(null);
   const popupRef = useRef<import("maplibre-gl").Popup | null>(null);
+  // Repaints the open pin card's found button from the real state, so a
+  // save that fails (and rolls back) never leaves it saying "Found".
+  const popupPaintRef = useRef<(() => void) | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const { found, toggle, era, setEra, spoiler, setSpoiler } =
     useGuideProgress();
@@ -135,8 +227,9 @@ export default function GuideMap({
   const data = useMemo(() => {
     const feats = (pins ?? [])
       .filter(
-        ([, , type, , , , , stage, eras]) =>
+        ([, eid, type, , , , , stage, eras]) =>
           !off.has(type) &&
+          !(hideFound && found.has(eid) && !highlight?.ids.has(eid)) &&
           eraVisible(eras, eraSwitch ? era : null) &&
           (!spoilers || spoilerVisible(config.spoilerStages, stage, spoiler)),
       )
@@ -154,9 +247,21 @@ export default function GuideMap({
           s: eslug,
           c: confirmed,
           f: found.has(eid) ? 1 : 0,
+          h: highlight?.ids.has(eid) ? 1 : 0,
         },
       }));
-    return { type: "FeatureCollection" as const, features: feats };
+    // Lit-up pins ("Show on map") go to their own unclustered source so
+    // they never hide inside a cluster bubble.
+    return {
+      main: {
+        type: "FeatureCollection" as const,
+        features: feats.filter((f) => f.properties.h !== 1),
+      },
+      hl: {
+        type: "FeatureCollection" as const,
+        features: feats.filter((f) => f.properties.h === 1),
+      },
+    };
   }, [
     pins,
     off,
@@ -168,6 +273,8 @@ export default function GuideMap({
     map.width,
     map.height,
     found,
+    hideFound,
+    highlight,
   ]);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -230,6 +337,13 @@ export default function GuideMap({
           // The details panel covers the right side of the full map.
           preview ? "top-right" : "top-left",
         );
+        // Full screen takes the whole frame (map + details panel). Phones
+        // without the Fullscreen API get MapLibre's CSS fallback.
+        if (!preview && frame.current)
+          m0.addControl(
+            new maplibregl.FullscreenControl({ container: frame.current }),
+            "top-left",
+          );
         ml.current = m0;
         // Art failure self-heals through the same-origin copy; only when
         // that fails too does the map show the failed state.
@@ -241,7 +355,7 @@ export default function GuideMap({
           if (!alive || !instance) return;
           instance.addSource("pins", {
             type: "geojson",
-            data: dataRef.current,
+            data: dataRef.current.main,
             cluster: true,
             clusterRadius: 36,
             clusterMaxZoom: Math.floor(z0 + map.maxZoom - 1),
@@ -269,24 +383,92 @@ export default function GuideMap({
               ],
             },
           });
+          // One paint for normal and lit-up pins.
+          const pinPaint = {
+            // Found pins turn dark green with a check: clearly done.
+            "circle-color": [
+              "case",
+              ["==", ["get", "f"], 1],
+              "#1f7a4a",
+              colorMatch,
+            ] as never,
+            "circle-radius": 8,
+            "circle-opacity": [
+              "case",
+              ["==", ["get", "f"], 1],
+              0.95,
+              ["==", ["get", "c"], 1],
+              1,
+              0.6,
+            ],
+            "circle-stroke-width": ["case", ["==", ["get", "f"], 1], 2, 1.5],
+            "circle-stroke-color": [
+              "case",
+              ["==", ["get", "f"], 1],
+              GREEN,
+              "#ffffff",
+            ],
+          };
           instance.addLayer({
             id: "pins",
             type: "circle",
             source: "pins",
             filter: ["!", ["has", "point_count"]],
-            paint: {
-              "circle-color": colorMatch as never,
-              "circle-radius": 8,
-              "circle-opacity": ["case", ["==", ["get", "c"], 1], 1, 0.6],
-              "circle-stroke-width": ["case", ["==", ["get", "f"], 1], 3, 1.5],
-              "circle-stroke-color": [
-                "case",
+            paint: pinPaint as never,
+          });
+          const check = checkIcon();
+          if (check) {
+            instance.addImage("found-check", check, { pixelRatio: 3 });
+            instance.addLayer({
+              id: "pins-found",
+              type: "symbol",
+              source: "pins",
+              filter: [
+                "all",
+                ["!", ["has", "point_count"]],
                 ["==", ["get", "f"], 1],
-                "#7EE2A0",
-                "#ffffff",
               ],
+              layout: {
+                "icon-image": "found-check",
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+              },
+            });
+          }
+          instance.addSource("hl", {
+            type: "geojson",
+            data: dataRef.current.hl,
+          });
+          instance.addLayer({
+            id: "hl-halo",
+            type: "circle",
+            source: "hl",
+            paint: {
+              "circle-color": "#FFD700",
+              "circle-radius": 17,
+              "circle-opacity": 0.3,
+              "circle-stroke-color": "#FFD700",
+              "circle-stroke-width": 2,
             },
           });
+          instance.addLayer({
+            id: "hl-pins",
+            type: "circle",
+            source: "hl",
+            paint: pinPaint as never,
+          });
+          if (check)
+            instance.addLayer({
+              id: "hl-found",
+              type: "symbol",
+              source: "hl",
+              filter: ["==", ["get", "f"], 1],
+              layout: {
+                "icon-image": "found-check",
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+              },
+            });
           instance.on("click", "clusters", async (e: MapLayerMouseEvent) => {
             const f = e.features?.[0];
             const id = f?.properties?.cluster_id;
@@ -300,8 +482,39 @@ export default function GuideMap({
               zoom,
             });
           });
-          instance.on("click", "pins", (e: MapLayerMouseEvent) => {
+          // Desktop: the pin's name on hover, no click needed.
+          let hoverPop: import("maplibre-gl").Popup | null = null;
+          const canHover = window.matchMedia("(hover: hover)").matches;
+          if (canHover) {
+            instance.on(
+              "mousemove",
+              ["pins", "hl-pins"],
+              (e: MapLayerMouseEvent) => {
+                const f = e.features?.[0];
+                if (!f || f.geometry.type !== "Point" || !instance) return;
+                // No hover label over an open pin card.
+                if (popupRef.current?.isOpen()) return;
+                hoverPop ??= new maplibregl.Popup({
+                  closeButton: false,
+                  closeOnClick: false,
+                  offset: 12,
+                  maxWidth: "240px",
+                  className: "nexzy-guide-hover",
+                });
+                hoverPop
+                  .setLngLat(f.geometry.coordinates as [number, number])
+                  .setText(String(f.properties?.title ?? ""))
+                  .addTo(instance);
+                darkChrome(hoverPop, true);
+              },
+            );
+            instance.on("mouseleave", ["pins", "hl-pins"], () =>
+              hoverPop?.remove(),
+            );
+          }
+          instance.on("click", ["pins", "hl-pins"], (e: MapLayerMouseEvent) => {
             const f = e.features?.[0];
+            hoverPop?.remove();
             if (!f || f.geometry.type !== "Point" || !instance) return;
             openPopupRef.current(
               maplibregl,
@@ -310,7 +523,7 @@ export default function GuideMap({
               f.properties as PinProps,
             );
           });
-          for (const id of ["clusters", "pins"]) {
+          for (const id of ["clusters", "pins", "hl-pins"]) {
             instance.on(
               "mouseenter",
               id,
@@ -338,10 +551,17 @@ export default function GuideMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, map.url, map.width, map.height, map.minZoom, map.maxZoom]);
 
+  useEffect(() => {
+    if (popupRef.current?.isOpen()) popupPaintRef.current?.();
+  }, [found]);
+
   // Push filter / progress changes to the GPU source.
   useEffect(() => {
     if (!ready || !ml.current) return;
-    (ml.current.getSource("pins") as GeoJSONSource | undefined)?.setData(data);
+    (ml.current.getSource("pins") as GeoJSONSource | undefined)?.setData(
+      data.main,
+    );
+    (ml.current.getSource("hl") as GeoJSONSource | undefined)?.setData(data.hl);
   }, [data, ready]);
 
   // ?pin=<id>: fly there once pins are in.
@@ -352,7 +572,7 @@ export default function GuideMap({
     // The full map opens the pin's details (a shared ?pin= link); a preview
     // just frames the pin.
     if (!preview && row[9]) {
-      openDetailRef.current(row[9]);
+      openDetailRef.current(row[9], row[0]);
       return;
     }
     ml.current.flyTo({
@@ -368,11 +588,20 @@ export default function GuideMap({
   const focusZoom = useCallback(() => {
     const m = ml.current;
     if (!m) return 0;
-    const c = imageCorners(map.width, map.height);
-    const fit = m.cameraForBounds([c[3], c[1]], { padding: 12 })?.zoom;
-    const base =
-      typeof fit === "number" && Number.isFinite(fit) ? fit : m.getZoom();
-    return Math.min(m.getMaxZoom(), base + 1.6);
+    // Worked out from the box size (no camera call): the zoom that fits the
+    // whole art in this box, then about 3x closer, but never past 1:1 so
+    // the art is never blown up into blurry pixels.
+    const one = baseZoom(map.width, map.height);
+    const el = m.getContainer();
+    const fit =
+      one +
+      Math.log2(
+        Math.min(
+          Math.max(1, el.clientWidth - 24) / map.width,
+          Math.max(1, el.clientHeight - 24) / map.height,
+        ),
+      );
+    return Math.min(one, m.getMaxZoom(), fit + 1.6);
   }, [map.width, map.height]);
 
   type PinProps = {
@@ -418,6 +647,7 @@ export default function GuideMap({
         btn.style.cssText = `cursor:pointer;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;border:1px solid ${on ? "#7EE2A0" : "#FFD700"};background:${on ? "#7EE2A0" : "#FFD700"};color:#0b0e1d`;
       };
       paint();
+      popupPaintRef.current = () => paint();
       btn.onclick = () => {
         // Paint from the state we are moving to, not from a re-render.
         const next = !foundRef.current.has(p.eid);
@@ -442,7 +672,7 @@ export default function GuideMap({
               if (t?.page) return;
             }
             ev.preventDefault();
-            openDetailRef.current(p.s);
+            openDetailRef.current(p.s, p.pid);
           };
         a.style.cssText =
           "font-size:12px;color:#FFD700;text-decoration:underline";
@@ -460,30 +690,7 @@ export default function GuideMap({
         .addTo(m);
       popupRef.current?.remove();
       popupRef.current = pop;
-      // MapLibre's default popup chrome is WHITE; ours carries light text and
-      // a gold link, so the chrome is restyled here (no global CSS to forget).
-      const chrome = pop.getElement();
-      const content = chrome.querySelector(
-        ".maplibregl-popup-content",
-      ) as HTMLElement | null;
-      if (content) {
-        content.style.background = "#11162c";
-        content.style.border = "1px solid rgba(255,255,255,0.16)";
-        content.style.borderRadius = "10px";
-        content.style.boxShadow = "0 10px 30px rgba(0,0,0,0.55)";
-      }
-      const close = chrome.querySelector(
-        ".maplibregl-popup-close-button",
-      ) as HTMLElement | null;
-      if (close) {
-        close.style.color = "#EDF2F7";
-        close.style.fontSize = "16px";
-      }
-      // The white arrow tip can't be recolored per anchor side reliably;
-      // the offset above keeps the popup clear of the pin without it.
-      chrome
-        .querySelectorAll<HTMLElement>(".maplibregl-popup-tip")
-        .forEach((tip) => (tip.style.display = "none"));
+      darkChrome(pop);
     },
     [config, slug, toggle, preview],
   );
@@ -495,18 +702,26 @@ export default function GuideMap({
   // Open an entry's details on the map: close the popup, bring its pin into
   // view beside the panel, and put ?pin= in the address so it can be shared.
   const openDetail = useCallback(
-    (entrySlug: string) => {
+    (entrySlug: string, pinId?: string) => {
       popupRef.current?.remove();
       popupRef.current = null;
       setResults(null);
       setDetail(entrySlug);
-      const row = pins?.find((p) => p[9] === entrySlug);
+      // The exact pin when known (an entry can have several pins), else
+      // the entry's first pin on this map.
+      const row =
+        (pinId && pins?.find((p) => p[0] === pinId)) ||
+        pins?.find((p) => p[9] === entrySlug);
       const m = ml.current;
       const wide = window.matchMedia(WIDE).matches;
       if (row && m) {
         m.easeTo({
           center: pxToLngLat(row[3], row[4], map.width, map.height),
-          zoom: Math.max(m.getZoom(), focusZoom()),
+          // Keep the reader's own closer zoom, but never past 1:1 (blurry).
+          zoom: Math.min(
+            baseZoom(map.width, map.height),
+            Math.max(m.getZoom(), focusZoom()),
+          ),
           padding: wide
             ? { right: PANEL_W + 24, left: 0, top: 0, bottom: 0 }
             : 0,
@@ -516,7 +731,9 @@ export default function GuideMap({
       const u = new URL(window.location.href);
       if (row) u.searchParams.set("pin", row[0]);
       else u.searchParams.delete("pin");
-      window.history.replaceState(window.history.state, "", u);
+      // null state: Next copies its own history state and keeps
+      // useSearchParams in sync with the address.
+      window.history.replaceState(null, "", u);
       if (!wide)
         requestAnimationFrame(() =>
           panelRef.current?.scrollIntoView({
@@ -539,7 +756,9 @@ export default function GuideMap({
     const u = new URL(window.location.href);
     if (u.searchParams.has("pin")) {
       u.searchParams.delete("pin");
-      window.history.replaceState(window.history.state, "", u);
+      // null state: Next copies its own history state and keeps
+      // useSearchParams in sync with the address.
+      window.history.replaceState(null, "", u);
     }
   }, []);
 
@@ -600,6 +819,64 @@ export default function GuideMap({
     (pins ?? []).forEach((p) => c.set(p[2], (c.get(p[2]) ?? 0) + 1));
     return c;
   }, [pins]);
+  const foundCounts = useMemo(() => {
+    const c = new Map<string, number>();
+    (pins ?? []).forEach(
+      (p) => found.has(p[1]) && c.set(p[2], (c.get(p[2]) ?? 0) + 1),
+    );
+    return c;
+  }, [pins, found]);
+  // Pins the reader's era / spoiler choices allow (type chips and "Hide
+  // found" are overridden by Show on map, these are not).
+  const visibleRows = useMemo(
+    () =>
+      (pins ?? []).filter(
+        ([, , , , , , , stage, eras]) =>
+          eraVisible(eras, eraSwitch ? era : null) &&
+          (!spoilers || spoilerVisible(config.spoilerStages, stage, spoiler)),
+      ),
+    [pins, era, spoiler, eraSwitch, spoilers, config.spoilerStages],
+  );
+  const pinned = useMemo(
+    () => new Set(visibleRows.map((p) => p[1])),
+    [visibleRows],
+  );
+
+  // "Show on map" from the details panel: light those pins up and frame
+  // them, leaving room for the panel on desktop.
+  const showOnMap = useCallback(
+    (ids: string[], label: string) => {
+      const m = ml.current;
+      const rows = visibleRows.filter((p) => ids.includes(p[1]));
+      if (!m || !rows.length) return;
+      setHighlight({ ids: new Set(ids), label });
+      // A type switched off would hide them; switch it back on.
+      setOff((prev) => {
+        const n = new Set(prev);
+        rows.forEach((r) => n.delete(r[2]));
+        return n.size === prev.size ? prev : n;
+      });
+      const pts = rows.map((r) =>
+        pxToLngLat(r[3], r[4], map.width, map.height),
+      );
+      const lngs = pts.map((q) => q[0]);
+      const lats = pts.map((q) => q[1]);
+      // The map already keeps room for the open panel (its camera padding
+      // from openDetail), so only a small margin is added here.
+      m.fitBounds(
+        [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ],
+        {
+          padding: 60,
+          maxZoom: focusZoom(),
+          duration: 600,
+        },
+      );
+    },
+    [visibleRows, map.width, map.height, focusZoom],
+  );
 
   // Only types that have pins on this map get a chip; a chip that hides
   // nothing reads as a broken button.
@@ -610,33 +887,71 @@ export default function GuideMap({
 
   const controls = !preview && (
     <Flex gap={2} wrap="wrap" mb={3} align="center">
-      {chips.length > 1 &&
-        chips.map((t) => {
-          const on = !off.has(t.key);
-          return (
-            <Button
-              key={t.key}
-              size="xs"
-              borderRadius="999px"
-              variant="outline"
-              borderColor={on ? t.color : G.line}
-              color={on ? "white" : G.muted}
-              bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
-              onClick={() =>
-                setOff((prev) => {
-                  const n = new Set(prev);
-                  if (n.has(t.key)) n.delete(t.key);
-                  else n.add(t.key);
-                  return n;
-                })
-              }
-              aria-pressed={on}
-            >
-              <Box w="8px" h="8px" borderRadius="full" bg={t.color} mr={1.5} />
-              {t.plural} ({counts.get(t.key)})
-            </Button>
-          );
-        })}
+      {chips.map((t) => {
+        const on = !off.has(t.key);
+        const total = counts.get(t.key) ?? 0;
+        const done = foundCounts.get(t.key) ?? 0;
+        return (
+          <Button
+            key={t.key}
+            size="xs"
+            h="auto"
+            py={1.5}
+            borderRadius="10px"
+            variant="outline"
+            borderColor={on ? t.color : G.line}
+            color={on ? "white" : G.muted}
+            bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
+            title={on ? `Hide ${t.plural}` : `Show ${t.plural}`}
+            onClick={() =>
+              setOff((prev) => {
+                const n = new Set(prev);
+                if (n.has(t.key)) n.delete(t.key);
+                else n.add(t.key);
+                return n;
+              })
+            }
+            aria-pressed={on}
+          >
+            <Stack gap={1} align="stretch">
+              <HStack gap={1.5}>
+                <Box w="8px" h="8px" borderRadius="full" bg={t.color} />
+                <Text>{t.plural}</Text>
+                <Text color={G.muted} fontWeight="600">
+                  {done} / {total}
+                </Text>
+              </HStack>
+              <Box
+                h="3px"
+                bg="rgba(255,255,255,0.1)"
+                borderRadius="999px"
+                overflow="hidden"
+              >
+                <Box
+                  h="100%"
+                  w={`${total ? Math.round((done / total) * 100) : 0}%`}
+                  bg={GREEN}
+                />
+              </Box>
+            </Stack>
+          </Button>
+        );
+      })}
+      {(pins?.length ?? 0) > 0 && (
+        <Button
+          size="xs"
+          borderRadius="999px"
+          variant="outline"
+          borderColor={hideFound ? GREEN : G.line}
+          color={hideFound ? "white" : G.muted}
+          bg={hideFound ? "rgba(126,226,160,0.12)" : "transparent"}
+          onClick={flipHideFound}
+          aria-pressed={hideFound}
+        >
+          {hideFound ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
+          Hide found
+        </Button>
+      )}
       {eraSwitch && config.eras.length > 0 && (
         <NativeSelect.Root size="xs" width="auto">
           <NativeSelect.Field
@@ -768,6 +1083,35 @@ export default function GuideMap({
       )}
       <Box
         position="relative"
+        ref={frame}
+        // In full screen (native or MapLibre's CSS fallback) the map fills
+        // the frame and the phone sheet floats over the bottom of the map.
+        css={{
+          "&:fullscreen, &.maplibregl-pseudo-fullscreen": {
+            maxWidth: "none",
+            background: "#0a0f22",
+          },
+          "&:fullscreen > [data-map-box], &.maplibregl-pseudo-fullscreen > [data-map-box]":
+            {
+              height: "100%",
+              aspectRatio: "auto",
+              borderRadius: 0,
+              border: 0,
+            },
+          "@media (max-width: 47.99em)": {
+            "&:fullscreen > [data-panel], &.maplibregl-pseudo-fullscreen > [data-panel]":
+              {
+                position: "absolute",
+                left: "12px",
+                right: "12px",
+                bottom: "12px",
+                width: "auto",
+                maxHeight: "55%",
+                overflowY: "auto",
+                marginTop: 0,
+              },
+          },
+        }}
         // The full map keeps the art's shape (no empty bands above or
         // below), capped so it still fits the screen. The details panel
         // sits inside this same frame.
@@ -782,6 +1126,7 @@ export default function GuideMap({
         <Box
           position="relative"
           ref={box}
+          data-map-box=""
           {...(preview
             ? { h: { base: "280px", md: "380px" } }
             : { w: "100%", aspectRatio: `${map.width} / ${map.height}` })}
@@ -836,6 +1181,46 @@ export default function GuideMap({
               </Text>
             </Flex>
           )}
+          {highlight && (
+            <Flex
+              position="absolute"
+              // Top left beside the zoom buttons: the details panel owns the
+              // right side, and the label must stay clickable.
+              top={3}
+              left="56px"
+              zIndex={5}
+              align="center"
+              gap={2}
+              bg={G.panel}
+              border="1px solid"
+              borderColor="rgba(255,215,0,0.5)"
+              borderRadius="999px"
+              pl={4}
+              pr={1}
+              py={1}
+              maxW={{
+                base: "calc(100% - 70px)",
+                md: detail
+                  ? `calc(100% - ${PANEL_W + 90}px)`
+                  : "calc(100% - 70px)",
+              }}
+            >
+              <Text color="white" fontSize="sm" truncate>
+                {highlight.label}
+              </Text>
+              <Button
+                size="xs"
+                variant="ghost"
+                color={G.text}
+                borderRadius="999px"
+                _hover={{ bg: "rgba(255,255,255,0.08)" }}
+                onClick={() => setHighlight(null)}
+                aria-label="Clear highlight"
+              >
+                <FiX />
+              </Button>
+            </Flex>
+          )}
           {preview && (
             <Box position="absolute" bottom={3} right={3} zIndex={2}>
               <NextLink href={`/games/${slug}/map`}>
@@ -858,6 +1243,7 @@ export default function GuideMap({
         {!preview && detail && (
           <Box
             ref={panelRef}
+            data-panel=""
             position={{ base: "static", md: "absolute" }}
             top={{ md: 3 }}
             right={{ md: 3 }}
@@ -870,12 +1256,15 @@ export default function GuideMap({
             borderRadius="14px"
           >
             <GuideEntryPanel
+              key={detail}
               slug={slug}
               config={config}
               entrySlug={detail}
               found={found}
+              pinned={pinned}
               onToggleFound={toggle}
               onOpenEntry={openDetail}
+              onShowOnMap={showOnMap}
               onClose={closeDetail}
             />
           </Box>
