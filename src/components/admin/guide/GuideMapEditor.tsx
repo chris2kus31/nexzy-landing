@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { FiTrash2, FiX } from "react-icons/fi";
 import {
+  artErrorRetry,
   fitWholeArt,
   loadMapLibre,
   mapArtUrl,
@@ -168,6 +169,15 @@ export default function GuideMapEditor({
       });
       instance = m0;
       fitWholeArt(m0, corners[3], corners[1]);
+      m0.on(
+        "error",
+        artErrorRetry(m0, map.url, corners, () => {
+          if (alive)
+            setErr([
+              "The map art could not load. Check the CDN CORS setting, then reload.",
+            ]);
+        }),
+      );
       m0.addControl(
         new maplibregl.NavigationControl({ showCompass: false }),
         "top-right",
@@ -435,7 +445,11 @@ export default function GuideMapEditor({
       <Problems lines={err} />
       <Box
         ref={box}
-        h="70vh"
+        w="100%"
+        aspectRatio={map ? `${map.width} / ${map.height}` : undefined}
+        h={map ? undefined : "70vh"}
+        maxW={map ? `calc(72vh * ${map.width / map.height})` : undefined}
+        mx="auto"
         minH="420px"
         borderRadius="12px"
         overflow="hidden"

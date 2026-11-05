@@ -102,6 +102,15 @@ const nextConfig: NextConfig = {
         destination: "/aasa",
       },
       {
+        // Same-origin fallback for guide MAP ART. The map draws art with
+        // WebGL, which needs a CORS-approved copy from the CDN; when a
+        // CloudFront location serves a response without the CORS header
+        // (seen in prod: one pop lagging the SimpleCORS policy), the map
+        // retries through this path. Same origin = no CORS involved at all.
+        source: "/cdn-hub/:path*",
+        destination: "https://cdn.nexzyapp.com/hub/:path*",
+      },
+      {
         source: "/.well-known/assetlinks.json",
         destination: "/android-assetlinks",
       },

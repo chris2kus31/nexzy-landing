@@ -32,6 +32,7 @@ import {
   pxToLngLat,
 } from "@/lib/hub-engine/coords";
 import {
+  artErrorRetry,
   fitWholeArt,
   loadMapLibre,
   mapArtUrl,
@@ -222,12 +223,12 @@ export default function GuideMap({
           "top-right",
         );
         ml.current = m0;
-        // The art failing (for example the CDN not sending CORS headers) must
-        // show the failed state, not a blank map behind a vanished spinner.
-        m0.on("error", (ev) => {
-          if ((ev as { sourceId?: string }).sourceId === "art" && alive)
-            setFailed(true);
-        });
+        // Art failure self-heals through the same-origin copy; only when
+        // that fails too does the map show the failed state.
+        m0.on(
+          "error",
+          artErrorRetry(m0, map.url, corners, () => alive && setFailed(true)),
+        );
         m0.on("load", () => {
           if (!alive || !instance) return;
           instance.addSource("pins", {
@@ -507,9 +508,17 @@ export default function GuideMap({
     return c;
   }, [pins]);
 
+  // Only types that have pins on this map get a chip; a chip that hides
+  // nothing reads as a broken button.
+  const chips = useMemo(
+    () => pinnable.filter((t) => (counts.get(t.key) ?? 0) > 0),
+    [pinnable, counts],
+  );
+
   const controls = !preview && (
     <Flex gap={2} wrap="wrap" mb={3} align="center">
-      {pinnable.map((t) => {
+      {chips.length > 1 &&
+        chips.map((t) => {
         const on = !off.has(t.key);
         return (
           <Button
@@ -531,7 +540,7 @@ export default function GuideMap({
             aria-pressed={on}
           >
             <Box w="8px" h="8px" borderRadius="full" bg={t.color} mr={1.5} />
-            {t.plural} {counts.get(t.key) ? `(${counts.get(t.key)})` : ""}
+            {t.plural} ({counts.get(t.key)})
           </Button>
         );
       })}
@@ -669,12 +678,17 @@ export default function GuideMap({
       <Box
         position="relative"
         ref={box}
-        h={
-          preview
-            ? { base: "280px", md: "380px" }
-            : { base: "70vh", md: "75vh" }
-        }
-        minH="300px"
+        // The full map keeps the art's shape (no empty bands above or
+        // below), capped so it still fits the screen.
+        {...(preview
+          ? { h: { base: "280px", md: "380px" } }
+          : {
+              w: "100%",
+              aspectRatio: `${map.width} / ${map.height}`,
+              maxW: `calc(78vh * ${map.width / map.height})`,
+              mx: "auto",
+            })}
+        minH={preview ? "300px" : "200px"}
         borderRadius="14px"
         overflow="hidden"
         bg="#0a0f22"

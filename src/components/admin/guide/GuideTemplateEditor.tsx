@@ -897,13 +897,7 @@ function MapsEditor({
             borderRadius="10px"
             wrap="wrap"
           >
-            <img
-              src={m.url}
-              alt=""
-              width={120}
-              crossOrigin="anonymous"
-              style={{ borderRadius: 6 }}
-            />
+            <img src={m.url} alt="" width={120} style={{ borderRadius: 6 }} />
             <SimpleGrid columns={{ base: 1, md: 4 }} gap={3} flex="1">
               <Labeled label="Name">
                 <TextIn

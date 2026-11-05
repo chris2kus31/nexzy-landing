@@ -60,3 +60,50 @@ export function fitWholeArt(
   relax(true);
   m.on("resize", () => relax(false));
 }
+
+const CDN_HUB = "https://cdn.nexzyapp.com/hub/";
+
+/** Same-origin copy of a CDN art URL (the /cdn-hub rewrite in
+ *  next.config.ts), or null when the art is not on our CDN. Same origin
+ *  means CORS never applies, whatever a CloudFront location sends. */
+export function mapArtFallbackUrl(url: string): string | null {
+  return url.startsWith(CDN_HUB)
+    ? "/cdn-hub/" + url.slice(CDN_HUB.length)
+    : null;
+}
+
+/**
+ * Handler for the map's "error" event that makes the art self-healing:
+ * if the CDN copy is refused (a CloudFront location serving without the
+ * CORS header), the art is retried once through the same-origin /cdn-hub
+ * path. Only when that also fails (or there is no fallback) does onDead
+ * run, which shows the map's failed state.
+ */
+export function artErrorRetry(
+  m: import("maplibre-gl").Map,
+  artUrl: string,
+  coordinates: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ],
+  onDead: () => void,
+): (ev: unknown) => void {
+  let tried = false;
+  return (ev: unknown) => {
+    if ((ev as { sourceId?: string }).sourceId !== "art") return;
+    const fb = mapArtFallbackUrl(artUrl);
+    if (!tried && fb) {
+      tried = true;
+      const src = m.getSource("art") as
+        | import("maplibre-gl").ImageSource
+        | undefined;
+      if (src) {
+        src.updateImage({ url: fb, coordinates });
+        return;
+      }
+    }
+    onDead();
+  };
+}
