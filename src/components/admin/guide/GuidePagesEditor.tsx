@@ -106,6 +106,11 @@ const KINDS: { kind: BlockKind; label: string; hint: string }[] = [
     label: "Entry list",
     hint: "Cards or a list, e.g. newest finds",
   },
+  {
+    kind: "steps",
+    label: "Walkthrough steps",
+    hint: "This page's sub-pages as steps: Up next / Done / reward",
+  },
 ];
 
 const EMPTY_FILTER: HubFilter = { types: [], tags: [], eras: [], statuses: [] };
@@ -161,6 +166,8 @@ function blankBlock(kind: BlockKind, config: HubTemplateConfig): HubBlock {
         limit: 8,
         sort: "newest",
       };
+    case "steps":
+      return { ...base, kind, title: null, show: "next" };
   }
 }
 
@@ -827,7 +834,7 @@ function BlocksEditor({
 }) {
   const kinds = KINDS.filter(
     (k) =>
-      !(nested && k.kind === "dropdown") &&
+      !(nested && (k.kind === "dropdown" || k.kind === "steps")) &&
       !(k.kind === "map" && !config.maps.length) &&
       !(k.kind === "checklist" && !config.checklists.length),
   );
@@ -1127,6 +1134,41 @@ function BlockCard({
               }))}
             />
           </Box>
+        )}
+        {b.kind === "steps" && (
+          <>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+              <Labeled label="Title (optional)">
+                <TextIn
+                  value={b.title ?? ""}
+                  maxLength={120}
+                  onChange={(t) => onChange({ ...b, title: t || null })}
+                />
+              </Labeled>
+              <Labeled label="Show">
+                <Pick
+                  label="Show"
+                  value={b.show}
+                  onChange={(s) =>
+                    onChange({ ...b, show: s as "next" | "all" })
+                  }
+                  options={[
+                    {
+                      value: "next",
+                      label: "Next 5 steps (around the reader)",
+                    },
+                    { value: "all", label: "All steps" },
+                  ]}
+                />
+              </Labeled>
+            </SimpleGrid>
+            <Text color={C.muted} fontSize="sm" mt={2}>
+              Shows the pages under this page as numbered steps. Each step page
+              gets Step X of N and Previous / Next step. Link a mission on a
+              step page (This page is about) for its reward, Mark done and map
+              pin. Use it on a top-level page.
+            </Text>
+          </>
         )}
         {b.kind === "entries" && (
           <>

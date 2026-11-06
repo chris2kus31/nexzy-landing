@@ -8,14 +8,7 @@
 import { useState } from "react";
 import NextLink from "next/link";
 import NextImage from "next/image";
-import {
-  Box,
-  Flex,
-  Heading,
-  SimpleGrid,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Flex, Heading, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import {
   FiAlertTriangle,
   FiCheck,
@@ -32,15 +25,21 @@ import {
   spoilerVisible,
   typeOf,
   type HubCaptionedImage,
+  type HubPageNode,
   type HubResolvedBlock,
   type HubTableRow,
   type HubTemplateConfig,
 } from "@/lib/hub-engine/types";
-import { G, GuideCard, GuideMarkdown } from "@/components/games/guide/GuideBits";
+import {
+  G,
+  GuideCard,
+  GuideMarkdown,
+} from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
 import GuideVideo from "@/components/games/guide/GuideVideo";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { useVisible } from "@/components/games/guide/GuideSections";
+import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
 
 const GREEN = "#7EE2A0";
 
@@ -48,16 +47,27 @@ export default function GuideBlocks({
   slug,
   config,
   blocks,
+  pages = [],
+  pageSlug = null,
 }: {
   slug: string;
   config: HubTemplateConfig;
   blocks: HubResolvedBlock[];
+  /** The guide's page tree + this page (for the Steps block). */
+  pages?: HubPageNode[];
+  pageSlug?: string | null;
 }) {
   return (
     <Stack gap={6}>
       {blocks.map((b) => (
         <Gate key={b.id} config={config} block={b}>
-          <Block slug={slug} config={config} b={b} />
+          <Block
+            slug={slug}
+            config={config}
+            b={b}
+            pages={pages}
+            pageSlug={pageSlug}
+          />
         </Gate>
       ))}
     </Stack>
@@ -120,12 +130,30 @@ function Block({
   slug,
   config,
   b,
+  pages = [],
+  pageSlug = null,
 }: {
   slug: string;
   config: HubTemplateConfig;
   b: HubResolvedBlock;
+  pages?: HubPageNode[];
+  pageSlug?: string | null;
 }) {
   switch (b.kind) {
+    case "steps": {
+      // This page's sub-pages as walkthrough steps.
+      const node = pages.find((p) => p.slug === pageSlug);
+      if (!node) return null;
+      return (
+        <StepCards
+          config={config}
+          title={b.title}
+          show={b.show}
+          steps={stepsOfNode(slug, node)}
+          allHref="#all-steps"
+        />
+      );
+    }
     case "text":
       return <GuideMarkdown text={b.markdown} />;
     case "tip":
@@ -240,8 +268,14 @@ function Tip({
   markdown: string;
 }) {
   const [shown, setShown] = useState(false);
-  const color = style === "warning" ? "#FFB86B" : style === "spoiler" ? "#c792ea" : G.gold;
-  const Icon = style === "warning" ? FiAlertTriangle : style === "spoiler" ? FiEye : FiInfo;
+  const color =
+    style === "warning" ? "#FFB86B" : style === "spoiler" ? "#c792ea" : G.gold;
+  const Icon =
+    style === "warning"
+      ? FiAlertTriangle
+      : style === "spoiler"
+        ? FiEye
+        : FiInfo;
   return (
     <Box
       bg="rgba(255,255,255,0.03)"
@@ -250,9 +284,20 @@ function Tip({
       borderRadius="10px"
       p={4}
     >
-      <Flex align="center" gap={2} mb={2} color={color} fontWeight="800" fontSize="sm">
+      <Flex
+        align="center"
+        gap={2}
+        mb={2}
+        color={color}
+        fontWeight="800"
+        fontSize="sm"
+      >
         <Icon aria-hidden />
-        {style === "warning" ? "Heads up" : style === "spoiler" ? "Spoiler" : "Tip"}
+        {style === "warning"
+          ? "Heads up"
+          : style === "spoiler"
+            ? "Spoiler"
+            : "Tip"}
       </Flex>
       {style === "spoiler" && !shown ? (
         <Box
@@ -378,7 +423,12 @@ function ManualTable({
         </Heading>
       )}
       <Box {...tableBox}>
-        <Box as="table" w="100%" fontSize="sm" style={{ borderCollapse: "collapse" }}>
+        <Box
+          as="table"
+          w="100%"
+          fontSize="sm"
+          style={{ borderCollapse: "collapse" }}
+        >
           <thead>
             <tr>
               {columns.map((c, i) => (
@@ -426,7 +476,8 @@ function Tracker({
   const shown = rows.filter(
     (r) =>
       eraVisible(r.eras, eraSwitch ? era : null) &&
-      (!spoilers || spoilerVisible(config.spoilerStages, r.spoilerStage, spoiler)),
+      (!spoilers ||
+        spoilerVisible(config.spoilerStages, r.spoilerStage, spoiler)),
   );
   const done = shown.filter((r) => found.has(r.id)).length;
   const hidden = rows.length - shown.length;
@@ -447,7 +498,12 @@ function Tracker({
         )}
       </Flex>
       <Box {...tableBox}>
-        <Box as="table" w="100%" fontSize="sm" style={{ borderCollapse: "collapse" }}>
+        <Box
+          as="table"
+          w="100%"
+          fontSize="sm"
+          style={{ borderCollapse: "collapse" }}
+        >
           <thead>
             <tr>
               {labels.map((l, i) => (
@@ -643,7 +699,13 @@ function EntriesBlock({
       {b.style === "list" ? (
         <Stack gap={2}>
           {items.map((c) => (
-            <GuideCard key={c.id} card={c} config={config} gameSlug={slug} minimal />
+            <GuideCard
+              key={c.id}
+              card={c}
+              config={config}
+              gameSlug={slug}
+              minimal
+            />
           ))}
         </Stack>
       ) : (

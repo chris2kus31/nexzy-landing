@@ -695,9 +695,12 @@ function MegaHub({
   const storyKeys = new Set(
     (guide?.config?.checklists ?? []).filter(isStory).map((c) => c.key),
   );
-  const walkthrough =
-    !!guide?.pages?.some((p) => p.story && p.children.length > 0) ||
-    checklists.some((c) => storyKeys.has(c.key) && c.items.length > 0);
+  // A story page is THE walkthrough once it exists (its steps, even none
+  // yet); the story checklist only stands in for games without one.
+  const storyPage = guide?.pages?.find((p) => p.story);
+  const walkthrough = storyPage
+    ? storyPage.children.length > 0
+    : checklists.some((c) => storyKeys.has(c.key) && c.items.length > 0);
   const navItems: HubNavItem[] = [
     ...(hasGuide ? [{ id: "guide", label: "Guide" }] : []),
     ...(hasGuide && guide?.config?.maps.length

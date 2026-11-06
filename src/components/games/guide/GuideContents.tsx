@@ -49,19 +49,28 @@ export function useGuideGroups(
       ? fallback
       : p.title;
   const groups: Group[] = [];
-  const story = pages.find((p) => p.story && p.children.length > 0);
+  // The Story page is the walkthrough (its steps, numbered).
+  const story = pages.find((p) => p.story);
   if (story)
     groups.push({
       key: "walkthrough",
       title: story.title,
       href: guidePath(slug, story.slug),
-      links: story.children.map((c, i) => ({
-        key: c.slug,
-        href: guidePath(slug, c.slug),
-        label: masked(c, "Spoiler step"),
-        n: i + 1,
-        done: !!c.entry && found.has(c.entry.id),
-      })),
+      links: story.children.length
+        ? story.children.map((c, i) => ({
+            key: c.slug,
+            href: guidePath(slug, c.slug),
+            label: masked(c, "Spoiler step"),
+            n: i + 1,
+            done: !!c.entry && found.has(c.entry.id),
+          }))
+        : [
+            {
+              key: story.slug,
+              href: guidePath(slug, story.slug),
+              label: story.title,
+            },
+          ],
     });
   const others = pages.filter((p) => p !== story);
   if (others.length)
@@ -74,11 +83,15 @@ export function useGuideGroups(
           href: guidePath(slug, p.slug),
           label: masked(p, "Spoiler page"),
         },
-        ...p.children.map((c) => ({
+        ...p.children.map((c, i) => ({
           key: c.slug,
           href: guidePath(slug, c.slug),
-          label: masked(c, "Spoiler page"),
+          label: masked(c, p.steps ? "Spoiler step" : "Spoiler page"),
           child: true,
+          // Sub-pages of a Steps page are numbered, with Done marks.
+          ...(p.steps
+            ? { n: i + 1, done: !!c.entry && found.has(c.entry.id) }
+            : {}),
         })),
       ]),
     });

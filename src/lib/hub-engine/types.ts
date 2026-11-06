@@ -224,8 +224,11 @@ export interface HubPageNode {
   summary: string | null;
   spoilerStage: string | null;
   eras: string[];
-  /** Story walkthrough page: its children are the steps (older APIs omit). */
+  /** Story walkthrough page: its children are the steps and the hub strip
+   *  shows them (older APIs omit). */
   story?: boolean;
+  /** Its children are walkthrough steps (story page or a Steps block). */
+  steps?: boolean;
   /** The entry this page is about (a step's mission), public only. */
   entry?: HubCard | null;
   children: HubPageNode[];
@@ -245,7 +248,8 @@ export type BlockKind =
   | "tip"
   | "map"
   | "checklist"
-  | "entries";
+  | "entries"
+  | "steps";
 
 interface BlockBase {
   id: string;
@@ -296,6 +300,12 @@ export type HubBlock = BlockBase &
         limit: number;
         sort: "order" | "newest" | "title";
       }
+    | {
+        /** This page's sub-pages as walkthrough steps. */
+        kind: "steps";
+        title: string | null;
+        show: "next" | "all";
+      }
   );
 
 export interface HubTableRow {
@@ -336,9 +346,11 @@ export interface HubGuidePage {
   siblings: number;
   children: Array<{ slug: string; title: string; summary: string | null }>;
   blocks: HubResolvedBlock[];
-  /** This page is the story walkthrough (older APIs omit these four). */
+  /** This page is the story walkthrough (older APIs omit these). */
   story?: boolean;
-  /** The parent is the story walkthrough: this page is a step. */
+  /** Its sub-pages are walkthrough steps. */
+  steps?: boolean;
+  /** The parent's sub-pages are steps: this page is a step. */
   isStep?: boolean;
   entry?: HubCard | null;
   pins?: Array<{ id: string; map: string; x: number; y: number }>;

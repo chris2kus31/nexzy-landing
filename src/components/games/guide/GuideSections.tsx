@@ -43,6 +43,7 @@ import {
 } from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
 import { GuideContentsHub } from "@/components/games/guide/GuideContents";
+import { StepCards, type Step } from "@/components/games/guide/GuideSteps";
 import {
   GuideProgressProvider,
   useGuideProgress,
@@ -185,10 +186,10 @@ function Body({
   const rest = sections.filter(
     (s) => s.style !== "map" && s.style !== "checklist",
   );
-  // The story walkthrough: the Story page's steps when the guide has one
-  // (each step page links its mission for progress), else the story
-  // checklist's items.
-  const storyPage = pages.find((p) => p.story && p.children.length > 0);
+  // The story walkthrough: once the guide has a Story page it is the ONLY
+  // walkthrough (its steps; none yet = no strip). The story checklist's
+  // items stand in only for games without a Story page.
+  const storyPage = pages.find((p) => p.story);
   const steps: Step[] | null = storyPage
     ? storyPage.children.map((c, i) => ({
         key: c.slug,
@@ -265,7 +266,9 @@ function Body({
       )}
 
       {steps && steps.length > 0 && (
-        <Walkthrough
+        <StepCards
+          id="guide-walkthrough"
+          show="next"
           config={config}
           title={storyPage?.title ?? walk?.title ?? "Walkthrough"}
           allHref={
@@ -400,129 +403,6 @@ function ProgressCard({
           </NextLink>
         ))}
       </Stack>
-    </Box>
-  );
-}
-
-/** The story, a few steps at a time around where the reader is. */
-type Step = {
-  key: string;
-  n: number;
-  title: string;
-  href: string;
-  /** The entry behind the step (done state, reward). */
-  card: HubCard | null;
-  spoilerStage: string | null;
-  eras: string[];
-};
-
-function Walkthrough({
-  config,
-  title,
-  allHref,
-  steps: all,
-}: {
-  config: HubTemplateConfig;
-  title: string;
-  allHref: string;
-  steps: Step[];
-}) {
-  const { found, era, spoiler } = useGuideProgress();
-  const { eraSwitch, spoilers } = config.features;
-  // A step shows only when both the page and its linked entry pass the
-  // reader's era / spoiler choices (a late mission must not leak its reward).
-  const ok = (eras: string[], stage: string | null) =>
-    eraVisible(eras, eraSwitch ? era : null) &&
-    (!spoilers || spoilerVisible(config.spoilerStages, stage, spoiler));
-  const steps = all.filter(
-    (x) =>
-      ok(x.eras, x.spoilerStage) &&
-      (!x.card || ok(x.card.eras, x.card.spoilerStage)),
-  );
-  const hidden = all.length - steps.length;
-  const isDone = (x: Step) => !!x.card && found.has(x.card.id);
-  const next = steps.findIndex((x) => !isDone(x));
-  const start = Math.max(
-    0,
-    Math.min(next < 0 ? steps.length : next, steps.length) - 1,
-  );
-  const shown = steps.slice(start, start + 5);
-  return (
-    <Box id="guide-walkthrough" scrollMarginTop="140px">
-      <HStack justify="space-between" align="baseline" mb={3} wrap="wrap">
-        <Heading as="h3" fontSize="xl" color="white">
-          {title}
-        </Heading>
-        <NextLink href={allHref}>
-          <Text color={G.gold} fontWeight="700" fontSize="sm">
-            All {all.length} steps
-          </Text>
-        </NextLink>
-      </HStack>
-      <SimpleGrid columns={{ base: 1, sm: 2, lg: 5 }} gap={3}>
-        {shown.map((x, i) => {
-          const done = isDone(x);
-          const isNext = !done && start + i === next;
-          const c = x.card;
-          const reward = c
-            ? (typeOf(config, c.type)?.fields ?? []).find(
-                (f) =>
-                  f.onCard &&
-                  f.kind === "text" &&
-                  hasFieldValue(f, c.fields[f.key]),
-              )
-            : undefined;
-          return (
-            <NextLink key={x.key} href={x.href}>
-              <Box
-                h="100%"
-                bg={G.panel}
-                border="1px solid"
-                borderColor={
-                  isNext
-                    ? "rgba(255,215,0,0.6)"
-                    : done
-                      ? "rgba(126,226,160,0.35)"
-                      : G.line
-                }
-                borderRadius="12px"
-                p={3.5}
-                display="flex"
-                flexDirection="column"
-                gap={1.5}
-                _hover={{ borderColor: G.gold }}
-              >
-                <HStack justify="space-between">
-                  <Text fontSize="xs" fontWeight="700" color={G.muted}>
-                    STEP {x.n}
-                  </Text>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="700"
-                    color={done ? GREEN : isNext ? G.gold : G.muted}
-                  >
-                    {done ? "Done" : isNext ? "Up next" : "Later"}
-                  </Text>
-                </HStack>
-                <Text fontWeight="700" color="white" lineHeight="1.3">
-                  {x.title}
-                </Text>
-                {reward && c && (
-                  <Text fontSize="xs" color={G.muted} mt="auto">
-                    {reward.label}: {String(c.fields[reward.key])}
-                  </Text>
-                )}
-              </Box>
-            </NextLink>
-          );
-        })}
-      </SimpleGrid>
-      {hidden > 0 && (
-        <Text fontSize="xs" color={G.muted} mt={2}>
-          {hidden} more step{hidden === 1 ? " is" : "s are"} hidden to avoid
-          spoilers. Change Spoilers above to see them.
-        </Text>
-      )}
     </Box>
   );
 }

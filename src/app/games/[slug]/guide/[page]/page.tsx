@@ -132,7 +132,7 @@ export default async function GuidePage({ params }: Params) {
           letterSpacing="0.08em"
           mb={1}
         >
-          Step {page.position} of {page.siblings}
+          {page.isStep ? "Step" : "Page"} {page.position} of {page.siblings}
         </Text>
       )}
       <Heading

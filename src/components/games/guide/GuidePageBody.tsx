@@ -29,6 +29,7 @@ import {
 } from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
 import { GuideContentsSidebar } from "@/components/games/guide/GuideContents";
+import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
 
 const GREEN = "#7EE2A0";
 import GuideBlocks from "@/components/games/guide/GuideBlocks";
@@ -80,13 +81,20 @@ export default function GuidePageBody({
             <GuidePrefs config={config} />
           </Flex>
           <PageGate config={config} stage={page.spoilerStage}>
-            {page.isStep && page.entry && (
-              // The linked mission can be later in the story than the page.
+            {page.entry && (
+              // Any page about a mission gets its facts, Mark done and map
+              // pin. The mission can be later in the story than the page.
               <PageGate config={config} stage={page.entry.spoilerStage}>
                 <StepPanel slug={slug} config={config} page={page} />
               </PageGate>
             )}
-            <GuideBlocks slug={slug} config={config} blocks={page.blocks} />
+            <GuideBlocks
+              slug={slug}
+              config={config}
+              blocks={page.blocks}
+              pages={pages}
+              pageSlug={page.slug}
+            />
             {page.children.length > 0 && (
               <ChildList
                 slug={slug}
@@ -117,6 +125,29 @@ function ChildList({
 }) {
   const { found, spoiler } = useGuideProgress();
   const node = pages.find((p) => p.slug === page.slug);
+  // Steps: every step as walkthrough cards (Up next / Done / reward),
+  // unless a Steps block on this page already shows them all.
+  if (node && (node.steps || node.story || page.steps)) {
+    // (a "Next 5" block already shows every step when there are 5 or fewer)
+    if (
+      page.blocks.some(
+        (b) =>
+          b.kind === "steps" && (b.show === "all" || node.children.length <= 5),
+      )
+    )
+      return null;
+    return (
+      <Box mt={8}>
+        <StepCards
+          id="all-steps"
+          config={config}
+          title="All steps"
+          show="all"
+          steps={stepsOfNode(slug, node)}
+        />
+      </Box>
+    );
+  }
   const title = (slugOf: string, t: string) => {
     const n = node?.children.find((c) => c.slug === slugOf);
     return config.features.spoilers &&
