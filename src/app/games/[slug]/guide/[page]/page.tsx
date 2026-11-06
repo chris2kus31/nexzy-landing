@@ -31,6 +31,7 @@ async function load(slug: string, pageSlug: string) {
   return {
     config: engine.config,
     pages: engine.pages ?? [],
+    counts: engine.typeCounts ?? null,
     page,
     short: hub.profile?.aliases?.[0] || hub.game.name,
   };
@@ -162,6 +163,7 @@ export default async function GuidePage({ params }: Params) {
         config={d.config}
         pages={d.pages}
         page={page}
+        counts={d.counts}
       />
     </Container>
   );

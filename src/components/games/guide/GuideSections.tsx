@@ -42,6 +42,7 @@ import {
   hasFieldValue,
 } from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
+import { GuideContentsHub } from "@/components/games/guide/GuideContents";
 import {
   GuideProgressProvider,
   useGuideProgress,
@@ -184,6 +185,33 @@ function Body({
   const rest = sections.filter(
     (s) => s.style !== "map" && s.style !== "checklist",
   );
+  // The story walkthrough: the Story page's steps when the guide has one
+  // (each step page links its mission for progress), else the story
+  // checklist's items.
+  const storyPage = pages.find((p) => p.story && p.children.length > 0);
+  const steps: Step[] | null = storyPage
+    ? storyPage.children.map((c, i) => ({
+        key: c.slug,
+        n: i + 1,
+        title: c.title,
+        href: guidePath(slug, c.slug),
+        card: c.entry ?? null,
+        spoilerStage: c.spoilerStage,
+        eras: c.eras,
+      }))
+    : walk
+      ? walk.items.map((c, i) => ({
+          key: c.id,
+          n: i + 1,
+          title: c.title,
+          href: typeOf(config, c.type)?.page
+            ? entryPath(slug, c.type, c.slug)
+            : `/games/${slug}/checklist/${walk.key}`,
+          card: c,
+          spoilerStage: c.spoilerStage,
+          eras: c.eras,
+        }))
+      : null;
   return (
     <Stack as="section" id="guide" gap={6} scrollMarginTop="140px">
       <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
@@ -227,27 +255,34 @@ function Body({
             <ProgressCard
               slug={slug}
               lists={walk ? [walk, ...trackers] : trackers}
+              storyHref={
+                walk && storyPage ? guidePath(slug, storyPage.slug) : null
+              }
+              storyKey={walk?.key ?? null}
             />
           )}
         </Flex>
       )}
 
-      {walk && (
+      {steps && steps.length > 0 && (
         <Walkthrough
-          slug={slug}
           config={config}
-          list={walk}
-          visible={visible}
+          title={storyPage?.title ?? walk?.title ?? "Walkthrough"}
+          allHref={
+            storyPage
+              ? guidePath(slug, storyPage.slug)
+              : `/games/${slug}/checklist/${walk!.key}`
+          }
+          steps={steps}
         />
       )}
 
-      {pages.length > 0 && (
-        <GuidePages slug={slug} config={config} pages={pages} />
-      )}
-
-      {typeCounts && (
-        <BrowseTiles slug={slug} config={config} counts={typeCounts} />
-      )}
+      <GuideContentsHub
+        slug={slug}
+        config={config}
+        pages={pages}
+        counts={typeCounts}
+      />
 
       {rest.map((s) => (
         <Section
@@ -279,9 +314,14 @@ function Bar({ pct }: { pct: number }) {
 function ProgressCard({
   slug,
   lists,
+  storyHref = null,
+  storyKey = null,
 }: {
   slug: string;
   lists: HubChecklistPage[];
+  /** The story checklist row opens the walkthrough page when there is one. */
+  storyHref?: string | null;
+  storyKey?: string | null;
 }) {
   const { found, signedIn } = useGuideProgress();
   const rows = lists.map((c) => {
@@ -327,7 +367,14 @@ function ProgressCard({
       </HStack>
       <Stack gap={2}>
         {rows.map(({ c, done: d, total }) => (
-          <NextLink key={c.key} href={`/games/${slug}/checklist/${c.key}`}>
+          <NextLink
+            key={c.key}
+            href={
+              storyHref && c.key === storyKey
+                ? storyHref
+                : `/games/${slug}/checklist/${c.key}`
+            }
+          >
             <Box
               bg={G.card}
               border="1px solid"
@@ -358,56 +405,75 @@ function ProgressCard({
 }
 
 /** The story, a few steps at a time around where the reader is. */
+type Step = {
+  key: string;
+  n: number;
+  title: string;
+  href: string;
+  /** The entry behind the step (done state, reward). */
+  card: HubCard | null;
+  spoilerStage: string | null;
+  eras: string[];
+};
+
 function Walkthrough({
-  slug,
   config,
-  list,
-  visible,
+  title,
+  allHref,
+  steps: all,
 }: {
-  slug: string;
   config: HubTemplateConfig;
-  list: HubChecklistPage;
-  visible: (c: HubCard) => boolean;
+  title: string;
+  allHref: string;
+  steps: Step[];
 }) {
-  const { found } = useGuideProgress();
-  const steps = list.items
-    .map((c, i) => ({ c, n: i + 1 }))
-    .filter((x) => visible(x.c));
-  const hidden = list.items.length - steps.length;
-  const next = steps.findIndex((x) => !found.has(x.c.id));
+  const { found, era, spoiler } = useGuideProgress();
+  const { eraSwitch, spoilers } = config.features;
+  // A step shows only when both the page and its linked entry pass the
+  // reader's era / spoiler choices (a late mission must not leak its reward).
+  const ok = (eras: string[], stage: string | null) =>
+    eraVisible(eras, eraSwitch ? era : null) &&
+    (!spoilers || spoilerVisible(config.spoilerStages, stage, spoiler));
+  const steps = all.filter(
+    (x) =>
+      ok(x.eras, x.spoilerStage) &&
+      (!x.card || ok(x.card.eras, x.card.spoilerStage)),
+  );
+  const hidden = all.length - steps.length;
+  const isDone = (x: Step) => !!x.card && found.has(x.card.id);
+  const next = steps.findIndex((x) => !isDone(x));
   const start = Math.max(
     0,
     Math.min(next < 0 ? steps.length : next, steps.length) - 1,
   );
   const shown = steps.slice(start, start + 5);
-  const t = (c: HubCard) => typeOf(config, c.type);
   return (
     <Box id="guide-walkthrough" scrollMarginTop="140px">
       <HStack justify="space-between" align="baseline" mb={3} wrap="wrap">
         <Heading as="h3" fontSize="xl" color="white">
-          {list.title}
+          {title}
         </Heading>
-        <NextLink href={`/games/${slug}/checklist/${list.key}`}>
+        <NextLink href={allHref}>
           <Text color={G.gold} fontWeight="700" fontSize="sm">
-            All {list.items.length} steps
+            All {all.length} steps
           </Text>
         </NextLink>
       </HStack>
       <SimpleGrid columns={{ base: 1, sm: 2, lg: 5 }} gap={3}>
-        {shown.map(({ c, n }, i) => {
-          const done = found.has(c.id);
+        {shown.map((x, i) => {
+          const done = isDone(x);
           const isNext = !done && start + i === next;
-          const reward = (t(c)?.fields ?? []).find(
-            (f) =>
-              f.onCard &&
-              f.kind === "text" &&
-              hasFieldValue(f, c.fields[f.key]),
-          );
-          const href = t(c)?.page
-            ? entryPath(slug, c.type, c.slug)
-            : `/games/${slug}/checklist/${list.key}`;
+          const c = x.card;
+          const reward = c
+            ? (typeOf(config, c.type)?.fields ?? []).find(
+                (f) =>
+                  f.onCard &&
+                  f.kind === "text" &&
+                  hasFieldValue(f, c.fields[f.key]),
+              )
+            : undefined;
           return (
-            <NextLink key={c.id} href={href}>
+            <NextLink key={x.key} href={x.href}>
               <Box
                 h="100%"
                 bg={G.panel}
@@ -428,7 +494,7 @@ function Walkthrough({
               >
                 <HStack justify="space-between">
                   <Text fontSize="xs" fontWeight="700" color={G.muted}>
-                    STEP {n}
+                    STEP {x.n}
                   </Text>
                   <Text
                     fontSize="xs"
@@ -439,9 +505,9 @@ function Walkthrough({
                   </Text>
                 </HStack>
                 <Text fontWeight="700" color="white" lineHeight="1.3">
-                  {c.title}
+                  {x.title}
                 </Text>
-                {reward && (
+                {reward && c && (
                   <Text fontSize="xs" color={G.muted} mt="auto">
                     {reward.label}: {String(c.fields[reward.key])}
                   </Text>
@@ -457,111 +523,6 @@ function Walkthrough({
           spoilers. Change Spoilers above to see them.
         </Text>
       )}
-    </Box>
-  );
-}
-
-/** One tile per entry type that has its own pages and at least one entry. */
-/** The guide's pages (table of contents) as tiles; steps count under each. */
-function GuidePages({
-  slug,
-  config,
-  pages,
-}: {
-  slug: string;
-  config: HubTemplateConfig;
-  pages: HubPageNode[];
-}) {
-  const { spoiler } = useGuideProgress();
-  const masked = (p: HubPageNode) =>
-    config.features.spoilers &&
-    !!p.spoilerStage &&
-    !spoilerVisible(config.spoilerStages, p.spoilerStage, spoiler);
-  return (
-    <Box id="guide-pages" scrollMarginTop="140px">
-      <Flex justify="space-between" align="baseline" mb={3} gap={3}>
-        <Heading as="h3" fontSize="xl" color="white">
-          Guide pages
-        </Heading>
-        <NextLink
-          href={`/games/${slug}/guide`}
-          style={{ color: G.gold, fontSize: 14, fontWeight: 700 }}
-        >
-          All pages
-        </NextLink>
-      </Flex>
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
-        {pages.slice(0, 12).map((p) => (
-          <NextLink key={p.slug} href={guidePath(slug, p.slug)}>
-            <Box
-              h="100%"
-              bg={G.panel}
-              border="1px solid"
-              borderColor={G.line}
-              borderRadius="12px"
-              p={4}
-              _hover={{ borderColor: G.gold }}
-            >
-              <Text fontWeight="700" color="white">
-                {masked(p) ? "Spoiler page" : p.title}
-              </Text>
-              {p.summary && !masked(p) && (
-                <Text fontSize="sm" color={G.muted} lineClamp={2} mt={1}>
-                  {p.summary}
-                </Text>
-              )}
-              {p.children.length > 0 && (
-                <Text fontSize="xs" color={G.gold} fontWeight="700" mt={2}>
-                  {p.children.length} step{p.children.length > 1 ? "s" : ""}
-                </Text>
-              )}
-            </Box>
-          </NextLink>
-        ))}
-      </SimpleGrid>
-    </Box>
-  );
-}
-
-function BrowseTiles({
-  slug,
-  config,
-  counts,
-}: {
-  slug: string;
-  config: HubTemplateConfig;
-  counts: Record<string, number>;
-}) {
-  const tiles = config.types.filter((t) => t.page && (counts[t.key] ?? 0) > 0);
-  if (!tiles.length) return null;
-  return (
-    <Box id="guide-browse" scrollMarginTop="140px">
-      <Heading as="h3" fontSize="xl" color="white" mb={3}>
-        Browse the guide
-      </Heading>
-      <SimpleGrid columns={{ base: 2, md: 3, lg: 5 }} gap={3}>
-        {tiles.map((t) => (
-          <NextLink key={t.key} href={`/games/${slug}/${t.key}`}>
-            <Box
-              h="100%"
-              bg={G.panel}
-              border="1px solid"
-              borderColor={G.line}
-              borderRadius="12px"
-              p={4}
-              _hover={{ borderColor: G.gold }}
-            >
-              <Box w="10px" h="10px" borderRadius="full" bg={t.color} mb={2} />
-              <Text fontWeight="700" color="white">
-                {t.plural}
-              </Text>
-              <Text fontSize="sm" color={G.muted}>
-                {counts[t.key]}
-              </Text>
-            </Box>
-          </NextLink>
-        ))}
-      </SimpleGrid>
     </Box>
   );
 }

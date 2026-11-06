@@ -695,18 +695,16 @@ function MegaHub({
   const storyKeys = new Set(
     (guide?.config?.checklists ?? []).filter(isStory).map((c) => c.key),
   );
-  const walkthrough = checklists.some(
-    (c) => storyKeys.has(c.key) && c.items.length > 0,
-  );
+  const walkthrough =
+    !!guide?.pages?.some((p) => p.story && p.children.length > 0) ||
+    checklists.some((c) => storyKeys.has(c.key) && c.items.length > 0);
   const navItems: HubNavItem[] = [
     ...(hasGuide ? [{ id: "guide", label: "Guide" }] : []),
     ...(hasGuide && guide?.config?.maps.length
       ? [{ id: "guide-map", label: "Map" }]
       : []),
     ...(walkthrough ? [{ id: "guide-walkthrough", label: "Walkthrough" }] : []),
-    ...(hasGuide && guide?.pages?.length
-      ? [{ id: "guide-pages", label: "Guide pages" }]
-      : []),
+    ...(hasGuide ? [{ id: "guide-contents", label: "Guide contents" }] : []),
     // Same order as the page: ratings lead after launch, follow Predict before.
     ...(m.scores && scores?.open ? [{ id: "scores", label: "Reviews" }] : []),
     ...(trailers.length ? [{ id: "trailers", label: "Trailers" }] : []),

@@ -4,7 +4,7 @@
 // Only types with page: true get a page; anything else 404s.
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import NextLink from "next/link";
 import NextImage from "next/image";
 import {
@@ -22,8 +22,10 @@ import {
   fetchEngineEntry,
   fetchEnginePage,
 } from "@/lib/hub-engine/server";
-import { isStory, typeOf } from "@/lib/hub-engine/types";
-import GuideStepNav, { type StepRef } from "@/components/games/guide/GuideStepNav";
+import { guidePath, isStory, typeOf } from "@/lib/hub-engine/types";
+import GuideStepNav, {
+  type StepRef,
+} from "@/components/games/guide/GuideStepNav";
 import {
   FieldValue,
   G,
@@ -92,7 +94,12 @@ async function storyStep(
   const ref = (n: number): StepRef | null => {
     const x = list.items[n];
     return x
-      ? { slug: x.slug, type: x.type, title: x.title, spoilerStage: x.spoilerStage }
+      ? {
+          slug: x.slug,
+          type: x.type,
+          title: x.title,
+          spoilerStage: x.spoilerStage,
+        }
       : null;
   };
   return {
@@ -132,6 +139,8 @@ export default async function GuideEntryPage({ params }: Params) {
   const { slug, type, entry: entrySlug } = await params;
   const d = await load(slug, type, entrySlug);
   if (!d) notFound();
+  // A guide page covers this entry (a walkthrough step): one page, not two.
+  if (d.entry.guidePage) redirect(guidePath(slug, d.entry.guidePage.slug));
   const { config, entry, t } = d;
   const pin = entry.pins[0];
   const map = pin ? config.maps.find((m) => m.key === pin.map) : undefined;

@@ -7,7 +7,15 @@
 // map, checklist, entry list. Everything is checked by the API on Save; a
 // page shows on the site only when its status is Published.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Box, Flex, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  Flex,
+  HStack,
+  SimpleGrid,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import {
   FiArrowDown,
   FiArrowLeft,
@@ -58,10 +66,25 @@ import {
   keyify,
 } from "@/components/admin/guide/ui";
 
-const STATUS: { key: PageStatus; label: string; color: string }[] = [
-  { key: "draft", label: "Draft (admins only)", color: C.faint },
-  { key: "published", label: "Published", color: C.good },
-  { key: "hidden", label: "Hidden", color: C.warn },
+const STATUS: {
+  key: PageStatus;
+  label: string;
+  short: string;
+  color: string;
+}[] = [
+  {
+    key: "draft",
+    label: "Draft (admins only)",
+    short: "Draft",
+    color: C.faint,
+  },
+  {
+    key: "published",
+    label: "Published",
+    short: "Published (live)",
+    color: C.good,
+  },
+  { key: "hidden", label: "Hidden", short: "Hidden", color: C.warn },
 ];
 
 const KINDS: { kind: BlockKind; label: string; hint: string }[] = [
@@ -69,12 +92,20 @@ const KINDS: { kind: BlockKind; label: string; hint: string }[] = [
   { kind: "image", label: "Photo", hint: "One photo with a caption" },
   { kind: "gallery", label: "Gallery", hint: "Several photos" },
   { kind: "video", label: "Video", hint: "YouTube or Streamable, start time" },
-  { kind: "table", label: "Table", hint: "Typed rows, or a tracker of entries" },
+  {
+    kind: "table",
+    label: "Table",
+    hint: "Typed rows, or a tracker of entries",
+  },
   { kind: "dropdown", label: "Dropdown", hint: "Collapsible section" },
   { kind: "tip", label: "Tip box", hint: "Tip, warning or spoiler" },
   { kind: "map", label: "Map", hint: "Small live map of chosen types" },
   { kind: "checklist", label: "Checklist", hint: "A checklist's progress" },
-  { kind: "entries", label: "Entry list", hint: "Cards or a list, e.g. newest finds" },
+  {
+    kind: "entries",
+    label: "Entry list",
+    hint: "Cards or a list, e.g. newest finds",
+  },
 ];
 
 const EMPTY_FILTER: HubFilter = { types: [], tags: [], eras: [], statuses: [] };
@@ -269,6 +300,26 @@ export default function GuidePagesEditor({
           /guide/{p.slug}
         </Text>
       </Box>
+      {p.story && (
+        <Badge
+          bg="transparent"
+          border="1px solid"
+          borderColor={C.gold}
+          color={C.gold}
+        >
+          story walkthrough
+        </Badge>
+      )}
+      {p.entryId && (
+        <Badge
+          bg="transparent"
+          border="1px solid"
+          borderColor={C.line}
+          color={C.muted}
+        >
+          linked
+        </Badge>
+      )}
       <Badge
         bg="transparent"
         border="1px solid"
@@ -441,8 +492,8 @@ export default function GuidePagesEditor({
         )}
       </Card>
       <Text fontSize="xs" color={C.faint}>
-        Published pages live at /games/{gameSlug}/guide/&lt;page&gt; and show
-        in the guide&apos;s table of contents within a minute.
+        Published pages live at /games/{gameSlug}/guide/&lt;page&gt; and show in
+        the guide&apos;s table of contents within a minute.
       </Text>
     </Stack>
   );
@@ -480,6 +531,8 @@ function PageForm({
           seoTitle: page.seoTitle,
           seoDescription: page.seoDescription,
           blocks: page.blocks,
+          story: !!page.story,
+          entry: page.entry?.slug ?? null,
         }
       : { title: "", status: "draft", eras: [], blocks: [] },
   );
@@ -618,22 +671,52 @@ function PageForm({
               }
             />
           </Labeled>
-          <Labeled label="Status">
-            <Pick
-              label="Status"
-              value={v.status ?? "draft"}
-              onChange={(s) => set({ status: s as PageStatus })}
-              options={STATUS.map((s) => ({ value: s.key, label: s.label }))}
-            />
+          <Labeled label="Who can see it">
+            <HStack gap={1} role="radiogroup" aria-label="Who can see it">
+              {STATUS.map((st) => {
+                const on = (v.status ?? "draft") === st.key;
+                return (
+                  <Box
+                    key={st.key}
+                    asChild
+                    flex="1"
+                    px={2}
+                    py={1.5}
+                    borderRadius="8px"
+                    fontSize="sm"
+                    fontWeight="700"
+                    textAlign="center"
+                    border="1px solid"
+                    borderColor={on ? st.color : C.line}
+                    bg={on ? st.color : "transparent"}
+                    color={on ? C.ink : C.text}
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => set({ status: st.key })}
+                    >
+                      {st.short}
+                    </button>
+                  </Box>
+                );
+              })}
+            </HStack>
           </Labeled>
           <Labeled label="Under page" hint="For walkthrough steps or chapters">
             <Pick
               label="Under page"
               value={v.parentId ?? ""}
-              onChange={(s) => set({ parentId: s || null })}
+              onChange={(s) =>
+                set({ parentId: s || null, ...(s ? { story: false } : {}) })
+              }
               options={[
                 { value: "", label: "Top level" },
-                ...parents.map((p) => ({ value: p.id, label: p.title })),
+                ...parents.map((p) => ({
+                  value: p.id,
+                  label: p.story ? `${p.title} (story walkthrough)` : p.title,
+                })),
               ]}
             />
           </Labeled>
@@ -654,8 +737,28 @@ function PageForm({
             </Labeled>
           )}
         </SimpleGrid>
+        <Flex gap={6} mt={3} wrap="wrap" align="flex-end">
+          {!v.parentId && (
+            <Check
+              label="Story walkthrough: the pages under this one are the steps, in order (one per game)"
+              checked={!!v.story}
+              onChange={(story) => set({ story })}
+            />
+          )}
+          <Box minW="320px" flex="1">
+            <EntrySlugPicker
+              gameId={gameId}
+              label="This page is about (optional): link a mission or entry for its map pin, Mark done and progress"
+              value={v.entry ?? null}
+              onChange={(entry) => set({ entry })}
+            />
+          </Box>
+        </Flex>
         <Box mt={3}>
-          <Labeled label="Summary" hint="One or two lines under the title and in search results (max 300)">
+          <Labeled
+            label="Summary"
+            hint="One or two lines under the title and in search results (max 300)"
+          >
             <LongIn
               rows={2}
               maxLength={300}
@@ -665,14 +768,20 @@ function PageForm({
           </Labeled>
         </Box>
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} mt={3}>
-          <Labeled label="Search title (optional)" hint="Max 70; defaults to the title">
+          <Labeled
+            label="Search title (optional)"
+            hint="Max 70; defaults to the title"
+          >
             <TextIn
               value={v.seoTitle ?? ""}
               maxLength={70}
               onChange={(s) => set({ seoTitle: s || null })}
             />
           </Labeled>
-          <Labeled label="Search description (optional)" hint="Max 170; defaults to the summary">
+          <Labeled
+            label="Search description (optional)"
+            hint="Max 170; defaults to the summary"
+          >
             <TextIn
               value={v.seoDescription ?? ""}
               maxLength={170}
@@ -751,7 +860,10 @@ function BlocksEditor({
                   const copy = JSON.parse(JSON.stringify(b)) as HubBlock;
                   copy.id = newId();
                   if (copy.kind === "dropdown")
-                    copy.blocks = copy.blocks.map((c) => ({ ...c, id: newId() }));
+                    copy.blocks = copy.blocks.map((c) => ({
+                      ...c,
+                      id: newId(),
+                    }));
                   const next = [...blocks];
                   next.splice(i + 1, 0, copy);
                   onChange(next);
@@ -941,11 +1053,7 @@ function BlockCard({
           </SimpleGrid>
         )}
         {b.kind === "table" && (
-          <TableEditor
-            config={config}
-            block={b}
-            onChange={onChange}
-          />
+          <TableEditor config={config} block={b} onChange={onChange} />
         )}
         {b.kind === "dropdown" && (
           <>
@@ -984,7 +1092,10 @@ function BlockCard({
                   label="Map"
                   value={b.mapKey}
                   onChange={(mapKey) => onChange({ ...b, mapKey })}
-                  options={config.maps.map((m) => ({ value: m.key, label: m.name }))}
+                  options={config.maps.map((m) => ({
+                    value: m.key,
+                    label: m.name,
+                  }))}
                 />
               </Box>
             )}
@@ -1031,7 +1142,9 @@ function BlockCard({
                 <Pick
                   label="Look"
                   value={b.style}
-                  onChange={(s) => onChange({ ...b, style: s as "cards" | "list" })}
+                  onChange={(s) =>
+                    onChange({ ...b, style: s as "cards" | "list" })
+                  }
                   options={[
                     { value: "cards", label: "Cards" },
                     { value: "list", label: "List" },
@@ -1226,7 +1339,9 @@ function TableEditor({
             label="Columns (the name is always first)"
             value={b.columns}
             options={fieldOpts}
-            onChange={(columns) => onChange({ ...b, columns: columns.slice(0, 8) })}
+            onChange={(columns) =>
+              onChange({ ...b, columns: columns.slice(0, 8) })
+            }
           />
         )}
         <Check
@@ -1249,7 +1364,11 @@ function TableEditor({
     <Stack gap={3}>
       {head}
       <Box overflowX="auto">
-        <Box as="table" w="100%" style={{ borderCollapse: "separate", borderSpacing: 4 }}>
+        <Box
+          as="table"
+          w="100%"
+          style={{ borderCollapse: "separate", borderSpacing: 4 }}
+        >
           <thead>
             <tr>
               {cols.map((c, j) => (
@@ -1355,7 +1474,9 @@ function TableEditor({
                 .filter((l) => l.trim())
                 .map((l) => l.split("\t").map((c) => c.trim().slice(0, 300)));
               if (!lines.length) return;
-              const columns = lines[0].slice(0, 8).map((c, i) => c || `Column ${i + 1}`);
+              const columns = lines[0]
+                .slice(0, 8)
+                .map((c, i) => c || `Column ${i + 1}`);
               const rows = lines
                 .slice(1, 201)
                 .map((r) => columns.map((_, j) => r[j] ?? ""));
@@ -1449,7 +1570,9 @@ function Photos({
                 maxLength={160}
                 onChange={(a) =>
                   onChange(
-                    value.map((x, j) => (j === i ? { ...x, alt: a || null } : x)),
+                    value.map((x, j) =>
+                      j === i ? { ...x, alt: a || null } : x,
+                    ),
                   )
                 }
               />
@@ -1472,7 +1595,11 @@ function Photos({
             textDecoration: "underline",
           }}
         >
-          {busy ? "Uploading..." : max > 1 ? "Add photos (or paste)" : "Add photo (or paste)"}
+          {busy
+            ? "Uploading..."
+            : max > 1
+              ? "Add photos (or paste)"
+              : "Add photo (or paste)"}
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/avif"
@@ -1512,7 +1639,9 @@ function EntrySlugPicker({
     }
     const t = setTimeout(async () => {
       try {
-        setHits((await listEngineEntries(gameId, { search: s })).items.slice(0, 8));
+        setHits(
+          (await listEngineEntries(gameId, { search: s })).items.slice(0, 8),
+        );
       } catch {
         setHits([]);
       }
@@ -1522,7 +1651,14 @@ function EntrySlugPicker({
   return (
     <Labeled label={label}>
       {value ? (
-        <HStack bg={C.surface} borderRadius="999px" px={3} py={1} gap={2} w="fit-content">
+        <HStack
+          bg={C.surface}
+          borderRadius="999px"
+          px={3}
+          py={1}
+          gap={2}
+          w="fit-content"
+        >
           <Text fontSize="sm" color={C.text}>
             {value}
           </Text>

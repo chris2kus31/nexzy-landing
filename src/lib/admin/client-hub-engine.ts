@@ -286,6 +286,8 @@ export interface EnginePageRow {
   title: string;
   summary: string | null;
   status: PageStatus;
+  story?: boolean;
+  entryId?: string | null;
   parentId: string | null;
   sortOrder: number;
   spoilerStage: string | null;
@@ -295,6 +297,8 @@ export interface EnginePageRow {
 }
 
 export interface EnginePage extends EnginePageRow {
+  /** The entry this page is about (a walkthrough step's mission). */
+  entry?: { slug: string; title: string; type: string } | null;
   seoTitle: string | null;
   seoDescription: string | null;
   blocks: HubBlock[];
@@ -312,6 +316,10 @@ export interface PageInput {
   seoTitle?: string | null;
   seoDescription?: string | null;
   blocks?: HubBlock[];
+  /** Top-level page whose sub-pages are the story walkthrough steps. */
+  story?: boolean;
+  /** Slug of the entry this page is about (null clears it). */
+  entry?: string | null;
 }
 
 export const listEnginePages = (gameId: string) =>

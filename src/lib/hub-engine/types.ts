@@ -130,6 +130,8 @@ export interface HubLinkRef {
 }
 
 export interface HubEntryFull extends HubCard {
+  /** A guide page about this entry (a walkthrough step). */
+  guidePage?: { slug: string; title: string } | null;
   media: HubImage[];
   linkedFrom: Array<{ type: string; field: string; entries: HubLinkRef[] }>;
   pins: Array<{ id: string; map: string; x: number; y: number }>;
@@ -222,6 +224,10 @@ export interface HubPageNode {
   summary: string | null;
   spoilerStage: string | null;
   eras: string[];
+  /** Story walkthrough page: its children are the steps (older APIs omit). */
+  story?: boolean;
+  /** The entry this page is about (a step's mission), public only. */
+  entry?: HubCard | null;
   children: HubPageNode[];
 }
 
@@ -252,7 +258,12 @@ export type HubBlock = BlockBase &
     | { kind: "text"; markdown: string }
     | { kind: "image"; image: HubCaptionedImage; entrySlug: string | null }
     | { kind: "gallery"; images: HubCaptionedImage[] }
-    | { kind: "video"; url: string; start: number | null; caption: string | null }
+    | {
+        kind: "video";
+        url: string;
+        start: number | null;
+        caption: string | null;
+      }
     | {
         kind: "table";
         title: string | null;
@@ -270,7 +281,12 @@ export type HubBlock = BlockBase &
       }
     | { kind: "dropdown"; title: string; open: boolean; blocks: HubBlock[] }
     | { kind: "tip"; style: "tip" | "warning" | "spoiler"; markdown: string }
-    | { kind: "map"; mapKey: string; filter: HubFilter; focusEntry: string | null }
+    | {
+        kind: "map";
+        mapKey: string;
+        filter: HubFilter;
+        focusEntry: string | null;
+      }
     | { kind: "checklist"; checklistKey: string }
     | {
         kind: "entries";
@@ -320,6 +336,12 @@ export interface HubGuidePage {
   siblings: number;
   children: Array<{ slug: string; title: string; summary: string | null }>;
   blocks: HubResolvedBlock[];
+  /** This page is the story walkthrough (older APIs omit these four). */
+  story?: boolean;
+  /** The parent is the story walkthrough: this page is a step. */
+  isStep?: boolean;
+  entry?: HubCard | null;
+  pins?: Array<{ id: string; map: string; x: number; y: number }>;
 }
 
 /** YouTube / Streamable link -> privacy embed URL (null = not playable). */
@@ -339,7 +361,8 @@ export function videoEmbed(
         id = m ? m[1] : null;
       }
     }
-    const t = start ?? (Number(u.searchParams.get("t")?.replace(/s$/, "")) || null);
+    const t =
+      start ?? (Number(u.searchParams.get("t")?.replace(/s$/, "")) || null);
     if (id && /^[\w-]{6,20}$/.test(id))
       return {
         src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0${t ? `&start=${Math.floor(t)}` : ""}`,
