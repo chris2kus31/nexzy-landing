@@ -17,8 +17,13 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
-import { fetchEngineEntry, fetchEnginePage } from "@/lib/hub-engine/server";
-import { typeOf } from "@/lib/hub-engine/types";
+import {
+  fetchEngineChecklist,
+  fetchEngineEntry,
+  fetchEnginePage,
+} from "@/lib/hub-engine/server";
+import { isStory, typeOf } from "@/lib/hub-engine/types";
+import GuideStepNav, { type StepRef } from "@/components/games/guide/GuideStepNav";
 import {
   FieldValue,
   G,
@@ -62,6 +67,41 @@ async function load(slug: string, type: string, entrySlug: string) {
     entry,
     t,
     short: hub.profile?.aliases?.[0] || hub.game.name,
+    step: await storyStep(slug, engine.config.checklists, type, entry.id),
+  };
+}
+
+/** Where this entry sits in the story walkthrough (a checklist with the
+ *  Story switch that lists its type), or null. A failed list read only
+ *  drops the step controls, never the page. */
+async function storyStep(
+  slug: string,
+  checklists: { key: string; story?: boolean; filter: { types: string[] } }[],
+  type: string,
+  entryId: string,
+) {
+  // An empty type list means every type.
+  const c = checklists.find(
+    (x) =>
+      isStory(x) && (!x.filter.types.length || x.filter.types.includes(type)),
+  );
+  if (!c) return null;
+  const list = await fetchEngineChecklist(slug, c.key).catch(() => null);
+  const i = list ? list.items.findIndex((x) => x.id === entryId) : -1;
+  if (!list || i < 0) return null;
+  const ref = (n: number): StepRef | null => {
+    const x = list.items[n];
+    return x
+      ? { slug: x.slug, type: x.type, title: x.title, spoilerStage: x.spoilerStage }
+      : null;
+  };
+  return {
+    key: list.key,
+    title: list.title,
+    position: i + 1,
+    total: list.items.length,
+    prev: ref(i - 1),
+    next: ref(i + 1),
   };
 }
 
@@ -127,6 +167,18 @@ export default async function GuideEntryPage({ params }: Params) {
         <NextLink href={`/games/${slug}`}>{d.short}</NextLink> /{" "}
         <NextLink href={`/games/${slug}/${type}`}>{t.plural}</NextLink>
       </Text>
+      {d.step && (
+        <Text
+          fontSize="xs"
+          fontWeight="800"
+          color={G.gold}
+          textTransform="uppercase"
+          letterSpacing="0.08em"
+          mb={1}
+        >
+          Step {d.step.position} of {d.step.total}
+        </Text>
+      )}
       <HStack gap={2} mb={2} wrap="wrap">
         <TypeChip config={config} type={entry.type} />
         {entry.status === "unconfirmed" && (
@@ -244,6 +296,23 @@ export default async function GuideEntryPage({ params }: Params) {
           </Box>
         ))}
       </Stack>
+
+      {d.step && (
+        <GuideStepNav
+          slug={slug}
+          config={{
+            features: config.features,
+            spoilerStages: config.spoilerStages,
+          }}
+          entryId={entry.id}
+          listKey={d.step.key}
+          listTitle={d.step.title}
+          position={d.step.position}
+          total={d.step.total}
+          prev={d.step.prev}
+          next={d.step.next}
+        />
+      )}
 
       <Text fontSize="xs" color={G.muted} mt={8}>
         Last updated{" "}

@@ -53,6 +53,18 @@ export const TYPE_PRESETS: HubEntryType[] = [
     f("reward", "Reward", "text", { onCard: true }),
     f("where", "Where", "entries", { targetTypes: ["location"] }),
   ]),
+  // A story walkthrough step. Pair it with a checklist that has the Story
+  // switch on: steps then get Step X of N, Previous / Next and Mark done.
+  t("step", "Walkthrough step", "Story steps", "#ff7043", [
+    f("goal", "Goal", "text", { onCard: true }),
+    f("steps", "Step by step", "longtext", { required: true }),
+    f("need", "You need", "entries", { targetTypes: ["item"] }),
+    f("boss", "Boss fight", "longtext"),
+    f("tips", "Tips", "longtext"),
+    f("onway", "Collectibles on the way", "entries"),
+    f("video", "Watch it", "video"),
+    f("where", "Where", "entries", { targetTypes: ["location"] }),
+  ]),
   t("item", "Item", "Items", "#7ee2a0", [
     f("how", "How to get it", "longtext", { onCard: true }),
     f("use", "What it does", "longtext"),

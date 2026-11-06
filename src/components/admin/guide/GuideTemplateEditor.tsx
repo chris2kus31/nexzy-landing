@@ -32,6 +32,7 @@ import {
   Gold,
   Labeled,
   LongIn,
+  MultiCheck,
   Pick,
   Plain,
   Problems,
@@ -280,6 +281,7 @@ export default function GuideTemplateEditor({
                       title: "",
                       description: null,
                       filter: { ...EMPTY_FILTER },
+                      story: false,
                     },
                   ],
                 })
@@ -1009,41 +1011,6 @@ function MapsEditor({
 
 // ───────────────────────── checklists + sections ─────────────────────────
 
-function MultiCheck({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string[];
-  options: { value: string; label: string }[];
-  onChange: (v: string[]) => void;
-}) {
-  return (
-    <Labeled label={label}>
-      <Flex gap={3} wrap="wrap">
-        {options.map((o) => (
-          <Check
-            key={o.value}
-            label={o.label}
-            checked={value.includes(o.value)}
-            onChange={(on) =>
-              onChange(
-                on ? [...value, o.value] : value.filter((x) => x !== o.value),
-              )
-            }
-          />
-        ))}
-        {!options.length && (
-          <Text fontSize="xs" color={C.faint}>
-            None available yet
-          </Text>
-        )}
-      </Flex>
-    </Labeled>
-  );
-}
 
 function ChecklistRow({
   c,
@@ -1086,6 +1053,11 @@ function ChecklistRow({
         <Flex justify="flex-end">{tools}</Flex>
       </SimpleGrid>
       <Stack gap={2} mt={2}>
+        <Check
+          label="Story walkthrough (items are steps in order: Step X of N, Previous / Next)"
+          checked={c.story ?? c.key === "walkthrough"}
+          onChange={(story) => onChange({ ...c, story })}
+        />
         <MultiCheck
           label="Entry types in this list"
           value={c.filter.types}

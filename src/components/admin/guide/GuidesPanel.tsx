@@ -41,8 +41,18 @@ import GuideTemplateEditor from "@/components/admin/guide/GuideTemplateEditor";
 import GuideEntriesEditor from "@/components/admin/guide/GuideEntriesEditor";
 import GuideMapEditor from "@/components/admin/guide/GuideMapEditor";
 import GuideImport from "@/components/admin/guide/GuideImport";
+import GuideQuickAdd from "@/components/admin/guide/GuideQuickAdd";
+import GuidePagesEditor from "@/components/admin/guide/GuidePagesEditor";
 
-type View = "setup" | "entries" | "map" | "import";
+type View = "setup" | "quick" | "entries" | "pages" | "map" | "import";
+const VIEWS: { key: View; label: string }[] = [
+  { key: "quick", label: "Quick add" },
+  { key: "entries", label: "Entries" },
+  { key: "pages", label: "Pages" },
+  { key: "map", label: "Map" },
+  { key: "setup", label: "Setup" },
+  { key: "import", label: "Import / Export" },
+];
 const LEGEND_KEY = "nexzy-admin-guides-legend";
 
 const fmt = (iso: string | null) =>
@@ -97,8 +107,16 @@ function Legend() {
       "An entry's spot on a map (pixels on our map art). One entry can have pins on several maps.",
     ],
     [
+      "Quick add",
+      "The launch-day screen: name, photos (drop or paste), the type's fields, a click on the map, Save. Entry and pin go in together, Unconfirmed by default.",
+    ],
+    [
       "Checklist",
-      "A filter readers tick off (for example all Gold Skulltulas). Ticks are free; guests keep them in the browser.",
+      "A filter readers tick off (for example all Gold Skulltulas). Ticks are free; guests keep them in the browser. Turn on Story walkthrough for the main story list: its items become steps (Step X of N, Previous / Next).",
+    ],
+    [
+      "Guide page",
+      "A page of the guide built from blocks (text, photo, gallery, video, table, dropdown, tip, map, checklist, entry list). Pages form the table of contents; a page can sit under another (walkthrough chapters).",
     ],
     [
       "Hub section",
@@ -150,8 +168,8 @@ function Legend() {
           ))}
           <Text fontSize="sm" color={C.muted}>
             Typical flow: Setup (start from a preset, upload map art) &gt; Save
-            draft &gt; Publish &gt; add Entries &gt; place pins on Map &gt;
-            switch Live.
+            draft &gt; Publish &gt; add finds with Quick add (or Entries + Map)
+            &gt; build Pages &gt; switch Live.
           </Text>
         </Stack>
       )}
@@ -168,6 +186,7 @@ export default function GuidesPanel() {
   const [view, setView] = useState<View>("setup");
   const [mapEntry, setMapEntry] = useState<string | null>(null);
   const [mapDirty, setMapDirty] = useState(false);
+  const [pageDirty, setPageDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string[]>([]);
@@ -190,6 +209,9 @@ export default function GuidesPanel() {
       setTpl(t);
       setDraft(t.draft);
       setDirty(false);
+      // A published guide opens on Quick add (launch-day work); a new one
+      // on Setup.
+      setView(t.version > 0 ? "quick" : "setup");
     } catch (e) {
       setErr(errorLines(e));
     } finally {
@@ -232,7 +254,7 @@ export default function GuidesPanel() {
             value={gameId}
             onChange={(v) => {
               if (
-                (dirty || mapDirty) &&
+                (dirty || mapDirty || pageDirty) &&
                 !window.confirm("You have unsaved changes. Switch game anyway?")
               )
                 return;
@@ -386,19 +408,28 @@ export default function GuidesPanel() {
           </Card>
 
           <HStack gap={2} wrap="wrap">
-            {(["setup", "entries", "map", "import"] as View[]).map((v) => (
+            {VIEWS.map(({ key: v, label }) => (
               <Box
                 key={v}
                 as="button"
                 onClick={() => {
-                  // Leaving the Map tab unmounts the editor; unsaved pin
-                  // drags must not vanish without a word.
+                  // Leaving a tab unmounts its editor; unsaved pin drags or
+                  // page edits must not vanish without a word.
                   if (
                     view === "map" &&
                     v !== "map" &&
                     mapDirty &&
                     !window.confirm(
                       "You have unsaved pin changes on the Map tab. Leave anyway?",
+                    )
+                  )
+                    return;
+                  if (
+                    view === "pages" &&
+                    v !== "pages" &&
+                    pageDirty &&
+                    !window.confirm(
+                      "You have unsaved page changes. Leave anyway?",
                     )
                   )
                     return;
@@ -414,13 +445,7 @@ export default function GuidesPanel() {
                 border="1px solid"
                 borderColor={view === v ? C.gold : C.line}
               >
-                {v === "setup"
-                  ? "Setup"
-                  : v === "entries"
-                    ? "Entries"
-                    : v === "map"
-                      ? "Map"
-                      : "Import / Export"}
+                {label}
               </Box>
             ))}
           </HStack>
@@ -440,6 +465,21 @@ export default function GuidesPanel() {
               Setup has unsaved changes. Entries and pins use the last saved
               draft.
             </Text>
+          )}
+          {view === "quick" && config && (
+            <GuideQuickAdd
+              gameId={tpl.game.id}
+              gameSlug={tpl.game.slug}
+              config={config}
+            />
+          )}
+          {view === "pages" && config && (
+            <GuidePagesEditor
+              gameId={tpl.game.id}
+              gameSlug={tpl.game.slug}
+              config={config}
+              onDirtyChange={setPageDirty}
+            />
           )}
           {view === "entries" && config && (
             <GuideEntriesEditor

@@ -27,6 +27,12 @@ export default function GuideMapScreen({
   const sp = useSearchParams();
   const fromUrl = sp?.get("pin");
   const pin = focusPin ?? (fromUrl && PIN_RE.test(fromUrl) ? fromUrl : null);
+  // ?entry=<slug> (guide page "Show on map"): open that entry's first pin.
+  const entryFromUrl = sp?.get("entry");
+  const entry =
+    !pin && entryFromUrl && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entryFromUrl)
+      ? entryFromUrl.slice(0, 80)
+      : null;
   const wanted = sp?.get("map");
   const map =
     fixed ?? config.maps.find((m) => m.key === wanted) ?? config.maps[0];
@@ -39,6 +45,7 @@ export default function GuideMapScreen({
         map={map}
         preview={preview}
         focusPin={pin}
+        focusEntry={entry}
       />
     </GuideProgressProvider>
   );

@@ -7,6 +7,7 @@ import NextImage from "next/image";
 import type { ReactNode } from "react";
 import { FiHelpCircle } from "react-icons/fi";
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
+import GuideVideo from "@/components/games/guide/GuideVideo";
 import {
   entryPath,
   typeOf,
@@ -28,59 +29,123 @@ export const G = {
   warn: "#FFB86B",
 };
 
-// ───────────────────────── Markdown (bold, italic, links, lists) ─────────────────────────
+// ───────────────────────── Markdown (safe subset) ─────────────────────────
+// Headings (#, ##, ###), **bold**, *italic*, links to https:// or
+// to our own pages (/games/...), "- " bullet lists and "1. " numbered lists.
+// Everything renders as React text, never HTML, so nothing can inject markup.
 
-const INLINE_RE = /(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\(https:\/\/[^)\s]+\))/g;
+const INLINE_RE =
+  /(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|\[[^\]]+\]\((?:https:\/\/|\/(?![/\\]))[^)\s\\]*\))/g;
 
 function inline(s: string, k: string): ReactNode[] {
   return s.split(INLINE_RE).map((part, i) => {
     const key = `${k}-${i}`;
     if (/^\*\*[^*]+\*\*$/.test(part))
       return <strong key={key}>{part.slice(2, -2)}</strong>;
-    if (/^\*[^*]+\*$/.test(part)) return <em key={key}>{part.slice(1, -1)}</em>;
-    const m = /^\[([^\]]+)\]\((https:\/\/[^)\s]+)\)$/.exec(part);
-    if (m)
-      return (
-        <a
-          key={key}
-          href={m[2]}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
-          style={{ color: G.gold, textDecoration: "underline" }}
-        >
-          {m[1]}
-        </a>
-      );
+    if (/^\*[^*]+\*$/.test(part))
+      return <em key={key}>{part.slice(1, -1)}</em>;
+    const m = /^\[([^\]]+)\]\(((?:https:\/\/|\/(?![/\\]))[^)\s\\]*)\)$/.exec(part);
+    if (m) {
+      // "/x" stays on our site; "//host" and "/\host" (which browsers read
+      // as another site) never match the pattern above.
+      const internal = m[2].startsWith("/") && !/^\/[/\\]/.test(m[2]);
+      if (internal)
+        return (
+          <NextLink
+            key={key}
+            href={m[2]}
+            style={{ color: G.gold, textDecoration: "underline" }}
+          >
+            {m[1]}
+          </NextLink>
+        );
+      if (m[2].startsWith("https://"))
+        return (
+          <a
+            key={key}
+            href={m[2]}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            style={{ color: G.gold, textDecoration: "underline" }}
+          >
+            {m[1]}
+          </a>
+        );
+      return m[1];
+    }
     return part;
   });
 }
 
-/** Text is rendered as React text (never HTML), so nothing can inject markup. */
 export function GuideMarkdown({ text }: { text: string }) {
-  const blocks = text.split(/\n{2,}/);
+  const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
   return (
     <Box color={G.text} lineHeight="1.7" fontSize="md">
       {blocks.map((b, i) => {
-        const lines = b.split("\n");
-        if (lines.every((l) => /^\s*-\s+/.test(l)))
+        const lines = b.split("\n").filter((l) => l.trim() !== "");
+        if (!lines.length) return null;
+        const h = /^(#{1,3})\s+(.+)$/.exec(lines[0]);
+        if (h && lines.length === 1) {
+          const level = h[1].length;
+          return (
+            <Text
+              key={i}
+              as={level === 1 ? "h2" : level === 2 ? "h3" : "h4"}
+              fontWeight="800"
+              fontSize={level === 1 ? "xl" : level === 2 ? "lg" : "md"}
+              color="white"
+              mt={i ? 5 : 0}
+              mb={2}
+            >
+              {inline(h[2], `${i}`)}
+            </Text>
+          );
+        }
+        if (lines.every((l) => /^\s*[-*]\s+/.test(l)))
           return (
             <Box as="ul" key={i} pl={5} mb={3} style={{ listStyle: "disc" }}>
               {lines.map((l, j) => (
                 <li key={j}>
-                  {inline(l.replace(/^\s*-\s+/, ""), `${i}-${j}`)}
+                  {inline(l.replace(/^\s*[-*]\s+/, ""), `${i}-${j}`)}
                 </li>
               ))}
             </Box>
           );
+        if (lines.every((l) => /^\s*\d{1,3}[.)]\s+/.test(l)))
+          return (
+            <Box as="ol" key={i} pl={6} mb={3} style={{ listStyle: "decimal" }}>
+              {lines.map((l, j) => (
+                <li key={j}>
+                  {inline(l.replace(/^\s*\d{1,3}[.)]\s+/, ""), `${i}-${j}`)}
+                </li>
+              ))}
+            </Box>
+          );
+        // A heading line followed by text in the same block.
+        const head = h ? lines.shift()! : null;
         return (
-          <Text key={i} mb={3}>
-            {lines.map((l, j) => (
-              <span key={j}>
-                {inline(l, `${i}-${j}`)}
-                {j < lines.length - 1 && <br />}
-              </span>
-            ))}
-          </Text>
+          <Box key={i}>
+            {head && h && (
+              <Text
+                as={h[1].length === 1 ? "h2" : h[1].length === 2 ? "h3" : "h4"}
+                fontWeight="800"
+                fontSize={h[1].length === 1 ? "xl" : h[1].length === 2 ? "lg" : "md"}
+                color="white"
+                mt={i ? 5 : 0}
+                mb={2}
+              >
+                {inline(h[2], `${i}h`)}
+              </Text>
+            )}
+            <Text mb={3}>
+              {lines.map((l, j) => (
+                <span key={j}>
+                  {inline(l, `${i}-${j}`)}
+                  {j < lines.length - 1 && <br />}
+                </span>
+              ))}
+            </Text>
+          </Box>
         );
       })}
     </Box>
@@ -239,6 +304,11 @@ export function FieldValue({
       ) : null;
     }
     case "video":
+      return typeof value === "string" && value.startsWith("https://") ? (
+        <Box maxW="720px">
+          <GuideVideo url={value} title={field.label} />
+        </Box>
+      ) : null;
     case "url":
       return typeof value === "string" && value.startsWith("https://") ? (
         <a
@@ -247,9 +317,7 @@ export function FieldValue({
           rel="noopener noreferrer nofollow"
           style={{ color: G.gold, textDecoration: "underline" }}
         >
-          {field.kind === "video"
-            ? "Watch the video"
-            : value.replace(/^https:\/\/(www\.)?/, "").slice(0, 60)}
+          {value.replace(/^https:\/\/(www\.)?/, "").slice(0, 60)}
         </a>
       ) : null;
     case "entries": {
@@ -372,8 +440,10 @@ export function GuideCard({
   right?: ReactNode;
 }) {
   const t = typeOf(config, card.type);
+  // Players don't fit on a small card; videos play on the entry page.
   const fields = (t?.fields ?? []).filter(
-    (f) => f.onCard && hasFieldValue(f, card.fields[f.key]),
+    (f) =>
+      f.onCard && f.kind !== "video" && hasFieldValue(f, card.fields[f.key]),
   );
   const title = t?.page ? (
     <NextLink href={entryPath(gameSlug, card.type, card.slug)}>

@@ -71,6 +71,9 @@ export interface HubChecklistDef {
   title: string;
   description: string | null;
   filter: HubFilter;
+  /** Story walkthrough: ordered steps (Step X of N, Previous / Next). Older
+   *  APIs omit it; isStory() falls back to the old key "walkthrough". */
+  story?: boolean;
 }
 
 export interface HubSectionDef {
@@ -149,6 +152,8 @@ export interface HubEnginePage {
   sections: HubResolvedSection[];
   /** Public entries per type (API 2026-11-05+; older APIs omit it). */
   typeCounts?: Record<string, number>;
+  /** Published guide pages (table of contents). Older APIs omit it. */
+  pages?: HubPageNode[];
 }
 
 /** [pinId, entryId, typeKey, x, y, title, confirmed, spoilerStage, eras,
@@ -173,9 +178,15 @@ export interface HubChecklistPage {
   items: HubCard[];
 }
 
-/** A checklist with this key is the story walkthrough: the hub shows it as
- *  steps and the page bar links to it. Plain module (server-safe). */
-export const WALKTHROUGH_KEY = "walkthrough";
+/** Is this checklist the story walkthrough (shown as steps)? The template's
+ *  Story switch; configs from before the switch used the key "walkthrough".
+ *  Plain module (server-safe). */
+export const isStory = (c: { key: string; story?: boolean }) =>
+  typeof c.story === "boolean" ? c.story : c.key === "walkthrough";
+
+/** Web path of a guide page. */
+export const guidePath = (gameSlug: string, pageSlug: string) =>
+  `/games/${gameSlug}/guide/${pageSlug}`;
 
 export const typeOf = (c: HubTemplateConfig, key: string) =>
   c.types.find((t) => t.key === key);
@@ -201,3 +212,149 @@ export function spoilerVisible(
 
 export const eraVisible = (eras: string[], era: string | null) =>
   !era || eras.length === 0 || eras.includes(era);
+
+// ───────────────────────── guide pages + blocks ─────────────────────────
+
+export interface HubPageNode {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  spoilerStage: string | null;
+  eras: string[];
+  children: HubPageNode[];
+}
+
+export interface HubCaptionedImage extends HubImage {
+  caption: string | null;
+}
+
+export type BlockKind =
+  | "text"
+  | "image"
+  | "gallery"
+  | "video"
+  | "table"
+  | "dropdown"
+  | "tip"
+  | "map"
+  | "checklist"
+  | "entries";
+
+interface BlockBase {
+  id: string;
+  spoilerStage: string | null;
+  eras: string[];
+}
+
+export type HubBlock = BlockBase &
+  (
+    | { kind: "text"; markdown: string }
+    | { kind: "image"; image: HubCaptionedImage; entrySlug: string | null }
+    | { kind: "gallery"; images: HubCaptionedImage[] }
+    | { kind: "video"; url: string; start: number | null; caption: string | null }
+    | {
+        kind: "table";
+        title: string | null;
+        mode: "manual";
+        columns: string[];
+        rows: string[][];
+      }
+    | {
+        kind: "table";
+        title: string | null;
+        mode: "entries";
+        filter: HubFilter;
+        columns: string[];
+        complete: boolean;
+      }
+    | { kind: "dropdown"; title: string; open: boolean; blocks: HubBlock[] }
+    | { kind: "tip"; style: "tip" | "warning" | "spoiler"; markdown: string }
+    | { kind: "map"; mapKey: string; filter: HubFilter; focusEntry: string | null }
+    | { kind: "checklist"; checklistKey: string }
+    | {
+        kind: "entries";
+        title: string | null;
+        filter: HubFilter;
+        style: "cards" | "list";
+        limit: number;
+        sort: "order" | "newest" | "title";
+      }
+  );
+
+export interface HubTableRow {
+  id: string;
+  slug: string;
+  type: string;
+  title: string;
+  status: "unconfirmed" | "confirmed";
+  spoilerStage: string | null;
+  eras: string[];
+  cells: Record<string, string>;
+}
+
+/** A block as readers get it: entry-driven blocks carry their data. */
+export type HubResolvedBlock = HubBlock & {
+  rows?: HubTableRow[] | string[][];
+  columnLabels?: string[];
+  items?: HubCard[];
+  checklistTitle?: string;
+  total?: number;
+  entryType?: string | null;
+};
+
+export interface HubGuidePage {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  spoilerStage: string | null;
+  eras: string[];
+  seoTitle: string | null;
+  seoDescription: string | null;
+  updatedAt: string;
+  parent: { slug: string; title: string } | null;
+  prev: { slug: string; title: string } | null;
+  next: { slug: string; title: string } | null;
+  position: number;
+  siblings: number;
+  children: Array<{ slug: string; title: string; summary: string | null }>;
+  blocks: HubResolvedBlock[];
+}
+
+/** YouTube / Streamable link -> privacy embed URL (null = not playable). */
+export function videoEmbed(
+  url: string,
+  start?: number | null,
+): { src: string; thumb: string | null } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    let id: string | null = null;
+    if (host === "youtu.be") id = u.pathname.slice(1).split("/")[0];
+    else if (host === "youtube.com" || host === "m.youtube.com") {
+      if (u.pathname === "/watch") id = u.searchParams.get("v");
+      else {
+        const m = /^\/(?:shorts|embed)\/([\w-]{6,})/.exec(u.pathname);
+        id = m ? m[1] : null;
+      }
+    }
+    const t = start ?? (Number(u.searchParams.get("t")?.replace(/s$/, "")) || null);
+    if (id && /^[\w-]{6,20}$/.test(id))
+      return {
+        src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0${t ? `&start=${Math.floor(t)}` : ""}`,
+        thumb: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      };
+    if (host === "streamable.com") {
+      const m = /^\/(?:e\/)?(\w{3,})/.exec(u.pathname);
+      if (m)
+        return {
+          src: `https://streamable.com/e/${m[1]}?autoplay=1${t ? `&t=${Math.floor(t)}` : ""}`,
+          thumb: null,
+        };
+    }
+  } catch {
+    /* not a URL */
+  }
+  return null;
+}

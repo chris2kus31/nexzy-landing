@@ -481,7 +481,7 @@ function EntryForm({
   );
 }
 
-function FieldInput({
+export function FieldInput({
   gameId,
   config,
   field: f,
@@ -644,7 +644,7 @@ function FieldInput({
   }
 }
 
-function Gallery({
+export function Gallery({
   gameId,
   value,
   max,

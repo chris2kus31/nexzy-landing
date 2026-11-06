@@ -14,6 +14,7 @@ import type {
   HubChecklistPage,
   HubEnginePage,
   HubEntryFull,
+  HubGuidePage,
 } from "@/lib/hub-engine/types";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
@@ -26,6 +27,7 @@ const OFF: HubEnginePage = {
   contentVersion: 0,
   config: null,
   sections: [],
+  pages: [],
 };
 
 function signedHeaders(): Record<string, string> {
@@ -101,4 +103,26 @@ export async function fetchEngineTypeEntries(
     if (!cursor) break;
   }
   return out;
+}
+
+/** One published guide page (blocks resolved by the API). */
+export async function fetchEngineGuidePage(
+  slug: string,
+  pageSlug: string,
+): Promise<HubGuidePage | null> {
+  return get<HubGuidePage>(
+    `/game-hubs/${enc(slug)}/engine/pages/${enc(pageSlug)}`,
+    300,
+  );
+}
+
+/** Every public guide URL (all live guides) for sitemap.xml. */
+export async function fetchEngineSitemap(): Promise<
+  Array<{ game: string; urls: Array<{ path: string; updatedAt: string }> }>
+> {
+  return (
+    (await get<
+      Array<{ game: string; urls: Array<{ path: string; updatedAt: string }> }>
+    >(`/hub-engine/sitemap`, 21600)) ?? []
+  );
 }

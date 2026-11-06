@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   Box,
   Button,
+  Flex,
   HStack,
   Input,
   NativeSelect,
@@ -356,5 +357,42 @@ export function SubTabs<K extends string>({
         );
       })}
     </HStack>
+  );
+}
+
+/** A row of checkboxes for picking several values. */
+export function MultiCheck({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string[];
+  options: { value: string; label: string }[];
+  onChange: (v: string[]) => void;
+}) {
+  return (
+    <Labeled label={label}>
+      <Flex gap={3} wrap="wrap">
+        {options.map((o) => (
+          <Check
+            key={o.value}
+            label={o.label}
+            checked={value.includes(o.value)}
+            onChange={(on) =>
+              onChange(
+                on ? [...value, o.value] : value.filter((x) => x !== o.value),
+              )
+            }
+          />
+        ))}
+        {!options.length && (
+          <Text fontSize="xs" color={C.faint}>
+            None available yet
+          </Text>
+        )}
+      </Flex>
+    </Labeled>
   );
 }

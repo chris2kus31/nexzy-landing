@@ -2,7 +2,7 @@
 
 // The guide on a game hub, one layout for every game (the mega hub
 // template): the map preview beside the reader's progress on every
-// checklist, the story walkthrough (a checklist keyed "walkthrough"), one
+// checklist, the story walkthrough (the checklist with the Story switch), one
 // "Browse" tile per entry type, then the template's other sections (cards,
 // featured, and lists drawn as compact tables). Map and checklist sections
 // in the template are folded into the top block, not repeated. Server HTML
@@ -22,8 +22,9 @@ import {
 } from "@chakra-ui/react";
 import { FiCheck, FiChevronRight, FiHelpCircle } from "react-icons/fi";
 import {
-  WALKTHROUGH_KEY,
   entryPath,
+  guidePath,
+  isStory,
   eraVisible,
   spoilerVisible,
   typeOf,
@@ -31,6 +32,7 @@ import {
   type HubChecklistPage,
   type HubEnginePage,
   type HubFieldDef,
+  type HubPageNode,
   type HubResolvedSection,
   type HubTemplateConfig,
 } from "@/lib/hub-engine/types";
@@ -81,6 +83,7 @@ export default function GuideSections({
         sections={page.sections}
         checklists={checklists}
         typeCounts={page.typeCounts ?? null}
+        pages={page.pages ?? []}
       />
     </GuideProgressProvider>
   );
@@ -156,22 +159,27 @@ function Body({
   sections,
   checklists,
   typeCounts,
+  pages,
 }: {
   slug: string;
   config: HubTemplateConfig;
   sections: HubResolvedSection[];
   checklists: HubChecklistPage[];
   typeCounts: Record<string, number> | null;
+  pages: HubPageNode[];
 }) {
   const visible = useVisible(config);
   const mapSection = sections.find((s) => s.style === "map");
   const map =
     config.maps.find((m) => m.key === mapSection?.mapKey) ?? config.maps[0];
+  const storyKeys = new Set(
+    config.checklists.filter(isStory).map((c) => c.key),
+  );
   const trackers = checklists.filter(
-    (c) => c.key !== WALKTHROUGH_KEY && c.items.length > 0,
+    (c) => !storyKeys.has(c.key) && c.items.length > 0,
   );
   const walk = checklists.find(
-    (c) => c.key === WALKTHROUGH_KEY && c.items.length > 0,
+    (c) => storyKeys.has(c.key) && c.items.length > 0,
   );
   const rest = sections.filter(
     (s) => s.style !== "map" && s.style !== "checklist",
@@ -231,6 +239,10 @@ function Body({
           list={walk}
           visible={visible}
         />
+      )}
+
+      {pages.length > 0 && (
+        <GuidePages slug={slug} config={config} pages={pages} />
       )}
 
       {typeCounts && (
@@ -450,6 +462,67 @@ function Walkthrough({
 }
 
 /** One tile per entry type that has its own pages and at least one entry. */
+/** The guide's pages (table of contents) as tiles; steps count under each. */
+function GuidePages({
+  slug,
+  config,
+  pages,
+}: {
+  slug: string;
+  config: HubTemplateConfig;
+  pages: HubPageNode[];
+}) {
+  const { spoiler } = useGuideProgress();
+  const masked = (p: HubPageNode) =>
+    config.features.spoilers &&
+    !!p.spoilerStage &&
+    !spoilerVisible(config.spoilerStages, p.spoilerStage, spoiler);
+  return (
+    <Box id="guide-pages" scrollMarginTop="140px">
+      <Flex justify="space-between" align="baseline" mb={3} gap={3}>
+        <Heading as="h3" fontSize="xl" color="white">
+          Guide pages
+        </Heading>
+        <NextLink
+          href={`/games/${slug}/guide`}
+          style={{ color: G.gold, fontSize: 14, fontWeight: 700 }}
+        >
+          All pages
+        </NextLink>
+      </Flex>
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
+        {pages.slice(0, 12).map((p) => (
+          <NextLink key={p.slug} href={guidePath(slug, p.slug)}>
+            <Box
+              h="100%"
+              bg={G.panel}
+              border="1px solid"
+              borderColor={G.line}
+              borderRadius="12px"
+              p={4}
+              _hover={{ borderColor: G.gold }}
+            >
+              <Text fontWeight="700" color="white">
+                {masked(p) ? "Spoiler page" : p.title}
+              </Text>
+              {p.summary && !masked(p) && (
+                <Text fontSize="sm" color={G.muted} lineClamp={2} mt={1}>
+                  {p.summary}
+                </Text>
+              )}
+              {p.children.length > 0 && (
+                <Text fontSize="xs" color={G.gold} fontWeight="700" mt={2}>
+                  {p.children.length} step{p.children.length > 1 ? "s" : ""}
+                </Text>
+              )}
+            </Box>
+          </NextLink>
+        ))}
+      </SimpleGrid>
+    </Box>
+  );
+}
+
 function BrowseTiles({
   slug,
   config,

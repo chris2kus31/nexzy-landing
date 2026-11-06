@@ -3,7 +3,11 @@
 // export. Same-origin proxy via adminRequest.
 "use client";
 
-import type { HubImage, HubTemplateConfig } from "@/lib/hub-engine/types";
+import type {
+  HubBlock,
+  HubImage,
+  HubTemplateConfig,
+} from "@/lib/hub-engine/types";
 
 const enc = encodeURIComponent;
 
@@ -158,6 +162,8 @@ export interface EntryInput {
   sortOrder?: number;
   fields?: Record<string, unknown>;
   media?: HubImage[];
+  /** Quick add: saved with the entry, replacing its pins. */
+  pins?: { mapKey: string; x: number; y: number }[];
 }
 
 export interface AdminMapPin {
@@ -269,6 +275,75 @@ export const exportEngineEntries = (gameId: string) =>
   adminRequest<{ entries: unknown[]; truncated?: boolean }>(
     `${base(gameId)}/export`,
   );
+
+// ── guide pages ──
+
+export type PageStatus = "draft" | "published" | "hidden";
+
+export interface EnginePageRow {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  status: PageStatus;
+  parentId: string | null;
+  sortOrder: number;
+  spoilerStage: string | null;
+  eras: string[];
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface EnginePage extends EnginePageRow {
+  seoTitle: string | null;
+  seoDescription: string | null;
+  blocks: HubBlock[];
+}
+
+export interface PageInput {
+  title: string;
+  slug?: string | null;
+  summary?: string | null;
+  status?: PageStatus;
+  parentId?: string | null;
+  sortOrder?: number;
+  spoilerStage?: string | null;
+  eras?: string[];
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  blocks?: HubBlock[];
+}
+
+export const listEnginePages = (gameId: string) =>
+  adminRequest<EnginePageRow[]>(`${base(gameId)}/pages`);
+export const getEnginePage = (gameId: string, id: string) =>
+  adminRequest<EnginePage>(`${base(gameId)}/pages/${enc(id)}`);
+export const createEnginePage = (gameId: string, input: PageInput) =>
+  adminRequest<EnginePage>(`${base(gameId)}/pages`, {
+    method: "POST",
+    body: input,
+  });
+export const updateEnginePage = (
+  gameId: string,
+  id: string,
+  input: PageInput,
+) =>
+  adminRequest<EnginePage>(`${base(gameId)}/pages/${enc(id)}`, {
+    method: "PUT",
+    body: input,
+  });
+export const deleteEnginePage = (gameId: string, id: string) =>
+  adminRequest<{ ok: true }>(`${base(gameId)}/pages/${enc(id)}`, {
+    method: "DELETE",
+  });
+export const reorderEnginePages = (
+  gameId: string,
+  items: { id: string; parentId: string | null; sortOrder: number }[],
+) =>
+  adminRequest<EnginePageRow[]>(`${base(gameId)}/pages/order`, {
+    method: "PUT",
+    body: { items },
+  });
 
 /** Read a picked file as a data URL (uploads go through the API as base64). */
 export function fileToDataUrl(file: File): Promise<string> {

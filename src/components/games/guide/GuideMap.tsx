@@ -126,6 +126,10 @@ type Props = {
   preview?: boolean;
   /** Open zoomed to this pin (from ?pin=). */
   focusPin?: string | null;
+  /** Open zoomed to this entry's first pin (guide page map blocks). */
+  focusEntry?: string | null;
+  /** Show only these entry types (guide page map blocks). Empty = all. */
+  types?: string[];
 };
 
 export default function GuideMap({
@@ -134,7 +138,10 @@ export default function GuideMap({
   map,
   preview = false,
   focusPin = null,
+  focusEntry = null,
+  types,
 }: Props) {
+  const onlyKey = (types ?? []).join(",");
   const box = useRef<HTMLDivElement | null>(null);
   const ml = useRef<MlMap | null>(null);
   const [visible, setVisible] = useState(!preview);
@@ -210,7 +217,11 @@ export default function GuideMap({
     setPinsFailed(false);
     fetch(`/api/hub-engine/${slug}/maps/${map.key}/pins`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((d: { pins: HubPinRow[] }) => alive && setPins(d.pins))
+      .then((d: { pins: HubPinRow[] }) => {
+        if (!alive) return;
+        const only = onlyKey ? new Set(onlyKey.split(",")) : null;
+        setPins(only ? d.pins.filter((p) => only.has(p[2])) : d.pins);
+      })
       .catch(() => {
         // A failed pins request must not look like "nothing placed yet".
         if (alive) {
@@ -221,7 +232,7 @@ export default function GuideMap({
     return () => {
       alive = false;
     };
-  }, [visible, slug, map.key]);
+  }, [visible, slug, map.key, onlyKey]);
 
   // Pins after the reader's filters, as GeoJSON for the GPU layer.
   const data = useMemo(() => {
@@ -568,10 +579,12 @@ export default function GuideMap({
     (ml.current.getSource("hl") as GeoJSONSource | undefined)?.setData(data.hl);
   }, [data, ready]);
 
-  // ?pin=<id>: fly there once pins are in.
+  // ?pin=<id> (or an entry to center on): fly there once pins are in.
   useEffect(() => {
-    if (!ready || !pins || !focusPin || !ml.current) return;
-    const row = pins.find((p) => p[0] === focusPin);
+    if (!ready || !pins || !(focusPin || focusEntry) || !ml.current) return;
+    const row = focusPin
+      ? pins.find((p) => p[0] === focusPin)
+      : pins.find((p) => p[9] === focusEntry);
     if (!row) return;
     // The full map opens the pin's details (a shared ?pin= link); a preview
     // just frames the pin.
@@ -585,7 +598,7 @@ export default function GuideMap({
     });
     // Only when the pin or the loaded pins change, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, pins, focusPin]);
+  }, [ready, pins, focusPin, focusEntry]);
 
   // A pin's close-up: about 3x the whole-map view of THIS box, so a small
   // box (entry page) and a big one (full map) frame the spot the same way.

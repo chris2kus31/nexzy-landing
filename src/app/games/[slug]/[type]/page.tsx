@@ -10,7 +10,7 @@ import {
   fetchEnginePage,
   fetchEngineTypeEntries,
 } from "@/lib/hub-engine/server";
-import { WALKTHROUGH_KEY, typeOf } from "@/lib/hub-engine/types";
+import { isStory, typeOf } from "@/lib/hub-engine/types";
 import { G } from "@/components/games/guide/GuideBits";
 import { GuideTypeList } from "@/components/games/guide/GuideSections";
 import { jsonLdString } from "@/lib/seo/jsonld";
@@ -34,7 +34,7 @@ async function load(slug: string, type: string) {
   // Story types keep the guide's order (walkthrough steps); everything else
   // reads best A to Z.
   const story = engine.config.checklists.some(
-    (c) => c.key === WALKTHROUGH_KEY && c.filter.types.includes(type),
+    (c) => isStory(c) && c.filter.types.includes(type),
   );
   const items = story
     ? fetched

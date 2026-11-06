@@ -20,6 +20,7 @@ import { MIN_TOPIC_ARTICLES } from "@/lib/blog/tags";
 import { AUTHORS } from "@/lib/blog/authors";
 import { dateSlug } from "@/lib/rewind/era";
 import { isPostIndexable } from "@/lib/blog/indexing";
+import { fetchEngineSitemap } from "@/lib/hub-engine/server";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -223,6 +224,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
+  // Mega hub guides: map, checklists, type lists, entry pages and guide
+  // pages of every live guide (one API call). Best-effort.
+  const guideEntries: MetadataRoute.Sitemap = [];
+  try {
+    for (const g of await fetchEngineSitemap()) {
+      for (const u of g.urls) {
+        const isPage = /\/guide(\/|$)/.test(u.path);
+        guideEntries.push({
+          url: `${SITE_URL}${u.path}`,
+          lastModified: new Date(u.updatedAt),
+          changeFrequency: "daily",
+          priority: isPage || /\/(map|checklist\/)/.test(u.path) ? 0.7 : 0.6,
+        });
+      }
+    }
+  } catch {
+    // keep whatever we already collected
+  }
+
   // Author pages (E-E-A-T) — stable, low-churn.
   const authorEntries: MetadataRoute.Sitemap = Object.values(AUTHORS).map(
     (a) => ({
@@ -261,6 +281,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...videoEntries,
     ...rewindDayEntries,
     ...gameHubEntries,
+    ...guideEntries,
     ...authorEntries,
     ...topicEntries,
   ];

@@ -55,7 +55,7 @@ import GuideSections from "@/components/games/guide/GuideSections";
 import HubNav, { type HubNavItem } from "@/components/games/hub/HubNav";
 import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
 import {
-  WALKTHROUGH_KEY,
+  isStory,
   type HubChecklistPage,
   type HubEnginePage,
 } from "@/lib/hub-engine/types";
@@ -308,8 +308,8 @@ export default async function GameHubPage({
   const checklistKeys =
     guide?.enabled && guide.config
       ? [
-          ...guide.config.checklists.filter((c) => c.key === WALKTHROUGH_KEY),
-          ...guide.config.checklists.filter((c) => c.key !== WALKTHROUGH_KEY),
+          ...guide.config.checklists.filter((c) => isStory(c)),
+          ...guide.config.checklists.filter((c) => !isStory(c)),
         ]
           .slice(0, 8)
           .map((c) => c.key)
@@ -692,8 +692,11 @@ function MegaHub({
     game.genres[0] ? { label: "GENRE", value: game.genres[0] } : null,
   ].filter((x): x is { label: string; value: string } => !!x);
   // The "on this page" bar lists only what this hub shows, in page order.
+  const storyKeys = new Set(
+    (guide?.config?.checklists ?? []).filter(isStory).map((c) => c.key),
+  );
   const walkthrough = checklists.some(
-    (c) => c.key === WALKTHROUGH_KEY && c.items.length > 0,
+    (c) => storyKeys.has(c.key) && c.items.length > 0,
   );
   const navItems: HubNavItem[] = [
     ...(hasGuide ? [{ id: "guide", label: "Guide" }] : []),
@@ -701,6 +704,9 @@ function MegaHub({
       ? [{ id: "guide-map", label: "Map" }]
       : []),
     ...(walkthrough ? [{ id: "guide-walkthrough", label: "Walkthrough" }] : []),
+    ...(hasGuide && guide?.pages?.length
+      ? [{ id: "guide-pages", label: "Guide pages" }]
+      : []),
     // Same order as the page: ratings lead after launch, follow Predict before.
     ...(m.scores && scores?.open ? [{ id: "scores", label: "Reviews" }] : []),
     ...(trailers.length ? [{ id: "trailers", label: "Trailers" }] : []),
