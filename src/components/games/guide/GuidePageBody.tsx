@@ -76,8 +76,9 @@ export default function GuidePageBody({
             current={page.slug}
           />
         </Box>
-        <Box flex="1" minW={0} w="100%">
-          <Flex justify="flex-end" mb={4}>
+        {/* Reading width like a guide, not a dashboard. */}
+        <Box flex="1" minW={0} w="100%" maxW="820px">
+          <Flex mb={5}>
             <GuidePrefs config={config} />
           </Flex>
           <PageGate config={config} stage={page.spoilerStage}>
@@ -102,6 +103,24 @@ export default function GuidePageBody({
                 pages={pages}
                 page={page}
               />
+            )}
+            {page.children.length === 0 && (page.story || page.steps) && (
+              <Box
+                mt={8}
+                bg={G.card}
+                border="1px dashed"
+                borderColor={G.line}
+                borderRadius="14px"
+                p={6}
+                textAlign="center"
+              >
+                <Text color="white" fontWeight="700">
+                  Steps are on the way
+                </Text>
+                <Text color={G.muted} fontSize="sm" mt={1}>
+                  Each step shows up here as it goes live.
+                </Text>
+              </Box>
             )}
           </PageGate>
           <PrevNext slug={slug} config={config} pages={pages} page={page} />

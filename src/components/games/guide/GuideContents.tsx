@@ -56,21 +56,13 @@ export function useGuideGroups(
       key: "walkthrough",
       title: story.title,
       href: guidePath(slug, story.slug),
-      links: story.children.length
-        ? story.children.map((c, i) => ({
-            key: c.slug,
-            href: guidePath(slug, c.slug),
-            label: masked(c, "Spoiler step"),
-            n: i + 1,
-            done: !!c.entry && found.has(c.entry.id),
-          }))
-        : [
-            {
-              key: story.slug,
-              href: guidePath(slug, story.slug),
-              label: story.title,
-            },
-          ],
+      links: story.children.map((c, i) => ({
+        key: c.slug,
+        href: guidePath(slug, c.slug),
+        label: masked(c, "Spoiler step"),
+        n: i + 1,
+        done: !!c.entry && found.has(c.entry.id),
+      })),
     });
   const others = pages.filter((p) => p !== story);
   if (others.length)
@@ -134,6 +126,8 @@ export function useGuideGroups(
   return groups;
 }
 
+const ON_BG = "rgba(255,215,0,0.10)";
+
 function LinkRow({ l, current }: { l: Link; current?: string }) {
   const on = l.key === current;
   return (
@@ -144,12 +138,14 @@ function LinkRow({ l, current }: { l: Link; current?: string }) {
       px={2.5}
       py={1.5}
       pl={l.child ? 6 : 2.5}
-      borderRadius="8px"
+      borderRadius="0 8px 8px 0"
+      borderLeft="2px solid"
+      borderColor={on ? G.gold : "transparent"}
       fontSize="sm"
-      fontWeight={on ? "800" : "500"}
-      color={on ? G.ink : l.child ? G.muted : G.text}
-      bg={on ? G.gold : "transparent"}
-      _hover={on ? {} : { bg: "rgba(255,255,255,0.06)", color: "white" }}
+      fontWeight={on ? "700" : "500"}
+      color={on ? G.gold : l.child ? G.muted : G.text}
+      bg={on ? ON_BG : "transparent"}
+      _hover={on ? {} : { bg: "rgba(255,255,255,0.05)", color: "white" }}
     >
       <NextLink href={l.href} aria-current={on ? "page" : undefined}>
         {l.n != null && (
@@ -157,7 +153,7 @@ function LinkRow({ l, current }: { l: Link; current?: string }) {
             as="span"
             minW="20px"
             fontWeight="800"
-            color={on ? G.ink : G.gold}
+            color={on ? G.gold : G.muted}
             fontSize="xs"
           >
             {l.n}
@@ -166,7 +162,7 @@ function LinkRow({ l, current }: { l: Link; current?: string }) {
         <Text as="span" flex="1" lineClamp={2}>
           {l.label}
         </Text>
-        {l.done && <FiCheck aria-label="Done" color={on ? G.ink : GREEN} />}
+        {l.done && <FiCheck aria-label="Done" color={GREEN} />}
       </NextLink>
     </Flex>
   );
@@ -198,6 +194,7 @@ export function GuideContentsHub({
       <SimpleGrid
         columns={{ base: 1, md: 2, lg: Math.min(groups.length, 4) }}
         gap={3}
+        alignItems="start"
       >
         {groups.map((g) => (
           <Box
@@ -220,6 +217,15 @@ export function GuideContentsHub({
               {g.title}
             </Text>
             <Stack gap={0}>
+              {g.links.length === 0 && g.href && (
+                <LinkRow
+                  l={{
+                    key: g.key,
+                    href: g.href,
+                    label: `Open the ${g.title.toLowerCase()}`,
+                  }}
+                />
+              )}
               {g.links.slice(0, MAX).map((l) => (
                 <LinkRow key={l.key} l={l} />
               ))}
@@ -286,22 +292,33 @@ export function GuideContentsSidebar({
         const isOpen = open.has(g.key);
         const onTitle =
           g.key === "walkthrough" && g.href?.endsWith(`/${current}`);
+        const canOpen = g.links.length > 0;
         return (
           <Box key={g.key}>
-            <Flex align="center">
+            <Flex
+              align="center"
+              borderRadius="0 8px 8px 0"
+              borderLeft="2px solid"
+              borderColor={onTitle ? G.gold : "transparent"}
+              bg={onTitle ? ON_BG : "transparent"}
+            >
               {g.href ? (
                 <Box
                   asChild
                   flex="1"
                   px={2.5}
                   py={1.5}
-                  borderRadius="8px"
                   fontSize="sm"
                   fontWeight="800"
-                  color={onTitle ? G.ink : "white"}
-                  bg={onTitle ? G.gold : "transparent"}
+                  color={onTitle ? G.gold : "white"}
+                  _hover={{ color: G.gold }}
                 >
-                  <NextLink href={g.href}>{g.title}</NextLink>
+                  <NextLink
+                    href={g.href}
+                    aria-current={onTitle ? "page" : undefined}
+                  >
+                    {g.title}
+                  </NextLink>
                 </Box>
               ) : (
                 <Text
@@ -315,18 +332,25 @@ export function GuideContentsSidebar({
                   {g.title}
                 </Text>
               )}
-              <Box asChild color={G.muted} p={1.5} _hover={{ color: "white" }}>
-                <button
-                  type="button"
-                  onClick={() => toggle(g.key)}
-                  aria-expanded={isOpen}
-                  aria-label={`${isOpen ? "Collapse" : "Expand"} ${g.title}`}
+              {canOpen && (
+                <Box
+                  asChild
+                  color={G.muted}
+                  p={1.5}
+                  _hover={{ color: "white" }}
                 >
-                  {isOpen ? <FiChevronDown /> : <FiChevronRight />}
-                </button>
-              </Box>
+                  <button
+                    type="button"
+                    onClick={() => toggle(g.key)}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? "Collapse" : "Expand"} ${g.title}`}
+                  >
+                    {isOpen ? <FiChevronDown /> : <FiChevronRight />}
+                  </button>
+                </Box>
+              )}
             </Flex>
-            {isOpen && (
+            {isOpen && canOpen && (
               <Stack gap={0} pl={1}>
                 {g.links.map((l) => (
                   <LinkRow key={l.key} l={l} current={current} />
