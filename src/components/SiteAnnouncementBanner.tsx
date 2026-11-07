@@ -6,6 +6,7 @@
 // is app-only, so on web it simply renders no button. Additive chrome — safe to
 // mount globally.
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Box, Flex, Text, Button, Link } from "@chakra-ui/react";
 import {
   FaBolt,
@@ -77,6 +78,22 @@ const tint = (hex: string, a: number) => {
 export default function SiteAnnouncementBanner() {
   const [item, setItem] = useState<Announcement | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Height of the fixed site nav on this page (0 on pages without it).
+  const [navH, setNavH] = useState(0);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>("[data-site-nav]");
+    if (!nav) {
+      setNavH(0);
+      return;
+    }
+    const measure = () => setNavH(nav.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [pathname]);
 
   useEffect(() => {
     let alive = true;
@@ -105,98 +122,115 @@ export default function SiteAnnouncementBanner() {
 
   return (
     <>
+      {/* Sits right under the fixed nav and scrolls away with the page. The
+          negative bottom margin hands the nav's height back, so each page's
+          own "clear the nav" top padding still lines up: the page simply
+          moves down by the banner's height. Opaque base so the page's own
+          background (painted below it) never shows through. */}
       <Box
-        bg={tint(accent, 0.1)}
-        borderBottom="1px solid"
-        borderColor={tint(accent, 0.35)}
-        px={{ base: 4, md: 6 }}
-        py={2.5}
+        position="relative"
+        zIndex={999}
+        bg="nexzy.navy"
+        style={{ marginTop: navH, marginBottom: -navH }}
       >
-        <Flex align="center" gap={3} maxW="1200px" mx="auto">
-          <Flex
-            align="center"
-            justify="center"
-            w="30px"
-            h="30px"
-            borderRadius="8px"
-            flex="0 0 auto"
-            bg={tint(accent, 0.16)}
-            color={accent}
-          >
-            <Icon size={15} />
-          </Flex>
-          <Box
-            flex="1"
-            minW={0}
-            cursor={hasDetail ? "pointer" : "default"}
-            onClick={() => hasDetail && setSheetOpen(true)}
-          >
-            <Flex align="baseline" gap={2} wrap="wrap">
-              {item.kicker ? (
-                <Text
-                  fontSize="10px"
-                  fontWeight="700"
-                  letterSpacing="1px"
-                  textTransform="uppercase"
-                  color={accent}
-                >
-                  {item.kicker}
-                </Text>
-              ) : null}
-              <Text fontSize="sm" fontWeight="600" color="white" lineClamp={1}>
-                {item.title}
-              </Text>
-              {item.subtitle ? (
-                <Text fontSize="xs" color="whiteAlpha.700" lineClamp={1}>
-                  {item.subtitle}
-                </Text>
-              ) : null}
-            </Flex>
-          </Box>
-          {linkCta && item.cta ? (
-            <Link
-              href={item.cta.target as string}
-              _hover={{ textDecoration: "none" }}
+        <Box
+          bg={tint(accent, 0.1)}
+          borderBottom="1px solid"
+          borderColor={tint(accent, 0.35)}
+          px={{ base: 4, md: 6 }}
+          py={2.5}
+        >
+          <Flex align="center" gap={3} maxW="1200px" mx="auto">
+            <Flex
+              align="center"
+              justify="center"
+              w="30px"
+              h="30px"
+              borderRadius="8px"
               flex="0 0 auto"
+              bg={tint(accent, 0.16)}
+              color={accent}
             >
+              <Icon size={15} />
+            </Flex>
+            <Box
+              flex="1"
+              minW={0}
+              cursor={hasDetail ? "pointer" : "default"}
+              onClick={() => hasDetail && setSheetOpen(true)}
+            >
+              <Flex align="baseline" gap={2} wrap="wrap">
+                {item.kicker ? (
+                  <Text
+                    fontSize="10px"
+                    fontWeight="700"
+                    letterSpacing="1px"
+                    textTransform="uppercase"
+                    color={accent}
+                  >
+                    {item.kicker}
+                  </Text>
+                ) : null}
+                <Text
+                  fontSize="sm"
+                  fontWeight="600"
+                  color="white"
+                  lineClamp={1}
+                >
+                  {item.title}
+                </Text>
+                {item.subtitle ? (
+                  <Text fontSize="xs" color="whiteAlpha.700" lineClamp={1}>
+                    {item.subtitle}
+                  </Text>
+                ) : null}
+              </Flex>
+            </Box>
+            {linkCta && item.cta ? (
+              <Link
+                href={item.cta.target as string}
+                _hover={{ textDecoration: "none" }}
+                flex="0 0 auto"
+              >
+                <Button
+                  size="xs"
+                  bg={accent}
+                  color="#12152a"
+                  _hover={{ opacity: 0.9 }}
+                  fontWeight="600"
+                >
+                  {item.cta.label}
+                </Button>
+              </Link>
+            ) : sheetCta && item.cta ? (
               <Button
                 size="xs"
                 bg={accent}
                 color="#12152a"
                 _hover={{ opacity: 0.9 }}
                 fontWeight="600"
+                flex="0 0 auto"
+                onClick={() => setSheetOpen(true)}
               >
                 {item.cta.label}
               </Button>
-            </Link>
-          ) : sheetCta && item.cta ? (
+            ) : null}
             <Button
+              aria-label="Dismiss"
               size="xs"
-              bg={accent}
-              color="#12152a"
-              _hover={{ opacity: 0.9 }}
-              fontWeight="600"
+              variant="ghost"
+              color="whiteAlpha.700"
+              _hover={{ bg: "whiteAlpha.100", color: "white" }}
               flex="0 0 auto"
-              onClick={() => setSheetOpen(true)}
+              onClick={() => {
+                rememberDismissed(item.id);
+                setItem(null);
+              }}
             >
-              {item.cta.label}
+              <FaTimes />
             </Button>
-          ) : null}
-          <Button
-            aria-label="Dismiss"
-            size="xs"
-            variant="ghost"
-            color="whiteAlpha.700"
-            _hover={{ bg: "whiteAlpha.100", color: "white" }}
-            flex="0 0 auto"
-            onClick={() => {
-              rememberDismissed(item.id);
-              setItem(null);
-            }}
-          >
-            <FaTimes />
-          </Button>
-        </Flex>
+          </Flex>
+        </Box>
       </Box>
 
       {sheetOpen ? (

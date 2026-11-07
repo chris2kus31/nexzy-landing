@@ -134,6 +134,7 @@ type Form = {
   title: string;
   subtitle: string;
   audience: "everyone" | "authenticated";
+  surface: "all" | "app" | "web";
   priority: number;
   ctaAction: "none" | "link" | "remind" | "sheet" | "claim_coins";
   ctaLabel: string;
@@ -160,6 +161,7 @@ const EMPTY: Form = {
   title: "",
   subtitle: "",
   audience: "everyone",
+  surface: "all",
   priority: 0,
   ctaAction: "none",
   ctaLabel: "",
@@ -313,6 +315,7 @@ export default function AnnouncementsPanel() {
       title: a.title,
       subtitle: a.subtitle ?? "",
       audience: a.audience === "authenticated" ? "authenticated" : "everyone",
+      surface: a.surface === "app" || a.surface === "web" ? a.surface : "all",
       priority: a.priority,
       ctaAction: (a.ctaAction as Form["ctaAction"]) || "none",
       ctaLabel: a.ctaLabel ?? "",
@@ -397,6 +400,7 @@ export default function AnnouncementsPanel() {
       title: form.title.trim(),
       subtitle: form.subtitle || null,
       audience: form.audience,
+      surface: form.surface,
       priority: Number(form.priority) || 0,
       ctaAction: form.ctaAction,
       ctaLabel: form.ctaAction === "none" ? null : form.ctaLabel || null,
@@ -624,6 +628,26 @@ export default function AnnouncementsPanel() {
                 </option>
                 <option value="authenticated" style={{ color: "#000" }}>
                   Logged-in only
+                </option>
+              </select>
+            </Box>
+            <Box flex="1">
+              {label("Where it shows")}
+              <select
+                value={form.surface}
+                onChange={(e) =>
+                  set("surface", e.target.value as Form["surface"])
+                }
+                style={nativeControl}
+              >
+                <option value="all" style={{ color: "#000" }}>
+                  App and website
+                </option>
+                <option value="app" style={{ color: "#000" }}>
+                  App only
+                </option>
+                <option value="web" style={{ color: "#000" }}>
+                  Website only
                 </option>
               </select>
             </Box>
@@ -1209,6 +1233,11 @@ export default function AnnouncementsPanel() {
                   </Text>
                   <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
                     {a.audience === "authenticated" ? "Logged-in" : "Everyone"}
+                    {a.surface === "web"
+                      ? " · Website only"
+                      : a.surface === "app"
+                        ? " · App only"
+                        : " · App and website"}
                     {a.endAt
                       ? ` · until ${new Date(a.endAt).toLocaleString()}`
                       : ""}

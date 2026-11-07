@@ -16,9 +16,21 @@ import {
 } from "@chakra-ui/react";
 import type { PublicPost } from "@/lib/blog/api";
 import BlogCard from "@/components/blog/BlogCard";
+import HubLiveCardTile from "@/components/landing/HubLiveCardTile";
+import type { HubLiveCard } from "@/lib/hub-engine/types";
 
-export default function HomeLibrary({ items }: { items: PublicPost[] }) {
-  if (!items.length) return null;
+export default function HomeLibrary({
+  items,
+  hubs = [],
+}: {
+  items: PublicPost[];
+  /** Live mega hubs lead the rail (newest first). */
+  hubs?: HubLiveCard[];
+}) {
+  if (!items.length && !hubs.length) return null;
+  // Hubs first, then the newest posts, keeping full rows of three.
+  const lead = hubs.slice(0, 3);
+  const posts = items.slice(0, Math.max(0, items.length - lead.length));
   return (
     <Box
       as="section"
@@ -77,7 +89,10 @@ export default function HomeLibrary({ items }: { items: PublicPost[] }) {
         </Flex>
 
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
-          {items.map((p) => (
+          {lead.map((h) => (
+            <HubLiveCardTile key={`hub-${h.slug}`} hub={h} />
+          ))}
+          {posts.map((p) => (
             <BlogCard key={`${p.type}-${p.slug}`} post={p} />
           ))}
         </SimpleGrid>

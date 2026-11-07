@@ -4595,6 +4595,8 @@ export interface AdminAnnouncement {
   title: string;
   subtitle: string | null;
   audience: "everyone" | "authenticated";
+  /** Where it shows: app + website, app only, or website only. */
+  surface: "all" | "app" | "web";
   priority: number;
   ctaLabel: string | null;
   ctaAction: string | null;
@@ -5193,7 +5195,6 @@ export async function getModerationHistory(): Promise<
 
 // ── Mega hubs (Phase 1): per-game profile editor ─────────────────────────────
 
-
 export interface GameProfileRow {
   gameId: string;
   name: string;
@@ -5245,7 +5246,9 @@ export async function getGameProfile(
   gameId: string,
 ): Promise<GameProfileDetail> {
   return handle(
-    await fetch(`/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`),
+    await fetch(
+      `/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`,
+    ),
   );
 }
 
@@ -5266,7 +5269,9 @@ const hubThreadUrl = (gameId: string) =>
   `/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}/thread`;
 
 /** Launch-night thread: what's pinned + recent @nexzyofficial posts about the game. */
-export async function getHubThreadAdmin(gameId: string): Promise<HubThreadAdmin> {
+export async function getHubThreadAdmin(
+  gameId: string,
+): Promise<HubThreadAdmin> {
   return handle(await fetch(hubThreadUrl(gameId)));
 }
 
@@ -5297,7 +5302,9 @@ export async function pinHubThread(
   );
 }
 
-export async function unpinHubThread(gameId: string): Promise<GameProfileDetail> {
+export async function unpinHubThread(
+  gameId: string,
+): Promise<GameProfileDetail> {
   return handle(await fetch(hubThreadUrl(gameId), { method: "DELETE" }));
 }
 
@@ -5306,11 +5313,14 @@ export async function saveGameProfile(
   input: GameProfileInput,
 ): Promise<GameProfileDetail> {
   return handle(
-    await fetch(`/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
+    await fetch(
+      `/api/newsroom/admin/game-profiles/${encodeURIComponent(gameId)}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    ),
   );
 }
 
@@ -5389,11 +5399,14 @@ export async function decideReview(
   action: "approve" | "remove",
 ): Promise<{ id: string; status: string }> {
   return handle(
-    await fetch(`/api/newsroom/admin/reviews/${encodeURIComponent(id)}/decision`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    }),
+    await fetch(
+      `/api/newsroom/admin/reviews/${encodeURIComponent(id)}/decision`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      },
+    ),
   );
 }
 

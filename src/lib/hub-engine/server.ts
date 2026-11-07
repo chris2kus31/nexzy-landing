@@ -15,6 +15,7 @@ import type {
   HubEnginePage,
   HubEntryFull,
   HubGuidePage,
+  HubLiveCard,
 } from "@/lib/hub-engine/types";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
@@ -114,6 +115,19 @@ export async function fetchEngineGuidePage(
     `/game-hubs/${enc(slug)}/engine/pages/${enc(pageSlug)}`,
     300,
   );
+}
+
+/** Live mega hubs, newest first (home banner, guides rail). [] when none
+ *  or the API is down: the promos simply don't show. */
+export async function fetchLiveHubs(): Promise<HubLiveCard[]> {
+  // A promo must never take the home page down with it (get() throws on
+  // API errors so guide pages keep their last good build).
+  try {
+    const v = await get<HubLiveCard[]>(`/hub-engine/live`, 600);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Every public guide URL (all live guides) for sitemap.xml. */

@@ -55,6 +55,7 @@ export default function Navigation() {
   return (
     <Box
       as="nav"
+      data-site-nav=""
       position="fixed"
       top={0}
       w="full"

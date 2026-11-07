@@ -14,6 +14,7 @@ import HomeVideos from "@/components/landing/HomeVideos";
 import CrawlHighway from "@/components/landing/CrawlHighway";
 import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
+import { fetchLiveHubs } from "@/lib/hub-engine/server";
 import {
   fetchPosts,
   fetchTrending,
@@ -27,7 +28,7 @@ import {
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
 
 export default async function HomePage() {
-  const [news, hot, reads, library, videos, rewindToday, gamesPage] =
+  const [news, hot, reads, library, videos, rewindToday, gamesPage, hubs] =
     await Promise.all([
       fetchPosts({ pageSize: 7 }),
       fetchTrending(6, "hot"),
@@ -36,6 +37,7 @@ export default async function HomePage() {
       fetchVideosLatest(9),
       fetchRewindToday(),
       fetchGamesPage(1, 40),
+      fetchLiveHubs(),
     ]);
 
   // The lead story anchors the masthead; the next few are the headline list.
@@ -59,7 +61,7 @@ export default async function HomePage() {
         <HomeVideos items={videos} />
 
         {/* Guides, walkthroughs & lists rail */}
-        <HomeLibrary items={library} />
+        <HomeLibrary items={library} hubs={hubs} />
 
         {/* Explore Nexzy — crawl highway: fans link equity out to game hubs +
             section hubs (the homepage is the most-crawled page on the site) */}

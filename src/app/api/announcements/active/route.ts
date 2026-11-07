@@ -17,11 +17,15 @@ const CACHE_HEADERS = {
 
 export async function GET() {
   try {
-    const res = await fetch(`${API_BASE_URL}/announcements/active`, {
-      headers: { "X-API-Key": API_SECRET_KEY ?? "" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
+    // surface=web: app + website banners and web-only ones, never app-only.
+    const res = await fetch(
+      `${API_BASE_URL}/announcements/active?surface=web`,
+      {
+        headers: { "X-API-Key": API_SECRET_KEY ?? "" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      },
+    );
     if (!res.ok) return NextResponse.json(null, { headers: CACHE_HEADERS });
     const text = await res.text();
     return NextResponse.json(text ? JSON.parse(text) : null, {

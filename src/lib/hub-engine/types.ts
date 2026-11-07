@@ -393,3 +393,29 @@ export function videoEmbed(
   }
   return null;
 }
+
+/** A live mega hub for site promos (home banner, guides rail). */
+export interface HubLiveCard {
+  slug: string;
+  name: string;
+  image: string | null;
+  liveAt: string;
+  hasMap: boolean;
+  /** Steps under the story walkthrough page. */
+  steps: number;
+  pages: number;
+  /** Biggest public lists, e.g. { label: "Gold Skulltulas", count: 100 }. */
+  highlights: Array<{ type: string; label: string; count: number }>;
+}
+
+/** "11-step walkthrough · Interactive map · 100 Gold Skulltulas". */
+export function hubParts(h: HubLiveCard, max = 3): string[] {
+  const out: string[] = [];
+  if (h.steps > 0) out.push(`${h.steps}-step walkthrough`);
+  if (h.hasMap) out.push("Interactive map");
+  for (const x of h.highlights) {
+    if (out.length >= max) break;
+    out.push(`${x.count} ${x.label}`);
+  }
+  return out.slice(0, max);
+}
