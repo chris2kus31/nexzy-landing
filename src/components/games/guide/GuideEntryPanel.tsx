@@ -54,6 +54,13 @@ type Props = {
   /** Light up these entries' pins on the map. */
   onShowOnMap: (entryIds: string[], label: string) => void;
   onClose: () => void;
+  /** Outside the map (a table's details window): link to this entry's spot
+   *  on the full map when it has a pin. */
+  mapHref?: (entry: HubEntryFull) => string | null;
+  /** Outside the map: open the entry's own page. */
+  pageLink?: boolean;
+  /** Inside a window that is already a dialog (no nested dialog role). */
+  embedded?: boolean;
 };
 
 /** Short facts that read well in one line ("When: Night · Needs: Bombs"). */
@@ -120,6 +127,9 @@ export default function GuideEntryPanel({
   onOpenEntry,
   onShowOnMap,
   onClose,
+  mapHref,
+  pageLink = false,
+  embedded = false,
 }: Props) {
   const key = `${slug}/${entrySlug}`;
   const [entry, setEntry] = useState<HubEntryFull | null>(
@@ -172,7 +182,7 @@ export default function GuideEntryPanel({
     if (e.defaultPrevented || e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = (e.target as HTMLElement).closest("a");
-    if (!a) return;
+    if (!a || a.hasAttribute("data-direct")) return;
     const url = new URL(a.href, window.location.href);
     if (url.origin !== window.location.origin) return;
     const parts = url.pathname.split("/").filter(Boolean);
@@ -244,8 +254,8 @@ export default function GuideEntryPanel({
 
   return (
     <Box
-      role="dialog"
-      aria-label={entry?.title ?? "Details"}
+      role={embedded ? undefined : "dialog"}
+      aria-label={embedded ? undefined : (entry?.title ?? "Details")}
       bg={G.panel}
       border="1px solid"
       borderColor={G.line}
@@ -342,6 +352,54 @@ export default function GuideEntryPanel({
             {isFound && <FiCheck aria-hidden />}
             {isFound ? "Found" : "Mark found"}
           </Button>
+          {(() => {
+            const href = mapHref?.(entry) ?? null;
+            if (!href && !(pageLink && t?.page)) return null;
+            return (
+              <HStack gap={2} wrap="wrap" mt={-2}>
+                {href && (
+                  <Box
+                    asChild
+                    display="inline-flex"
+                    alignItems="center"
+                    gap={1.5}
+                    px={3}
+                    py={1.5}
+                    borderRadius="999px"
+                    border="1px solid"
+                    borderColor={G.line}
+                    color={G.text}
+                    fontSize="sm"
+                    fontWeight="700"
+                    _hover={{ borderColor: G.gold, color: "white" }}
+                  >
+                    <a href={href} data-direct="">
+                      <FiMapPin aria-hidden /> Show on map
+                    </a>
+                  </Box>
+                )}
+                {pageLink && t?.page && (
+                  <Box
+                    asChild
+                    display="inline-flex"
+                    alignItems="center"
+                    px={3}
+                    py={1.5}
+                    fontSize="sm"
+                    fontWeight="700"
+                    color={G.gold}
+                  >
+                    <a
+                      href={entryPath(slug, entry.type, entry.slug)}
+                      data-direct=""
+                    >
+                      Open full page
+                    </a>
+                  </Box>
+                )}
+              </HStack>
+            );
+          })()}
 
           {entry.summary && (
             <Text color={G.text} fontSize="md">

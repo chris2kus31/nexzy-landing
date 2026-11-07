@@ -37,6 +37,7 @@ import {
 } from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
 import GuideVideo from "@/components/games/guide/GuideVideo";
+import GuideEntryDialog from "@/components/games/guide/GuideEntryDialog";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { useVisible } from "@/components/games/guide/GuideSections";
 import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
@@ -473,6 +474,8 @@ function Tracker({
   const { found, toggle } = useGuideProgress();
   const { era, spoiler } = useGuideProgress();
   const { eraSwitch, spoilers } = config.features;
+  // Details open in a window over the page (no second page to read).
+  const [open, setOpen] = useState<string | null>(null);
   const shown = rows.filter(
     (r) =>
       eraVisible(r.eras, eraSwitch ? era : null) &&
@@ -520,16 +523,24 @@ function Tracker({
                 <tr key={r.id}>
                   <Td strong>
                     <Flex align="center" gap={1.5}>
-                      {t?.page ? (
-                        <NextLink
-                          href={entryPath(slug, r.type, r.slug)}
-                          style={{ textDecoration: "underline" }}
-                        >
-                          {r.title}
-                        </NextLink>
-                      ) : (
-                        r.title
-                      )}
+                      <NextLink
+                        href={
+                          t?.page
+                            ? entryPath(slug, r.type, r.slug)
+                            : `/games/${slug}/map?entry=${r.slug}`
+                        }
+                        style={{ textDecoration: "underline" }}
+                        aria-haspopup="dialog"
+                        onClick={(e) => {
+                          // New-tab clicks still open the page.
+                          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+                            return;
+                          e.preventDefault();
+                          setOpen(r.slug);
+                        }}
+                      >
+                        {r.title}
+                      </NextLink>
                       {r.status === "unconfirmed" && (
                         <Box
                           as="span"
@@ -594,6 +605,13 @@ function Tracker({
           {hidden} more hidden by your era or spoiler settings.
         </Text>
       )}
+      <GuideEntryDialog
+        slug={slug}
+        config={config}
+        entrySlug={open}
+        onOpenEntry={setOpen}
+        onClose={() => setOpen(null)}
+      />
     </Box>
   );
 }
