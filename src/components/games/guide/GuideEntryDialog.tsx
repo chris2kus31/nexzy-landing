@@ -32,19 +32,29 @@ export default function GuideEntryDialog({
       onOpenChange={(d) => {
         if (!d.open) onClose();
       }}
-      placement="center"
       scrollBehavior="inside"
-      size={{ base: "full", md: "md" }}
     >
       <Portal>
         <Dialog.Backdrop bg="rgba(5,7,18,0.72)" />
-        <Dialog.Positioner p={{ base: 0, md: 4 }}>
+        {/* Centered on desktop wherever the reader has scrolled; a sheet
+            from the bottom on phones (thumb reach). */}
+        <Dialog.Positioner
+          position="fixed"
+          inset={0}
+          display="flex"
+          alignItems={{ base: "flex-end", md: "center" }}
+          justifyContent="center"
+          p={{ base: 0, md: 6 }}
+        >
           <Dialog.Content
             bg="transparent"
             boxShadow="none"
-            maxH={{ base: "100dvh", md: "88vh" }}
-            my={{ md: "auto" }}
+            m={0}
+            w={{ base: "100%", md: "560px" }}
+            maxW="100%"
+            maxH={{ base: "88dvh", md: "85vh" }}
             overflowY="auto"
+            borderRadius={{ base: "16px 16px 0 0", md: "14px" }}
           >
             <Dialog.Title srOnly>Details</Dialog.Title>
             <Box>
