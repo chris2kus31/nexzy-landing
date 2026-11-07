@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 // banner (a client component) calls this after hydration, so pages stay
 // static/ISR and scrapers that don't run JS never hit it. Returns the banner
 // object or null.
-const API_BASE_URL = process.env.API_BASE_URL || "https://api.nexzy.app";
+// Same API base as every other site route. (This used API_BASE_URL, which
+// isn't set on the site, so it fell back to a dead host and always got null.)
+const API_BASE_URL = process.env.NEWSROOM_API_URL || "http://localhost:3003";
 const API_SECRET_KEY = process.env.API_SECRET_KEY;
 
 export const dynamic = "force-dynamic";
