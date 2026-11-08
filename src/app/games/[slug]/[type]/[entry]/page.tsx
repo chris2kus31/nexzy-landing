@@ -64,6 +64,8 @@ async function load(slug: string, type: string, entrySlug: string) {
   )
     return null;
   const t = typeOf(engine.config, type);
+  // Types without their own page (chests, enemies...) live on the map.
+  if (t && !t.page && entry.pins.length) return { mapOnly: true as const };
   if (!t?.page) return null;
   return {
     config: engine.config,
@@ -117,6 +119,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug, type, entry } = await params;
   const d = await load(slug, type, entry);
   if (!d) return { title: "Not found", robots: { index: false } };
+  if ("mapOnly" in d) return { robots: { index: false } };
   const title = `${d.entry.title} - ${d.short} ${d.t.label}`.slice(0, 70);
   const description = (
     d.entry.summary ||
@@ -140,6 +143,8 @@ export default async function GuideEntryPage({ params }: Params) {
   const { slug, type, entry: entrySlug } = await params;
   const d = await load(slug, type, entrySlug);
   if (!d) notFound();
+  if ("mapOnly" in d)
+    redirect(`/games/${slug}/map?entry=${encodeURIComponent(entrySlug)}`);
   // A guide page covers this entry (a walkthrough step): one page, not two.
   if (d.entry.guidePage) redirect(guidePath(slug, d.entry.guidePage.slug));
   const { config, entry, t } = d;

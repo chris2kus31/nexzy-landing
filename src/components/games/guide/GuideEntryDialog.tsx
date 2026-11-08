@@ -5,7 +5,7 @@
 // Same panel as the map's, same "found" progress. The entry's own page still
 // exists for search engines and new-tab clicks.
 import { Box, Dialog, Portal } from "@chakra-ui/react";
-import type { HubTemplateConfig } from "@/lib/hub-engine/types";
+import type { HubEntryFull, HubTemplateConfig } from "@/lib/hub-engine/types";
 import GuideEntryPanel from "@/components/games/guide/GuideEntryPanel";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 
@@ -17,6 +17,7 @@ export default function GuideEntryDialog({
   entrySlug,
   onOpenEntry,
   onClose,
+  onShowOnPage,
 }: {
   slug: string;
   config: HubTemplateConfig;
@@ -24,6 +25,8 @@ export default function GuideEntryDialog({
   entrySlug: string | null;
   onOpenEntry: (entrySlug: string) => void;
   onClose: () => void;
+  /** On a guide page: show the entry on that page's map, when it can. */
+  onShowOnPage?: (e: HubEntryFull) => (() => void) | null;
 }) {
   const { found, toggle } = useGuideProgress();
   return (
@@ -72,6 +75,7 @@ export default function GuideEntryDialog({
                   onClose={onClose}
                   pageLink
                   embedded
+                  showHere={onShowOnPage}
                   mapHref={(e) =>
                     e.pins.length && config.maps.length
                       ? `/games/${slug}/map?entry=${encodeURIComponent(e.slug)}`

@@ -3,10 +3,18 @@
 // A guide map with floor tabs. Maps that share a `group` in the template are
 // one map with floors (a dungeon); this shows a tab per floor and swaps the
 // map below. A map outside a group renders exactly like GuideMap.
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
 import { Box, Flex, Text } from "@chakra-ui/react";
 import GuideMap from "@/components/games/guide/GuideMap";
 import { G } from "@/components/games/guide/GuideBits";
+import { usePageMaps } from "@/components/games/guide/GuidePageMaps";
 import { floorsOf, mapTitle } from "@/lib/hub-engine/maps";
 
 type Props = ComponentProps<typeof GuideMap> & {
@@ -19,10 +27,28 @@ export default function GuideMapFloors({ syncUrl = false, ...props }: Props) {
   const floors = useMemo(() => floorsOf(config, map), [config, map]);
   const [cur, setCur] = useState(map.key);
   useEffect(() => setCur(map.key), [map.key]);
-  if (floors.length < 2) return <GuideMap {...props} />;
+  // "Show on map" from the page text: an entry to open on, and a counter
+  // so asking for the same floor again re-focuses the map.
+  const [asked, setAsked] = useState<{ entry: string; n: number } | null>(null);
+  const box = useRef<HTMLDivElement | null>(null);
+  const id = useId();
+  const pageMaps = usePageMaps();
+  useEffect(() => {
+    if (!pageMaps) return;
+    return pageMaps.register(id, {
+      keys: new Set(floors.map((f) => f.key)),
+      show: (mapKey, entry) => {
+        setCur(mapKey);
+        setAsked((a) => ({ entry, n: (a?.n ?? 0) + 1 }));
+        box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      },
+    });
+  }, [pageMaps, id, floors]);
+
   const active = floors.find((f) => f.key === cur) ?? map;
   const pick = (key: string) => {
     setCur(key);
+    setAsked(null);
     if (!syncUrl) return;
     try {
       const url = new URL(window.location.href);
@@ -38,53 +64,55 @@ export default function GuideMapFloors({ syncUrl = false, ...props }: Props) {
   // The focus pin/entry belongs to the floor the map opened on.
   const opened = active.key === map.key;
   return (
-    <Box>
-      <Flex align="center" gap={1.5} wrap="wrap" mb={2}>
-        <Text
-          fontSize="xs"
-          fontWeight="700"
-          color={G.muted}
-          textTransform="uppercase"
-          letterSpacing="0.06em"
-          mr={1}
-        >
-          {mapTitle(map)}
-        </Text>
-        <Flex role="tablist" aria-label={`${mapTitle(map)} floors`} gap={1.5}>
-          {floors.map((f) => {
-            const on = f.key === active.key;
-            return (
-              <Box
-                as="button"
-                key={f.key}
-                role="tab"
-                aria-selected={on}
-                onClick={() => pick(f.key)}
-                px={3}
-                py={1}
-                minW="44px"
-                borderRadius="999px"
-                border="1px solid"
-                borderColor={on ? G.gold : G.line}
-                bg={on ? G.gold : "transparent"}
-                color={on ? G.ink : G.text}
-                fontSize="sm"
-                fontWeight="800"
-                cursor="pointer"
-                _hover={on ? undefined : { borderColor: G.gold }}
-              >
-                {f.floor ?? f.name}
-              </Box>
-            );
-          })}
+    <Box ref={box}>
+      {floors.length > 1 && (
+        <Flex align="center" gap={1.5} wrap="wrap" mb={2}>
+          <Text
+            fontSize="xs"
+            fontWeight="700"
+            color={G.muted}
+            textTransform="uppercase"
+            letterSpacing="0.06em"
+            mr={1}
+          >
+            {mapTitle(map)}
+          </Text>
+          <Flex role="tablist" aria-label={`${mapTitle(map)} floors`} gap={1.5}>
+            {floors.map((f) => {
+              const on = f.key === active.key;
+              return (
+                <Box
+                  as="button"
+                  key={f.key}
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => pick(f.key)}
+                  px={3}
+                  py={1}
+                  minW="44px"
+                  borderRadius="999px"
+                  border="1px solid"
+                  borderColor={on ? G.gold : G.line}
+                  bg={on ? G.gold : "transparent"}
+                  color={on ? G.ink : G.text}
+                  fontSize="sm"
+                  fontWeight="800"
+                  cursor="pointer"
+                  _hover={on ? undefined : { borderColor: G.gold }}
+                >
+                  {f.floor ?? f.name}
+                </Box>
+              );
+            })}
+          </Flex>
         </Flex>
-      </Flex>
+      )}
       <GuideMap
-        key={active.key}
+        key={`${active.key}:${asked?.n ?? 0}`}
         {...props}
         map={active}
-        focusPin={opened ? focusPin : null}
-        focusEntry={opened ? focusEntry : null}
+        focusPin={asked ? null : opened ? focusPin : null}
+        focusEntry={asked ? asked.entry : opened ? focusEntry : null}
       />
     </Box>
   );

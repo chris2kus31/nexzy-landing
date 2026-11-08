@@ -28,6 +28,7 @@ import {
   UnconfirmedBadge,
 } from "@/components/games/guide/GuideBits";
 import GuideMapFloors from "@/components/games/guide/GuideMapFloors";
+import GuidePageMaps from "@/components/games/guide/GuidePageMaps";
 import { worldPin } from "@/lib/hub-engine/maps";
 import { GuideContentsSidebar } from "@/components/games/guide/GuideContents";
 import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
@@ -90,13 +91,17 @@ export default function GuidePageBody({
                 <StepPanel slug={slug} config={config} page={page} />
               </PageGate>
             )}
-            <GuideBlocks
-              slug={slug}
-              config={config}
-              blocks={page.blocks}
-              pages={pages}
-              pageSlug={page.slug}
-            />
+            {/* Entry links in the text open their details; Show on map
+                jumps to this page's map block (any game). */}
+            <GuidePageMaps slug={slug} config={config}>
+              <GuideBlocks
+                slug={slug}
+                config={config}
+                blocks={page.blocks}
+                pages={pages}
+                pageSlug={page.slug}
+              />
+            </GuidePageMaps>
             {page.children.length > 0 && (
               <ChildList
                 slug={slug}

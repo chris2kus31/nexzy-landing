@@ -67,6 +67,8 @@ type Props = {
   mapHref?: (entry: HubEntryFull) => string | null;
   /** Outside the map: open the entry's own page. */
   pageLink?: boolean;
+  /** On a guide page with a map of this entry: show it there instead. */
+  showHere?: (entry: HubEntryFull) => (() => void) | null;
   /** Inside a window that is already a dialog (no nested dialog role). */
   embedded?: boolean;
 };
@@ -138,6 +140,7 @@ export default function GuideEntryPanel({
   mapHref,
   pageLink = false,
   embedded = false,
+  showHere,
 }: Props) {
   const key = `${slug}/${entrySlug}`;
   const [entry, setEntry] = useState<HubEntryFull | null>(
@@ -392,10 +395,32 @@ export default function GuideEntryPanel({
             );
           })()}
           {(() => {
-            const href = mapHref?.(entry) ?? null;
-            if (!href && !(pageLink && t?.page)) return null;
+            const here = showHere?.(entry) ?? null;
+            const href = here ? null : (mapHref?.(entry) ?? null);
+            if (!here && !href && !(pageLink && t?.page)) return null;
             return (
               <HStack gap={2} wrap="wrap" mt={-2}>
+                {here && (
+                  <Box
+                    as="button"
+                    display="inline-flex"
+                    alignItems="center"
+                    gap={1.5}
+                    px={3}
+                    py={1.5}
+                    borderRadius="999px"
+                    border="1px solid"
+                    borderColor={G.line}
+                    color={G.text}
+                    fontSize="sm"
+                    fontWeight="700"
+                    cursor="pointer"
+                    onClick={here}
+                    _hover={{ borderColor: G.gold, color: "white" }}
+                  >
+                    <FiMapPin aria-hidden /> Show on map
+                  </Box>
+                )}
                 {href && (
                   <Box
                     asChild

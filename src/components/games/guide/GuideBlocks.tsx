@@ -38,6 +38,7 @@ import {
 import GuideMapFloors from "@/components/games/guide/GuideMapFloors";
 import GuideVideo from "@/components/games/guide/GuideVideo";
 import GuideEntryDialog from "@/components/games/guide/GuideEntryDialog";
+import { usePageMaps } from "@/components/games/guide/GuidePageMaps";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { useVisible } from "@/components/games/guide/GuideSections";
 import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
@@ -476,6 +477,8 @@ function Tracker({
   const { eraSwitch, spoilers } = config.features;
   // Details open in a window over the page (no second page to read).
   const [open, setOpen] = useState<string | null>(null);
+  // On a guide page with a map block, Show on map jumps there.
+  const pageMaps = usePageMaps();
   const shown = rows.filter(
     (r) =>
       eraVisible(r.eras, eraSwitch ? era : null) &&
@@ -611,6 +614,7 @@ function Tracker({
         entrySlug={open}
         onOpenEntry={setOpen}
         onClose={() => setOpen(null)}
+        onShowOnPage={pageMaps?.showOnPage}
       />
     </Box>
   );
