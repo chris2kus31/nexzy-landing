@@ -65,6 +65,7 @@ import {
   TextIn,
   keyify,
 } from "@/components/admin/guide/ui";
+import { mapLabel } from "@/lib/hub-engine/maps";
 
 const STATUS: {
   key: PageStatus;
@@ -1101,7 +1102,7 @@ function BlockCard({
                   onChange={(mapKey) => onChange({ ...b, mapKey })}
                   options={config.maps.map((m) => ({
                     value: m.key,
-                    label: m.name,
+                    label: mapLabel(m),
                   }))}
                 />
               </Box>

@@ -57,6 +57,12 @@ export interface HubMapDef {
   minZoom: number;
   maxZoom: number;
   artVersion: number;
+  /** Maps with the same group are one map with floor tabs (a dungeon). */
+  group?: string | null;
+  /** Floor tab label inside its group ("B1"). */
+  floor?: string | null;
+  /** Entry slug this map belongs to (the dungeon): its details offer "Open map". */
+  entry?: string | null;
 }
 
 export interface HubFilter {

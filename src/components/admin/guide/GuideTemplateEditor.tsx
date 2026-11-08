@@ -847,6 +847,9 @@ function MapsEditor({
             minZoom: -2,
             maxZoom: 2,
             artVersion: 1,
+            group: null,
+            floor: null,
+            entry: null,
           },
         ]);
       } else {
@@ -905,7 +908,9 @@ function MapsEditor({
       <Stack gap={3}>
         <Text fontSize="sm" color={C.muted}>
           Our own art only (never the game's map or another site's). SVG is
-          converted to a sharp 4096px image. Keep files under 4 MB.
+          converted to a sharp 4096px image. Keep files under 4 MB. For a
+          dungeon, upload one image per floor, give them the same Floors group
+          and keep them next to each other (top floor first).
         </Text>
         <Problems lines={err} />
         {maps.map((m, i) => (
@@ -993,14 +998,63 @@ function MapsEditor({
                       }
                     />
                   </label>
-                  <Plain
-                    danger
-                    onClick={() => onChange(maps.filter((_, j) => j !== i))}
-                  >
-                    <FiTrash2 aria-label="Remove map" />
-                  </Plain>
+                  <RowTools
+                    onUp={() => onChange(move(maps, i, -1))}
+                    onDown={() => onChange(move(maps, i, 1))}
+                    onRemove={() => onChange(maps.filter((_, j) => j !== i))}
+                  />
                 </HStack>
               </Box>
+              <Labeled
+                label="Floors group"
+                hint="Same name on several maps = one map with floor tabs (a dungeon). Empty = its own map."
+              >
+                <TextIn
+                  value={m.group ?? ""}
+                  maxLength={60}
+                  placeholder="e.g. Inside the Deku Tree"
+                  onChange={(v) =>
+                    onChange(
+                      maps.map((x, j) =>
+                        j === i ? { ...x, group: v || null } : x,
+                      ),
+                    )
+                  }
+                />
+              </Labeled>
+              <Labeled label="Floor tab" hint="Short, e.g. B1 or 2F">
+                <TextIn
+                  value={m.floor ?? ""}
+                  maxLength={12}
+                  placeholder="B1"
+                  onChange={(v) =>
+                    onChange(
+                      maps.map((x, j) =>
+                        j === i ? { ...x, floor: v || null } : x,
+                      ),
+                    )
+                  }
+                />
+              </Labeled>
+              <Labeled
+                label="Belongs to entry (optional)"
+                hint="Entry address, e.g. inside-the-deku-tree: its details get an Open map button that lands on this floor (set it on the entrance floor only)"
+              >
+                <TextIn
+                  value={m.entry ?? ""}
+                  maxLength={80}
+                  placeholder="inside-the-deku-tree"
+                  onChange={(v) =>
+                    onChange(
+                      maps.map((x, j) =>
+                        j === i
+                          ? { ...x, entry: v.trim().toLowerCase() || null }
+                          : x,
+                      ),
+                    )
+                  }
+                />
+              </Labeled>
             </SimpleGrid>
           </Flex>
         ))}
@@ -1010,7 +1064,6 @@ function MapsEditor({
 }
 
 // ───────────────────────── checklists + sections ─────────────────────────
-
 
 function ChecklistRow({
   c,

@@ -679,7 +679,7 @@ export default function GuideMap({
         // opens the details beside the pin (a new-tab click still gets the
         // entry's own page when it has one).
         a.href = preview
-          ? `/games/${slug}/map?pin=${encodeURIComponent(p.pid)}`
+          ? `/games/${slug}/map?map=${encodeURIComponent(map.key)}&pin=${encodeURIComponent(p.pid)}`
           : t?.page
             ? entryPath(slug, p.type, p.s)
             : "#";
@@ -1240,7 +1240,13 @@ export default function GuideMap({
           )}
           {preview && (
             <Box position="absolute" bottom={3} right={3} zIndex={2}>
-              <NextLink href={`/games/${slug}/map`}>
+              <NextLink
+                href={
+                  map.key === config.maps[0]?.key
+                    ? `/games/${slug}/map`
+                    : `/games/${slug}/map?map=${encodeURIComponent(map.key)}`
+                }
+              >
                 <HStack
                   bg={G.gold}
                   color={G.ink}

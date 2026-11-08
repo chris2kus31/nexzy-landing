@@ -24,6 +24,7 @@ import {
 import type { HubTemplateConfig } from "@/lib/hub-engine/types";
 import { getEngineMapPins } from "@/lib/admin/client-hub-engine";
 import { C, Pick, Plain } from "@/components/admin/guide/ui";
+import { mapLabel } from "@/lib/hub-engine/maps";
 
 export type PickedPin = { mapKey: string; x: number; y: number };
 
@@ -235,7 +236,7 @@ export default function PinPicker({
               label="Map"
               value={mapKey}
               onChange={setMapKey}
-              options={maps.map((m) => ({ value: m.key, label: m.name }))}
+              options={maps.map((m) => ({ value: m.key, label: mapLabel(m) }))}
             />
           </Box>
         )}

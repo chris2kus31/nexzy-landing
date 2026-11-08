@@ -6,6 +6,7 @@
 // pages). The hub shows it as columns; guide pages show it as a sidebar
 // with collapsible groups. Story titles past the reader's spoiler setting
 // are masked; done steps get a check (same progress as the map).
+import { mapChoices } from "@/lib/hub-engine/maps";
 import { useState } from "react";
 import NextLink from "next/link";
 import { Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react";
@@ -97,15 +98,16 @@ export function useGuideGroups(
       key: "trackers",
       title: "Map and checklists",
       links: [
-        ...(config.maps.length
-          ? [
-              {
-                key: "map",
-                href: `/games/${slug}/map`,
-                label: "Interactive map",
-              },
-            ]
-          : []),
+        // The first map is "Interactive map"; dungeon maps (one link per
+        // group, opening on its first floor) follow it.
+        ...mapChoices(config).map((m, i) => ({
+          key: `map-${m.key}`,
+          href:
+            i === 0
+              ? `/games/${slug}/map`
+              : `/games/${slug}/map?map=${encodeURIComponent(m.key)}`,
+          label: i === 0 ? "Interactive map" : `Map: ${m.label}`,
+        })),
         ...lists.map((c) => ({
           key: `cl-${c.key}`,
           href: `/games/${slug}/checklist/${c.key}`,

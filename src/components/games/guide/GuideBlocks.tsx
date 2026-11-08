@@ -35,7 +35,7 @@ import {
   GuideCard,
   GuideMarkdown,
 } from "@/components/games/guide/GuideBits";
-import GuideMap from "@/components/games/guide/GuideMap";
+import GuideMapFloors from "@/components/games/guide/GuideMapFloors";
 import GuideVideo from "@/components/games/guide/GuideVideo";
 import GuideEntryDialog from "@/components/games/guide/GuideEntryDialog";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
@@ -241,7 +241,7 @@ function Block({
           borderRadius="16px"
           p={{ base: 2, md: 3 }}
         >
-          <GuideMap
+          <GuideMapFloors
             slug={slug}
             config={config}
             map={map}

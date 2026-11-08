@@ -8,6 +8,7 @@ import NextLink from "next/link";
 import { Box, Container, Flex, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
 import { fetchEnginePage } from "@/lib/hub-engine/server";
+import { mapChoices } from "@/lib/hub-engine/maps";
 import GuideMapScreen from "@/components/games/guide/GuideMapScreen";
 import { G } from "@/components/games/guide/GuideBits";
 
@@ -60,9 +61,9 @@ export default async function GuideMapPage({ params }: Params) {
         <Heading as="h1" fontSize={{ base: "2xl", md: "4xl" }} color="white">
           {d.short} interactive map
         </Heading>
-        {d.config.maps.length > 1 && (
+        {mapChoices(d.config).length > 1 && (
           <Flex gap={2} wrap="wrap">
-            {d.config.maps.map((m) => (
+            {mapChoices(d.config).map((m) => (
               <NextLink key={m.key} href={`/games/${slug}/map?map=${m.key}`}>
                 <Text
                   fontSize="sm"
@@ -73,7 +74,7 @@ export default async function GuideMapPage({ params }: Params) {
                   borderColor={G.line}
                   color={G.muted}
                 >
-                  {m.name}
+                  {m.label}
                 </Text>
               </NextLink>
             ))}

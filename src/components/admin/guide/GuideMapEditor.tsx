@@ -40,6 +40,7 @@ import {
   Problems,
   TextIn,
 } from "@/components/admin/guide/ui";
+import { mapLabel } from "@/lib/hub-engine/maps";
 
 type PinDraft = { mapKey: string; x: number; y: number };
 
@@ -351,7 +352,7 @@ export default function GuideMapEditor({
               label="Map"
               value={mapKey}
               onChange={setMapKey}
-              options={maps.map((m) => ({ value: m.key, label: m.name }))}
+              options={maps.map((m) => ({ value: m.key, label: mapLabel(m) }))}
             />
           </Box>
         )}

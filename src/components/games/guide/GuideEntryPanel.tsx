@@ -17,7 +17,15 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { FiCheck, FiCircle, FiLink, FiMapPin, FiX } from "react-icons/fi";
+import {
+  FiCheck,
+  FiCircle,
+  FiLink,
+  FiMap,
+  FiMapPin,
+  FiX,
+} from "react-icons/fi";
+import { mapForEntry, mapTitle } from "@/lib/hub-engine/maps";
 import {
   entryPath,
   typeOf,
@@ -352,6 +360,37 @@ export default function GuideEntryPanel({
             {isFound && <FiCheck aria-hidden />}
             {isFound ? "Found" : "Mark found"}
           </Button>
+          {(() => {
+            // A dungeon (or any entry a map belongs to) opens its own map.
+            const own = mapForEntry(config, entry.slug);
+            if (!own) return null;
+            return (
+              <Box
+                asChild
+                display="inline-flex"
+                alignItems="center"
+                alignSelf="flex-start"
+                gap={1.5}
+                px={3}
+                py={1.5}
+                borderRadius="999px"
+                border="1px solid"
+                borderColor={G.gold}
+                color={G.gold}
+                fontSize="sm"
+                fontWeight="800"
+                mt={-2}
+                _hover={{ bg: "rgba(255,215,0,0.12)" }}
+              >
+                <a
+                  href={`/games/${slug}/map?map=${encodeURIComponent(own.key)}`}
+                  data-direct=""
+                >
+                  <FiMap aria-hidden /> Open map: {mapTitle(own)}
+                </a>
+              </Box>
+            );
+          })()}
           {(() => {
             const href = mapHref?.(entry) ?? null;
             if (!href && !(pageLink && t?.page)) return null;

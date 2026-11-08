@@ -27,7 +27,8 @@ import {
   hasFieldValue,
   UnconfirmedBadge,
 } from "@/components/games/guide/GuideBits";
-import GuideMap from "@/components/games/guide/GuideMap";
+import GuideMapFloors from "@/components/games/guide/GuideMapFloors";
+import { worldPin } from "@/lib/hub-engine/maps";
 import { GuideContentsSidebar } from "@/components/games/guide/GuideContents";
 import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
 
@@ -384,7 +385,8 @@ function StepPanel({
       f.kind !== "video" &&
       hasFieldValue(f, e.fields[f.key]),
   );
-  const pin = page.pins?.[0];
+  // Where to go in the world (the dungeon's own map is a block on the page).
+  const pin = worldPin(config, page.pins ?? []);
   const map = pin ? config.maps.find((m) => m.key === pin.map) : undefined;
   return (
     <Box
@@ -444,7 +446,7 @@ function StepPanel({
         </Flex>
       </Flex>
       {map && pin && (
-        <GuideMap
+        <GuideMapFloors
           slug={slug}
           config={config}
           map={map}

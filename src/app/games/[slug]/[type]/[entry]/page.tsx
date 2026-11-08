@@ -35,6 +35,7 @@ import {
   UnconfirmedBadge,
 } from "@/components/games/guide/GuideBits";
 import GuideMapScreen from "@/components/games/guide/GuideMapScreen";
+import { bestPin, floorsOf } from "@/lib/hub-engine/maps";
 import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 300;
@@ -142,7 +143,7 @@ export default async function GuideEntryPage({ params }: Params) {
   // A guide page covers this entry (a walkthrough step): one page, not two.
   if (d.entry.guidePage) redirect(guidePath(slug, d.entry.guidePage.slug));
   const { config, entry, t } = d;
-  const pin = entry.pins[0];
+  const pin = bestPin(config, entry.pins);
   const map = pin ? config.maps.find((m) => m.key === pin.map) : undefined;
   const url = `${SITE_URL}/games/${slug}/${type}/${entrySlug}`;
   const crumbs = {
@@ -284,7 +285,7 @@ export default async function GuideEntryPage({ params }: Params) {
                   eras: config.eras,
                   spoilerStages: config.spoilerStages,
                   types: config.types.map((t) => ({ ...t, fields: [] })),
-                  maps: [map],
+                  maps: floorsOf(config, map),
                   checklists: [],
                   sections: [],
                 }}
