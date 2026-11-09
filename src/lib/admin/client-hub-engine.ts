@@ -106,6 +106,9 @@ export interface EngineTemplate {
   published: HubTemplateConfig | null;
   draft: HubTemplateConfig;
   hasDraft: boolean;
+  /** Fingerprint of the template this page loaded; Save draft sends it back
+   *  so the API can refuse to save over a newer version (stale tab). */
+  draftHash: string | null;
   publishedAt: string | null;
   publishedBy: string | null;
   imagePrefix: string;
@@ -188,10 +191,14 @@ export const listEngineTemplates = () =>
   adminRequest<EngineTemplateRow[]>("hub-engine");
 export const getEngineTemplate = (gameId: string) =>
   adminRequest<EngineTemplate>(base(gameId));
-export const saveEngineDraft = (gameId: string, config: HubTemplateConfig) =>
+export const saveEngineDraft = (
+  gameId: string,
+  config: HubTemplateConfig,
+  baseHash: string | null,
+) =>
   adminRequest<EngineTemplate>(`${base(gameId)}/draft`, {
     method: "PUT",
-    body: { config },
+    body: baseHash ? { config, baseHash } : { config },
   });
 export const discardEngineDraft = (gameId: string) =>
   adminRequest<EngineTemplate>(`${base(gameId)}/draft`, { method: "DELETE" });

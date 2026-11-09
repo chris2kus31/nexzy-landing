@@ -317,7 +317,7 @@ export default function GuidesPanel() {
               <Gold
                 onClick={() =>
                   void act(
-                    () => saveEngineDraft(tpl.game.id, draft),
+                    () => saveEngineDraft(tpl.game.id, draft, tpl.draftHash),
                     "Draft saved.",
                   )
                 }
