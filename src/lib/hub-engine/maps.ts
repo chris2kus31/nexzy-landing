@@ -40,6 +40,50 @@ export function mapChoices(
   return out;
 }
 
+export type MapSection = {
+  label: string;
+  items: { key: string; label: string }[];
+};
+
+/** The map picker, grouped: the world map(s) first, then one section per
+ *  entry type that owns maps (in template type order: Regions, Dungeons...),
+ *  then anything left. `entryTypes` = entry slug -> type key, read off the
+ *  world map's pins (only entries pinned there get a typed section). */
+export function mapSections(
+  config: Pick<HubTemplateConfig, "maps" | "types">,
+  entryTypes: Record<string, string>,
+): MapSection[] {
+  const world: MapSection["items"] = [];
+  const other: MapSection["items"] = [];
+  const byType = new Map<string, MapSection["items"]>();
+  for (const c of mapChoices(config)) {
+    const first = config.maps.find((m) => m.key === c.key);
+    if (!first) continue;
+    // A group's entry is set on one floor only (the entrance floor).
+    const entry = floorsOf(config, first)
+      .map((m) => m.entry)
+      .find(Boolean);
+    if (!entry && !first.group) {
+      world.push(c);
+      continue;
+    }
+    const t = (entry && entryTypes[entry]) || null;
+    if (!t) other.push(c);
+    else byType.set(t, [...(byType.get(t) ?? []), c]);
+  }
+  const out: MapSection[] = [];
+  if (world.length) out.push({ label: "World", items: world });
+  for (const t of config.types) {
+    const items = byType.get(t.key);
+    if (items?.length) out.push({ label: t.plural, items });
+  }
+  // A type the template no longer lists still shows; nothing is dropped.
+  for (const [t, items] of byType)
+    if (!config.types.some((x) => x.key === t)) out.push({ label: t, items });
+  if (other.length) out.push({ label: "More maps", items: other });
+  return out;
+}
+
 /** The map an entry belongs to ("Open map" on a dungeon): its first floor. */
 export function mapForEntry(
   config: Pick<HubTemplateConfig, "maps">,

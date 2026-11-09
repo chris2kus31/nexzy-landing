@@ -16,6 +16,7 @@ import type {
   HubEntryFull,
   HubGuidePage,
   HubLiveCard,
+  HubPinRow,
 } from "@/lib/hub-engine/types";
 
 const API = process.env.NEWSROOM_API_URL || "http://localhost:3003";
@@ -103,6 +104,23 @@ export async function fetchEngineTypeEntries(
     cursor = page.nextCursor;
     if (!cursor) break;
   }
+  return out;
+}
+
+/** Entry slug -> type key for every entry pinned on one map (the map page
+ *  reads the world map's pins to group its map picker). {} when the map has
+ *  no pins; throws like every other read on API errors. */
+export async function fetchEngineMapEntryTypes(
+  slug: string,
+  mapKey: string,
+  revalidate = 300,
+): Promise<Record<string, string>> {
+  const d = await get<{ pins: HubPinRow[] }>(
+    `/game-hubs/${enc(slug)}/engine/maps/${enc(mapKey)}/pins`,
+    revalidate,
+  );
+  const out: Record<string, string> = {};
+  for (const p of d?.pins ?? []) if (p[9]) out[p[9]] = p[2];
   return out;
 }
 

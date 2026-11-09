@@ -5,10 +5,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
-import { Box, Container, Flex, Heading, Text } from "@chakra-ui/react";
+import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
-import { fetchEnginePage } from "@/lib/hub-engine/server";
-import { mapChoices } from "@/lib/hub-engine/maps";
+import {
+  fetchEngineMapEntryTypes,
+  fetchEnginePage,
+} from "@/lib/hub-engine/server";
+import { mapSections } from "@/lib/hub-engine/maps";
 import GuideMapScreen from "@/components/games/guide/GuideMapScreen";
 import { G } from "@/components/games/guide/GuideBits";
 
@@ -24,7 +27,20 @@ async function load(slug: string) {
   if (!hub || !engine.enabled || !engine.config || !engine.config.maps.length)
     return null;
   const short = hub.profile?.aliases?.[0] || hub.game.name;
-  return { hub, engine, config: engine.config, short };
+  // The picker groups maps by what they belong to (a region, a dungeon),
+  // read off the world map's pins: one cached request.
+  const config = engine.config;
+  const world = config.maps.find((m) => !m.group && !m.entry);
+  const entryTypes = world
+    ? await fetchEngineMapEntryTypes(slug, world.key, 300)
+    : {};
+  return {
+    hub,
+    engine,
+    config,
+    short,
+    sections: mapSections(config, entryTypes),
+  };
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -57,32 +73,16 @@ export default async function GuideMapPage({ params }: Params) {
       <Text fontSize="sm" color={G.muted} mb={2}>
         <NextLink href={`/games/${slug}`}>{d.short}</NextLink> / Map
       </Text>
-      <Flex justify="space-between" align="baseline" wrap="wrap" gap={3} mb={4}>
-        <Heading as="h1" fontSize={{ base: "2xl", md: "4xl" }} color="white">
-          {d.short} interactive map
-        </Heading>
-        {mapChoices(d.config).length > 1 && (
-          <Flex gap={2} wrap="wrap">
-            {mapChoices(d.config).map((m) => (
-              <NextLink key={m.key} href={`/games/${slug}/map?map=${m.key}`}>
-                <Text
-                  fontSize="sm"
-                  px={3}
-                  py={1}
-                  borderRadius="999px"
-                  border="1px solid"
-                  borderColor={G.line}
-                  color={G.muted}
-                >
-                  {m.label}
-                </Text>
-              </NextLink>
-            ))}
-          </Flex>
-        )}
-      </Flex>
+      <Heading
+        as="h1"
+        fontSize={{ base: "2xl", md: "4xl" }}
+        color="white"
+        mb={4}
+      >
+        {d.short} interactive map
+      </Heading>
       <Suspense fallback={<Box h="70vh" bg="#0a0f22" borderRadius="14px" />}>
-        <GuideMapScreen slug={slug} config={d.config} />
+        <GuideMapScreen slug={slug} config={d.config} sections={d.sections} />
       </Suspense>
       <Text fontSize="xs" color={G.muted} mt={3}>
         Unofficial fan map by Nexzy. Pins are placed by the Nexzy team;

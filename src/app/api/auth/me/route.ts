@@ -58,6 +58,11 @@ export async function GET(req: NextRequest) {
     } catch {
       return NextResponse.json({ user: null }, { status: 502 });
     }
+    // The API answers 5xx when IT failed (DB/Redis blip, deploy), not when the
+    // token is bad: keep the cookies so the next load signs straight back in.
+    if (refreshed.status >= 500) {
+      return NextResponse.json({ user: null }, { status: 503 });
+    }
     if (refreshed.ok) {
       const tokens = await refreshed.json();
       try {

@@ -54,6 +54,7 @@ import {
   type HubPinRow,
   type HubTemplateConfig,
 } from "@/lib/hub-engine/types";
+import { floorsOf, mapForEntry } from "@/lib/hub-engine/maps";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { G } from "@/components/games/guide/GuideBits";
 import GuideEntryPanel from "@/components/games/guide/GuideEntryPanel";
@@ -234,6 +235,42 @@ export default function GuideMap({
     };
   }, [visible, slug, map.key, onlyKey]);
 
+  // The world map (no group, no owner entry) starts with only the types
+  // whose pins open their own maps (regions, dungeons) switched on, so it
+  // reads as a map of places instead of a wall of collectibles; the chips
+  // turn the rest on. Area and dungeon maps show everything. Once per map
+  // (GuideMapFloors remounts this per floor), never over the reader's own
+  // chip choices, and never hiding a pin the page opened on.
+  const isWorld = !map.group && !map.entry;
+  const ownsMap = useCallback(
+    (entrySlug: string) =>
+      !!entrySlug && config.maps.some((m) => m.entry === entrySlug),
+    [config],
+  );
+  const placeTypes = useMemo(() => {
+    const t = new Set<string>();
+    (pins ?? []).forEach((p) => ownsMap(p[9]) && t.add(p[2]));
+    return t;
+  }, [pins, ownsMap]);
+  const defaulted = useRef(false);
+  useEffect(() => {
+    if (preview || !isWorld || defaulted.current || !pins) return;
+    defaulted.current = true;
+    if (
+      !placeTypes.size ||
+      placeTypes.size === new Set(pins.map((p) => p[2])).size
+    )
+      return;
+    const keep = new Set(placeTypes);
+    const opened = focusPin
+      ? pins.find((p) => p[0] === focusPin)
+      : focusEntry
+        ? pins.find((p) => p[9] === focusEntry)
+        : undefined;
+    if (opened) keep.add(opened[2]);
+    setOff(new Set(pins.map((p) => p[2]).filter((t) => !keep.has(t))));
+  }, [pins, placeTypes, preview, isWorld, focusPin, focusEntry]);
+
   // Pins after the reader's filters, as GeoJSON for the GPU layer.
   const data = useMemo(() => {
     const feats = (pins ?? [])
@@ -370,7 +407,10 @@ export default function GuideMap({
             // The small preview shows every pin as a dot: cluster bubbles
             // read as big yellow blobs at that size.
             cluster: !preview,
-            clusterRadius: 36,
+            // Small radius and 3+ pins: places a few pixels apart stay
+            // separate pins instead of turning into a bubble.
+            clusterRadius: 28,
+            clusterMinPoints: 3,
             clusterMaxZoom: Math.floor(z0 + map.maxZoom - 1),
           });
           instance.addLayer({
@@ -379,9 +419,11 @@ export default function GuideMap({
             source: "pins",
             filter: ["has", "point_count"],
             paint: {
-              "circle-color": "#FFD700",
-              "circle-opacity": 0.85,
-              "circle-stroke-color": "#0b0e1d",
+              // Neutral, so a group of pins never looks like a (gold)
+              // Gold Skulltula or any other pin type.
+              "circle-color": "#2a3766",
+              "circle-opacity": 0.92,
+              "circle-stroke-color": "#ffffff",
               "circle-stroke-width": 2,
               "circle-radius": [
                 "step",
@@ -671,6 +713,30 @@ export default function GuideMap({
         toggle(p.eid);
         paint(next);
       };
+      // A place with its own map (a region, a dungeon): open that map.
+      const own = p.s ? mapForEntry(config, p.s) : null;
+      if (own && !floorsOf(config, map).some((f) => f.key === own.key)) {
+        const go = document.createElement("a");
+        go.textContent = "Open map";
+        go.href = `/games/${slug}/map?map=${encodeURIComponent(own.key)}`;
+        go.style.cssText =
+          "display:block;text-align:center;border-radius:999px;padding:6px 12px;margin-bottom:8px;font-size:13px;font-weight:800;background:#FFD700;color:#0b0e1d;text-decoration:none";
+        go.onclick = (ev) => {
+          // Already on the full map page: switch maps in place (Back
+          // returns here). Anywhere else the link loads the map page.
+          if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+          if (window.location.pathname !== `/games/${slug}/map`) return;
+          ev.preventDefault();
+          popupRef.current?.remove();
+          const u = new URL(window.location.href);
+          u.searchParams.set("map", own.key);
+          u.searchParams.delete("pin");
+          u.searchParams.delete("entry");
+          window.history.pushState(null, "", u.toString());
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+        el.append(go);
+      }
       row.append(btn);
       if (p.s) {
         const a = document.createElement("a");
@@ -709,7 +775,7 @@ export default function GuideMap({
       popupRef.current = pop;
       darkChrome(pop);
     },
-    [config, slug, toggle, preview],
+    [config, slug, toggle, preview, map],
   );
   // Map click handlers are bound once; they call the latest popup builder
   // through this ref (fresh toggle, signed-in state, config).
@@ -903,110 +969,138 @@ export default function GuideMap({
   );
 
   const controls = !preview && (
-    <Flex gap={2} wrap="wrap" mb={3} align="center">
-      {chips.map((t) => {
-        const on = !off.has(t.key);
-        const total = counts.get(t.key) ?? 0;
-        const done = foundCounts.get(t.key) ?? 0;
-        return (
-          <Button
-            key={t.key}
-            size="xs"
-            h="auto"
-            py={1.5}
-            borderRadius="10px"
-            variant="outline"
-            borderColor={on ? t.color : G.line}
-            color={on ? "white" : G.muted}
-            bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
-            title={on ? `Hide ${t.plural}` : `Show ${t.plural}`}
-            onClick={() =>
-              setOff((prev) => {
-                const n = new Set(prev);
-                if (n.has(t.key)) n.delete(t.key);
-                else n.add(t.key);
-                return n;
-              })
-            }
-            aria-pressed={on}
-          >
-            <Stack gap={1} align="stretch">
-              <HStack gap={1.5}>
-                <Box w="8px" h="8px" borderRadius="full" bg={t.color} />
-                <Text>{t.plural}</Text>
-                <Text color={G.muted} fontWeight="600">
-                  {done} / {total}
-                </Text>
-              </HStack>
-              <Box
-                h="3px"
-                bg="rgba(255,255,255,0.1)"
-                borderRadius="999px"
-                overflow="hidden"
-              >
+    <Box mb={3}>
+      {/* Type chips: one swipeable row on phones, wrapping rows on desktop. */}
+      <Flex
+        gap={2}
+        wrap={{ base: "nowrap", md: "wrap" }}
+        overflowX={{ base: "auto", md: "visible" }}
+        mx={{ base: -4, md: 0 }}
+        px={{ base: 4, md: 0 }}
+        pb={{ base: 1, md: 0 }}
+        mb={2}
+        css={{
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+        role="group"
+        aria-label="Show or hide pin types"
+      >
+        {chips.map((t) => {
+          const on = !off.has(t.key);
+          const total = counts.get(t.key) ?? 0;
+          const done = foundCounts.get(t.key) ?? 0;
+          return (
+            <Button
+              key={t.key}
+              size="xs"
+              h="auto"
+              minH="40px"
+              flexShrink={0}
+              py={1.5}
+              borderRadius="10px"
+              variant="outline"
+              borderColor={on ? t.color : G.line}
+              color={on ? "white" : G.muted}
+              bg={on ? "rgba(255,255,255,0.06)" : "transparent"}
+              opacity={on ? 1 : 0.75}
+              title={`${on ? "Hide" : "Show"} ${t.plural}: ${done} of ${total} on this map found`}
+              onClick={() =>
+                setOff((prev) => {
+                  const n = new Set(prev);
+                  if (n.has(t.key)) n.delete(t.key);
+                  else n.add(t.key);
+                  return n;
+                })
+              }
+              aria-pressed={on}
+            >
+              <Stack gap={1} align="stretch">
+                <HStack gap={1.5}>
+                  <Box w="8px" h="8px" borderRadius="full" bg={t.color} />
+                  <Text>{t.plural}</Text>
+                  <Text color={G.muted} fontWeight="600">
+                    {done} / {total}
+                  </Text>
+                </HStack>
                 <Box
-                  h="100%"
-                  w={`${total ? Math.round((done / total) * 100) : 0}%`}
-                  bg={GREEN}
-                />
-              </Box>
-            </Stack>
+                  h="3px"
+                  bg="rgba(255,255,255,0.1)"
+                  borderRadius="999px"
+                  overflow="hidden"
+                >
+                  <Box
+                    h="100%"
+                    w={`${total ? Math.round((done / total) * 100) : 0}%`}
+                    bg={GREEN}
+                  />
+                </Box>
+              </Stack>
+            </Button>
+          );
+        })}
+      </Flex>
+      <Flex gap={2} wrap="wrap" align="center">
+        {(pins?.length ?? 0) > 0 && (
+          <Button
+            size="xs"
+            minH="32px"
+            borderRadius="999px"
+            variant="outline"
+            borderColor={hideFound ? GREEN : G.line}
+            color={hideFound ? "white" : G.muted}
+            bg={hideFound ? "rgba(126,226,160,0.12)" : "transparent"}
+            onClick={flipHideFound}
+            aria-pressed={hideFound}
+          >
+            {hideFound ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
+            Hide found
           </Button>
-        );
-      })}
-      {(pins?.length ?? 0) > 0 && (
-        <Button
-          size="xs"
-          borderRadius="999px"
-          variant="outline"
-          borderColor={hideFound ? GREEN : G.line}
-          color={hideFound ? "white" : G.muted}
-          bg={hideFound ? "rgba(126,226,160,0.12)" : "transparent"}
-          onClick={flipHideFound}
-          aria-pressed={hideFound}
-        >
-          {hideFound ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
-          Hide found
-        </Button>
-      )}
-      {eraSwitch && config.eras.length > 0 && (
-        <NativeSelect.Root size="xs" width="auto">
-          <NativeSelect.Field
-            aria-label="Era"
-            value={era ?? ""}
-            onChange={(e) => setEra(e.target.value || null)}
-            bg={G.card}
-            color="white"
-          >
-            <option value="">All eras</option>
-            {config.eras.map((x) => (
-              <option key={x.key} value={x.key}>
-                {x.label}
-              </option>
-            ))}
-          </NativeSelect.Field>
-        </NativeSelect.Root>
-      )}
-      {spoilers && config.spoilerStages.length > 0 && (
-        <NativeSelect.Root size="xs" width="auto">
-          <NativeSelect.Field
-            aria-label="Spoilers"
-            value={spoiler ?? ""}
-            onChange={(e) => setSpoiler(e.target.value || null)}
-            bg={G.card}
-            color="white"
-          >
-            <option value="">No spoilers</option>
-            {config.spoilerStages.map((s) => (
-              <option key={s.key} value={s.key}>
-                Up to: {s.label}
-              </option>
-            ))}
-            <option value="all">Show everything</option>
-          </NativeSelect.Field>
-        </NativeSelect.Root>
-      )}
-    </Flex>
+        )}
+        {eraSwitch && config.eras.length > 0 && (
+          <NativeSelect.Root size="xs" width="auto">
+            <NativeSelect.Field
+              aria-label="Era"
+              value={era ?? ""}
+              onChange={(e) => setEra(e.target.value || null)}
+              bg={G.card}
+              color="white"
+            >
+              <option value="">All eras</option>
+              {config.eras.map((x) => (
+                <option key={x.key} value={x.key}>
+                  {x.label}
+                </option>
+              ))}
+            </NativeSelect.Field>
+          </NativeSelect.Root>
+        )}
+        {spoilers && config.spoilerStages.length > 0 && (
+          <NativeSelect.Root size="xs" width="auto">
+            <NativeSelect.Field
+              aria-label="Spoilers"
+              value={spoiler ?? ""}
+              onChange={(e) => setSpoiler(e.target.value || null)}
+              bg={G.card}
+              color="white"
+            >
+              <option value="">No spoilers</option>
+              {config.spoilerStages.map((s) => (
+                <option key={s.key} value={s.key}>
+                  Up to: {s.label}
+                </option>
+              ))}
+              <option value="all">Show everything</option>
+            </NativeSelect.Field>
+          </NativeSelect.Root>
+        )}
+        <Text fontSize="xs" color={G.muted}>
+          {placeTypes.size > 0
+            ? "Tap a place or exit to open its map. Counts are for this map."
+            : "Counts are for this map."}
+        </Text>
+      </Flex>
+    </Box>
   );
 
   return (
