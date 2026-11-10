@@ -1709,7 +1709,15 @@ function Photos({
     setErr([]);
     const out = [...value];
     try {
-      for (const file of files.slice(0, max - value.length)) {
+      // The file picker hands files back in no set order: upload them by
+      // name (kf-02 before kf-10) so a numbered set lands in order.
+      const sorted = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      );
+      for (const file of sorted.slice(0, max - value.length)) {
         const r = await uploadEngineImage(
           gameId,
           await fileToDataUrl(file),
@@ -1775,6 +1783,25 @@ function Photos({
                   )
                 }
               />
+              {value.length > 1 && (
+                <HStack gap={1}>
+                  <Plain
+                    onClick={() => onChange(move(value, i, -1))}
+                    disabled={i === 0}
+                  >
+                    <FiArrowLeft aria-label="Move left" />
+                  </Plain>
+                  <Plain
+                    onClick={() => onChange(move(value, i, 1))}
+                    disabled={i === value.length - 1}
+                  >
+                    <FiArrowRight aria-label="Move right" />
+                  </Plain>
+                  <Text color={C.faint} fontSize="xs">
+                    {i + 1} of {value.length}
+                  </Text>
+                </HStack>
+              )}
               <Plain
                 danger
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
