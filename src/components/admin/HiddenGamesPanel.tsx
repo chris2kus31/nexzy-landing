@@ -59,7 +59,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [tags, setTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<Status>("all");
-  const [tag, setTag] = useState<string>("");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [query, setQuery] = useState(""); // debounced q actually sent
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -77,7 +77,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
         limit: PAGE_SIZE,
         q: query,
         status,
-        tag: tag || undefined,
+        tags: picked.size ? [...picked] : undefined,
       });
       setItems(res.items);
       setTotal(res.total);
@@ -85,7 +85,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load hidden games");
     }
-  }, [page, query, status, tag]);
+  }, [page, query, status, picked]);
 
   useEffect(() => {
     load();
@@ -107,7 +107,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
   useEffect(() => {
     setSelected(new Set());
     setConfirmAll(null);
-  }, [query, status, tag]);
+  }, [query, status, picked]);
 
   const toggleOne = async (g: HiddenGame) => {
     setBusy(true);
@@ -178,7 +178,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
   const bulkAllMatching = (allow: boolean) =>
     runBulk({
       allow,
-      filter: { q: query, status, tag: tag || undefined },
+      filter: { q: query, status, tags: picked.size ? [...picked] : undefined },
     });
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -247,11 +247,11 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
       <HStack gap={1} mb={4} wrap="wrap">
         <Button
           size="xs"
-          bg={tag === "" ? "nexzy.blue" : "whiteAlpha.100"}
+          bg={picked.size === 0 ? "nexzy.blue" : "whiteAlpha.100"}
           color="nexzy.white"
           _hover={{ opacity: 0.85 }}
           onClick={() => {
-            setTag("");
+            setPicked(new Set());
             setPage(1);
           }}
         >
@@ -261,11 +261,16 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
           <Button
             key={t}
             size="xs"
-            bg={tag === t ? "nexzy.blue" : "whiteAlpha.100"}
+            bg={picked.has(t) ? "nexzy.blue" : "whiteAlpha.100"}
             color="nexzy.white"
             _hover={{ opacity: 0.85 }}
             onClick={() => {
-              setTag(t);
+              setPicked((prev) => {
+                const next = new Set(prev);
+                if (next.has(t)) next.delete(t);
+                else next.add(t);
+                return next;
+              });
               setPage(1);
             }}
           >
