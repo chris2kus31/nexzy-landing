@@ -2600,20 +2600,39 @@ export interface HiddenGamesPage {
   total: number;
   page: number;
   limit: number;
+  tags: string[];
 }
 
-export async function listHiddenGames(opts: {
-  page?: number;
-  limit?: number;
+export interface HiddenGamesFilter {
   q?: string;
   status?: "all" | "hidden" | "allowed";
-}): Promise<HiddenGamesPage> {
+  tag?: string;
+}
+
+export async function listHiddenGames(
+  opts: HiddenGamesFilter & { page?: number; limit?: number },
+): Promise<HiddenGamesPage> {
   const p = new URLSearchParams();
   if (opts.page) p.set("page", String(opts.page));
   if (opts.limit) p.set("limit", String(opts.limit));
   if (opts.q?.trim()) p.set("q", opts.q.trim());
   if (opts.status && opts.status !== "all") p.set("status", opts.status);
+  if (opts.tag) p.set("tag", opts.tag);
   return handle(await fetch(`/api/newsroom/admin/games/hidden?${p}`));
+}
+
+export async function bulkSetGameVisibility(body: {
+  allow: boolean;
+  ids?: string[];
+  filter?: HiddenGamesFilter;
+}): Promise<{ updated: number }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/hidden/bulk`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
 }
 
 export async function setGameVisibilityException(
