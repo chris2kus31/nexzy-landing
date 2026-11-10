@@ -9,7 +9,7 @@ import NextLink from "next/link";
 import { Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
 import { fetchEngineGuidePage, fetchEnginePage } from "@/lib/hub-engine/server";
-import { guidePath } from "@/lib/hub-engine/types";
+import { guidePath, type HubResolvedBlock } from "@/lib/hub-engine/types";
 import { G } from "@/components/games/guide/GuideBits";
 import GuidePageBody from "@/components/games/guide/GuidePageBody";
 import { jsonLdString } from "@/lib/seo/jsonld";
@@ -37,6 +37,16 @@ async function load(slug: string, pageSlug: string) {
   };
 }
 
+// The page's first photo (a single image block, else a gallery's first photo):
+// used for the share card and the Article info Google reads.
+function firstPhoto(blocks: HubResolvedBlock[]): string | undefined {
+  for (const b of blocks) {
+    if (b.kind === "image") return b.image.url;
+    if (b.kind === "gallery" && b.images.length) return b.images[0].url;
+  }
+  return undefined;
+}
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug, page } = await params;
   const d = await load(slug, page);
@@ -50,7 +60,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     d.page.summary ||
     `${d.page.title} in ${d.short}: Nexzy's guide with maps, trackers and tips.`
   ).slice(0, 160);
-  const img = d.page.blocks.find((b) => b.kind === "image");
+  const img = firstPhoto(d.page.blocks);
   return {
     title,
     description,
@@ -59,7 +69,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title,
       description,
       type: "article",
-      ...(img && img.kind === "image" ? { images: [img.image.url] } : {}),
+      ...(img ? { images: [img] } : {}),
     },
   };
 }
@@ -70,6 +80,7 @@ export default async function GuidePage({ params }: Params) {
   if (!d) notFound();
   const { page } = d;
   const url = `${SITE_URL}${guidePath(slug, page.slug)}`;
+  const photo = firstPhoto(page.blocks);
   const crumbs = [
     { name: d.short, item: `${SITE_URL}/games/${slug}` },
     { name: "Guide", item: `${SITE_URL}/games/${slug}/guide` },
@@ -101,8 +112,14 @@ export default async function GuidePage({ params }: Params) {
       ...(page.summary ? { description: page.summary } : {}),
       dateModified: page.updatedAt,
       mainEntityOfPage: url,
+      ...(photo ? { image: [photo] } : {}),
       about: { "@type": "VideoGame", name: d.short },
-      publisher: { "@type": "Organization", name: "Nexzy" },
+      author: { "@type": "Organization", name: "Nexzy", url: SITE_URL },
+      publisher: {
+        "@type": "Organization",
+        name: "Nexzy",
+        logo: { "@type": "ImageObject", url: `${SITE_URL}/NexzyLogo.png` },
+      },
     },
   ];
   return (

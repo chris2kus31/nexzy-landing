@@ -12,7 +12,6 @@ import {
   Text,
   Link,
   Separator,
-  Image,
   Icon,
 } from "@chakra-ui/react";
 import { FaApple, FaGooglePlay, FaNewspaper } from "react-icons/fa";
@@ -22,6 +21,7 @@ import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 import StoreLink from "@/components/StoreLink";
 import EmailCapture from "@/components/landing/EmailCapture";
 import PreferredSourceButton from "@/components/PreferredSourceButton";
+import NextImage from "next/image";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -90,7 +90,12 @@ export default function Footer() {
           {/* Logo & Brand Column */}
           <Stack gap={4} pr={{ base: 0, lg: 8 }}>
             <HStack gap={3}>
-              <Image src="/NexzyLogo.png" alt="Nexzy" h={12} w={12} />
+              <NextImage
+                src="/NexzyLogo.png"
+                alt="Nexzy"
+                width={48}
+                height={48}
+              />
               <Stack gap={0}>
                 <Text
                   fontFamily="title"

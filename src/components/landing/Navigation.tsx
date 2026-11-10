@@ -12,7 +12,6 @@ import {
   HStack,
   Button,
   Container,
-  Image,
   Link,
   IconButton,
   Stack,
@@ -31,6 +30,7 @@ import { HiMenu, HiX, HiChevronDown } from "react-icons/hi";
 import NextLink from "next/link";
 import { track } from "@/lib/analytics";
 import { BEATS } from "@/lib/blog/beats";
+import NextImage from "next/image";
 
 // Absolute hrefs so they work from ANY page (e.g. /blog), not just home.
 const LIBRARY = [
@@ -70,7 +70,13 @@ export default function Navigation() {
           <Link asChild _hover={{ textDecoration: "none" }}>
             <NextLink href="/">
               <HStack gap={2}>
-                <Image src="/NexzyLogo.png" alt="Nexzy" h={10} w={10} />
+                <NextImage
+                  src="/NexzyLogo.png"
+                  alt="Nexzy"
+                  width={40}
+                  height={40}
+                  preload
+                />
                 <Text
                   fontFamily="title"
                   fontWeight="bold"

@@ -91,7 +91,7 @@ export function GuideMarkdown({ text }: { text: string }) {
           return (
             <Text
               key={i}
-              as={level === 1 ? "h2" : level === 2 ? "h3" : "h4"}
+              as={level <= 2 ? "h2" : "h3"}
               fontWeight="800"
               fontSize={level === 1 ? "xl" : level === 2 ? "lg" : "md"}
               color="white"
@@ -137,7 +137,7 @@ export function GuideMarkdown({ text }: { text: string }) {
           <Box key={i}>
             {head && h && (
               <Text
-                as={h[1].length === 1 ? "h2" : h[1].length === 2 ? "h3" : "h4"}
+                as={h[1].length <= 2 ? "h2" : "h3"}
                 fontWeight="800"
                 fontSize={
                   h[1].length === 1 ? "xl" : h[1].length === 2 ? "lg" : "md"
