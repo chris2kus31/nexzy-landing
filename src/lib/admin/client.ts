@@ -2588,6 +2588,47 @@ export async function reorderFeaturedGames(
   );
 }
 
+export interface HiddenGame extends GameLite {
+  notabilityScore: number | null;
+  isMature: boolean;
+  matureOverride: boolean;
+  blockingTags: string[] | null;
+}
+
+export interface HiddenGamesPage {
+  items: HiddenGame[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function listHiddenGames(opts: {
+  page?: number;
+  limit?: number;
+  q?: string;
+  status?: "all" | "hidden" | "allowed";
+}): Promise<HiddenGamesPage> {
+  const p = new URLSearchParams();
+  if (opts.page) p.set("page", String(opts.page));
+  if (opts.limit) p.set("limit", String(opts.limit));
+  if (opts.q?.trim()) p.set("q", opts.q.trim());
+  if (opts.status && opts.status !== "all") p.set("status", opts.status);
+  return handle(await fetch(`/api/newsroom/admin/games/hidden?${p}`));
+}
+
+export async function setGameVisibilityException(
+  gameId: string,
+  allow: boolean,
+): Promise<{ id: string; matureOverride: boolean }> {
+  return handle(
+    await fetch(`/api/newsroom/admin/games/hidden/${gameId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allow }),
+    }),
+  );
+}
+
 export interface TaxonomyOption {
   id: string;
   name: string;

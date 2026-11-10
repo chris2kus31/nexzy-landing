@@ -21,6 +21,7 @@ import GrowthPanel from "@/components/admin/GrowthPanel";
 import IndexingRitualPanel from "@/components/admin/IndexingRitualPanel";
 import AiVisibilityPanel from "@/components/admin/AiVisibilityPanel";
 import MissingGamesPanel from "@/components/admin/MissingGamesPanel";
+import HiddenGamesPanel from "@/components/admin/HiddenGamesPanel";
 import DiscoveryPanel from "@/components/admin/DiscoveryPanel";
 import GameHubPanel from "@/components/admin/GameHubPanel";
 import MegaHubsPanel from "@/components/admin/MegaHubsPanel";
@@ -63,6 +64,7 @@ type Tab =
   | "indexing"
   | "ai-visibility"
   | "games"
+  | "hidden-games"
   | "discovery"
   | "gamehub"
   | "megahubs"
@@ -363,6 +365,11 @@ function AdminContent() {
             onClick={() => setTab("games")}
           />
           <TabButton
+            label="Hidden games"
+            active={tab === "hidden-games"}
+            onClick={() => setTab("hidden-games")}
+          />
+          <TabButton
             label="Discovery"
             active={tab === "discovery"}
             onClick={() => setTab("discovery")}
@@ -590,6 +597,7 @@ function AdminContent() {
       {tab === "indexing" && <IndexingRitualPanel />}
       {tab === "ai-visibility" && <AiVisibilityPanel isOwner={isOwner} />}
       {tab === "games" && <MissingGamesPanel isOwner={isOwner} />}
+      {tab === "hidden-games" && <HiddenGamesPanel isOwner={isOwner} />}
       {tab === "discovery" && <DiscoveryPanel isOwner={isOwner} />}
       {tab === "gamehub" && <GameHubPanel />}
       {tab === "megahubs" && <MegaHubsPanel />}
