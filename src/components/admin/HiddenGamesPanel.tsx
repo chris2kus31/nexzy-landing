@@ -47,6 +47,16 @@ const year = (d: string | null) => (d ? d.slice(0, 4) : "TBD");
 
 type Status = "all" | "hidden" | "allowed";
 
+const tagsOf = (
+  picked: Map<string, "in" | "out">,
+  mode: "in" | "out",
+): string[] | undefined => {
+  const out = [...picked.entries()]
+    .filter(([, m]) => m === mode)
+    .map(([t]) => t);
+  return out.length ? out : undefined;
+};
+
 const STATUS_TABS: Array<{ key: Status; label: string }> = [
   { key: "all", label: "All" },
   { key: "hidden", label: "Hidden" },
@@ -59,7 +69,8 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [tags, setTags] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<Status>("all");
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  // Per-tag filter mode: include ("in"), exclude ("out"), or absent (off).
+  const [picked, setPicked] = useState<Map<string, "in" | "out">>(new Map());
   const [q, setQ] = useState("");
   const [query, setQuery] = useState(""); // debounced q actually sent
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -77,7 +88,8 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
         limit: PAGE_SIZE,
         q: query,
         status,
-        tags: picked.size ? [...picked] : undefined,
+        tags: tagsOf(picked, "in"),
+        notTags: tagsOf(picked, "out"),
       });
       setItems(res.items);
       setTotal(res.total);
@@ -178,7 +190,12 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
   const bulkAllMatching = (allow: boolean) =>
     runBulk({
       allow,
-      filter: { q: query, status, tags: picked.size ? [...picked] : undefined },
+      filter: {
+        q: query,
+        status,
+        tags: tagsOf(picked, "in"),
+        notTags: tagsOf(picked, "out"),
+      },
     });
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -251,7 +268,7 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
           color="nexzy.white"
           _hover={{ opacity: 0.85 }}
           onClick={() => {
-            setPicked(new Set());
+            setPicked(new Map());
             setPage(1);
           }}
         >
@@ -261,20 +278,29 @@ export default function HiddenGamesPanel({ isOwner }: { isOwner: boolean }) {
           <Button
             key={t}
             size="xs"
-            bg={picked.has(t) ? "nexzy.blue" : "whiteAlpha.100"}
+            bg={
+              picked.get(t) === "in"
+                ? "nexzy.blue"
+                : picked.get(t) === "out"
+                  ? "red.700"
+                  : "whiteAlpha.100"
+            }
             color="nexzy.white"
             _hover={{ opacity: 0.85 }}
+            title="Tap: include. Tap again: exclude. Tap again: off."
             onClick={() => {
               setPicked((prev) => {
-                const next = new Set(prev);
-                if (next.has(t)) next.delete(t);
-                else next.add(t);
+                const next = new Map(prev);
+                const mode = next.get(t);
+                if (mode === undefined) next.set(t, "in");
+                else if (mode === "in") next.set(t, "out");
+                else next.delete(t);
                 return next;
               });
               setPage(1);
             }}
           >
-            {t}
+            {picked.get(t) === "out" ? `not ${t}` : t}
           </Button>
         ))}
       </HStack>

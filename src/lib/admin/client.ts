@@ -2607,6 +2607,7 @@ export interface HiddenGamesFilter {
   q?: string;
   status?: "all" | "hidden" | "allowed";
   tags?: string[];
+  notTags?: string[];
 }
 
 export async function listHiddenGames(
@@ -2618,6 +2619,7 @@ export async function listHiddenGames(
   if (opts.q?.trim()) p.set("q", opts.q.trim());
   if (opts.status && opts.status !== "all") p.set("status", opts.status);
   if (opts.tags?.length) p.set("tags", opts.tags.join(","));
+  if (opts.notTags?.length) p.set("not", opts.notTags.join(","));
   return handle(await fetch(`/api/newsroom/admin/games/hidden?${p}`));
 }
 
