@@ -37,6 +37,9 @@ import {
 } from "@/components/games/guide/GuideBits";
 import GuideMapFloors from "@/components/games/guide/GuideMapFloors";
 import GuideVideo from "@/components/games/guide/GuideVideo";
+import GuideGallery, {
+  GuideLightbox,
+} from "@/components/games/guide/GuideGallery";
 import GuideEntryDialog from "@/components/games/guide/GuideEntryDialog";
 import { usePageMaps } from "@/components/games/guide/GuidePageMaps";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
@@ -196,15 +199,7 @@ function Block({
         />
       );
     case "gallery":
-      return (
-        <Flex gap={3} overflowX="auto" pb={2}>
-          {b.images.map((img) => (
-            <Box key={img.url} minW={{ base: "78%", md: "300px" }} w="300px">
-              <Figure img={img} h={190} />
-            </Box>
-          ))}
-        </Flex>
-      );
+      return <GuideGallery images={b.images} />;
     case "video":
       return (
         <Box maxW="820px">
@@ -327,9 +322,15 @@ function Figure({
   h?: number;
   after?: React.ReactNode;
 }) {
+  const [viewer, setViewer] = useState<number | null>(null);
   return (
     <Box as="figure" m={0}>
       <Box
+        as="button"
+        onClick={() => setViewer(0)}
+        aria-label={`Open photo: ${img.alt ?? img.caption ?? ""}`}
+        cursor="zoom-in"
+        display="block"
         position="relative"
         w="100%"
         h={{ base: `${Math.round(h * 0.6)}px`, md: `${h}px` }}
@@ -351,6 +352,12 @@ function Figure({
         </Text>
       )}
       {after}
+      <GuideLightbox
+        images={[img]}
+        index={viewer}
+        onIndex={setViewer}
+        onClose={() => setViewer(null)}
+      />
     </Box>
   );
 }
