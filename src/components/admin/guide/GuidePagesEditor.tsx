@@ -6,7 +6,7 @@
 // page form stacks blocks: text, photo, gallery, video, table, dropdown, tip,
 // map, checklist, entry list. Everything is checked by the API on Save; a
 // page shows on the site only when its status is Published.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Box,
@@ -21,6 +21,8 @@ import {
   FiArrowLeft,
   FiArrowRight,
   FiArrowUp,
+  FiChevronDown,
+  FiChevronRight,
   FiCopy,
   FiExternalLink,
   FiPlus,
@@ -839,100 +841,132 @@ function BlocksEditor({
       !(k.kind === "map" && !config.maps.length) &&
       !(k.kind === "checklist" && !config.checklists.length),
   );
-  const [adding, setAdding] = useState(false);
-  return (
-    <Stack gap={3}>
-      {blocks.map((b, i) => (
-        <BlockCard
-          key={b.id}
-          gameId={gameId}
-          config={config}
-          block={b}
-          onChange={(nb) => onChange(blocks.map((x, j) => (j === i ? nb : x)))}
-          tools={
-            <HStack gap={1}>
-              <Plain
-                onClick={() => onChange(move(blocks, i, -1))}
-                disabled={i === 0}
-              >
-                <FiArrowUp aria-label="Move up" />
-              </Plain>
-              <Plain
-                onClick={() => onChange(move(blocks, i, 1))}
-                disabled={i === blocks.length - 1}
-              >
-                <FiArrowDown aria-label="Move down" />
-              </Plain>
-              <Plain
-                onClick={() => {
-                  const copy = JSON.parse(JSON.stringify(b)) as HubBlock;
-                  copy.id = newId();
-                  if (copy.kind === "dropdown")
-                    copy.blocks = copy.blocks.map((c) => ({
-                      ...c,
-                      id: newId(),
-                    }));
-                  const next = [...blocks];
-                  next.splice(i + 1, 0, copy);
-                  onChange(next);
-                }}
-              >
-                <FiCopy aria-label="Duplicate" />
-              </Plain>
-              <Plain
-                danger
-                onClick={() =>
-                  window.confirm("Remove this block?") &&
-                  onChange(blocks.filter((_, j) => j !== i))
-                }
-              >
-                <FiTrash2 aria-label="Remove" />
-              </Plain>
-            </HStack>
-          }
-        />
-      ))}
-      {adding ? (
-        <Box bg={C.raised} borderRadius="10px" p={3}>
-          <Flex justify="space-between" mb={2}>
+  // Where the block picker is open (insert position), or null.
+  const [addAt, setAddAt] = useState<number | null>(null);
+  // Collapsed block ids. Long pages open as an outline; new blocks open.
+  const [shut, setShut] = useState<Set<string>>(
+    () => new Set(!nested && blocks.length > 5 ? blocks.map((b) => b.id) : []),
+  );
+  const toggle = (id: string) =>
+    setShut((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const insert = (at: number, kind: BlockKind) => {
+    const next = [...blocks];
+    next.splice(at, 0, blankBlock(kind, config));
+    onChange(next);
+    setAddAt(null);
+  };
+  const picker = (at: number) => (
+    <Box bg={C.raised} borderRadius="10px" p={3} my={1}>
+      <Flex justify="space-between" mb={2}>
+        <Text color={C.text} fontWeight="700" fontSize="sm">
+          {at >= blocks.length ? "Add a block at the end" : "Add a block here"}
+        </Text>
+        <Plain onClick={() => setAddAt(null)}>
+          <FiX aria-label="Cancel" />
+        </Plain>
+      </Flex>
+      <SimpleGrid columns={{ base: 2, md: 5 }} gap={2}>
+        {kinds.map((k) => (
+          <Box
+            key={k.kind}
+            as="button"
+            textAlign="left"
+            bg={C.surface}
+            border="1px solid"
+            borderColor={C.line}
+            borderRadius="8px"
+            p={2}
+            _hover={{ borderColor: C.gold }}
+            onClick={() => insert(at, k.kind)}
+          >
             <Text color={C.text} fontWeight="700" fontSize="sm">
-              Add a block
+              {k.label}
             </Text>
-            <Plain onClick={() => setAdding(false)}>
-              <FiX aria-label="Cancel" />
-            </Plain>
-          </Flex>
-          <SimpleGrid columns={{ base: 2, md: 5 }} gap={2}>
-            {kinds.map((k) => (
-              <Box
-                key={k.kind}
-                as="button"
-                textAlign="left"
-                bg={C.surface}
-                border="1px solid"
-                borderColor={C.line}
-                borderRadius="8px"
-                p={2}
-                _hover={{ borderColor: C.gold }}
-                onClick={() => {
-                  onChange([...blocks, blankBlock(k.kind, config)]);
-                  setAdding(false);
-                }}
-              >
-                <Text color={C.text} fontWeight="700" fontSize="sm">
-                  {k.label}
-                </Text>
-                <Text color={C.faint} fontSize="xs">
-                  {k.hint}
-                </Text>
-              </Box>
-            ))}
-          </SimpleGrid>
-        </Box>
+            <Text color={C.faint} fontSize="xs">
+              {k.hint}
+            </Text>
+          </Box>
+        ))}
+      </SimpleGrid>
+    </Box>
+  );
+  return (
+    <Stack gap={0}>
+      {!nested && blocks.length > 1 && (
+        <Flex justify="flex-end" gap={2} mb={2}>
+          <Plain onClick={() => setShut(new Set(blocks.map((b) => b.id)))}>
+            Collapse all
+          </Plain>
+          <Plain onClick={() => setShut(new Set())}>Expand all</Plain>
+        </Flex>
+      )}
+      {blocks.map((b, i) => (
+        <Fragment key={b.id}>
+          {addAt === i ? picker(i) : <AddHere onClick={() => setAddAt(i)} />}
+          <BlockCard
+            gameId={gameId}
+            config={config}
+            block={b}
+            collapsed={shut.has(b.id)}
+            onToggle={() => toggle(b.id)}
+            onChange={(nb) =>
+              onChange(blocks.map((x, j) => (j === i ? nb : x)))
+            }
+            tools={
+              <HStack gap={1}>
+                <Plain
+                  onClick={() => onChange(move(blocks, i, -1))}
+                  disabled={i === 0}
+                >
+                  <FiArrowUp aria-label="Move up" />
+                </Plain>
+                <Plain
+                  onClick={() => onChange(move(blocks, i, 1))}
+                  disabled={i === blocks.length - 1}
+                >
+                  <FiArrowDown aria-label="Move down" />
+                </Plain>
+                <Plain
+                  onClick={() => {
+                    const copy = JSON.parse(JSON.stringify(b)) as HubBlock;
+                    copy.id = newId();
+                    if (copy.kind === "dropdown")
+                      copy.blocks = copy.blocks.map((c) => ({
+                        ...c,
+                        id: newId(),
+                      }));
+                    const next = [...blocks];
+                    next.splice(i + 1, 0, copy);
+                    onChange(next);
+                  }}
+                >
+                  <FiCopy aria-label="Duplicate" />
+                </Plain>
+                <Plain
+                  danger
+                  onClick={() =>
+                    window.confirm("Remove this block?") &&
+                    onChange(blocks.filter((_, j) => j !== i))
+                  }
+                >
+                  <FiTrash2 aria-label="Remove" />
+                </Plain>
+              </HStack>
+            }
+          />
+        </Fragment>
+      ))}
+      {addAt === blocks.length ? (
+        picker(blocks.length)
       ) : (
-        <Box>
-          <Plain onClick={() => setAdding(true)}>
-            <FiPlus aria-hidden /> Add block
+        <Box mt={2}>
+          <Plain onClick={() => setAddAt(blocks.length)}>
+            <FiPlus aria-hidden /> Add block at the end
           </Plain>
         </Box>
       )}
@@ -940,16 +974,106 @@ function BlocksEditor({
   );
 }
 
+/** Thin "+ Add here" row between blocks: inserts at that spot. */
+function AddHere({ onClick }: { onClick: () => void }) {
+  return (
+    <Box
+      as="button"
+      onClick={onClick}
+      w="100%"
+      py={1}
+      display="flex"
+      alignItems="center"
+      gap={2}
+      color={C.faint}
+      fontSize="xs"
+      _hover={{ color: C.gold }}
+      aria-label="Add a block here"
+    >
+      <Box flex="1" borderTop="1px dashed" borderColor={C.line} />
+      <HStack gap={1}>
+        <FiPlus aria-hidden />
+        <span>Add here</span>
+      </HStack>
+      <Box flex="1" borderTop="1px dashed" borderColor={C.line} />
+    </Box>
+  );
+}
+
+/** Plain-text one-liner for a collapsed block's title bar. */
+function blockSummary(b: HubBlock, config: HubTemplateConfig): string {
+  const plain = (s: string) =>
+    s
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/[*_`]/g, "")
+      .trim();
+  const firstLine = (md: string) => {
+    const lines = md
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const line = lines.find((l) => /^#{1,6}\s/.test(l)) ?? lines[0] ?? "";
+    return plain(
+      line.replace(/^#{1,6}\s+/, "").replace(/^(\d+\.|[-*])\s+/, ""),
+    );
+  };
+  let s = "";
+  switch (b.kind) {
+    case "text":
+    case "tip":
+      s = firstLine(b.markdown);
+      break;
+    case "image":
+      s = b.image.url ? b.image.caption || "Photo" : "No photo yet";
+      break;
+    case "gallery":
+      s = b.images.length
+        ? `${b.images.length} photo${b.images.length === 1 ? "" : "s"}${
+            b.images[0].caption ? `: ${b.images[0].caption}` : ""
+          }`
+        : "No photos yet";
+      break;
+    case "video":
+      s = b.caption || b.url;
+      break;
+    case "table":
+      s = b.title || b.columns.join(", ");
+      break;
+    case "dropdown":
+      s = `${b.title} (${b.blocks.length} inside)`;
+      break;
+    case "map": {
+      const m = config.maps.find((x) => x.key === b.mapKey);
+      s = m ? mapLabel(m) : b.mapKey;
+      break;
+    }
+    case "checklist":
+      s =
+        config.checklists.find((c) => c.key === b.checklistKey)?.title ??
+        b.checklistKey;
+      break;
+    case "entries":
+    case "steps":
+      s = b.title ?? "";
+      break;
+  }
+  return s.length > 90 ? `${s.slice(0, 89)}...` : s;
+}
+
 function BlockCard({
   gameId,
   config,
   block: b,
+  collapsed,
+  onToggle,
   onChange,
   tools,
 }: {
   gameId: string;
   config: HubTemplateConfig;
   block: HubBlock;
+  collapsed: boolean;
+  onToggle: () => void;
   onChange: (b: HubBlock) => void;
   tools: React.ReactNode;
 }) {
@@ -963,276 +1087,308 @@ function BlockCard({
       borderLeft="3px solid"
       borderColor={C.gold}
     >
-      <Flex justify="space-between" align="center" mb={2} gap={2} wrap="wrap">
-        <Text color={C.gold} fontWeight="800" fontSize="sm">
-          {label}
-        </Text>
+      <Flex
+        justify="space-between"
+        align="center"
+        mb={collapsed ? 0 : 2}
+        gap={2}
+        wrap="wrap"
+      >
+        <Box
+          as="button"
+          onClick={onToggle}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          flex="1"
+          minW="200px"
+          textAlign="left"
+          aria-expanded={!collapsed}
+        >
+          <Box color={C.faint} flexShrink={0}>
+            {collapsed ? <FiChevronRight /> : <FiChevronDown />}
+          </Box>
+          <Text color={C.gold} fontWeight="800" fontSize="sm" flexShrink={0}>
+            {label}
+          </Text>
+          <Text color={C.text} fontSize="sm" truncate>
+            {blockSummary(b, config)}
+          </Text>
+        </Box>
         {tools}
       </Flex>
-      <Stack gap={3}>
-        {b.kind === "text" && (
-          <Labeled
-            label="Text"
-            hint="## Heading, **bold**, *italic*, [link](https://...), lines starting with - or 1. for lists"
-          >
-            <LongIn
-              rows={6}
-              maxLength={10000}
-              value={b.markdown}
-              onChange={(markdown) => onChange({ ...b, markdown })}
-            />
-          </Labeled>
-        )}
-        {b.kind === "tip" && (
-          <>
-            <Box w="220px">
-              <Pick
-                label="Style"
-                value={b.style}
-                onChange={(s) =>
-                  onChange({ ...b, style: s as "tip" | "warning" | "spoiler" })
-                }
-                options={[
-                  { value: "tip", label: "Tip" },
-                  { value: "warning", label: "Warning" },
-                  { value: "spoiler", label: "Spoiler (tap to show)" },
-                ]}
-              />
-            </Box>
-            <LongIn
-              rows={3}
-              maxLength={10000}
-              value={b.markdown}
-              onChange={(markdown) => onChange({ ...b, markdown })}
-            />
-          </>
-        )}
-        {b.kind === "image" && (
-          <>
-            <Photos
-              gameId={gameId}
-              value={b.image.url ? [b.image] : []}
-              max={1}
-              onChange={(imgs) =>
-                onChange({
-                  ...b,
-                  image: imgs[0] ?? { url: "", alt: null, caption: null },
-                })
-              }
-            />
-            <EntrySlugPicker
-              gameId={gameId}
-              label="Show on map (optional): link this photo to an entry"
-              value={b.entrySlug}
-              onChange={(entrySlug) => onChange({ ...b, entrySlug })}
-            />
-          </>
-        )}
-        {b.kind === "gallery" && (
-          <Photos
-            gameId={gameId}
-            value={b.images}
-            max={12}
-            onChange={(images) => onChange({ ...b, images })}
-          />
-        )}
-        {b.kind === "video" && (
-          <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-            <Labeled label="YouTube or Streamable link *">
-              <TextIn
-                value={b.url}
-                maxLength={500}
-                onChange={(url) => onChange({ ...b, url: url.trim() })}
+      {!collapsed && (
+        <Stack gap={3}>
+          {b.kind === "text" && (
+            <Labeled
+              label="Text"
+              hint="## Heading, **bold**, *italic*, [link](https://...), lines starting with - or 1. for lists"
+            >
+              <LongIn
+                rows={6}
+                maxLength={10000}
+                value={b.markdown}
+                onChange={(markdown) => onChange({ ...b, markdown })}
               />
             </Labeled>
-            <Labeled label="Start at" hint="1:30 or seconds (optional)">
-              <TextIn
-                value={b.start == null ? "" : fmtTime(b.start)}
-                onChange={(s) => onChange({ ...b, start: parseTime(s) })}
-              />
-            </Labeled>
-            <Labeled label="Caption">
-              <TextIn
-                value={b.caption ?? ""}
-                maxLength={200}
-                onChange={(c) => onChange({ ...b, caption: c || null })}
-              />
-            </Labeled>
-          </SimpleGrid>
-        )}
-        {b.kind === "table" && (
-          <TableEditor config={config} block={b} onChange={onChange} />
-        )}
-        {b.kind === "dropdown" && (
-          <>
-            <Flex gap={3} align="flex-end" wrap="wrap">
-              <Box flex="1" minW="240px">
-                <Labeled label="Dropdown title *">
-                  <TextIn
-                    value={b.title}
-                    maxLength={120}
-                    onChange={(title) => onChange({ ...b, title })}
-                  />
-                </Labeled>
-              </Box>
-              <Check
-                label="Open by default"
-                checked={b.open}
-                onChange={(open) => onChange({ ...b, open })}
-              />
-            </Flex>
-            <Box pl={3} borderLeft="1px solid" borderColor={C.line}>
-              <BlocksEditor
-                gameId={gameId}
-                config={config}
-                blocks={b.blocks}
-                nested
-                onChange={(blocks) => onChange({ ...b, blocks })}
-              />
-            </Box>
-          </>
-        )}
-        {b.kind === "map" && (
-          <>
-            {config.maps.length > 1 && (
-              <Box w="240px">
+          )}
+          {b.kind === "tip" && (
+            <>
+              <Box w="220px">
                 <Pick
-                  label="Map"
-                  value={b.mapKey}
-                  onChange={(mapKey) => onChange({ ...b, mapKey })}
-                  options={config.maps.map((m) => ({
-                    value: m.key,
-                    label: mapLabel(m),
-                  }))}
-                />
-              </Box>
-            )}
-            <MultiCheck
-              label="Show only these types (none = all)"
-              value={b.filter.types}
-              options={typeOpts}
-              onChange={(types) =>
-                onChange({ ...b, filter: { ...b.filter, types } })
-              }
-            />
-            <EntrySlugPicker
-              gameId={gameId}
-              label="Center on an entry (optional)"
-              value={b.focusEntry}
-              onChange={(focusEntry) => onChange({ ...b, focusEntry })}
-            />
-          </>
-        )}
-        {b.kind === "checklist" && (
-          <Box w="280px">
-            <Pick
-              label="Checklist"
-              value={b.checklistKey}
-              onChange={(checklistKey) => onChange({ ...b, checklistKey })}
-              options={config.checklists.map((c) => ({
-                value: c.key,
-                label: c.title,
-              }))}
-            />
-          </Box>
-        )}
-        {b.kind === "steps" && (
-          <>
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-              <Labeled label="Title (optional)">
-                <TextIn
-                  value={b.title ?? ""}
-                  maxLength={120}
-                  onChange={(t) => onChange({ ...b, title: t || null })}
-                />
-              </Labeled>
-              <Labeled label="Show">
-                <Pick
-                  label="Show"
-                  value={b.show}
-                  onChange={(s) =>
-                    onChange({ ...b, show: s as "next" | "all" })
-                  }
-                  options={[
-                    {
-                      value: "next",
-                      label: "Next 5 steps (around the reader)",
-                    },
-                    { value: "all", label: "All steps" },
-                  ]}
-                />
-              </Labeled>
-            </SimpleGrid>
-            <Text color={C.muted} fontSize="sm" mt={2}>
-              Shows the pages under this page as numbered steps. Each step page
-              gets Step X of N and Previous / Next step. Link a mission on a
-              step page (This page is about) for its reward, Mark done and map
-              pin. Use it on a top-level page.
-            </Text>
-          </>
-        )}
-        {b.kind === "entries" && (
-          <>
-            <SimpleGrid columns={{ base: 1, md: 4 }} gap={3}>
-              <Labeled label="Title (optional)">
-                <TextIn
-                  value={b.title ?? ""}
-                  maxLength={120}
-                  onChange={(t) => onChange({ ...b, title: t || null })}
-                />
-              </Labeled>
-              <Labeled label="Look">
-                <Pick
-                  label="Look"
+                  label="Style"
                   value={b.style}
-                  onChange={(s) =>
-                    onChange({ ...b, style: s as "cards" | "list" })
-                  }
-                  options={[
-                    { value: "cards", label: "Cards" },
-                    { value: "list", label: "List" },
-                  ]}
-                />
-              </Labeled>
-              <Labeled label="Order">
-                <Pick
-                  label="Order"
-                  value={b.sort}
-                  onChange={(s) =>
-                    onChange({ ...b, sort: s as "order" | "newest" | "title" })
-                  }
-                  options={[
-                    { value: "newest", label: "Newest first" },
-                    { value: "order", label: "Guide order" },
-                    { value: "title", label: "A to Z" },
-                  ]}
-                />
-              </Labeled>
-              <Labeled label="How many (1-24)">
-                <TextIn
-                  type="number"
-                  value={String(b.limit)}
                   onChange={(s) =>
                     onChange({
                       ...b,
-                      limit: Math.max(1, Math.min(24, Number(s) || 1)),
+                      style: s as "tip" | "warning" | "spoiler",
                     })
                   }
+                  options={[
+                    { value: "tip", label: "Tip" },
+                    { value: "warning", label: "Warning" },
+                    { value: "spoiler", label: "Spoiler (tap to show)" },
+                  ]}
+                />
+              </Box>
+              <LongIn
+                rows={3}
+                maxLength={10000}
+                value={b.markdown}
+                onChange={(markdown) => onChange({ ...b, markdown })}
+              />
+            </>
+          )}
+          {b.kind === "image" && (
+            <>
+              <Photos
+                gameId={gameId}
+                value={b.image.url ? [b.image] : []}
+                max={1}
+                onChange={(imgs) =>
+                  onChange({
+                    ...b,
+                    image: imgs[0] ?? { url: "", alt: null, caption: null },
+                  })
+                }
+              />
+              <EntrySlugPicker
+                gameId={gameId}
+                label="Show on map (optional): link this photo to an entry"
+                value={b.entrySlug}
+                onChange={(entrySlug) => onChange({ ...b, entrySlug })}
+              />
+            </>
+          )}
+          {b.kind === "gallery" && (
+            <Photos
+              gameId={gameId}
+              value={b.images}
+              max={12}
+              onChange={(images) => onChange({ ...b, images })}
+            />
+          )}
+          {b.kind === "video" && (
+            <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
+              <Labeled label="YouTube or Streamable link *">
+                <TextIn
+                  value={b.url}
+                  maxLength={500}
+                  onChange={(url) => onChange({ ...b, url: url.trim() })}
+                />
+              </Labeled>
+              <Labeled label="Start at" hint="1:30 or seconds (optional)">
+                <TextIn
+                  value={b.start == null ? "" : fmtTime(b.start)}
+                  onChange={(s) => onChange({ ...b, start: parseTime(s) })}
+                />
+              </Labeled>
+              <Labeled label="Caption">
+                <TextIn
+                  value={b.caption ?? ""}
+                  maxLength={200}
+                  onChange={(c) => onChange({ ...b, caption: c || null })}
                 />
               </Labeled>
             </SimpleGrid>
-            <MultiCheck
-              label="Entry types (none = all)"
-              value={b.filter.types}
-              options={typeOpts}
-              onChange={(types) =>
-                onChange({ ...b, filter: { ...b.filter, types } })
-              }
-            />
-          </>
-        )}
-        <Visibility config={config} block={b} onChange={onChange} />
-      </Stack>
+          )}
+          {b.kind === "table" && (
+            <TableEditor config={config} block={b} onChange={onChange} />
+          )}
+          {b.kind === "dropdown" && (
+            <>
+              <Flex gap={3} align="flex-end" wrap="wrap">
+                <Box flex="1" minW="240px">
+                  <Labeled label="Dropdown title *">
+                    <TextIn
+                      value={b.title}
+                      maxLength={120}
+                      onChange={(title) => onChange({ ...b, title })}
+                    />
+                  </Labeled>
+                </Box>
+                <Check
+                  label="Open by default"
+                  checked={b.open}
+                  onChange={(open) => onChange({ ...b, open })}
+                />
+              </Flex>
+              <Box pl={3} borderLeft="1px solid" borderColor={C.line}>
+                <BlocksEditor
+                  gameId={gameId}
+                  config={config}
+                  blocks={b.blocks}
+                  nested
+                  onChange={(blocks) => onChange({ ...b, blocks })}
+                />
+              </Box>
+            </>
+          )}
+          {b.kind === "map" && (
+            <>
+              {config.maps.length > 1 && (
+                <Box w="240px">
+                  <Pick
+                    label="Map"
+                    value={b.mapKey}
+                    onChange={(mapKey) => onChange({ ...b, mapKey })}
+                    options={config.maps.map((m) => ({
+                      value: m.key,
+                      label: mapLabel(m),
+                    }))}
+                  />
+                </Box>
+              )}
+              <MultiCheck
+                label="Show only these types (none = all)"
+                value={b.filter.types}
+                options={typeOpts}
+                onChange={(types) =>
+                  onChange({ ...b, filter: { ...b.filter, types } })
+                }
+              />
+              <EntrySlugPicker
+                gameId={gameId}
+                label="Center on an entry (optional)"
+                value={b.focusEntry}
+                onChange={(focusEntry) => onChange({ ...b, focusEntry })}
+              />
+            </>
+          )}
+          {b.kind === "checklist" && (
+            <Box w="280px">
+              <Pick
+                label="Checklist"
+                value={b.checklistKey}
+                onChange={(checklistKey) => onChange({ ...b, checklistKey })}
+                options={config.checklists.map((c) => ({
+                  value: c.key,
+                  label: c.title,
+                }))}
+              />
+            </Box>
+          )}
+          {b.kind === "steps" && (
+            <>
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                <Labeled label="Title (optional)">
+                  <TextIn
+                    value={b.title ?? ""}
+                    maxLength={120}
+                    onChange={(t) => onChange({ ...b, title: t || null })}
+                  />
+                </Labeled>
+                <Labeled label="Show">
+                  <Pick
+                    label="Show"
+                    value={b.show}
+                    onChange={(s) =>
+                      onChange({ ...b, show: s as "next" | "all" })
+                    }
+                    options={[
+                      {
+                        value: "next",
+                        label: "Next 5 steps (around the reader)",
+                      },
+                      { value: "all", label: "All steps" },
+                    ]}
+                  />
+                </Labeled>
+              </SimpleGrid>
+              <Text color={C.muted} fontSize="sm" mt={2}>
+                Shows the pages under this page as numbered steps. Each step
+                page gets Step X of N and Previous / Next step. Link a mission
+                on a step page (This page is about) for its reward, Mark done
+                and map pin. Use it on a top-level page.
+              </Text>
+            </>
+          )}
+          {b.kind === "entries" && (
+            <>
+              <SimpleGrid columns={{ base: 1, md: 4 }} gap={3}>
+                <Labeled label="Title (optional)">
+                  <TextIn
+                    value={b.title ?? ""}
+                    maxLength={120}
+                    onChange={(t) => onChange({ ...b, title: t || null })}
+                  />
+                </Labeled>
+                <Labeled label="Look">
+                  <Pick
+                    label="Look"
+                    value={b.style}
+                    onChange={(s) =>
+                      onChange({ ...b, style: s as "cards" | "list" })
+                    }
+                    options={[
+                      { value: "cards", label: "Cards" },
+                      { value: "list", label: "List" },
+                    ]}
+                  />
+                </Labeled>
+                <Labeled label="Order">
+                  <Pick
+                    label="Order"
+                    value={b.sort}
+                    onChange={(s) =>
+                      onChange({
+                        ...b,
+                        sort: s as "order" | "newest" | "title",
+                      })
+                    }
+                    options={[
+                      { value: "newest", label: "Newest first" },
+                      { value: "order", label: "Guide order" },
+                      { value: "title", label: "A to Z" },
+                    ]}
+                  />
+                </Labeled>
+                <Labeled label="How many (1-24)">
+                  <TextIn
+                    type="number"
+                    value={String(b.limit)}
+                    onChange={(s) =>
+                      onChange({
+                        ...b,
+                        limit: Math.max(1, Math.min(24, Number(s) || 1)),
+                      })
+                    }
+                  />
+                </Labeled>
+              </SimpleGrid>
+              <MultiCheck
+                label="Entry types (none = all)"
+                value={b.filter.types}
+                options={typeOpts}
+                onChange={(types) =>
+                  onChange({ ...b, filter: { ...b.filter, types } })
+                }
+              />
+            </>
+          )}
+          <Visibility config={config} block={b} onChange={onChange} />
+        </Stack>
+      )}
     </Box>
   );
 }
