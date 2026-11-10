@@ -42,9 +42,10 @@ function inline(s: string, k: string): ReactNode[] {
     const key = `${k}-${i}`;
     if (/^\*\*[^*]+\*\*$/.test(part))
       return <strong key={key}>{part.slice(2, -2)}</strong>;
-    if (/^\*[^*]+\*$/.test(part))
-      return <em key={key}>{part.slice(1, -1)}</em>;
-    const m = /^\[([^\]]+)\]\(((?:https:\/\/|\/(?![/\\]))[^)\s\\]*)\)$/.exec(part);
+    if (/^\*[^*]+\*$/.test(part)) return <em key={key}>{part.slice(1, -1)}</em>;
+    const m = /^\[([^\]]+)\]\(((?:https:\/\/|\/(?![/\\]))[^)\s\\]*)\)$/.exec(
+      part,
+    );
     if (m) {
       // "/x" stays on our site; "//host" and "/\host" (which browsers read
       // as another site) never match the pattern above.
@@ -113,7 +114,16 @@ export function GuideMarkdown({ text }: { text: string }) {
           );
         if (lines.every((l) => /^\s*\d{1,3}[.)]\s+/.test(l)))
           return (
-            <Box as="ol" key={i} pl={6} mb={3} style={{ listStyle: "decimal" }}>
+            // Keep the author's numbering: a list that starts at "4." (a
+            // section split around a photo) shows 4, 5, 6, not 1, 2, 3.
+            <Box
+              as="ol"
+              key={i}
+              pl={6}
+              mb={3}
+              style={{ listStyle: "decimal" }}
+              {...{ start: Number(/\d{1,3}/.exec(lines[0])![0]) }}
+            >
               {lines.map((l, j) => (
                 <li key={j}>
                   {inline(l.replace(/^\s*\d{1,3}[.)]\s+/, ""), `${i}-${j}`)}
@@ -129,7 +139,9 @@ export function GuideMarkdown({ text }: { text: string }) {
               <Text
                 as={h[1].length === 1 ? "h2" : h[1].length === 2 ? "h3" : "h4"}
                 fontWeight="800"
-                fontSize={h[1].length === 1 ? "xl" : h[1].length === 2 ? "lg" : "md"}
+                fontSize={
+                  h[1].length === 1 ? "xl" : h[1].length === 2 ? "lg" : "md"
+                }
                 color="white"
                 mt={i ? 5 : 0}
                 mb={2}
