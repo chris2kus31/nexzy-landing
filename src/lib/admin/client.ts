@@ -5386,6 +5386,78 @@ export async function saveGameProfile(
   );
 }
 
+// --- Mega hub wording (catalog + overrides; default wording is owner only) ---
+
+export interface HubCopyKey {
+  key: string;
+  group: string;
+  kind: "label" | "line" | "text";
+  default: string;
+  tokens: string[];
+  surface: "web" | "app" | "both";
+  max: number;
+}
+
+export interface HubCopyCatalog {
+  groups: { key: string; label: string }[];
+  keys: HubCopyKey[];
+  lists: Record<string, string[]>;
+  /** The signed-in admin is the owner (may edit the default wording). */
+  canEditDefault: boolean;
+}
+
+export interface HubCopyScope {
+  scope: string;
+  overrides: Record<string, string>;
+  rev: number;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+/** A refused wording save: every problem line, plus the HTTP status (409 =
+ *  someone saved since this editor loaded). */
+export class HubCopySaveError extends Error {
+  constructor(
+    readonly lines: string[],
+    readonly status: number,
+  ) {
+    super(lines[0] || "Save failed");
+  }
+}
+
+const hubCopyUrl = (scope: string) =>
+  `/api/newsroom/admin/hub-copy/${encodeURIComponent(scope)}`;
+
+export async function getHubCopyCatalog(): Promise<HubCopyCatalog> {
+  return handle(await fetch(`/api/newsroom/admin/hub-copy/catalog`));
+}
+
+/** scope = "default" or a game id. */
+export async function getHubCopy(scope: string): Promise<HubCopyScope> {
+  return handle(await fetch(hubCopyUrl(scope)));
+}
+
+export async function saveHubCopy(
+  scope: string,
+  overrides: Record<string, string | null>,
+  rev: number,
+): Promise<HubCopyScope> {
+  const res = await fetch(hubCopyUrl(scope), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ overrides, rev }),
+  });
+  if (res.ok || res.status === 401) return handle(res);
+  const body = await res.json().catch(() => ({}));
+  const m = body?.message;
+  throw new HubCopySaveError(
+    Array.isArray(m)
+      ? m.map(String)
+      : [typeof m === "string" && m ? m : `Save failed (${res.status})`],
+    res.status,
+  );
+}
+
 // --- Reviews: Nexzy Players ratings (Phase 2; any admin) ---
 
 export type ReviewQueueView = "held" | "hidden_text" | "removed";

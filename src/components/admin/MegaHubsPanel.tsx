@@ -54,6 +54,7 @@ import {
 } from "@/lib/hubs/types";
 import RoomProfileCard from "@/components/admin/RoomProfileCard";
 import { SubTabs } from "@/components/admin/guide/ui";
+import HubWordingEditor from "@/components/admin/HubWordingEditor";
 
 type HubTab =
   | "overview"
@@ -62,7 +63,8 @@ type HubTab =
   | "editions"
   | "faq"
   | "thread"
-  | "rooms";
+  | "rooms"
+  | "wording";
 const TAB_KEY = "nexzy-admin-megahubs-tab";
 const HUB_TABS: HubTab[] = [
   "overview",
@@ -72,6 +74,7 @@ const HUB_TABS: HubTab[] = [
   "faq",
   "thread",
   "rooms",
+  "wording",
 ];
 
 /** Which tab a save problem lives on (problems() wording). */
@@ -601,6 +604,8 @@ export default function MegaHubsPanel() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [tab, setTabState] = useState<HubTab>("overview");
   const [openRows, setOpenRows] = useState<Set<string>>(new Set());
+  // Default wording (every hub) replaces the game editor on the right.
+  const [defaultsOpen, setDefaultsOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -641,6 +646,7 @@ export default function MegaHubsPanel() {
   }, [loadRows]);
 
   const open = useCallback(async (gameId: string) => {
+    setDefaultsOpen(false);
     setLoading(true);
     setMsg(null);
     try {
@@ -783,6 +789,20 @@ export default function MegaHubsPanel() {
               </Box>
             )}
           </Card>
+          <Card
+            title="Default wording"
+            hint="What every hub says, on the website and in the app. Each game can still change its own in its Wording tab. Owner only."
+          >
+            <Button
+              size="sm"
+              variant="outline"
+              borderColor={defaultsOpen ? C.gold : C.line}
+              color={C.text}
+              onClick={() => setDefaultsOpen(true)}
+            >
+              Edit default wording
+            </Button>
+          </Card>
           <Card title="Add a game">
             <HStack gap={2}>
               <Input
@@ -836,8 +856,9 @@ export default function MegaHubsPanel() {
           gap={4}
           w="full"
         >
-          {loading && <Spinner />}
-          {!loading && !draft && (
+          {defaultsOpen && <HubWordingEditor key="default" scope="default" />}
+          {!defaultsOpen && loading && <Spinner />}
+          {!defaultsOpen && !loading && !draft && (
             <Box
               bg={C.surface}
               borderRadius="14px"
@@ -848,7 +869,7 @@ export default function MegaHubsPanel() {
               Pick a hub on the left, or add a game.
             </Box>
           )}
-          {!loading && draft && detail && (
+          {!defaultsOpen && !loading && draft && detail && (
             <>
               <Card
                 title={detail.game.name}
@@ -934,6 +955,7 @@ export default function MegaHubsPanel() {
                   },
                   { key: "thread", label: "Launch thread" },
                   { key: "rooms", label: "Rooms" },
+                  { key: "wording", label: "Wording" },
                 ]}
               />
 
@@ -1039,6 +1061,14 @@ export default function MegaHubsPanel() {
                         : prev,
                     );
                   }}
+                />
+              )}
+
+              {tab === "wording" && (
+                <HubWordingEditor
+                  key={detail.game.id}
+                  scope={detail.game.id}
+                  gameName={draft.aliases[0] || detail.game.name}
                 />
               )}
 
