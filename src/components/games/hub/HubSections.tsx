@@ -8,7 +8,6 @@ import { Badge, Box, HStack, Heading, Link, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import {
   FACT_SECTIONS,
-  sectionQuestion,
   type FactStatus,
   type HubEdition,
   type HubFact,
@@ -19,22 +18,14 @@ import { getAuthorByName } from "@/lib/blog/authors";
 
 export { HUB_TZ, fmtHubDate } from "@/lib/hubs/types";
 import { fmtHubDate } from "@/lib/hubs/types";
+import type { HubT } from "@/lib/hubs/copy";
 
-const STATUS: Record<
-  FactStatus,
-  { label: string; palette: string; note: string }
-> = {
-  confirmed: { label: "Confirmed", palette: "green", note: "Official source" },
-  reported: {
-    label: "Reported",
-    palette: "blue",
-    note: "Credible report, not official",
-  },
-  leaked: {
-    label: "Leaked",
-    palette: "orange",
-    note: "Unverified, treat with care",
-  },
+/** Badge color per fact status (presentation only; the words come from the
+ *  hub's wording: known.status.<status>.label / .note). */
+const STATUS_PALETTE: Record<FactStatus, string> = {
+  confirmed: "green",
+  reported: "blue",
+  leaked: "orange",
 };
 
 export function HubPanel({
@@ -87,6 +78,7 @@ export function HubPanel({
 
 /** The short version: a 30 to 45 word direct answer, dated and bylined. */
 export function ShortVersion({
+  t,
   gameName,
   summary,
   updatedAt,
@@ -96,12 +88,13 @@ export function ShortVersion({
   summary: string;
   updatedAt: string | null;
   editor: string | null;
+  t: HubT;
 }) {
   const persona = getAuthorByName(editor);
   return (
     <Box
       as="section"
-      aria-label={`${gameName}: the short version`}
+      aria-label={t("shortVersion.aria", { game: gameName }) || undefined}
       borderLeft="3px solid #FFD700"
       bg="#1a1f3a"
       borderRadius="0 14px 14px 0"
@@ -114,7 +107,7 @@ export function ShortVersion({
         color="#FFD700"
         mb={2}
       >
-        THE SHORT VERSION
+        {t("shortVersion.title")}
       </Text>
       <Text color="white" fontSize={{ base: "md", md: "lg" }} lineHeight="1.6">
         {summary}
@@ -122,7 +115,7 @@ export function ShortVersion({
       <HStack gap={2} mt={3} fontSize="sm" color="#9aa3bf" flexWrap="wrap">
         {persona && (
           <Text>
-            By{" "}
+            {t("shortVersion.by")}{" "}
             <Link asChild color="nexzy.lightBlue">
               <NextLink href={`/author/${persona.slug}`} rel="author">
                 {persona.name}
@@ -133,7 +126,7 @@ export function ShortVersion({
         {persona && updatedAt && <Text>·</Text>}
         {updatedAt && (
           <Text>
-            Updated{" "}
+            {t("shortVersion.updated")}{" "}
             <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time>
           </Text>
         )}
@@ -143,8 +136,13 @@ export function ShortVersion({
 }
 
 /** One fact as a compact row: label, the fact, then status and source. */
-function FactCard({ fact }: { fact: HubFact }) {
-  const st = STATUS[fact.status] ?? STATUS.reported;
+function FactCard({ fact, t }: { fact: HubFact; t: HubT }) {
+  const status = STATUS_PALETTE[fact.status] ? fact.status : "reported";
+  const st = {
+    palette: STATUS_PALETTE[status],
+    label: t(`known.status.${status}.label`),
+    note: t(`known.status.${status}.note`),
+  };
   return (
     <Box
       as="li"
@@ -168,9 +166,15 @@ function FactCard({ fact }: { fact: HubFact }) {
         {fact.value}
       </Text>
       <HStack gap={2} fontSize="xs" color="#9aa3bf" flexWrap="wrap">
-        <Badge colorPalette={st.palette} variant="subtle" title={st.note}>
-          {st.label}
-        </Badge>
+        {st.label && (
+          <Badge
+            colorPalette={st.palette}
+            variant="subtle"
+            title={st.note || undefined}
+          >
+            {st.label}
+          </Badge>
+        )}
         <Link
           href={fact.sourceUrl}
           target="_blank"
@@ -191,32 +195,40 @@ function FactCard({ fact }: { fact: HubFact }) {
 
 /** Everything we know: facts grouped under the questions people ask. */
 export function EverythingWeKnow({
+  t,
   gameName,
   facts,
   updatedAt,
 }: {
+  t: HubT;
   gameName: string;
   facts: HubFact[];
   updatedAt: string | null;
 }) {
-  const groups = FACT_SECTIONS.map((s) => ({
-    section: s,
-    items: facts.filter((f) => f.section === s),
-  })).filter((g) => g.items.length > 0);
+  // Section order comes from the API (lists.factSections); a section this
+  // page can't name is still shown, under the "other" question.
+  const order = t.list("factSections");
+  const sections = order.length ? order : [...FACT_SECTIONS];
+  const groups = sections
+    .map((s) => ({
+      section: s,
+      items: facts.filter((f) => f.section === s),
+    }))
+    .filter((g) => g.items.length > 0);
   if (!groups.length) return null;
   return (
     <HubPanel
       id="everything-we-know"
-      title={`${gameName}: everything we know`}
+      title={t("known.title", { game: gameName })}
       aside={
         updatedAt ? (
           <>
-            Updated{" "}
-            <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time> ·
-            every fact sourced
+            {t("known.updated")}{" "}
+            <time dateTime={updatedAt}>{fmtHubDate(updatedAt, true)}</time> ·{" "}
+            {t("known.sourced")}
           </>
         ) : (
-          "Every fact sourced"
+          t("known.sourcedAlone")
         )
       }
     >
@@ -230,20 +242,19 @@ export function EverythingWeKnow({
               mb={1}
               fontFamily="heading"
             >
-              {sectionQuestion(g.section, gameName)}
+              {t(`known.q.${g.section}`, { game: gameName }) ||
+                t("known.q.other", { game: gameName })}
             </Heading>
             <Box as="ul" m={0} p={0}>
               {g.items.map((f) => (
-                <FactCard key={f.id} fact={f} />
+                <FactCard key={f.id} fact={f} t={t} />
               ))}
             </Box>
           </Box>
         ))}
       </Box>
       <Text fontSize="xs" color="#9aa3bf" mt={5}>
-        Confirmed = from {gameName}&apos;s publisher or platform holder.
-        Reported = a credible outlet, not yet official. Leaked = unverified; we
-        never show leaked footage.
+        {t("known.legend", { game: gameName })}
       </Text>
     </HubPanel>
   );
@@ -263,15 +274,17 @@ function money(price: number, currency: string): string {
 const cell = { padding: "12px 16px 12px 0", verticalAlign: "top" } as const;
 
 export function EditionsTable({
+  t,
   gameName,
   editions,
 }: {
+  t: HubT;
   gameName: string;
   editions: HubEdition[];
 }) {
   if (!editions.length) return null;
   return (
-    <HubPanel id="editions" title={`${gameName} editions and price`}>
+    <HubPanel id="editions" title={t("editions.title", { game: gameName })}>
       <Box overflowX="auto">
         {/* Plain HTML table: this is a server component, and Chakra's
             `chakra.*` factory is not available on the server. */}
@@ -281,16 +294,16 @@ export function EditionsTable({
           <thead>
             <tr style={{ color: "#9aa3bf", textAlign: "left" }}>
               <th scope="col" style={{ ...cell, fontWeight: 600 }}>
-                Edition
+                {t("editions.edition")}
               </th>
               <th scope="col" style={{ ...cell, fontWeight: 600 }}>
-                Price
+                {t("editions.price")}
               </th>
               <th
                 scope="col"
                 style={{ ...cell, fontWeight: 600, paddingRight: 0 }}
               >
-                What&apos;s included
+                {t("editions.included")}
               </th>
             </tr>
           </thead>
@@ -332,10 +345,12 @@ export function EditionsTable({
                 >
                   {e.price != null
                     ? money(e.price, e.currency)
-                    : "Not announced"}
+                    : t("editions.notAnnounced")}
                 </td>
                 <td style={{ ...cell, color: "#c7cde0", paddingRight: 0 }}>
-                  {e.includes.length ? e.includes.join(" · ") : "Base game"}
+                  {e.includes.length
+                    ? e.includes.join(" · ")
+                    : t("editions.baseGame")}
                 </td>
               </tr>
             ))}
@@ -347,15 +362,17 @@ export function EditionsTable({
 }
 
 export function HubFaqList({
+  t,
   gameName,
   faqs,
 }: {
+  t: HubT;
   gameName: string;
   faqs: HubFaq[];
 }) {
   if (!faqs.length) return null;
   return (
-    <HubPanel id="faq" title={`${gameName} FAQ`}>
+    <HubPanel id="faq" title={t("faq.title", { game: gameName })}>
       <Box display="flex" flexDirection="column" gap={5}>
         {faqs.map((f) => (
           <Box key={f.id}>
@@ -379,15 +396,17 @@ export function HubFaqList({
 }
 
 export function LatestNews({
+  t,
   gameName,
   items,
 }: {
+  t: HubT;
   gameName: string;
   items: GameHubItem[];
 }) {
   if (!items.length) return null;
   return (
-    <HubPanel id="latest" title={`Latest ${gameName} news`}>
+    <HubPanel id="latest" title={t("news.title", { game: gameName })}>
       <Box as="ul" m={0} p={0} display="flex" flexDirection="column" gap={3}>
         {items.map((it) => (
           <Box as="li" key={it.slug} listStyleType="none">

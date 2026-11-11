@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Box, HStack, Text, chakra } from "@chakra-ui/react";
 import { FaPlay } from "react-icons/fa";
 import { track } from "@/lib/analytics";
+import { useHubT } from "./HubCopyProvider";
 
 export interface HubTrailer {
   youtubeId: string;
@@ -31,6 +32,7 @@ export default function HubTrailers({
   slug: string;
   trailers: HubTrailer[];
 }) {
+  const hubT = useHubT();
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const current = trailers[index];
@@ -63,7 +65,7 @@ export default function HubTrailers({
           <chakra.button
             type="button"
             onClick={play}
-            aria-label={`Play ${current.title}`}
+            aria-label={hubT("trailers.play", { title: current.title }) || undefined}
             position="absolute"
             inset={0}
             w="full"
@@ -148,7 +150,7 @@ export default function HubTrailers({
                   setPlaying(false);
                 }}
                 aria-pressed={on}
-                aria-label={`Show ${t.title}`}
+                aria-label={hubT("trailers.show", { title: t.title }) || undefined}
                 flexShrink={0}
                 w={{ base: "150px", md: "180px" }}
                 textAlign="left"

@@ -5,6 +5,7 @@
 // only, no network.
 import { useEffect, useState } from "react";
 import { Box, HStack, Text } from "@chakra-ui/react";
+import { useHubT } from "./HubCopyProvider";
 
 function parts(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -52,6 +53,7 @@ export default function LaunchCountdown({
   /** Pre-formatted date string from the server (stable across zones). */
   launchLabel: string;
 }) {
+  const t = useHubT();
   const target = new Date(launchAt).getTime();
   const [now, setNow] = useState<number | null>(null);
 
@@ -62,24 +64,29 @@ export default function LaunchCountdown({
   }, []);
 
   const out = now !== null && now >= target;
-  const t = parts(now === null ? 0 : target - now);
+  const left = parts(now === null ? 0 : target - now);
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
     <HStack gap={{ base: 2, md: 3 }} flexWrap="wrap" align="stretch">
       {now !== null && !out && (
         <>
-          <Block value={t.days} label={t.days === 1 ? "day" : "days"} />
-          <Block value={pad(t.hours)} label="hours" />
-          <Block value={pad(t.min)} label="min" />
+          <Block
+            value={left.days}
+            label={t(
+              left.days === 1 ? "countdown.days.one" : "countdown.days.other",
+            )}
+          />
+          <Block value={pad(left.hours)} label={t("countdown.hours")} />
+          <Block value={pad(left.min)} label={t("countdown.min")} />
           <Box display={{ base: "none", sm: "block" }}>
-            <Block value={pad(t.sec)} label="sec" />
+            <Block value={pad(left.sec)} label={t("countdown.sec")} />
           </Box>
         </>
       )}
       <Box display="flex" flexDirection="column" justifyContent="center" pl={1}>
         <Text fontSize="sm" color="#9aa3bf">
-          {out ? "Out now" : "Launches"}
+          {t(out ? "countdown.out" : "countdown.launches")}
         </Text>
         <Text fontSize="md" fontWeight="600" color="white">
           <time dateTime={launchAt}>{launchLabel}</time>

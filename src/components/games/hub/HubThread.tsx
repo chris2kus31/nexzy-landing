@@ -10,6 +10,8 @@ import { Box, Flex, HStack, Heading, Stack, Text, Textarea, chakra } from "@chak
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
+import type { HubT } from "@/lib/hubs/copy";
+import { useHubT } from "./HubCopyProvider";
 import {
   THREAD_REPLY_MAX,
   type HubPerson,
@@ -27,12 +29,12 @@ const C = {
   ink: "#0b0e1d",
 };
 
-function ago(iso: string): string {
+function ago(t: HubT, iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
+  if (s < 60) return t("time.justNow");
+  if (s < 3600) return t("time.minutes", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("time.hours", { n: Math.floor(s / 3600) });
+  return t("time.days", { n: Math.floor(s / 86400) });
 }
 
 export function PersonAvatar({ p, size = 32 }: { p: HubPerson | null; size?: number }) {
@@ -113,6 +115,7 @@ function Composer({
   onCancel?: () => void;
   autoFocus?: boolean;
 }) {
+  const t = useHubT();
   const [text, setText] = useState("");
   return (
     <Box>
@@ -131,7 +134,7 @@ function Composer({
       <HStack justify="flex-end" gap={2} mt={2}>
         {onCancel && (
           <Button small onClick={onCancel} disabled={busy}>
-            Cancel
+            {t("thread.cancel")}
           </Button>
         )}
         <Button
@@ -142,7 +145,7 @@ function Composer({
             if (await onSend(text)) setText("");
           }}
         >
-          {busy ? "Posting..." : "Reply"}
+          {t(busy ? "thread.posting" : "thread.reply")}
         </Button>
       </HStack>
     </Box>
@@ -162,6 +165,7 @@ function CommentItem({
   onReplyToggle?: () => void;
   replyComposer?: React.ReactNode;
 }) {
+  const t = useHubT();
   return (
     <Box>
       <HStack align="start" gap={3}>
@@ -169,11 +173,11 @@ function CommentItem({
         <Box minW={0} flex="1">
           <HStack gap={2} flexWrap="wrap">
             <Text fontSize="sm" fontWeight="600" color={c.deleted ? C.muted : C.text}>
-              {c.author ? `@${c.author.username}` : "[deleted]"}
+              {c.author ? `@${c.author.username}` : t("thread.deleted")}
             </Text>
             <Text fontSize="xs" color={C.muted}>
-              {ago(c.createdAt)}
-              {c.edited ? " · edited" : ""}
+              {ago(t, c.createdAt)}
+              {c.edited ? ` · ${t("thread.edited")}` : ""}
             </Text>
           </HStack>
           {!c.deleted && (
@@ -192,7 +196,7 @@ function CommentItem({
               cursor="pointer"
               _hover={{ color: C.gold }}
             >
-              {replyOpen ? "Cancel reply" : "Reply"}
+              {t(replyOpen ? "thread.cancelReply" : "thread.reply")}
             </chakra.button>
           )}
           {replyComposer}
@@ -213,6 +217,7 @@ type Pending = { text: string; parentId?: string } | null;
 
 export default function HubThread({ slug, gameName }: { slug: string; gameName: string }) {
   const { user, loading } = useAuth();
+  const t = useHubT();
   const [thread, setThread] = useState<Thread | null>(null);
   const [gone, setGone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -255,23 +260,23 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
         if (!r.ok) {
           setError(
             r.status === 401
-              ? "Sign in again to reply."
+              ? t("thread.signInAgain")
               : r.status === 429
-                ? "Slow down a sec, then try again."
-                : (typeof d?.message === "string" && d.message) || "That didn't go through. Try again.",
+                ? t("errors.slowDown")
+                : (typeof d?.message === "string" && d.message) || t("errors.generic"),
           );
           return false;
         }
         track("hub_thread_reply", { slug, threaded: parentId ? "true" : "false" });
         if (d?.flagged) {
-          setNote("Your reply is being checked and will show once it clears.");
+          setNote(t("thread.held"));
         }
         setReplyTo(null);
         setResetKey((k) => k + 1);
         await load();
         return true;
       } catch {
-        setError("Couldn't reach Nexzy. Try again.");
+        setError(t("errors.network"));
         return false;
       } finally {
         setBusy(false);
@@ -326,7 +331,7 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
     >
       <HStack justify="space-between" align="baseline" flexWrap="wrap" gap={2} mb={4}>
         <Heading as="h2" id="launch-thread-h" fontFamily="heading" fontSize={{ base: "xl", md: "2xl" }} color="white">
-          {gameName} launch night
+          {t("thread.title", { game: gameName })}
         </Heading>
         <chakra.button
           type="button"
@@ -337,13 +342,13 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
           cursor="pointer"
           _hover={{ color: C.gold }}
         >
-          Refresh
+          {t("thread.refresh")}
         </chakra.button>
       </HStack>
 
       {!thread ? (
         <Text fontSize="sm" color={C.muted}>
-          Loading the thread...
+          {t("thread.loading")}
         </Text>
       ) : (
         <>
@@ -355,7 +360,7 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
                   @{thread.post.author.username}
                 </Text>
                 <Text fontSize="xs" color={C.muted}>
-                  Pinned · {ago(thread.post.createdAt)}
+                  {t("thread.pinned")} · {ago(t, thread.post.createdAt)}
                 </Text>
               </Box>
             </HStack>
@@ -364,14 +369,15 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
             </Text>
             <Text fontSize="xs" color={C.muted} mt={2}>
               {thread.post.commentCount.toLocaleString("en-US")}{" "}
-              {thread.post.commentCount === 1 ? "reply" : "replies"} · also in the Nexzy app
+              {t(thread.post.commentCount === 1 ? "thread.replies.one" : "thread.replies.other")} ·{" "}
+              {t("thread.alsoInApp.web")}
             </Text>
           </Box>
 
           <Box mt={4}>
             <Composer
               key={`main-${resetKey}`}
-              placeholder={`How's ${gameName} running for you?`}
+              placeholder={t("thread.placeholder", { game: gameName })}
               busy={busy}
               onSend={(t) => send(t)}
             />
@@ -399,7 +405,9 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
                     replyTo === c.id ? (
                       <Box mt={2}>
                         <Composer
-                          placeholder={`Reply to @${c.author?.username ?? "player"}`}
+                          placeholder={t("thread.replyTo", {
+                            user: c.author?.username ?? t("thread.replyToFallback"),
+                          })}
                           busy={busy}
                           autoFocus
                           onSend={(t) => send(t, c.id)}
@@ -414,7 +422,7 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
           )}
           {thread.nextCursor && (
             <Box mt={4}>
-              <Button onClick={() => void more()}>Older replies</Button>
+              <Button onClick={() => void more()}>{t("thread.older")}</Button>
             </Box>
           )}
         </>
@@ -428,8 +436,8 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
           setPending(null);
           if (p) await post(p.text, p.parentId);
         }}
-        title="Join the launch-night thread"
-        subtitle="Sign in to reply. Same account as the Nexzy app."
+        title={t("thread.signIn.title.web")}
+        subtitle={t("thread.signIn.sub.web")}
       />
     </Box>
   );

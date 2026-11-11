@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
+import { useHubT } from "./HubCopyProvider";
 import type {
   DayOnePlatform,
   HubLive,
@@ -60,6 +61,7 @@ export default function HubLiveProvider({
   children: ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const t = useHubT();
   const [live, setLive] = useState<HubLive>(initial);
   const [me, setMe] = useState<HubMe | null>(null);
   const [busy, setBusy] = useState(false);
@@ -113,8 +115,9 @@ export default function HubLiveProvider({
         if (!r.ok) {
           setError(
             r.status === 429
-              ? "Slow down a sec, then try again."
-              : (d?.message as string) || "That didn't go through. Try again.",
+              ? t("errors.slowDown")
+              : (typeof d?.message === "string" && d.message) ||
+                  t("errors.generic"),
           );
           return false;
         }
@@ -122,13 +125,13 @@ export default function HubLiveProvider({
         if (d?.me) setMe(d.me);
         return true;
       } catch {
-        setError("Couldn't reach Nexzy. Try again.");
+        setError(t("errors.network"));
         return false;
       } finally {
         setBusy(false);
       }
     },
-    [slug],
+    [slug, t],
   );
 
   const joinDayOne = useCallback(
@@ -200,13 +203,13 @@ export default function HubLiveProvider({
         onSignedIn={onSignedIn}
         title={
           pending?.kind === "predict"
-            ? "Lock in your prediction"
-            : `You're in for ${gameName}?`
+            ? t("predict.signIn.title.web")
+            : t("dayOne.signIn.title.web", { game: gameName })
         }
         subtitle={
           pending?.kind === "predict"
-            ? "Sign in so we can tell you if you called it once the player score settles."
-            : "Sign in to count yourself in and get your Day One badge."
+            ? t("predict.signIn.sub.web")
+            : t("dayOne.signIn.sub.web")
         }
       />
     </HubLiveContext.Provider>

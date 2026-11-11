@@ -17,6 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { track } from "@/lib/analytics";
 import { fmtRoomTime, kindLabel, type HubRoomsList } from "@/lib/rooms/public";
+import { useHubT } from "./HubCopyProvider";
 
 const C = {
   panel: "#1a1f3a",
@@ -38,6 +39,7 @@ export default function HubRooms({
   slug: string;
   gameName: string;
 }) {
+  const t = useHubT();
   const [data, setData] = useState<HubRoomsList | null>(null);
 
   useEffect(() => {
@@ -80,20 +82,19 @@ export default function HubRooms({
           fontSize={{ base: "xl", md: "2xl" }}
           color="white"
         >
-          {gameName} rooms
+          {t("rooms.title", { game: gameName })}
         </Heading>
         <Text fontSize="sm" color={C.muted}>
-          {data.live} live · {data.upcoming} coming up
+          {t("rooms.counts", { live: data.live, upcoming: data.upcoming })}
         </Text>
       </HStack>
       <Text fontSize="sm" color={C.muted} mb={4}>
-        Play along, hunt collectibles together, or hang out with a crew. Rooms
-        live in the Nexzy app.
+        {t("rooms.intro.web")}
       </Text>
 
       {rooms.length === 0 ? (
         <Text fontSize="sm" color={C.text}>
-          No rooms yet. Start one in the Nexzy app.
+          {t("rooms.empty.web")}
         </Text>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
@@ -116,18 +117,22 @@ export default function HubRooms({
                     textTransform="uppercase"
                     letterSpacing="0.06em"
                   >
-                    {live ? "Live now" : fmtRoomTime(r.startsAt)}
+                    {live ? t("rooms.live") : fmtRoomTime(r.startsAt)}
                   </Text>
                   <Text fontSize="xs" color={C.muted}>
                     {kindLabel(r.kind, data.profile?.kinds)}
-                    {r.isOfficial ? " · Official" : ""}
+                    {r.isOfficial ? ` · ${t("rooms.official")}` : ""}
                   </Text>
                 </HStack>
                 <Text fontWeight="700" color="white" lineClamp={2}>
                   {r.title}
                 </Text>
                 <Text fontSize="sm" color={C.muted} mt={1}>
-                  {r.memberCount}/{r.maxSize} in · hosted by @{r.host.username}
+                  {t("rooms.members", {
+                    count: r.memberCount,
+                    max: r.maxSize,
+                    user: r.host.username,
+                  })}
                 </Text>
               </Box>
             );
@@ -147,11 +152,11 @@ export default function HubRooms({
           py={2}
           borderRadius="999px"
         >
-          {rooms.length ? "Join in the Nexzy app" : "Get the Nexzy app"}
+          {t(rooms.length ? "rooms.join.web" : "rooms.getApp.web")}
         </chakra.a>
         {data.rooms.length > SHOW && (
           <Text fontSize="sm" color={C.muted}>
-            {data.rooms.length - SHOW} more in the app
+            {t("rooms.more.web", { n: data.rooms.length - SHOW })}
           </Text>
         )}
       </HStack>

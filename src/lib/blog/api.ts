@@ -2,6 +2,7 @@
 // unauthenticated /newsroom/public endpoints and are safe to call from server
 // components (SSR/SEO).
 import "server-only";
+import type { HubCopy } from "@/lib/hubs/copy";
 import type { TagInfo } from "./tags";
 import type { HubProfile } from "@/lib/hubs/types";
 import type { HubReview, HubReviewPage, HubScores } from "@/lib/hubs/reviews";
@@ -710,6 +711,28 @@ export async function fetchGameHub(slug: string): Promise<GameHub | null> {
   );
   if (!res.ok) return null;
   return res.json();
+}
+
+/**
+ * The mega hub's wording (every label, set in Admin > Mega hubs > Wording).
+ * Same revalidate as the hub page; a wording save revalidates the page.
+ * Throws when it can't be read: the page then keeps its last good version
+ * (ISR) instead of caching a page with missing labels.
+ */
+export async function fetchHubCopy(slug: string): Promise<HubCopy> {
+  const res = await fetch(
+    `${API}/game-hubs/${encodeURIComponent(slug)}/copy`,
+    cacheInit(CACHE_HUB),
+  );
+  if (!res.ok) throw new Error(`Hub wording unavailable (${res.status})`);
+  const d = (await res.json()) as HubCopy;
+  if (!d || typeof d.copy !== "object" || !d.copy)
+    throw new Error("Hub wording malformed");
+  return {
+    version: String(d.version ?? ""),
+    copy: d.copy,
+    lists: d.lists ?? {},
+  };
 }
 
 /** Critics vs Nexzy Players for a mega hub (null when ratings are off).

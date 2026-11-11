@@ -25,6 +25,7 @@ import {
 import type { IconType } from "react-icons";
 import {
   fetchGameHub,
+  fetchHubCopy,
   fetchHubReviews,
   fetchHubScores,
   type GameHubItem,
@@ -41,6 +42,8 @@ import { jsonLdString } from "@/lib/seo/jsonld";
 import { authorJsonLd } from "@/lib/blog/authors";
 import type { DayOnePlatform, HubProfile } from "@/lib/hubs/types";
 import HubLiveProvider from "@/components/games/hub/HubLiveProvider";
+import { HubCopyProvider } from "@/components/games/hub/HubCopyProvider";
+import { makeHubT, type HubCopy } from "@/lib/hubs/copy";
 import LaunchCountdown from "@/components/games/hub/LaunchCountdown";
 import DayOneCard from "@/components/games/hub/DayOneCard";
 import PredictScore from "@/components/games/hub/PredictScore";
@@ -293,11 +296,15 @@ export default async function GameHubPage({
   if (!hub) notFound();
   const { game, content } = hub;
   const profile = hub.profile ?? null;
+  // Mega hub wording (Admin > Mega hubs > Wording), started now so it loads
+  // alongside the scores. A failed read throws: ISR keeps the last good page.
+  const copyP = profile ? fetchHubCopy(game.slug) : null;
   // Ratings (Phase 2): only for mega hubs with the Scores module on.
   const emptyReviews: HubReviewPage = { items: [], nextCursor: null };
   const [scores, reviews] = profile?.modules.scores
     ? await Promise.all([fetchHubScores(game.slug), fetchHubReviews(game.slug)])
     : [null, emptyReviews];
+  const copy = copyP ? await copyP : null;
   // Guide engine (Phase 4): only mega hubs can have one; off = nothing shown.
   const guide = profile ? await fetchEnginePage(game.slug) : null;
   // Every checklist of the guide (progress card + walkthrough), in parallel,
@@ -528,23 +535,26 @@ export default async function GameHubPage({
           </Text>
         </HStack>
 
-        {profile ? (
-          <HubLiveProvider
-            slug={game.slug}
-            gameName={profile.aliases[0] || game.name}
-            initial={profile.live}
-          >
-            <MegaHub
-              game={game}
-              profile={profile}
-              news={content.news.slice(0, 4)}
-              trailers={trailers}
-              scores={scores}
-              reviews={reviews}
-              guide={guide}
-              checklists={checklists}
-            />
-          </HubLiveProvider>
+        {profile && copy ? (
+          <HubCopyProvider copy={copy}>
+            <HubLiveProvider
+              slug={game.slug}
+              gameName={profile.aliases[0] || game.name}
+              initial={profile.live}
+            >
+              <MegaHub
+                game={game}
+                profile={profile}
+                copy={copy}
+                news={content.news.slice(0, 4)}
+                trailers={trailers}
+                scores={scores}
+                reviews={reviews}
+                guide={guide}
+                checklists={checklists}
+              />
+            </HubLiveProvider>
+          </HubCopyProvider>
         ) : (
           <>
             {/* Contained hero banner */}
@@ -652,6 +662,7 @@ export default async function GameHubPage({
 function MegaHub({
   game,
   profile,
+  copy,
   news,
   trailers,
   scores,
@@ -661,6 +672,7 @@ function MegaHub({
 }: {
   game: NonNullable<Awaited<ReturnType<typeof fetchGameHub>>>["game"];
   profile: HubProfile;
+  copy: HubCopy;
   news: GameHubItem[];
   trailers: HubTrailer[];
   scores: HubScoresData | null;
@@ -669,6 +681,7 @@ function MegaHub({
   checklists: HubChecklistPage[];
 }) {
   const m = profile.modules;
+  const t = makeHubT(copy);
   const short = profile.aliases[0] || game.name;
   const launchAt =
     profile.launchAt ||
@@ -682,15 +695,25 @@ function MegaHub({
     .map((e) => ({ p: e.price as number, c: e.currency }));
   const cheapest = prices.sort((a, b) => a.p - b.p)[0];
   const facts = [
-    launchAt ? { label: "RELEASE", value: fmtHubDate(launchAt) } : null,
+    launchAt
+      ? { label: t("card.facts.release"), value: fmtHubDate(launchAt) }
+      : null,
     game.platforms[0]
-      ? { label: "PLATFORM", value: game.platforms.slice(0, 2).join(", ") }
+      ? {
+          label: t("card.facts.platform"),
+          value: game.platforms.slice(0, 2).join(", "),
+        }
       : null,
     cheapest
-      ? { label: "PRICE", value: priceText(cheapest.p, cheapest.c) }
+      ? {
+          label: t("card.facts.price"),
+          value: priceText(cheapest.p, cheapest.c),
+        }
       : null,
-    game.genres[0] ? { label: "GENRE", value: game.genres[0] } : null,
-  ].filter((x): x is { label: string; value: string } => !!x);
+    game.genres[0]
+      ? { label: t("card.facts.genre"), value: game.genres[0] }
+      : null,
+  ].filter((x): x is { label: string; value: string } => !!x && !!x.label);
   // The "on this page" bar lists only what this hub shows, in page order.
   const storyKeys = new Set(
     (guide?.config?.checklists ?? []).filter(isStory).map((c) => c.key),
@@ -702,31 +725,41 @@ function MegaHub({
     ? storyPage.children.length > 0
     : checklists.some((c) => storyKeys.has(c.key) && c.items.length > 0);
   const navItems: HubNavItem[] = [
-    ...(hasGuide ? [{ id: "guide", label: "Guide" }] : []),
+    ...(hasGuide ? [{ id: "guide", label: t("nav.guide.web") }] : []),
     ...(hasGuide && guide?.config?.maps.length
-      ? [{ id: "guide-map", label: "Map" }]
+      ? [{ id: "guide-map", label: t("nav.map.web") }]
       : []),
-    ...(walkthrough ? [{ id: "guide-walkthrough", label: "Walkthrough" }] : []),
-    ...(hasGuide ? [{ id: "guide-contents", label: "Guide contents" }] : []),
+    ...(walkthrough
+      ? [{ id: "guide-walkthrough", label: t("nav.walkthrough.web") }]
+      : []),
+    ...(hasGuide
+      ? [{ id: "guide-contents", label: t("nav.contents.web") }]
+      : []),
     // Same order as the page: ratings lead after launch, follow Predict before.
-    ...(m.scores && scores?.open ? [{ id: "scores", label: "Reviews" }] : []),
-    ...(trailers.length ? [{ id: "trailers", label: "Trailers" }] : []),
+    ...(m.scores && scores?.open
+      ? [{ id: "scores", label: t("nav.reviews.web") }]
+      : []),
+    ...(trailers.length
+      ? [{ id: "trailers", label: t("nav.trailers.web") }]
+      : []),
     ...(m.scores && scores && !scores.open
-      ? [{ id: "scores", label: "Reviews" }]
+      ? [{ id: "scores", label: t("nav.reviews.web") }]
       : []),
     ...(m.facts && profile.facts.length
-      ? [{ id: "everything-we-know", label: "Everything we know" }]
+      ? [{ id: "everything-we-know", label: t("nav.known.web") }]
       : []),
-    ...(m.faq && profile.faqs.length ? [{ id: "faq", label: "FAQ" }] : []),
-    ...(news.length ? [{ id: "latest", label: "News" }] : []),
-  ];
+    ...(m.faq && profile.faqs.length
+      ? [{ id: "faq", label: t("nav.faq.web") }]
+      : []),
+    ...(news.length ? [{ id: "latest", label: t("nav.news.web") }] : []),
+  ].filter((n) => !!n.label);
   // After launch the ratings lead the page; before it, they sit under Predict.
   const scoresPanel =
     m.scores && scores ? (
       <HubPanel
         id="scores"
-        title={`${short} review scores: critics vs players`}
-        aside={scores.open ? "Rated by real players" : "Opens at launch"}
+        title={t("scores.title", { game: short })}
+        aside={t(scores.open ? "scores.aside.open" : "scores.aside.closed")}
       >
         <HubScores
           slug={game.slug}
@@ -757,7 +790,7 @@ function MegaHub({
               py={1}
               letterSpacing="0.05em"
             >
-              OFFICIAL NEXZY HUB
+              {t("card.badge")}
             </Badge>
             {platformLine && (
               <Badge
@@ -834,7 +867,7 @@ function MegaHub({
                     borderRadius: 999,
                   }}
                 >
-                  Open the guide
+                  {t("card.cta.guide")}
                 </a>
               )}
               {scores?.open && (
@@ -848,7 +881,7 @@ function MegaHub({
                     border: "1px solid rgba(255,255,255,0.22)",
                   }}
                 >
-                  Rate {short}
+                  {t("card.cta.rate", { game: short })}
                 </a>
               )}
             </HStack>
@@ -884,6 +917,7 @@ function MegaHub({
 
       {profile.summary && (
         <ShortVersion
+          t={t}
           gameName={short}
           summary={profile.summary}
           updatedAt={profile.factsUpdatedAt}
@@ -891,7 +925,7 @@ function MegaHub({
         />
       )}
 
-      <HubNav items={navItems} />
+      <HubNav items={navItems} ariaLabel={t("nav.aria.web")} />
 
       {hasGuide && guide && (
         <GuideSections
@@ -906,8 +940,8 @@ function MegaHub({
       {trailers.length > 0 && (
         <HubPanel
           id="trailers"
-          title={`${short} trailers`}
-          aside="Official videos"
+          title={t("trailers.title", { game: short })}
+          aside={t("trailers.aside")}
         >
           <HubTrailers slug={game.slug} trailers={trailers} />
         </HubPanel>
@@ -916,16 +950,8 @@ function MegaHub({
       {m.predict && (
         <HubPanel
           id="predict"
-          title={
-            scores?.settled
-              ? "Did the crowd call it?"
-              : "Predict the Nexzy Players score"
-          }
-          aside={
-            scores?.settled
-              ? "The verdict is in"
-              : "Real score unlocks after launch"
-          }
+          title={t(scores?.settled ? "predict.title.settled" : "predict.title")}
+          aside={t(scores?.settled ? "predict.aside.settled" : "predict.aside")}
         >
           <PredictScore
             settled={
@@ -947,6 +973,7 @@ function MegaHub({
 
       {m.facts && (
         <EverythingWeKnow
+          t={t}
           gameName={short}
           facts={profile.facts}
           updatedAt={profile.factsUpdatedAt}
@@ -971,13 +998,13 @@ function MegaHub({
           alignItems="start"
         >
           {m.editions && (
-            <EditionsTable gameName={short} editions={profile.editions} />
+            <EditionsTable t={t} gameName={short} editions={profile.editions} />
           )}
-          {m.faq && <HubFaqList gameName={short} faqs={profile.faqs} />}
+          {m.faq && <HubFaqList t={t} gameName={short} faqs={profile.faqs} />}
         </Box>
       )}
 
-      <LatestNews gameName={short} items={news} />
+      <LatestNews t={t} gameName={short} items={news} />
     </Box>
   );
 }

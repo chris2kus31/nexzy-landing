@@ -15,9 +15,12 @@ const HEADER_PX = 65;
 export default function HubNav({
   items,
   right,
+  ariaLabel,
 }: {
   items: HubNavItem[];
   right?: React.ReactNode;
+  /** From the hub's wording (nav.aria.web). */
+  ariaLabel?: string;
 }) {
   const [active, setActive] = useState(items[0]?.id ?? "");
 
@@ -60,7 +63,7 @@ export default function HubNav({
       <Flex align="center" gap={2} wrap="wrap">
         <Flex
           as="nav"
-          aria-label="On this page"
+          aria-label={ariaLabel || undefined}
           flex="1"
           minW={0}
           overflowX="auto"

@@ -9,13 +9,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
 import {
-  CRITERIA,
-  HOURS_BUCKETS,
   MIN_FORM_MS,
   REVIEW_BODY_MAX,
-  REVIEW_PLATFORMS,
-  hoursLabel,
-  platformLabel,
   previewScore,
   type CriterionKey,
   type HoursBucket,
@@ -27,6 +22,8 @@ import {
   type ReviewPlatform,
 } from "@/lib/hubs/reviews";
 import { fmtHubDate } from "@/lib/hubs/types";
+import type { HubT } from "@/lib/hubs/copy";
+import { useHubT } from "./HubCopyProvider";
 
 const C = {
   card: "#11152b",
@@ -42,20 +39,27 @@ const C = {
 const fmtDay = (iso: string) => fmtHubDate(iso);
 const fmt1 = (n: number) => n.toFixed(1);
 
-function reasonText(r: ReviewBlockReason, game: string, opensAt: string | null): string {
+function reasonText(
+  t: HubT,
+  r: ReviewBlockReason,
+  game: string,
+  opensAt: string | null,
+): string {
   switch (r) {
     case "not_open":
-      return opensAt ? `Ratings open at launch, ${fmtDay(opensAt)}.` : "Ratings open at launch.";
+      return opensAt
+        ? t("scores.reason.notOpenAt", { date: fmtDay(opensAt) })
+        : t("scores.reason.notOpen");
     case "not_verified":
-      return "Verify your email to rate games.";
+      return t("scores.reason.notVerified");
     case "removed":
-      return "Your rating for this game was removed by a moderator.";
+      return t("scores.reason.removed");
     case "account_too_new":
-      return "New accounts can rate a few days after signing up.";
+      return t("scores.reason.tooNew");
     case "not_in_library":
-      return `Add ${game} to your library in the Nexzy app first, then rate it here.`;
+      return t("scores.reason.notInLibrary.web", { game });
     default:
-      return "Ratings are off for this game.";
+      return t("scores.reason.off");
   }
 }
 
@@ -74,13 +78,13 @@ const emptyDraft = (): Draft => ({
   body: "",
 });
 
-async function readError(r: Response): Promise<string> {
+async function readError(t: HubT, r: Response): Promise<string> {
   const d = await r.json().catch(() => null);
-  if (r.status === 401) return "Sign in again to continue.";
+  if (r.status === 401) return t("errors.signInAgain");
   const msg = d?.message ?? d?.error;
   if (typeof msg === "string" && msg) return msg;
-  if (Array.isArray(msg) && msg[0]) return "Check your answers and try again.";
-  return r.status === 429 ? "Slow down a sec, then try again." : "That didn't go through. Try again.";
+  if (Array.isArray(msg) && msg[0]) return t("errors.checkAnswers");
+  return r.status === 429 ? t("errors.slowDown") : t("errors.generic");
 }
 
 export default function HubScores({
@@ -95,6 +99,7 @@ export default function HubScores({
   initialReviews: HubReviewPage;
 }) {
   const { user, loading } = useAuth();
+  const t = useHubT();
   const [scores, setScores] = useState<Scores>(initialScores);
   const [reviews, setReviews] = useState<HubReview[]>(initialReviews.items);
   const [cursor, setCursor] = useState<string | null>(initialReviews.nextCursor);
@@ -145,12 +150,12 @@ export default function HubScores({
     async (state: MyReviewState | null) => {
       setError(null);
       if (!state?.canReview) {
-        if (state?.reason) setError(reasonText(state.reason, gameName, scores.opensAt));
+        if (state?.reason) setError(reasonText(t, state.reason, gameName, scores.opensAt));
         return;
       }
       const r = await fetch(`/api/hubs/${slug}/reviews/start`, { method: "POST" }).catch(() => null);
       if (!r || !r.ok) {
-        setError(r ? await readError(r) : "Couldn't reach Nexzy. Try again.");
+        setError(r ? await readError(t, r) : t("errors.network"));
         return;
       }
       const d = (await r.json()) as { formToken: string };
@@ -176,7 +181,7 @@ export default function HubScores({
       setFormOpen(true);
       track("hub_review_start", { slug, edit: mine ? "true" : "false" });
     },
-    [slug, gameName, scores.opensAt],
+    [slug, gameName, scores.opensAt, t],
   );
 
   const onRate = useCallback(async () => {
@@ -231,7 +236,7 @@ export default function HubScores({
         }),
       });
       if (!r.ok) {
-        setError(await readError(r));
+        setError(await readError(t, r));
         return;
       }
       setMe((await r.json()) as MyReviewState);
@@ -240,11 +245,11 @@ export default function HubScores({
       track("hub_review_submit", { slug, edit: hadReview ? "true" : "false" });
       void refreshPublic();
     } catch {
-      setError("Couldn't reach Nexzy. Try again.");
+      setError(t("errors.network"));
     } finally {
       setBusy(false);
     }
-  }, [complete, slug, c, draft, me, refreshPublic]);
+  }, [complete, slug, c, draft, me, refreshPublic, t]);
 
   const remove = useCallback(async () => {
     if (!confirmDelete) {
@@ -256,7 +261,7 @@ export default function HubScores({
     try {
       const r = await fetch(`/api/hubs/${slug}/reviews`, { method: "DELETE" });
       if (!r.ok) {
-        setError(await readError(r));
+        setError(await readError(t, r));
         return;
       }
       setMe((await r.json()) as MyReviewState);
@@ -266,13 +271,13 @@ export default function HubScores({
     } finally {
       setBusy(false);
     }
-  }, [confirmDelete, slug, refreshPublic]);
+  }, [confirmDelete, slug, refreshPublic, t]);
 
   /** Native share sheet where there is one, else copy the link. */
   const share = useCallback(
     async (reviewId: string, score: number) => {
       const url = `${window.location.origin}/games/${slug}/rated/${reviewId}`;
-      const text = `I gave ${gameName} a ${score.toFixed(1)} on Nexzy`;
+      const text = t("scores.shareText", { game: gameName, score: score.toFixed(1) });
       setShareNote(null);
       try {
         if (typeof navigator.share === "function") {
@@ -281,14 +286,14 @@ export default function HubScores({
           return;
         }
         await navigator.clipboard.writeText(`${text} ${url}`);
-        setShareNote("Link copied. Paste it anywhere.");
+        setShareNote(t("scores.copied.web"));
         track("hub_review_share", { slug, method: "copy" });
       } catch (e) {
         // Closing the share sheet is not an error worth showing.
         if ((e as Error)?.name !== "AbortError") setShareNote(url);
       }
     },
-    [slug, gameName],
+    [slug, gameName, t],
   );
 
   const loadMore = useCallback(async () => {
@@ -308,45 +313,54 @@ export default function HubScores({
     <Box>
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
         <ScoreCard
-          label="Critics"
+          label={t("scores.critics")}
+          outOf={t("scores.outOf")}
           score={scores.critics.score}
           sub={
             scores.critics.score != null
-              ? `Average of ${scores.critics.count ?? "critic"} reviews (IGDB)`
-              : "No critic score yet"
+              ? scores.critics.count != null
+                ? t("scores.criticsSub", { count: scores.critics.count })
+                : t("scores.criticsSubNoCount")
+              : t("scores.criticsNone")
           }
         />
         <ScoreCard
-          label="Nexzy Players"
+          label={t("scores.players")}
+          outOf={t("scores.outOf")}
           gold
           score={p.score}
           sub={
             !scores.open
               ? scores.opensAt
-                ? `Player ratings open at launch, ${fmtDay(scores.opensAt)}`
-                : "Player ratings open at launch"
+                ? t("scores.opensAt", { date: fmtDay(scores.opensAt) })
+                : t("scores.opens")
               : p.score != null
-                ? `${p.count.toLocaleString("en-US")} player ratings`
-                : `${p.needed} more rating${p.needed === 1 ? "" : "s"} to show a score`
+                ? t("scores.count", { count: p.count.toLocaleString("en-US") })
+                : t(p.needed === 1 ? "scores.needed.one" : "scores.needed.other", {
+                    n: p.needed,
+                  })
           }
         />
       </SimpleGrid>
 
       {(p.recommended || p.split || p.frozen || scores.settled) && (
         <HStack gap={2} mt={3} flexWrap="wrap">
-          {p.recommended && <Tag color={C.good}>Players recommend</Tag>}
-          {p.split && <Tag color={C.warn}>Critics and players disagree</Tag>}
-          {p.frozen && <Tag color={C.warn}>Score paused: unusual rating activity under review</Tag>}
+          {p.recommended && <Tag color={C.good}>{t("scores.tag.recommended")}</Tag>}
+          {p.split && <Tag color={C.warn}>{t("scores.tag.split")}</Tag>}
+          {p.frozen && <Tag color={C.warn}>{t("scores.tag.frozen")}</Tag>}
           {scores.settled && (
             <Tag color={C.gold}>
-              Settled {fmt1(scores.settled.score)} on {fmtDay(scores.settled.at)}
+              {t("scores.tag.settled", {
+                score: fmt1(scores.settled.score),
+                date: fmtDay(scores.settled.at),
+              })}
             </Tag>
           )}
         </HStack>
       )}
 
       {p.score != null && (
-        <Box mt={4} aria-label="How players rated it, 1 to 10">
+        <Box mt={4} aria-label={t("scores.distAria") || undefined}>
           <HStack align="end" gap="3px" h="48px">
             {p.distribution.map((n, i) => (
               <Box
@@ -372,7 +386,7 @@ export default function HubScores({
           <Box bg={C.card} border="1px solid" borderColor={C.line} borderRadius="12px" p={4}>
             <HStack justify="space-between" flexWrap="wrap" gap={2}>
               <Text color={C.text}>
-                Your rating:{" "}
+                {t("scores.yourRating")}{" "}
                 <Text as="span" fontFamily="title" fontSize="xl" color={C.gold}>
                   {fmt1(mine.score)}
                 </Text>
@@ -380,22 +394,22 @@ export default function HubScores({
               <HStack gap={2} flexWrap="wrap">
                 {mine.status !== "removed" && (
                   <PrimaryButton onClick={() => void share(mine.id, mine.score)} disabled={busy}>
-                    Share
+                    {t("scores.share")}
                   </PrimaryButton>
                 )}
                 {me?.canReview && (
                   <GhostButton onClick={() => void startForm(me)} disabled={busy}>
-                    Edit
+                    {t("scores.edit")}
                   </GhostButton>
                 )}
                 <GhostButton onClick={() => void remove()} disabled={busy}>
-                  {confirmDelete ? "Tap again to remove" : "Remove"}
+                  {t(confirmDelete ? "scores.removeConfirm.web" : "scores.remove")}
                 </GhostButton>
               </HStack>
             </HStack>
             {mine.dayOne && mine.status !== "removed" && (
               <Box mt={2}>
-                <Tag color={C.gold}>Day One reviewer</Tag>
+                <Tag color={C.gold}>{t("scores.dayOneReviewer")}</Tag>
               </Box>
             )}
             {shareNote && (
@@ -405,23 +419,23 @@ export default function HubScores({
             )}
             {mine.status === "held" && (
               <Text fontSize="sm" color={C.muted} mt={2}>
-                Your rating is being checked and will count once it clears.
+                {t("scores.held")}
               </Text>
             )}
             {mine.status === "removed" && (
               <Text fontSize="sm" color={C.muted} mt={2}>
-                A moderator removed this rating, so it doesn't count.
+                {t("scores.removed")}
               </Text>
             )}
             {mine.status === "excluded" && (
               <Text fontSize="sm" color={C.muted} mt={2}>
-                Team accounts are shown but never counted in the score.
+                {t("scores.excluded")}
               </Text>
             )}
           </Box>
         ) : !formOpen && scores.open ? (
           <PrimaryButton onClick={() => void onRate()} disabled={busy}>
-            Rate {gameName}
+            {t("scores.rate", { game: gameName })}
           </PrimaryButton>
         ) : null}
 
@@ -450,7 +464,7 @@ export default function HubScores({
       {reviews.length > 0 && (
         <Box mt={7}>
           <Text as="h3" fontFamily="heading" fontSize="lg" color="white" mb={3}>
-            What players say about {gameName}
+            {t("scores.listTitle", { game: gameName })}
           </Text>
           <Stack gap={3}>
             {reviews.map((r) => (
@@ -459,7 +473,7 @@ export default function HubScores({
           </Stack>
           {cursor && (
             <Box mt={3}>
-              <GhostButton onClick={() => void loadMore()}>More reviews</GhostButton>
+              <GhostButton onClick={() => void loadMore()}>{t("scores.more")}</GhostButton>
             </Box>
           )}
         </Box>
@@ -467,7 +481,7 @@ export default function HubScores({
 
       <Text fontSize="xs" color={C.muted} mt={5}>
         <a href="/how-player-scores-work" style={{ color: C.muted, textDecoration: "underline" }}>
-          How player scores work
+          {t("scores.how")}
         </a>
       </Text>
 
@@ -478,8 +492,8 @@ export default function HubScores({
           setSignIn(false);
           await startForm(await loadMe());
         }}
-        title={`Rate ${gameName}`}
-        subtitle="Sign in so your rating counts toward the Nexzy Players score."
+        title={t("scores.signIn.title.web", { game: gameName })}
+        subtitle={t("scores.signIn.sub.web")}
       />
     </Box>
   );
@@ -487,11 +501,13 @@ export default function HubScores({
 
 function ScoreCard({
   label,
+  outOf,
   score,
   sub,
   gold,
 }: {
   label: string;
+  outOf: string;
   score: number | null;
   sub: string;
   gold?: boolean;
@@ -503,9 +519,10 @@ function ScoreCard({
       </Text>
       <Text fontFamily="title" fontSize={{ base: "4xl", md: "5xl" }} lineHeight="1.1" color={gold ? C.gold : "white"}>
         {score != null ? fmt1(score) : "--"}
-        {score != null && (
+        {score != null && outOf && (
           <Text as="span" fontSize="lg" color={C.muted}>
-            {" "}/ 10
+            {" "}
+            {outOf}
           </Text>
         )}
       </Text>
@@ -612,16 +629,22 @@ function RateForm({
   onSubmit: () => void;
   onCancel: () => void;
 }) {
+  const t = useHubT();
   return (
     <Box bg={C.card} border="1px solid" borderColor={C.line} borderRadius="14px" p={{ base: 4, md: 5 }}>
       <Text fontWeight="700" color="white" mb={1}>
-        Rate {gameName}
+        {t("rate.title", { game: gameName })}
       </Text>
       <Text fontSize="sm" color={C.muted} mb={4}>
-        1 is bad, 5 is great. Your score is worked out from these.
+        {t("rate.hint")}
       </Text>
       <Stack gap={4}>
-        {CRITERIA.map((cr) => {
+        {(t.list("reviewCriteria") as CriterionKey[]).map((key) => {
+          const cr = {
+            key,
+            label: t(`rate.criterion.${key}.label`),
+            hint: t(`rate.criterion.${key}.hint`),
+          };
           const na = cr.key === "story" && draft.storyNa;
           return (
             <Box key={cr.key}>
@@ -639,7 +662,7 @@ function RateForm({
                     key={v}
                     on={!na && draft.criteria[cr.key] === v}
                     label={String(v)}
-                    ariaLabel={`${cr.label} ${v} of 5`}
+                    ariaLabel={t("rate.optionAria", { label: cr.label, n: v })}
                     onClick={() =>
                       setDraft((d) => ({
                         ...d,
@@ -652,7 +675,7 @@ function RateForm({
                 {cr.key === "story" && (
                   <Chip
                     on={draft.storyNa}
-                    label="No story"
+                    label={t("rate.noStory")}
                     onClick={() =>
                       setDraft((d) => {
                         const { story: _s, ...rest } = d.criteria;
@@ -668,15 +691,20 @@ function RateForm({
 
         <Box>
           <Text color={C.text} fontWeight="600" mb={2}>
-            Played on
+            {t("rate.playedOn")}
           </Text>
-          <HStack gap={2} flexWrap="wrap" role="radiogroup" aria-label="Platform">
-            {REVIEW_PLATFORMS.map((pl) => (
+          <HStack
+            gap={2}
+            flexWrap="wrap"
+            role="radiogroup"
+            aria-label={t("rate.playedOnAria") || undefined}
+          >
+            {(t.list("reviewPlatforms") as ReviewPlatform[]).map((key) => (
               <Chip
-                key={pl.key}
-                on={draft.platform === pl.key}
-                label={pl.label}
-                onClick={() => setDraft((d) => ({ ...d, platform: pl.key }))}
+                key={key}
+                on={draft.platform === key}
+                label={t(`platform.${key}`)}
+                onClick={() => setDraft((d) => ({ ...d, platform: key }))}
               />
             ))}
           </HStack>
@@ -684,15 +712,20 @@ function RateForm({
 
         <Box>
           <Text color={C.text} fontWeight="600" mb={2}>
-            Hours played
+            {t("rate.hours")}
           </Text>
-          <HStack gap={2} flexWrap="wrap" role="radiogroup" aria-label="Hours played">
-            {HOURS_BUCKETS.map((h) => (
+          <HStack
+            gap={2}
+            flexWrap="wrap"
+            role="radiogroup"
+            aria-label={t("rate.hours") || undefined}
+          >
+            {(t.list("hoursPlayed") as HoursBucket[]).map((key) => (
               <Chip
-                key={h.key}
-                on={draft.hours === h.key}
-                label={h.label}
-                onClick={() => setDraft((d) => ({ ...d, hours: h.key }))}
+                key={key}
+                on={draft.hours === key}
+                label={t(`rate.hours.${key}`)}
+                onClick={() => setDraft((d) => ({ ...d, hours: key }))}
               />
             ))}
           </HStack>
@@ -700,7 +733,10 @@ function RateForm({
 
         <Box>
           <Text color={C.text} fontWeight="600" mb={2}>
-            Say why <Text as="span" fontSize="xs" color={C.muted} fontWeight="400">(optional)</Text>
+            {t("rate.why")}{" "}
+            <Text as="span" fontSize="xs" color={C.muted} fontWeight="400">
+              {t("rate.optional")}
+            </Text>
           </Text>
           <Textarea
             value={draft.body}
@@ -709,7 +745,7 @@ function RateForm({
               const body = e.target.value;
               setDraft((d) => ({ ...d, body }));
             }}
-            placeholder={`What should other players know about ${gameName}?`}
+            placeholder={t("rate.placeholder", { game: gameName })}
             rows={4}
             bg="#0d1124"
             color={C.text}
@@ -723,17 +759,17 @@ function RateForm({
 
         <HStack justify="space-between" flexWrap="wrap" gap={3}>
           <Text color={C.text}>
-            Your score:{" "}
+            {t("rate.yourScore")}{" "}
             <Text as="span" fontFamily="title" fontSize="2xl" color={C.gold}>
               {preview != null ? preview.toFixed(1) : "--"}
             </Text>
           </Text>
           <HStack gap={2}>
             <GhostButton onClick={onCancel} disabled={busy}>
-              Cancel
+              {t("rate.cancel")}
             </GhostButton>
             <PrimaryButton onClick={onSubmit} disabled={!complete || busy}>
-              {busy ? "Saving..." : "Submit rating"}
+              {t(busy ? "rate.saving" : "rate.submit")}
             </PrimaryButton>
           </HStack>
         </HStack>
@@ -743,16 +779,18 @@ function RateForm({
 }
 
 function ReviewItem({ r }: { r: HubReview }) {
+  const t = useHubT();
   return (
     <Box as="article" bg={C.card} border="1px solid" borderColor={C.line} borderRadius="12px" p={4}>
       <HStack justify="space-between" align="start" gap={3}>
         <Box minW={0}>
           <Text color={C.text} fontWeight="600" lineClamp={1}>
-            {r.author ? `@${r.author.username}` : "A Nexzy player"}
+            {r.author ? `@${r.author.username}` : t("scores.anon")}
           </Text>
           <Text fontSize="xs" color={C.muted}>
-            {platformLabel(r.platform)} · {hoursLabel(r.hours)} · {fmtDay(r.createdAt)}
-            {r.edited ? " · edited" : ""}
+            {t(`platform.${r.platform}`) || r.platform} ·{" "}
+            {t(`rate.hours.${r.hours}`) || r.hours} · {fmtDay(r.createdAt)}
+            {r.edited ? ` · ${t("scores.edited")}` : ""}
           </Text>
         </Box>
         <Text fontFamily="title" fontSize="2xl" color={C.gold} flexShrink={0}>
@@ -761,9 +799,9 @@ function ReviewItem({ r }: { r: HubReview }) {
       </HStack>
       {(r.dayOne || r.state !== "counted") && (
         <HStack gap={2} mt={2} flexWrap="wrap">
-          {r.dayOne && <Tag color={C.gold}>Day One reviewer</Tag>}
-          {r.state === "held" && <Tag color={C.muted}>Not counted yet</Tag>}
-          {r.state === "team" && <Tag color={C.muted}>Nexzy team, not counted</Tag>}
+          {r.dayOne && <Tag color={C.gold}>{t("scores.dayOneReviewer")}</Tag>}
+          {r.state === "held" && <Tag color={C.muted}>{t("scores.notCounted")}</Tag>}
+          {r.state === "team" && <Tag color={C.muted}>{t("scores.team")}</Tag>}
         </HStack>
       )}
       {r.body && (

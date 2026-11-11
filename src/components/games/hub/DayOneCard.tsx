@@ -7,19 +7,12 @@ import { useState } from "react";
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { FiCheck, FiShare2 } from "react-icons/fi";
 import { useHubLive } from "./HubLiveProvider";
+import { useHubT } from "./HubCopyProvider";
 import type { DayOnePlatform } from "@/lib/hubs/types";
 import { track } from "@/lib/analytics";
 
 /** Below this, a small number reads as an empty room: show a call instead. */
 const SHOW_COUNT_AT = 25;
-
-const PLATFORM_LABEL: Record<DayOnePlatform, string> = {
-  ps5: "PS5",
-  xbox: "Xbox",
-  switch: "Switch",
-  switch2: "Switch 2",
-  pc: "PC",
-};
 
 export default function DayOneCard({
   platforms,
@@ -29,12 +22,13 @@ export default function DayOneCard({
 }) {
   const { live, me, busy, error, gameName, slug, joinDayOne, leaveDayOne } =
     useHubLive();
+  const t = useHubT();
   const [copied, setCopied] = useState(false);
   const inIt = !!me?.dayOne;
 
   async function share() {
     const url = `${window.location.origin}/games/${slug}`;
-    const text = `I'm playing ${gameName} day one. You in?`;
+    const text = t("dayOne.shareText", { game: gameName });
     track("hub_share", { slug });
     try {
       if (navigator.share) {
@@ -71,7 +65,7 @@ export default function DayOneCard({
               {live.dayOne.toLocaleString("en-US")}
             </Text>
             <Text fontSize="sm" color="#c7cde0" mt={1}>
-              players are playing {gameName} day one
+              {t("dayOne.count", { game: gameName })}
             </Text>
           </Box>
         ) : (
@@ -82,12 +76,12 @@ export default function DayOneCard({
               color="#FFD700"
               lineHeight="1.15"
             >
-              {inIt ? "You're one of the first" : "Be one of the first"}
+              {t(inIt ? "dayOne.title.in" : "dayOne.title.empty")}
             </Text>
             <Text fontSize="sm" color="#c7cde0" mt={1}>
-              {inIt
-                ? `You're playing ${gameName} day one. Bring your squad.`
-                : `Say you're playing ${gameName} day one.`}
+              {t(inIt ? "dayOne.sub.in" : "dayOne.sub.empty", {
+                game: gameName,
+              })}
             </Text>
           </Box>
         )}
@@ -101,9 +95,9 @@ export default function DayOneCard({
               color="#FFD700"
               _hover={{ bg: "rgba(255,215,0,0.08)" }}
               borderRadius="10px"
-              title="Tap to leave"
+              title={t("dayOne.inHint") || undefined}
             >
-              <FiCheck /> You&apos;re in
+              <FiCheck /> {t("dayOne.in")}
             </Button>
           ) : (
             <Button
@@ -115,7 +109,7 @@ export default function DayOneCard({
               _hover={{ bg: "#ffe24d" }}
               borderRadius="10px"
             >
-              I&apos;m in, day one
+              {t("dayOne.cta")}
             </Button>
           )}
           <Button
@@ -126,7 +120,7 @@ export default function DayOneCard({
             _hover={{ bg: "whiteAlpha.100" }}
             borderRadius="10px"
           >
-            <FiShare2 /> {copied ? "Link copied" : "Share"}
+            <FiShare2 /> {t(copied ? "dayOne.copied.web" : "dayOne.share")}
           </Button>
         </HStack>
       </HStack>
@@ -134,7 +128,7 @@ export default function DayOneCard({
       {inIt && platforms.length > 1 && (
         <HStack gap={2} mt={4} flexWrap="wrap">
           <Text fontSize="xs" color="#9aa3bf" mr={1}>
-            Playing on
+            {t("dayOne.playingOn")}
           </Text>
           {platforms.map((p) => {
             const on = me?.platform === p;
@@ -155,7 +149,7 @@ export default function DayOneCard({
                 borderColor={on ? "rgba(255,215,0,0.5)" : "transparent"}
                 cursor={on ? "default" : "pointer"}
               >
-                {PLATFORM_LABEL[p]}
+                {t(`platform.${p}`)}
               </Box>
             );
           })}

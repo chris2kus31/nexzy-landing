@@ -11,6 +11,7 @@ import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
 import type { HubPlayer, HubPlayersPage } from "@/lib/hubs/social";
 import { PersonAvatar } from "./HubThread";
+import { useHubT } from "./HubCopyProvider";
 
 const C = {
   panel: "#1a1f3a",
@@ -24,6 +25,7 @@ const C = {
 
 export default function WhosPlaying({ slug, gameName }: { slug: string; gameName: string }) {
   const { user, loading } = useAuth();
+  const t = useHubT();
   const [page, setPage] = useState<HubPlayersPage | null>(null);
   const [items, setItems] = useState<HubPlayer[]>([]);
   const [signIn, setSignIn] = useState(false);
@@ -67,12 +69,12 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
         if (next) track("hub_follow", { slug });
       } catch {
         setItems((prev) => prev.map((x) => (x.id === p.id ? { ...x, following: !next } : x)));
-        setError("That didn't go through. Try again.");
+        setError(t("errors.generic"));
       } finally {
         setBusyId(null);
       }
     },
-    [slug],
+    [slug, t],
   );
 
   if (!page || page.count === 0) return null;
@@ -90,17 +92,19 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
     >
       <HStack justify="space-between" align="baseline" flexWrap="wrap" gap={2} mb={4}>
         <Heading as="h2" id="whos-playing-h" fontFamily="heading" fontSize={{ base: "xl", md: "2xl" }} color="white">
-          Who&apos;s playing {gameName}
+          {t("players.title", { game: gameName })}
         </Heading>
         <Text fontSize="sm" color={C.muted}>
-          {page.count.toLocaleString("en-US")} {page.count === 1 ? "player" : "players"} in
+          {t(page.count === 1 ? "players.count.one" : "players.count.other", {
+            count: page.count.toLocaleString("en-US"),
+          })}
         </Text>
       </HStack>
 
       {!signedIn ? (
         <Box>
           <Text color={C.text} mb={3}>
-            See who else is playing and follow them on Nexzy.
+            {t("players.pitch")}
           </Text>
           <chakra.button
             type="button"
@@ -113,12 +117,12 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
             py={3}
             cursor="pointer"
           >
-            Sign in to see who&apos;s playing
+            {t("players.signIn")}
           </chakra.button>
         </Box>
       ) : items.length === 0 ? (
         <Text fontSize="sm" color={C.muted}>
-          The players who are in keep their profiles private.
+          {t("players.private")}
         </Text>
       ) : (
         <>
@@ -131,12 +135,14 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
                     @{p.username}
                   </Text>
                   <Text fontSize="xs" color={C.muted}>
-                    {[p.dayOne ? "Day One" : null, p.rated ? "Rated it" : null].filter(Boolean).join(" · ")}
+                    {[p.dayOne ? t("players.dayOne") : null, p.rated ? t("players.rated") : null]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </Text>
                 </Box>
                 {p.isMe ? (
                   <Text fontSize="xs" color={C.muted} flexShrink={0}>
-                    You
+                    {t("players.you")}
                   </Text>
                 ) : (
                   <chakra.button
@@ -157,7 +163,7 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
                     cursor="pointer"
                     _disabled={{ opacity: 0.6 }}
                   >
-                    {p.following ? "Following" : "Follow"}
+                    {t(p.following ? "players.following" : "players.follow")}
                   </chakra.button>
                 )}
               </HStack>
@@ -179,7 +185,7 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
               cursor="pointer"
               _hover={{ borderColor: C.gold }}
             >
-              More players
+              {t("players.more")}
             </chakra.button>
           )}
           {error && (
@@ -197,8 +203,8 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
           setSignIn(false);
           void load();
         }}
-        title={`Who's playing ${gameName}`}
-        subtitle="Sign in to see who's in and follow them. Same account as the Nexzy app."
+        title={t("players.signIn.title.web", { game: gameName })}
+        subtitle={t("players.signIn.sub.web")}
       />
     </Box>
   );
