@@ -186,9 +186,14 @@ async function proxy(req: NextRequest, ctx: Ctx) {
     status: apiRes.status,
     headers: {
       "Content-Type": "application/json",
+      // The Netlify edge cache ignores query strings on Next routes, so a
+      // list with a query (?type, ?tag, ?q, ?cursor) is browser-cached only;
+      // edge-caching it would hand one filter's answer to every filter.
       "Cache-Control":
         route.publicCache && apiRes.ok
-          ? "public, max-age=30, s-maxage=60, stale-while-revalidate=300"
+          ? query
+            ? "public, max-age=30"
+            : "public, max-age=30, s-maxage=60, stale-while-revalidate=300"
           : "private, no-store",
     },
   });

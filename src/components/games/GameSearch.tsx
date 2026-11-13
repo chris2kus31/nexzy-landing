@@ -51,7 +51,7 @@ export default function GameSearch({
       setBusy(true);
       setFailed(false);
       try {
-        const r = await fetch(`/api/games/search?q=${encodeURIComponent(q)}`, {
+        const r = await fetch(`/api/games/search/${encodeURIComponent(q)}`, {
           signal: ac.signal,
         });
         if (!r.ok) throw new Error(String(r.status));
