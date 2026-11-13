@@ -567,7 +567,7 @@ function PageForm({
     setErr([]);
     try {
       const r = saved
-        ? await updateEnginePage(gameId, saved.id, v)
+        ? await updateEnginePage(gameId, saved.id, v, saved.updatedAt)
         : await createEnginePage(gameId, v);
       setSaved(r);
       setV((cur) => ({ ...cur, slug: r.slug, blocks: r.blocks }));

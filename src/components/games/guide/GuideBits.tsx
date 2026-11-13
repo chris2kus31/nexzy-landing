@@ -40,9 +40,12 @@ const INLINE_RE =
 function inline(s: string, k: string): ReactNode[] {
   return s.split(INLINE_RE).map((part, i) => {
     const key = `${k}-${i}`;
+    // Bold / italic text is parsed again so links inside them
+    // ("**[Hookshot](/games/...)**") render as links, not raw markdown.
     if (/^\*\*[^*]+\*\*$/.test(part))
-      return <strong key={key}>{part.slice(2, -2)}</strong>;
-    if (/^\*[^*]+\*$/.test(part)) return <em key={key}>{part.slice(1, -1)}</em>;
+      return <strong key={key}>{inline(part.slice(2, -2), key)}</strong>;
+    if (/^\*[^*]+\*$/.test(part))
+      return <em key={key}>{inline(part.slice(1, -1), key)}</em>;
     const m = /^\[([^\]]+)\]\(((?:https:\/\/|\/(?![/\\]))[^)\s\\]*)\)$/.exec(
       part,
     );

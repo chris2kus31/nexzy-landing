@@ -278,7 +278,7 @@ function EntryForm({
     setErr([]);
     try {
       const r = saved
-        ? await updateEngineEntry(gameId, saved.id, v)
+        ? await updateEngineEntry(gameId, saved.id, v, saved.updatedAt)
         : await createEngineEntry(gameId, v);
       setSaved(r);
       setRefs(r.linkRefs);

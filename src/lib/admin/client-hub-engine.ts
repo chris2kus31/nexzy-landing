@@ -232,15 +232,21 @@ export const createEngineEntry = (gameId: string, input: EntryInput) =>
     method: "POST",
     body: input,
   });
+/** `loadedAt` = the entry's updatedAt when the editor loaded it: the API
+ *  refuses (409) a save over a newer change (another save, an import, SQL). */
 export const updateEngineEntry = (
   gameId: string,
   id: string,
   input: EntryInput,
+  loadedAt?: string,
 ) =>
-  adminRequest<EngineEntry>(`${base(gameId)}/entries/${enc(id)}`, {
-    method: "PUT",
-    body: input,
-  });
+  adminRequest<EngineEntry>(
+    `${base(gameId)}/entries/${enc(id)}${loadedAt ? `?base=${enc(loadedAt)}` : ""}`,
+    {
+      method: "PUT",
+      body: input,
+    },
+  );
 export const deleteEngineEntry = (gameId: string, id: string) =>
   adminRequest<{ ok: true }>(`${base(gameId)}/entries/${enc(id)}`, {
     method: "DELETE",
@@ -338,15 +344,21 @@ export const createEnginePage = (gameId: string, input: PageInput) =>
     method: "POST",
     body: input,
   });
+/** `loadedAt` = the page's updatedAt when the editor loaded it (see
+ *  updateEngineEntry). */
 export const updateEnginePage = (
   gameId: string,
   id: string,
   input: PageInput,
+  loadedAt?: string,
 ) =>
-  adminRequest<EnginePage>(`${base(gameId)}/pages/${enc(id)}`, {
-    method: "PUT",
-    body: input,
-  });
+  adminRequest<EnginePage>(
+    `${base(gameId)}/pages/${enc(id)}${loadedAt ? `?base=${enc(loadedAt)}` : ""}`,
+    {
+      method: "PUT",
+      body: input,
+    },
+  );
 export const deleteEnginePage = (gameId: string, id: string) =>
   adminRequest<{ ok: true }>(`${base(gameId)}/pages/${enc(id)}`, {
     method: "DELETE",
