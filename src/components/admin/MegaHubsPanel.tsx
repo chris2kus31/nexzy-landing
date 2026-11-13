@@ -55,6 +55,7 @@ import {
 import RoomProfileCard from "@/components/admin/RoomProfileCard";
 import { SubTabs } from "@/components/admin/guide/ui";
 import HubWordingEditor from "@/components/admin/HubWordingEditor";
+import HubThemeEditor from "@/components/admin/HubThemeEditor";
 
 type HubTab =
   | "overview"
@@ -64,6 +65,7 @@ type HubTab =
   | "faq"
   | "thread"
   | "rooms"
+  | "look"
   | "wording";
 const TAB_KEY = "nexzy-admin-megahubs-tab";
 const HUB_TABS: HubTab[] = [
@@ -74,6 +76,7 @@ const HUB_TABS: HubTab[] = [
   "faq",
   "thread",
   "rooms",
+  "look",
   "wording",
 ];
 
@@ -955,6 +958,7 @@ export default function MegaHubsPanel() {
                   },
                   { key: "thread", label: "Launch thread" },
                   { key: "rooms", label: "Rooms" },
+                  { key: "look", label: "Look and colors" },
                   { key: "wording", label: "Wording" },
                 ]}
               />
@@ -1068,6 +1072,14 @@ export default function MegaHubsPanel() {
                 <HubWordingEditor
                   key={detail.game.id}
                   scope={detail.game.id}
+                  gameName={draft.aliases[0] || detail.game.name}
+                />
+              )}
+
+              {tab === "look" && (
+                <HubThemeEditor
+                  key={detail.game.id}
+                  gameId={detail.game.id}
                   gameName={draft.aliases[0] || detail.game.name}
                 />
               )}
