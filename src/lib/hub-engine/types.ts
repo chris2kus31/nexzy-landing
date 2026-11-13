@@ -63,6 +63,9 @@ export interface HubMapDef {
   floor?: string | null;
   /** Entry slug this map belongs to (the dungeon): its details offer "Open map". */
   entry?: string | null;
+  /** Admins only (Admin > Setup > Maps): hidden from readers until unticked
+   *  and published. Public reads never include staged maps. */
+  staged?: boolean;
 }
 
 export interface HubFilter {

@@ -923,7 +923,24 @@ function MapsEditor({
             borderRadius="10px"
             wrap="wrap"
           >
-            <img src={m.url} alt="" width={120} style={{ borderRadius: 6 }} />
+            <Stack gap={2} align="flex-start">
+              <img src={m.url} alt="" width={120} style={{ borderRadius: 6 }} />
+              <Check
+                label="Staged: admins only"
+                checked={!!m.staged}
+                onChange={(v) =>
+                  onChange(
+                    maps.map((x, j) => (j === i ? { ...x, staged: v } : x)),
+                  )
+                }
+              />
+              {m.staged && (
+                <Text fontSize="xs" color={C.warn} maxW="140px">
+                  Hidden from the site and app, even after Publish. Untick and
+                  Publish to release it.
+                </Text>
+              )}
+            </Stack>
             <SimpleGrid columns={{ base: 1, md: 4 }} gap={3} flex="1">
               <Labeled label="Name">
                 <TextIn

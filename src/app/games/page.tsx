@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGamesPage } from "@/lib/blog/api";
 import GamesGrid from "@/components/games/GamesGrid";
+import GameSearch from "@/components/games/GameSearch";
 import { jsonLdString } from "@/lib/seo/jsonld";
 
 export const revalidate = 1800; // 30 min; the publish webhook refreshes it instantly
@@ -105,6 +106,8 @@ export default async function GamesIndexPage() {
           Our guides, walkthroughs, lists and news for each game — gathered in
           one place, and growing every week.
         </Text>
+
+        <GameSearch />
 
         <GamesGrid initialItems={games} total={total} pageSize={PAGE_SIZE} />
       </Container>
