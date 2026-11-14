@@ -36,7 +36,7 @@ export default function GuidelinesPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: January 2025
+              Last updated: November 2026
             </Text>
           </HStack>
         </Container>
@@ -210,6 +210,37 @@ export default function GuidelinesPage() {
                 </Text>
                 <Text color="gray.700">
                   • Be patient with our AI assistant - it's always learning
+                </Text>
+              </Stack>
+            </Box>
+
+            <Box>
+              <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
+                Squad Rooms
+              </Heading>
+              <Text color="gray.700" mb={3}>
+                Rooms are for adults (18+) playing together. On top of
+                everything above:
+              </Text>
+              <Stack gap={2}>
+                <Text color="gray.700">
+                  • Keep personal details out of chat: no phone numbers,
+                  addresses or real names without consent
+                </Text>
+                <Text color="gray.700">
+                  • No selling, trading or asking for money
+                </Text>
+                <Text color="gray.700">
+                  • Spoilers go behind ||spoiler|| tags, or wait for the spoiler
+                  stage
+                </Text>
+                <Text color="gray.700">
+                  • Follow the host&apos;s room rules; hosts can mute and remove
+                  people
+                </Text>
+                <Text color="gray.700">
+                  • Report anything that feels wrong: long-press a message, or
+                  use the menu on a member or the room
                 </Text>
               </Stack>
             </Box>

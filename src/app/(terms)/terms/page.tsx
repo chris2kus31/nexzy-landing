@@ -35,7 +35,7 @@ export default function TermsPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: September 2026
+              Last updated: November 2026
             </Text>
           </HStack>
         </Container>
@@ -241,7 +241,44 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                8. Disclaimers
+                8. Squad Rooms
+              </Heading>
+              <Stack gap={3}>
+                <Text color="gray.700">
+                  Squad Rooms are group chats for a game. You must be 18 or
+                  older to join or host one. Everything in section 7 and our
+                  Community Guidelines applies inside rooms.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Hosts</strong> set a room&apos;s rules, who can join
+                  and its plan, and can mute or remove members. A host&apos;s
+                  rules can add to ours but never override them.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Not allowed in rooms:</strong> sharing anyone&apos;s
+                  personal information (phone numbers, addresses, real names
+                  without consent), asking for money, trades or payments
+                  outside Nexzy, links that lead off Nexzy to private chats,
+                  and contacting a minor. Automated checks may hold or block a
+                  message or photo before others see it.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Enforcement:</strong> we may hide messages, remove
+                  members, end rooms, and give warnings or a ban from rooms
+                  (for a set time or with no end date), in addition to the
+                  account actions in section 7. Rooms that never start, or go
+                  quiet, close on their own.
+                </Text>
+                <Text color="gray.700">
+                  Room chat is not end-to-end encrypted. See our Privacy Policy
+                  for what we collect in rooms and how long we keep it.
+                </Text>
+              </Stack>
+            </Box>
+
+            <Box>
+              <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
+                9. Disclaimers
               </Heading>
               <Text color="gray.700">
                 Nexzy is provided "as is" without warranties of any kind. We do
@@ -254,7 +291,7 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                9. Limitation of Liability
+                10. Limitation of Liability
               </Heading>
               <Text color="gray.700">
                 To the maximum extent permitted by law, Nexzy shall not be
@@ -266,7 +303,7 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                10. Termination
+                11. Termination
               </Heading>
               <Text color="gray.700">
                 We may terminate or suspend your account at any time for
@@ -278,7 +315,7 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                11. Changes to Terms
+                12. Changes to Terms
               </Heading>
               <Text color="gray.700">
                 We reserve the right to modify these Terms at any time. We will
@@ -290,7 +327,7 @@ export default function TermsPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                12. Contact Information
+                13. Contact Information
               </Heading>
               <Text color="gray.700">
                 For questions about these Terms, please contact us at:

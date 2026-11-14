@@ -36,7 +36,7 @@ export default function PrivacyPage() {
               </Button>
             </NextLink>
             <Text color="nexzy.white" fontSize="sm">
-              Last updated: September 2026
+              Last updated: November 2026
             </Text>
           </HStack>
         </Container>
@@ -229,7 +229,63 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                8. Changes to This Policy
+                8. Squad Rooms
+              </Heading>
+              <Stack gap={3}>
+                <Text color="gray.700">
+                  Squad Rooms are group chats for a game, open to users 18 and
+                  older. We check your age from the date of birth on your
+                  account; it is never shown to other people.
+                </Text>
+                <Text color="gray.700">
+                  <strong>What we collect in a room:</strong> the messages, GIFs
+                  and photos you send, map pins you drop (a spot on the
+                  game&apos;s map, never your real location), list items you add
+                  or tick, your plan replies (going, maybe, can&apos;t), the
+                  gamer IDs you choose to share on the Crew tab, and reports you
+                  make.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Who can see it:</strong> the members of that room.
+                  Room chat is encrypted in transit but is not end-to-end
+                  encrypted: the Nexzy team can review rooms to keep them safe,
+                  for example when something is reported.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Automated safety checks:</strong> messages and photos
+                  are checked by an automated moderation service (OpenAI) before
+                  others see them. Photos are re-saved by us with their hidden
+                  details removed, including any location data.
+                </Text>
+                <Text color="gray.700">
+                  <strong>How long we keep it:</strong> photos are deleted one
+                  day after a room ends (in Crew rooms, which stay open, 30 days
+                  after they were posted). A photo you delete from chat
+                  disappears for everyone at once and its file is removed on
+                  that same schedule. Room chat is kept 30 days after a room
+                  ends so reports can still be reviewed, then deleted. Crew
+                  rooms stay open until their owner ends them; their chat is
+                  kept while the room is open and deleted 90 days after it ends.
+                  Reports and the messages they point to are kept up to one year
+                  after we decide them.
+                </Text>
+                <Text color="gray.700">
+                  <strong>Child safety:</strong> content that may involve the
+                  sexual exploitation of a child is removed, preserved and
+                  reported to the National Center for Missing &amp; Exploited
+                  Children (NCMEC) as the law requires, and kept for at least
+                  one year.
+                </Text>
+                <Text color="gray.700">
+                  You can block anyone from a room; their messages and pins are
+                  hidden from you everywhere in Nexzy.
+                </Text>
+              </Stack>
+            </Box>
+
+            <Box>
+              <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
+                9. Changes to This Policy
               </Heading>
               <Text color="gray.700">
                 We may update this Privacy Policy from time to time. We will
@@ -240,7 +296,7 @@ export default function PrivacyPage() {
 
             <Box>
               <Heading as="h2" size="lg" mb={3} color="nexzy.navy">
-                9. Contact Us
+                10. Contact Us
               </Heading>
               <Text color="gray.700">
                 If you have questions about this Privacy Policy, please contact
