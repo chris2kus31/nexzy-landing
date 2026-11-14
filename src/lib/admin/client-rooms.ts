@@ -245,10 +245,10 @@ export const setRoomHoldNcmec = (id: string, ncmecReportId: string) =>
 // ───────────────────────── room profiles (Mega hubs) ─────────────────────────
 
 export const ROOM_TAB_OPTIONS = [
-  { key: "plan", label: "Plan", ready: true },
-  { key: "crew", label: "Crew", ready: true },
-  { key: "list", label: "List", ready: true },
-  { key: "map", label: "Map", ready: false },
+  { key: "plan", label: "Plan" },
+  { key: "crew", label: "Crew" },
+  { key: "list", label: "List" },
+  { key: "map", label: "Map" },
 ] as const;
 
 export const CREW_PLATFORM_OPTIONS = [

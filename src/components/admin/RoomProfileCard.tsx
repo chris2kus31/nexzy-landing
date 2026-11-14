@@ -456,23 +456,17 @@ export default function RoomProfileCard({
 
         <Section
           label="Tabs"
-          hint="Tabs a room shows besides Chat. Map arrives with the map engine (Phase 4)."
+          hint="Tabs a room shows besides Chat. Map uses this game's mega hub maps (the hub must be live with at least one map); rooms of a game without one show 'no map yet'."
         >
           <HStack gap={4} wrap="wrap">
-            {ROOM_TAB_OPTIONS.map((t) =>
-              t.ready ? (
-                <Toggle
-                  key={t.key}
-                  checked={draft.tabs.includes(t.key)}
-                  onChange={(v) => set("tabs", toggleIn(draft.tabs, t.key, v))}
-                  label={t.label}
-                />
-              ) : (
-                <Text key={t.key} fontSize="sm" color={C.faint}>
-                  {t.label} (later)
-                </Text>
-              ),
-            )}
+            {ROOM_TAB_OPTIONS.map((t) => (
+              <Toggle
+                key={t.key}
+                checked={draft.tabs.includes(t.key)}
+                onChange={(v) => set("tabs", toggleIn(draft.tabs, t.key, v))}
+                label={t.label}
+              />
+            ))}
           </HStack>
         </Section>
 

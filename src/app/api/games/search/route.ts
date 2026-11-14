@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") ?? "";
-  const url = new URL(`/api/games/search/${encodeURIComponent(q)}`, req.url);
+  // Absolute on the public site (req.url is the internal deploy host).
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
+  const url = new URL(`/api/games/search/${encodeURIComponent(q)}`, site);
   return NextResponse.redirect(url, {
     status: 308,
     headers: { "Cache-Control": "private, no-store" },
