@@ -390,7 +390,7 @@ function AdminContent() {
             onClick={() => setTab("reviews")}
           />
           <TabButton
-            label="Rooms"
+            label="Rooms safety"
             active={tab === "rooms"}
             onClick={() => setTab("rooms")}
           />

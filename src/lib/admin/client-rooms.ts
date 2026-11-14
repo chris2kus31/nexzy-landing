@@ -44,6 +44,13 @@ export interface RoomEvidenceLine {
   createdAt: string;
   /** Child-safety line withheld from a non-owner admin. */
   withheld?: boolean;
+  /** A reported photo: short staff links (the copy kept for the report, and
+   *  the original while the room still has it), or why it isn't shown.
+   *  Child-safety photos are never shown here. */
+  photo?:
+    | { url: string; liveUrl: string | null }
+    | { withheld: true }
+    | { unavailable: true };
 }
 
 export interface RoomSnapshot {
@@ -268,8 +275,19 @@ export const ROOM_PROFILE_LIMITS = {
   listTemplates: 12,
   listItems: 200,
   listLabel: 120,
+  listName: 60,
+  blurb: 80,
 } as const;
 
+export const JOIN_MODE_OPTIONS = [
+  { key: "request", label: "Ask to join" },
+  { key: "open", label: "Open" },
+  { key: "invite", label: "Invite only" },
+] as const;
+export type RoomJoinMode = (typeof JOIN_MODE_OPTIONS)[number]["key"];
+
+/** One room kind. Optional fields mirror the API's RoomKindDto: absent means
+ *  the default (all the game's tabs, spoiler shield on, has a start time). */
 export interface RoomKindConfig {
   key: string;
   label: string;
@@ -277,6 +295,18 @@ export interface RoomKindConfig {
   maxSize: number;
   persistent?: boolean;
   staffOnly?: boolean;
+  /** One short line under the kind in the app's create sheet (80 max). */
+  blurb?: string;
+  /** The tabs this kind turns on, within the game's tabs. */
+  tabs?: string[];
+  /** false = no spoiler shield for this kind. */
+  spoilers?: boolean;
+  /** false = no start time: the room opens live when made (Hang out). */
+  scheduled?: boolean;
+  /** The host picks the tabs, within this kind's tabs. */
+  custom?: boolean;
+  /** Join mode the create sheet starts on. */
+  joinMode?: RoomJoinMode;
 }
 
 export interface RoomProfileInput {
@@ -285,14 +315,19 @@ export interface RoomProfileInput {
   tabs: string[];
   crewPlatforms: string[];
   spoilerStages: Array<{ key: string; label: string }>;
-  listTemplates: Array<{ key: string; label: string; items: string[] }>;
   minAge: number;
+}
+
+/** Saved profile as the API returns it (lists are edited on their own tab
+ *  and never sent with the profile, so a save can't overwrite them). */
+interface RoomProfileStored extends RoomProfileInput {
+  listTemplates?: unknown[];
 }
 
 export interface RoomProfileAdmin {
   game: { id: string; name: string; slug: string };
   profile:
-    | (RoomProfileInput & { updatedAt: string; updatedBy: string | null })
+    | (RoomProfileStored & { updatedAt: string; updatedBy: string | null })
     | null;
 }
 
@@ -312,9 +347,55 @@ export const EMPTY_ROOM_PROFILE: RoomProfileInput = {
   tabs: ["plan", "crew", "list"],
   crewPlatforms: [],
   spoilerStages: [],
-  listTemplates: [],
   minAge: 18,
 };
+
+// ───────────────────────── recommended lists (Mega hubs > Room lists) ─────────────────────────
+
+export interface RoomListRow {
+  key: string;
+  label: string;
+  items: string[];
+  /** Kind keys it is suggested for; empty = every kind. */
+  kinds: string[];
+  /** false = hidden from hosts (kept here). */
+  enabled: boolean;
+  /** Rooms that loaded it. */
+  rooms: number;
+}
+
+export interface RoomListsAdmin {
+  game: { id: string; name: string; slug: string };
+  kinds: Array<{ key: string; label: string }>;
+  max: number;
+  lists: RoomListRow[];
+}
+
+export interface RoomListInput {
+  label: string;
+  items: string[];
+  kinds: string[];
+  enabled: boolean;
+}
+
+export const getRoomLists = (gameId: string) =>
+  adminRequest<RoomListsAdmin>(`room-profiles/${enc(gameId)}/lists`);
+
+export const saveRoomList = (
+  gameId: string,
+  key: string,
+  input: RoomListInput,
+) =>
+  adminRequest<RoomListsAdmin>(
+    `room-profiles/${enc(gameId)}/lists/${enc(key)}`,
+    { method: "PUT", body: input },
+  );
+
+export const deleteRoomList = (gameId: string, key: string) =>
+  adminRequest<RoomListsAdmin>(
+    `room-profiles/${enc(gameId)}/lists/${enc(key)}`,
+    { method: "DELETE" },
+  );
 
 // ───────────────────────── labels shared by the UI ─────────────────────────
 

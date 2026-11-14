@@ -375,9 +375,71 @@ function Lines({
               ? "Withheld (child-safety report: owner only)"
               : l.content || (l.gif ? "[GIF]" : "")}
           </Text>
+          {l.photo && <EvidencePhoto photo={l.photo} />}
         </Box>
       ))}
     </Flex>
+  );
+}
+
+/** A reported photo. Blurred until a person chooses to look (moderator
+ *  wellbeing); the copy kept for the report first, the room's original if
+ *  that copy is missing. Child-safety photos never come here. */
+function EvidencePhoto({
+  photo,
+}: {
+  photo: NonNullable<RoomEvidenceLine["photo"]>;
+}) {
+  const [show, setShow] = useState(false);
+  const [src, setSrc] = useState<string | null>(
+    "url" in photo ? photo.url : null,
+  );
+  if ("withheld" in photo)
+    return (
+      <Text fontSize="xs" color={C.faint} mt={1}>
+        Photo kept in the safety hold (not shown here)
+      </Text>
+    );
+  if (!("url" in photo) || !src)
+    return (
+      <Text fontSize="xs" color={C.faint} mt={1}>
+        Photo not available
+      </Text>
+    );
+  return (
+    <Box mt={2} position="relative" w="fit-content" maxW="100%">
+      {/* Signed S3 link, not a site image: a plain img on purpose. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt="Reported photo"
+        referrerPolicy="no-referrer"
+        onError={() =>
+          setSrc(src === photo.url && photo.liveUrl ? photo.liveUrl : null)
+        }
+        style={{
+          display: "block",
+          maxWidth: "100%",
+          maxHeight: 320,
+          borderRadius: 8,
+          filter: show ? "none" : "blur(24px)",
+        }}
+      />
+      {!show && (
+        <Button
+          size="xs"
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          bg={C.raised}
+          color={C.text}
+          onClick={() => setShow(true)}
+        >
+          Show photo
+        </Button>
+      )}
+    </Box>
   );
 }
 

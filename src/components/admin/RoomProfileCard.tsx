@@ -2,9 +2,11 @@
 
 // Admin -> Mega hubs -> Rooms card (Phase 3 Step 4). One game's Squad Rooms
 // profile: whether the game has rooms at all, which room kinds people can
-// open, tabs, Crew ID platforms, spoiler stages, list templates and the
-// minimum age. Saved on its own (PUT newsroom/admin/room-profiles/:gameId),
-// separate from the hub profile's Save bar.
+// open (and each kind's options), tabs, Crew ID platforms, spoiler stages and
+// the minimum age. Saved on its own (PUT newsroom/admin/room-profiles/:gameId),
+// separate from the hub profile's Save bar. Recommended lists have their own
+// tab (RoomListsCard) and are never sent from here, so neither page can
+// overwrite the other's work.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
@@ -16,16 +18,22 @@ import {
   NativeSelect,
   Spinner,
   Text,
-  Textarea,
 } from "@chakra-ui/react";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiChevronRight,
+  FiPlus,
+  FiTrash2,
+} from "react-icons/fi";
 import {
   CREW_PLATFORM_OPTIONS,
   EMPTY_ROOM_PROFILE,
+  JOIN_MODE_OPTIONS,
   ROOM_PROFILE_LIMITS as L,
   ROOM_TAB_OPTIONS,
   getRoomProfile,
   saveRoomProfile,
+  type RoomJoinMode,
   type RoomKindConfig,
   type RoomProfileInput,
 } from "@/lib/admin/client-rooms";
@@ -76,7 +84,6 @@ function clean(d: RoomProfileInput): RoomProfileInput {
     ...d,
     kinds: strip(d.kinds),
     spoilerStages: strip(d.spoilerStages),
-    listTemplates: strip(d.listTemplates),
   };
 }
 
@@ -88,15 +95,69 @@ const LAUNCH_PRESET_KINDS: RoomKindConfig[] = [
     defaultSize: 200,
     maxSize: 200,
     staffOnly: true,
+    blurb: "The official launch night room",
   },
-  { key: "play-along", label: "Play-along", defaultSize: 8, maxSize: 20 },
-  { key: "hunt", label: "Hunt", defaultSize: 8, maxSize: 20 },
+  {
+    key: "play-along",
+    label: "Play-along",
+    defaultSize: 8,
+    maxSize: 20,
+    blurb: "Play at the same time and talk it through",
+  },
+  {
+    key: "hunt",
+    label: "Hunt",
+    defaultSize: 8,
+    maxSize: 20,
+    blurb: "Track down collectibles together",
+  },
   {
     key: "crew",
     label: "Crew",
     defaultSize: 50,
     maxSize: 50,
     persistent: true,
+    blurb: "A group that stays open",
+  },
+];
+
+/** One-tap kinds (added with their options; every field stays editable). */
+const KIND_PRESETS: Array<{ name: string; kind: RoomKindConfig }> = [
+  {
+    name: "Hang out",
+    kind: {
+      key: "hang-out",
+      label: "Hang out",
+      defaultSize: 8,
+      maxSize: 20,
+      blurb: "Chill and chat, no start time",
+      tabs: [],
+      scheduled: false,
+      joinMode: "open",
+    },
+  },
+  {
+    name: "Squad",
+    kind: {
+      key: "squad",
+      label: "Squad",
+      defaultSize: 4,
+      maxSize: 8,
+      blurb: "Team up for a session",
+      tabs: ["plan", "crew"],
+      joinMode: "request",
+    },
+  },
+  {
+    name: "Custom",
+    kind: {
+      key: "custom",
+      label: "Custom",
+      defaultSize: 8,
+      maxSize: 20,
+      blurb: "Pick your own tabs",
+      custom: true,
+    },
   },
 ];
 
@@ -176,6 +237,14 @@ function problems(d: RoomProfileInput): string[] {
       out.push(`${k.label || "A kind"}: sizes run 2 to ${L.absoluteMaxSize}.`);
     if (k.defaultSize > k.maxSize)
       out.push(`${k.label || "A kind"}: default size is above the max.`);
+    if ((k.blurb ?? "").length > L.blurb)
+      out.push(
+        `${k.label || "A kind"}: the app line is ${L.blurb} characters max.`,
+      );
+    if (k.custom && k.tabs && !k.tabs.some((t) => d.tabs.includes(t)))
+      out.push(
+        `${k.label || "A kind"}: Custom needs at least one tab to pick from.`,
+      );
   }
   dup(
     "kinds",
@@ -193,23 +262,145 @@ function problems(d: RoomProfileInput): string[] {
     "spoiler stages",
     d.spoilerStages.map((s) => s.key),
   );
-  if (d.listTemplates.length > L.listTemplates)
-    out.push(`At most ${L.listTemplates} list templates.`);
-  for (const t of d.listTemplates) {
-    if (t.label.length > 60)
-      out.push("List template names are 60 characters max.");
-    if (t.label.trim().length < 2)
-      out.push("Every list template needs a label.");
-    if (t.items.length > L.listItems)
-      out.push(`${t.label}: at most ${L.listItems} items.`);
-    if (t.items.some((i) => i.length > L.listLabel))
-      out.push(`${t.label}: items are ${L.listLabel} characters max.`);
-  }
-  dup(
-    "list templates",
-    d.listTemplates.map((t) => t.key),
-  );
   return [...new Set(out)];
+}
+
+/** One kind's options (mockup A2). Absent fields keep the API defaults: all
+ *  the game's tabs, spoiler shield on, a start time, the app's join default. */
+function KindOptions({
+  kind: k,
+  gameTabs,
+  hasStages,
+  onChange,
+}: {
+  kind: RoomKindConfig;
+  gameTabs: string[];
+  hasStages: boolean;
+  onChange: (patch: Partial<RoomKindConfig>) => void;
+}) {
+  const tabs = ROOM_TAB_OPTIONS.filter((t) => gameTabs.includes(t.key));
+  const on = k.tabs ?? gameTabs;
+  const row = { gap: 2, align: "center", wrap: "wrap" } as const;
+  const label = (text: string) => (
+    <Text fontSize="xs" color={C.muted} w="96px" flexShrink={0}>
+      {text}
+    </Text>
+  );
+  return (
+    <Flex
+      direction="column"
+      gap={2}
+      mt={2}
+      ml={7}
+      pl={3}
+      borderLeft="2px solid"
+      borderColor={C.line}
+    >
+      <Flex {...row}>
+        {label("Line in the app")}
+        <Input
+          {...inputProps}
+          flex="1"
+          minW="220px"
+          maxLength={L.blurb}
+          placeholder="e.g. Chill and chat, no start time"
+          value={k.blurb ?? ""}
+          onChange={(e) => onChange({ blurb: e.target.value || undefined })}
+        />
+      </Flex>
+      <Flex {...row}>
+        {label("Tabs")}
+        {tabs.length === 0 ? (
+          <Text fontSize="xs" color={C.faint}>
+            Chat only: turn tabs on for the game below first.
+          </Text>
+        ) : (
+          <>
+            {tabs.map((t) => (
+              <Toggle
+                key={t.key}
+                checked={on.includes(t.key)}
+                onChange={(v) =>
+                  onChange({
+                    tabs: v
+                      ? [...new Set([...on, t.key])]
+                      : on.filter((x) => x !== t.key),
+                  })
+                }
+                label={t.label}
+              />
+            ))}
+            {k.tabs ? (
+              <Button
+                size="xs"
+                variant="ghost"
+                color={C.muted}
+                onClick={() => onChange({ tabs: undefined })}
+              >
+                Use all the game&apos;s tabs
+              </Button>
+            ) : (
+              <Text fontSize="xs" color={C.faint}>
+                (all the game&apos;s tabs)
+              </Text>
+            )}
+          </>
+        )}
+      </Flex>
+      <Flex {...row}>
+        {label("Join mode")}
+        <NativeSelect.Root size="sm" w="200px">
+          <NativeSelect.Field
+            value={k.joinMode ?? ""}
+            onChange={(e) =>
+              onChange({
+                joinMode: (e.target.value || undefined) as
+                  | RoomJoinMode
+                  | undefined,
+              })
+            }
+            bg={C.raised}
+            color={C.text}
+          >
+            <option value="">App default (Open)</option>
+            {JOIN_MODE_OPTIONS.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </NativeSelect.Field>
+        </NativeSelect.Root>
+        <Text fontSize="xs" color={C.faint}>
+          Where the create sheet starts; the host can change it.
+        </Text>
+      </Flex>
+      <HStack gap={4} wrap="wrap">
+        <Toggle
+          checked={k.scheduled !== false}
+          onChange={(v) => onChange({ scheduled: v ? undefined : false })}
+          label="Has a start time"
+        />
+        <Toggle
+          checked={k.spoilers !== false}
+          onChange={(v) => onChange({ spoilers: v ? undefined : false })}
+          label="Spoiler shield"
+        />
+        <Toggle
+          checked={!!k.custom}
+          onChange={(v) => onChange({ custom: v || undefined })}
+          label="Host picks tabs (Custom)"
+        />
+      </HStack>
+      {k.scheduled === false && (
+        <Hint>No start time: the room is live as soon as it&apos;s made.</Hint>
+      )}
+      {k.spoilers !== false && !hasStages && (
+        <Hint>
+          The spoiler shield needs spoiler stages (below) to do anything.
+        </Hint>
+      )}
+    </Flex>
+  );
 }
 
 export default function RoomProfileCard({
@@ -228,8 +419,8 @@ export default function RoomProfileCard({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // Templates' items are edited as one line per item.
-  const [itemText, setItemText] = useState<Record<number, string>>({});
+  // Kinds whose options are expanded (by row; cleared when a row is removed).
+  const [openKinds, setOpenKinds] = useState<Set<number>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -244,17 +435,12 @@ export default function RoomProfileCard({
             tabs: p.tabs ?? [],
             crewPlatforms: p.crewPlatforms ?? [],
             spoilerStages: p.spoilerStages ?? [],
-            listTemplates: p.listTemplates ?? [],
             minAge: p.minAge ?? 18,
           }
         : EMPTY_ROOM_PROFILE;
       setSaved(input);
       setDraft(input);
-      setItemText(
-        Object.fromEntries(
-          input.listTemplates.map((t, i) => [i, t.items.join("\n")]),
-        ),
-      );
+      setOpenKinds(new Set());
       setUpdated(p ? { at: p.updatedAt, by: p.updatedBy } : null);
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -348,7 +534,7 @@ export default function RoomProfileCard({
       <Flex direction="column" gap={4} mt={2}>
         <Section
           label="Kinds"
-          hint="The room types people can open. Stays open = Crew (never auto-ends). Staff only = only team accounts can create it (Launch Night). Never change a key once rooms use it."
+          hint="The room types people can open. Stays open = Crew (never auto-ends). Staff only = only team accounts can create it (Launch Night). The arrow opens a kind's options (its line in the app, tabs, join mode, start time, spoilers, Custom). Never change a key once rooms use it."
         >
           {draft.kinds.length === 0 && (
             <Button
@@ -363,72 +549,101 @@ export default function RoomProfileCard({
             </Button>
           )}
           {draft.kinds.map((k, i) => (
-            <Flex key={i} gap={2} align="center" wrap="wrap" py={1}>
-              <Input
-                {...inputProps}
-                w="160px"
-                placeholder="Label"
-                maxLength={40}
-                value={k.label}
-                onChange={(e) =>
-                  setKind(i, {
-                    label: e.target.value,
-                    ...(isNew(k) ? { key: keyFrom(e.target.value) } : {}),
-                  })
-                }
-              />
-              <Text fontSize="xs" fontFamily="mono" color={C.faint} w="110px">
-                {k.key}
-              </Text>
-              <Text fontSize="xs" color={C.muted}>
-                size
-              </Text>
-              <Input
-                {...inputProps}
-                w="64px"
-                type="number"
-                value={k.defaultSize}
-                onChange={(e) =>
-                  setKind(i, { defaultSize: Number(e.target.value) || 0 })
-                }
-              />
-              <Text fontSize="xs" color={C.muted}>
-                max
-              </Text>
-              <Input
-                {...inputProps}
-                w="64px"
-                type="number"
-                value={k.maxSize}
-                onChange={(e) =>
-                  setKind(i, { maxSize: Number(e.target.value) || 0 })
-                }
-              />
-              <Toggle
-                checked={!!k.persistent}
-                onChange={(v) => setKind(i, { persistent: v || undefined })}
-                label="Stays open"
-              />
-              <Toggle
-                checked={!!k.staffOnly}
-                onChange={(v) => setKind(i, { staffOnly: v || undefined })}
-                label="Staff only"
-              />
-              <Button
-                size="xs"
-                variant="ghost"
-                color={C.bad}
-                aria-label="Remove kind"
-                onClick={() =>
-                  set(
-                    "kinds",
-                    draft.kinds.filter((_, j) => j !== i),
-                  )
-                }
-              >
-                <FiTrash2 />
-              </Button>
-            </Flex>
+            <Box key={i} py={1}>
+              <Flex gap={2} align="center" wrap="wrap">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color={C.muted}
+                  px={1}
+                  aria-expanded={openKinds.has(i)}
+                  aria-label={`Options for ${k.label || "this kind"}`}
+                  onClick={() =>
+                    setOpenKinds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(i)) next.delete(i);
+                      else next.add(i);
+                      return next;
+                    })
+                  }
+                >
+                  {openKinds.has(i) ? <FiChevronDown /> : <FiChevronRight />}
+                </Button>
+                <Input
+                  {...inputProps}
+                  w="160px"
+                  placeholder="Label"
+                  maxLength={40}
+                  value={k.label}
+                  onChange={(e) =>
+                    setKind(i, {
+                      label: e.target.value,
+                      ...(isNew(k) ? { key: keyFrom(e.target.value) } : {}),
+                    })
+                  }
+                />
+                <Text fontSize="xs" fontFamily="mono" color={C.faint} w="110px">
+                  {k.key}
+                </Text>
+                <Text fontSize="xs" color={C.muted}>
+                  size
+                </Text>
+                <Input
+                  {...inputProps}
+                  w="64px"
+                  type="number"
+                  value={k.defaultSize}
+                  onChange={(e) =>
+                    setKind(i, { defaultSize: Number(e.target.value) || 0 })
+                  }
+                />
+                <Text fontSize="xs" color={C.muted}>
+                  max
+                </Text>
+                <Input
+                  {...inputProps}
+                  w="64px"
+                  type="number"
+                  value={k.maxSize}
+                  onChange={(e) =>
+                    setKind(i, { maxSize: Number(e.target.value) || 0 })
+                  }
+                />
+                <Toggle
+                  checked={!!k.persistent}
+                  onChange={(v) => setKind(i, { persistent: v || undefined })}
+                  label="Stays open"
+                />
+                <Toggle
+                  checked={!!k.staffOnly}
+                  onChange={(v) => setKind(i, { staffOnly: v || undefined })}
+                  label="Staff only"
+                />
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color={C.bad}
+                  aria-label="Remove kind"
+                  onClick={() => {
+                    set(
+                      "kinds",
+                      draft.kinds.filter((_, j) => j !== i),
+                    );
+                    setOpenKinds(new Set());
+                  }}
+                >
+                  <FiTrash2 />
+                </Button>
+              </Flex>
+              {openKinds.has(i) && (
+                <KindOptions
+                  kind={k}
+                  gameTabs={draft.tabs}
+                  hasStages={draft.spoilerStages.length > 0}
+                  onChange={(patch) => setKind(i, patch)}
+                />
+              )}
+            </Box>
           ))}
           {draft.kinds.length < L.kinds && (
             <Button
@@ -451,6 +666,41 @@ export default function RoomProfileCard({
             >
               <FiPlus /> Add a kind
             </Button>
+          )}
+          {draft.kinds.length < L.kinds && (
+            <HStack gap={2} mt={1} wrap="wrap">
+              <Text fontSize="xs" color={C.muted}>
+                Or add a ready one:
+              </Text>
+              {KIND_PRESETS.filter(
+                (p) => !draft.kinds.some((k) => k.key === p.kind.key),
+              ).map((p) => (
+                <Button
+                  key={p.kind.key}
+                  size="xs"
+                  bg={C.raised}
+                  color={C.text}
+                  onClick={() =>
+                    set("kinds", [
+                      ...draft.kinds,
+                      {
+                        ...p.kind,
+                        // Only tabs the game has (Squad on a game without Crew).
+                        ...(p.kind.tabs
+                          ? {
+                              tabs: p.kind.tabs.filter((t) =>
+                                draft.tabs.includes(t),
+                              ),
+                            }
+                          : {}),
+                      },
+                    ])
+                  }
+                >
+                  <FiPlus /> {p.name}
+                </Button>
+              ))}
+            </HStack>
           )}
         </Section>
 
@@ -557,110 +807,6 @@ export default function RoomProfileCard({
         </Section>
 
         <Section
-          label="List templates"
-          hint="Ready-made checklists a host can load into the List tab (one item per line, 200 max). Example: Gold Skulltulas by area."
-        >
-          {draft.listTemplates.map((t, i) => (
-            <Box key={i} py={2}>
-              <Flex gap={2} align="center" mb={1}>
-                <Input
-                  {...inputProps}
-                  w="240px"
-                  placeholder="Template name"
-                  maxLength={60}
-                  value={t.label}
-                  onChange={(e) =>
-                    set(
-                      "listTemplates",
-                      draft.listTemplates.map((x, j) =>
-                        j === i
-                          ? {
-                              ...x,
-                              label: e.target.value,
-                              key: isNew(x) ? keyFrom(e.target.value) : x.key,
-                            }
-                          : x,
-                      ),
-                    )
-                  }
-                />
-                <Text fontSize="xs" color={C.muted}>
-                  {t.items.length} items
-                </Text>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  color={C.bad}
-                  aria-label="Remove template"
-                  onClick={() => {
-                    set(
-                      "listTemplates",
-                      draft.listTemplates.filter((_, j) => j !== i),
-                    );
-                    setItemText((prev) => {
-                      const next: Record<number, string> = {};
-                      Object.entries(prev).forEach(([k, v]) => {
-                        const n = Number(k);
-                        if (n < i) next[n] = v;
-                        else if (n > i) next[n - 1] = v;
-                      });
-                      return next;
-                    });
-                  }}
-                >
-                  <FiTrash2 />
-                </Button>
-              </Flex>
-              <Textarea
-                {...inputProps}
-                rows={4}
-                placeholder="One item per line"
-                value={itemText[i] ?? ""}
-                onChange={(e) => {
-                  const text = e.target.value;
-                  setItemText((prev) => ({ ...prev, [i]: text }));
-                  set(
-                    "listTemplates",
-                    draft.listTemplates.map((x, j) =>
-                      j === i
-                        ? {
-                            ...x,
-                            items: text
-                              .split("\n")
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          }
-                        : x,
-                    ),
-                  );
-                }}
-              />
-            </Box>
-          ))}
-          {draft.listTemplates.length < L.listTemplates && (
-            <Button
-              size="xs"
-              bg={C.raised}
-              color={C.text}
-              mt={1}
-              onClick={() =>
-                set("listTemplates", [
-                  ...draft.listTemplates,
-                  {
-                    key: `list-${draft.listTemplates.length + 1}`,
-                    label: "",
-                    items: [],
-                    ...FRESH,
-                  },
-                ])
-              }
-            >
-              <FiPlus /> Add a template
-            </Button>
-          )}
-        </Section>
-
-        <Section
           label="Minimum age"
           hint="Who can join rooms for this game. 18 at launch (the app asks once and keeps it private)."
         >
@@ -706,14 +852,7 @@ export default function RoomProfileCard({
             disabled={!dirty || saving}
             onClick={() => {
               setDraft(saved);
-              setItemText(
-                Object.fromEntries(
-                  (saved?.listTemplates ?? []).map((t, i) => [
-                    i,
-                    t.items.join("\n"),
-                  ]),
-                ),
-              );
+              setOpenKinds(new Set());
             }}
           >
             Discard
