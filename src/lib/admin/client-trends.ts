@@ -39,6 +39,8 @@ export interface TrendTheme {
   accent?: string;
   background?: string;
   card?: string;
+  /** Up to 3 game ids for the drop's card on /drops until people pick. */
+  cardGames?: string[];
 }
 
 export interface AdminTrend {
@@ -127,9 +129,11 @@ const enc = encodeURIComponent;
 export const listTrends = () => adminRequest<AdminTrendList>("trends");
 
 export const getTrend = (id: string) =>
-  adminRequest<{ trend: AdminTrend; listGames: TrendGameLite[] }>(
-    `trends/${enc(id)}`,
-  );
+  adminRequest<{
+    trend: AdminTrend;
+    listGames: TrendGameLite[];
+    cardGames?: TrendGameLite[];
+  }>(`trends/${enc(id)}`);
 
 export const createTrend = (body: TrendInput) =>
   adminRequest<AdminTrend>("trends", { method: "POST", body });

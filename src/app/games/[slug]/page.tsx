@@ -57,6 +57,7 @@ import HubRooms from "@/components/games/hub/HubRooms";
 import GuideSections from "@/components/games/guide/GuideSections";
 import HubNav, { type HubNavItem } from "@/components/games/hub/HubNav";
 import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
+import { fetchGameDrops } from "@/lib/trends/server";
 import {
   isStory,
   type HubChecklistPage,
@@ -295,6 +296,8 @@ export default async function GameHubPage({
   const hub = await fetchGameHub(slug);
   if (!hub) notFound();
   const { game, content } = hub;
+  // "On 44% of #GameDNA builds" (Drops with 50+ builds). Never fails the page.
+  const dropsP = fetchGameDrops(game.id);
   const profile = hub.profile ?? null;
   // Mega hub wording (Admin > Mega hubs > Wording), started now so it loads
   // alongside the scores. A failed read throws: ISR keeps the last good page.
@@ -305,6 +308,7 @@ export default async function GameHubPage({
     ? await Promise.all([fetchHubScores(game.slug), fetchHubReviews(game.slug)])
     : [null, emptyReviews];
   const copy = copyP ? await copyP : null;
+  const gameDrops = await dropsP;
   // Guide engine (Phase 4): only mega hubs can have one; off = nothing shown.
   const guide = profile ? await fetchEnginePage(game.slug) : null;
   // Every checklist of the guide (progress card + walkthrough), in parallel,
@@ -626,6 +630,18 @@ export default async function GameHubPage({
                     : `Released ${fmtDate(game.released)}`}
                 </Badge>
               )}
+              {gameDrops.slice(0, 2).map((d) => (
+                <Badge
+                  key={d.slug}
+                  asChild
+                  colorPalette="purple"
+                  variant="subtle"
+                >
+                  <NextLink href={`/drops/${d.slug}`}>
+                    On {d.percent}% of #{d.hashtag} builds
+                  </NextLink>
+                </Badge>
+              ))}
             </HStack>
           </>
         )}

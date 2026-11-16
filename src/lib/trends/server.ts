@@ -1,4 +1,4 @@
-// Server-only reads for the /trends and /t/ pages. Straight to nexzy-api,
+// Server-only reads for the /drops pages and game pages. Straight to nexzy-api,
 // signed as the site's own server (SITE_SERVER_ID in the API's
 // SignedIpThrottlerGuard): page builds are not visitors and must not share,
 // or use up, one per-IP bucket.
@@ -10,7 +10,10 @@
 import "server-only";
 import { createHmac } from "crypto";
 import type {
-  TrendCard,
+  DropBuildPage,
+  DropMatches,
+  DropsPage,
+  GameDropShare,
   TrendEntryPage,
   TrendEntryRow,
   TrendPick,
@@ -44,9 +47,41 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
   return (await res.json()) as T;
 }
 
-export async function fetchTrendHub(): Promise<TrendCard[] | null> {
-  const r = await get<{ data: TrendCard[] }>("/trends", 120);
+/** The /drops page: live, soon, past and the public totals. */
+export async function fetchDropsPage(): Promise<DropsPage | null> {
+  const r = await get<{ data: DropsPage }>("/trends?surface=drops", 120);
   return r ? r.data : null;
+}
+
+export function fetchBuild(
+  slug: string,
+  code: string,
+): Promise<DropBuildPage | null> {
+  return get<DropBuildPage>(`/trends/${enc(slug)}/builds/${enc(code)}`, 300);
+}
+
+/** Match count for a build page (anonymous: no players listed). */
+export function fetchBuildMatches(
+  slug: string,
+  code: string,
+): Promise<DropMatches | null> {
+  return get<DropMatches>(
+    `/trends/${enc(slug)}/matches?code=${enc(code)}`,
+    300,
+  );
+}
+
+/** "On X% of #Tag builds" for a game page. Never fails the page. */
+export async function fetchGameDrops(gameId: string): Promise<GameDropShare[]> {
+  try {
+    const r = await get<{ data: GameDropShare[] }>(
+      `/trends/games/${enc(gameId)}`,
+      600,
+    );
+    return r?.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export function fetchTrend(slug: string): Promise<TrendView | null> {

@@ -1,9 +1,11 @@
 "use client";
-// The /t/<slug> builder: pick games, get the share image (rendered by the
-// server, never stored), then save it, share it, or post it on Nexzy with a
-// reader account. Games that aren't on Nexzy can be requested ("Ask Nexzy to
-// add it"). Only pick-games trends (optionally ranked) are built here; the
-// page shows an app prompt for the rest.
+// The /drops/<slug> builder: pick games, get the share image (rendered by
+// the server), then save it, share it, or post it on Nexzy with a reader
+// account. Making the image also saves the build (no account), so the share
+// link opens its own page (/drops/<slug>/b/<code>) with its own preview,
+// and shows how many players share the picks. Games that aren't on Nexzy can
+// be requested. Only pick-games drops (optionally ranked) are built here;
+// the page shows an app prompt for the rest.
 import { useEffect, useMemo, useRef, useState } from "react";
 import NextLink from "next/link";
 import {
@@ -36,29 +38,37 @@ import {
 } from "react-icons/fa6";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
-import { track } from "@/lib/analytics";
+import { track, trackDownload } from "@/lib/analytics";
 import {
   TrendApiError,
   fetchChoices,
+  fetchMatches,
   fetchPreview,
   logTrendEvent,
   postEntry,
   requestGame,
+  saveBuild,
 } from "@/lib/trends/client";
 import {
   SITE_URL,
   VISIT_TAG,
+  buildPath,
+  dropPath,
+  entryPath,
   isRanked,
   pickRange,
+  type DropMatches,
   type TrendChoice,
   type TrendView,
 } from "@/lib/trends/types";
+import { D } from "@/components/drops/tokens";
+import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 
-const YELLOW = "#FFD24A";
-const NAVY = "#151935";
-const CARD = "#1E2346";
-const LINE = "#2C335F";
-const MUTED = "#9AA1C7";
+const YELLOW = D.yellow;
+const NAVY = D.base;
+const CARD = D.panel;
+const LINE = D.line;
+const MUTED = D.muted;
 
 type Shape = "portrait" | "tall";
 type Pending = "post" | "request" | "choices" | null;
@@ -84,7 +94,7 @@ function errorText(e: unknown): string {
   if (e instanceof TrendApiError) {
     if (e.status === 429)
       return "Lots of people are building right now. Try again in a moment.";
-    if (e.status === 409) return "You've already joined this trend.";
+    if (e.status === 409) return "You've already posted a build in this drop.";
     if (e.status === 403) return "Verify your email first, then try again.";
     if (e.status === 401) return "Sign in first.";
     if (e.status === 422 || e.status === 400)
@@ -110,6 +120,9 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The saved build behind the share link, and who matches it. */
+  const [code, setCode] = useState<string | null>(null);
+  const [matches, setMatches] = useState<DropMatches | null>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [asking, setAsking] = useState(false);
   const counted = useRef({ try: false, build: false });
@@ -151,6 +164,11 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     });
     setPosted(null);
   }, [picks, shape]);
+  // New picks are a new build (same picks keep their code).
+  useEffect(() => {
+    setCode(null);
+    setMatches(null);
+  }, [picks]);
   useEffect(() => () => abort.current?.abort(), []);
 
   function add(g: TrendChoice) {
@@ -177,9 +195,19 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     if (!ready) return;
     setMaking(true);
     setError(null);
+    const ids = picks.map((p) => p.id);
+    // Save the build alongside (best effort): the share link then opens its
+    // own page, and the match count can load. The image never waits on it.
+    if (!code)
+      void saveBuild(trend.slug, ids)
+        .then(async (b) => {
+          setCode(b.code);
+          setMatches(await fetchMatches(trend.slug, { code: b.code }));
+        })
+        .catch(() => undefined);
     try {
       const blob = await fetchPreview(trend.slug, {
-        picks: picks.map((p) => p.id),
+        picks: ids,
         shape,
         handle: user?.username ?? undefined,
       });
@@ -199,10 +227,14 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
 
   const shareUrl = (platform: string) => {
     const tag = VISIT_TAG[platform] ?? "other";
-    const path = posted ? `/t/${trend.slug}/${posted}` : `/t/${trend.slug}`;
+    const path = posted
+      ? entryPath(trend.slug, posted)
+      : code
+        ? buildPath(trend.slug, code)
+        : dropPath(trend.slug);
     return `${SITE_URL}${path}?s=${tag}`;
   };
-  const shareText = `My #${trend.hashtag}: ${trend.title}. Do you match?`;
+  const shareText = `My #${trend.hashtag} build: ${trend.title}. Do you match?`;
   const fileName = `nexzy-${trend.slug}.jpg`;
 
   function countShare(platform: string) {
@@ -288,6 +320,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   }
 
   if (!trend.joinable) {
+    const soon = !!trend.startsAt && Date.parse(trend.startsAt) > Date.now();
     return (
       <Box
         p={5}
@@ -297,10 +330,12 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         borderColor={LINE}
       >
         <Text fontWeight="800" fontSize="lg" color="white">
-          This trend has ended
+          {soon ? "This drop isn't live yet" : "This drop has ended"}
         </Text>
         <Text color={MUTED} mt={1}>
-          The entries stay up. Look for the newest trends on Nexzy.
+          {soon
+            ? "Come back when it drops to make your build."
+            : "The builds stay up. Make one in a live drop."}
         </Text>
         <Button
           asChild
@@ -310,7 +345,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
           borderRadius="12px"
           fontWeight="800"
         >
-          <NextLink href="/trends">See trends</NextLink>
+          <NextLink href="/drops">See live drops</NextLink>
         </Button>
       </Box>
     );
@@ -328,7 +363,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
       <Stack gap={4}>
         <Box>
           <Text fontWeight="800" fontSize="lg" color="white">
-            Make yours, no account needed
+            Make your build, no account needed
           </Text>
           <Text color={MUTED} fontSize="sm">
             {min === max ? `Pick ${max} games` : `Pick ${min} to ${max} games`}
@@ -351,7 +386,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
               {trend.source.kind === "library" ? "library" : "wishlist"}.
             </Text>
             <Button
-              bg="#2B315E"
+              bg="#2A3166"
               color="white"
               borderRadius="12px"
               onClick={() => setPending("choices")}
@@ -424,7 +459,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
               loadingText="Making it"
               onClick={make}
             >
-              Make my image
+              Make my build
             </Button>
           </HStack>
         )}
@@ -442,11 +477,12 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
             >
               <Image
                 src={image.url}
-                alt={`My #${trend.hashtag}`}
+                alt={`My #${trend.hashtag} build`}
                 w="100%"
                 h="auto"
               />
             </Box>
+            {matches && <MatchNote matches={matches} />}
             <HStack gap={2} wrap="wrap">
               <ShapePicker shape={shape} onChange={setShape} />
               <Button
@@ -513,9 +549,9 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
                   Posted on Nexzy.
                 </Text>
                 <Text color="#CDEFD9" fontSize="sm">
-                  Your entry is on the trend now.{" "}
+                  Your build is in the drop now.{" "}
                   <NextLink
-                    href={`/t/${trend.slug}/${posted}`}
+                    href={entryPath(trend.slug, posted)}
                     style={{ color: YELLOW, fontWeight: 700 }}
                   >
                     Open it
@@ -526,7 +562,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
               <Button
                 h="44px"
                 borderRadius="12px"
-                bg="#2B315E"
+                bg="#2A3166"
                 color="white"
                 fontWeight="700"
                 loading={posting}
@@ -567,6 +603,83 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   );
 }
 
+/** After the build is saved: how many players share its picks (the app
+ *  shows who). */
+function MatchNote({ matches }: { matches: DropMatches }) {
+  const any = matches.count > 0;
+  return (
+    <Flex
+      p={3.5}
+      gap={3}
+      align="center"
+      borderRadius="14px"
+      bg={NAVY}
+      border="1px solid"
+      borderColor={LINE}
+      wrap="wrap"
+    >
+      <Text
+        fontFamily="title"
+        fontWeight="700"
+        fontSize="3xl"
+        color={YELLOW}
+        minW="56px"
+        textAlign="center"
+      >
+        {matches.count.toLocaleString("en-US")}
+      </Text>
+      <Box flex="1" minW="180px">
+        <Text color="white" fontWeight="700" fontSize="sm">
+          {any
+            ? `${matches.count === 1 ? "player shares" : "players share"} ${matches.threshold} or more of your picks`
+            : "Nobody matches you yet. Be the first they find."}
+        </Text>
+        <Text color={MUTED} fontSize="xs" mt={0.5}>
+          {any
+            ? "See who they are and follow them in the Nexzy app."
+            : "Post it in the Nexzy app and get matched as people join."}
+        </Text>
+      </Box>
+      <HStack gap={2}>
+        <Button
+          asChild
+          size="sm"
+          borderRadius="10px"
+          bg="white"
+          color={NAVY}
+          fontWeight="800"
+        >
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackDownload("ios", "drop_match")}
+          >
+            App Store
+          </a>
+        </Button>
+        <Button
+          asChild
+          size="sm"
+          borderRadius="10px"
+          bg={YELLOW}
+          color={NAVY}
+          fontWeight="800"
+        >
+          <a
+            href={googlePlayUrl("drop_match")}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackDownload("android", "drop_match")}
+          >
+            Google Play
+          </a>
+        </Button>
+      </HStack>
+    </Flex>
+  );
+}
+
 function ShareButton({
   label,
   icon,
@@ -580,9 +693,9 @@ function ShareButton({
     <Button
       size="sm"
       borderRadius="10px"
-      bg="#2B315E"
+      bg="#2A3166"
       color="white"
-      _hover={{ bg: "#3A4378" }}
+      _hover={{ bg: "#343C78" }}
       onClick={onClick}
     >
       {icon} {label}

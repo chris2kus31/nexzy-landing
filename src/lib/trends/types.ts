@@ -1,5 +1,7 @@
-// Public Trends shapes (nexzy-api src/trends), shared by the /trends and /t/
-// pages, the builder and the BFF. Client-safe: no server imports.
+// Public Trends shapes (nexzy-api src/trends), shared by the /drops pages,
+// the builder and the BFF. The product calls a trend a "drop" and what a
+// person makes "a build"; the API keeps the word trend. Client-safe: no
+// server imports.
 
 export type TrendStep =
   | { kind: "pickGames"; min: number; max: number }
@@ -29,14 +31,84 @@ export interface TrendCard {
   covers: string[];
 }
 
+/** A card on /drops (GET /trends?surface=drops). */
+export interface DropCard extends TrendCard {
+  number: number;
+  pickSize: number | null;
+  startsAt: string | null;
+  buildCount: number;
+  phase: "live" | "soon" | "past";
+}
+
+export interface DropsPage {
+  live: DropCard[];
+  soon: DropCard[];
+  past: DropCard[];
+  totals: { builds: number; shares: number; matched: number };
+}
+
+/** A game page's "On 44% of #GameDNA builds". */
+export interface GameDropShare {
+  slug: string;
+  hashtag: string;
+  title: string;
+  percent: number;
+}
+
+/** Who shares the picks of a build or an entry. `people` only when signed in. */
+export interface DropMatches {
+  picks: number;
+  threshold: number;
+  count: number;
+  best: number;
+  people: Array<{
+    username: string;
+    avatarUrl: string | null;
+    overlap: number;
+    postId: string;
+    following: boolean;
+  }>;
+}
+
+export interface BuildPick {
+  id: string;
+  name: string;
+  slug: string | null;
+  cover: string | null;
+  badge: string | null;
+  reason: string | null;
+  hasPage?: boolean;
+}
+
+/** The site link of a picked game, only when the site has its page. */
+export const gameHref = (g: { slug: string | null; hasPage?: boolean }) =>
+  g.slug && g.hasPage ? `/games/${g.slug}` : null;
+
+/** A website build saved for sharing (/drops/<slug>/b/<code>). */
+export interface DropBuildPage {
+  build: {
+    code: string;
+    images: { portrait?: string; tall?: string; link?: string } | null;
+    createdAt: string;
+  };
+  picks: BuildPick[];
+}
+
 export interface TrendView extends Omit<TrendCard, "covers"> {
   id: string;
+  /** Website builds saved for sharing (no account). */
+  buildCount?: number;
   status: "live" | "ended";
   joinable: boolean;
   startsAt: string | null;
   steps: { v: number; steps: TrendStep[] };
   source: { kind: TrendSourceKind };
-  theme: { accent?: string; background?: string; card?: string };
+  theme: {
+    accent?: string;
+    background?: string;
+    card?: string;
+    cardGames?: string[];
+  };
   startedBy: string | null;
 }
 
@@ -47,6 +119,8 @@ export interface TrendPick {
   cover: string | null;
   count: number;
   percent: number;
+  /** The site has a page for it (/games/<slug>); only then link it. */
+  hasPage?: boolean;
 }
 
 export interface TrendChoice {
@@ -74,14 +148,7 @@ export interface TrendEntryRow {
 
 export interface TrendEntryPage {
   entry: TrendEntryRow;
-  picks: Array<{
-    id: string;
-    name: string;
-    slug: string | null;
-    cover: string | null;
-    badge: string | null;
-    reason: string | null;
-  }>;
+  picks: BuildPick[];
 }
 
 /** What the web builder can do itself: pick games, optionally ranked. Any
@@ -123,6 +190,15 @@ export const VISIT_TAG: Record<string, string> = {
 export const VISIT_SOURCES = ["ig", "tt", "x", "fb", "th", "link", "other"];
 
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** A saved build's public code (nexzy-api trend-builds.service CODE_RE). */
+export const BUILD_CODE_RE = /^[A-Za-z0-9]{6,12}$/;
+
+/** Site paths for drops. */
+export const dropPath = (slug: string) => `/drops/${slug}`;
+export const buildPath = (slug: string, code: string) =>
+  `/drops/${slug}/b/${code}`;
+export const entryPath = (slug: string, postId: string) =>
+  `/drops/${slug}/${postId}`;
 export const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

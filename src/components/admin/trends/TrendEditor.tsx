@@ -59,6 +59,8 @@ const DEFAULT_THEME = {
   card: "#232A52",
 };
 const MAX_LIST = 300;
+/** Games on the drop's card at /drops until people have picked. */
+const MAX_CARD_GAMES = 3;
 const HEX = /^#[0-9a-f]{6}$/i;
 
 type SourceKind = TrendSource["kind"];
@@ -81,6 +83,7 @@ interface Form {
   yearTo: string;
   query: string;
   listGames: TrendGameLite[];
+  cardGames: TrendGameLite[];
   accent: string;
   background: string;
   card: string;
@@ -108,6 +111,7 @@ const EMPTY: Form = {
   yearTo: "",
   query: "",
   listGames: [],
+  cardGames: [],
   ...DEFAULT_THEME,
   startsAt: "",
   endsAt: "",
@@ -155,7 +159,11 @@ function isEditableSteps(steps: TrendStep[]): boolean {
   );
 }
 
-function formFrom(t: AdminTrend, listGames: TrendGameLite[]): Form {
+function formFrom(
+  t: AdminTrend,
+  listGames: TrendGameLite[],
+  cardGames: TrendGameLite[],
+): Form {
   const steps = t.steps?.steps ?? [];
   const pick = steps.find((s) => s.kind === "pickGames");
   const reason = steps.find((s) => s.kind === "reason");
@@ -179,6 +187,7 @@ function formFrom(t: AdminTrend, listGames: TrendGameLite[]): Form {
     yearTo: f?.yearTo ? String(f.yearTo) : "",
     query: f?.query ?? "",
     listGames,
+    cardGames,
     accent: t.theme?.accent ?? DEFAULT_THEME.accent,
     background: t.theme?.background ?? DEFAULT_THEME.background,
     card: t.theme?.card ?? DEFAULT_THEME.card,
@@ -268,7 +277,7 @@ export default function TrendEditor({
     try {
       const r = await getTrend(trendId);
       setTrend(r.trend);
-      setForm(formFrom(r.trend, r.listGames));
+      setForm(formFrom(r.trend, r.listGames, r.cardGames ?? []));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -301,6 +310,9 @@ export default function TrendEditor({
         ...(HEX.test(form.accent) ? { accent: form.accent } : {}),
         ...(HEX.test(form.background) ? { background: form.background } : {}),
         ...(HEX.test(form.card) ? { card: form.card } : {}),
+        ...(form.cardGames.length
+          ? { cardGames: form.cardGames.map((g) => g.id) }
+          : {}),
       },
       startsAt: fromLocalInput(form.startsAt),
       endsAt: fromLocalInput(form.endsAt),
@@ -352,7 +364,7 @@ export default function TrendEditor({
           ? saved
           : setTrendStatus(saved.id, "live");
       },
-      "Live. It shows to users once TRENDS_ENABLED is on.",
+      "Live. It shows at nexzyapp.com/drops.",
     );
   const changeStatus = (status: TrendStatus, done: string) => {
     if (!trend) return;
@@ -491,7 +503,7 @@ export default function TrendEditor({
                   </Hint>
                 </Box>
                 <Box flex="1" minW="200px">
-                  <FieldLabel>Link: nexzyapp.com/t/</FieldLabel>
+                  <FieldLabel>Link: nexzyapp.com/drops/</FieldLabel>
                   <Input
                     {...inputProps}
                     value={form.slug}
@@ -639,6 +651,17 @@ export default function TrendEditor({
                 Hidden (mature) games never show, whatever the choice.
               </Hint>
             </VStack>
+          </Section>
+
+          <Section
+            title="Card games"
+            sub="Up to 3 games on this drop's card at nexzyapp.com/drops until people have picked. Then the most picked games take over."
+          >
+            <ListPicker
+              games={form.cardGames}
+              max={MAX_CARD_GAMES}
+              onChange={(g) => set("cardGames", g)}
+            />
           </Section>
 
           <Section title="Look" sub="Colors of the share image.">
@@ -843,9 +866,11 @@ function FilterFields({
 function ListPicker({
   games,
   onChange,
+  max = MAX_LIST,
 }: {
   games: TrendGameLite[];
   onChange: (g: TrendGameLite[]) => void;
+  max?: number;
 }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<GameLite[]>([]);
@@ -875,7 +900,7 @@ function ListPicker({
 
   const chosen = new Set(games.map((g) => g.id));
   const add = (g: GameLite) => {
-    if (chosen.has(g.id) || games.length >= MAX_LIST) return;
+    if (chosen.has(g.id) || games.length >= max) return;
     onChange([
       ...games,
       { id: g.id, name: g.name, backgroundImage: g.backgroundImage },
@@ -930,7 +955,7 @@ function ListPicker({
         </VStack>
       )}
       <Text fontSize="xs" color="whiteAlpha.700">
-        {games.length} of {MAX_LIST} games
+        {games.length} of {max} games
       </Text>
       <Flex gap={2} wrap="wrap">
         {games.map((g) => (

@@ -90,6 +90,15 @@ const nextConfig: NextConfig = {
       },
       // Launch day (Oct 21, 2026): the pre-launch /follow page moved to /app.
       { source: "/follow", destination: "/app", permanent: true },
+      // Trends became Drops (Nov 2026). Shared /t/ links and images keep
+      // working; the query (?s= share source) is passed along.
+      { source: "/trends", destination: "/drops", permanent: true },
+      { source: "/t/:slug", destination: "/drops/:slug", permanent: true },
+      {
+        source: "/t/:slug/:entry",
+        destination: "/drops/:slug/:entry",
+        permanent: true,
+      },
     ];
   },
   // Serve the app-link verification files at the exact well-known paths Apple

@@ -21,7 +21,7 @@ import { AUTHORS } from "@/lib/blog/authors";
 import { dateSlug } from "@/lib/rewind/era";
 import { isPostIndexable } from "@/lib/blog/indexing";
 import { fetchEngineSitemap } from "@/lib/hub-engine/server";
-import { fetchTrendHub } from "@/lib/trends/server";
+import { fetchDropsPage } from "@/lib/trends/server";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
 
@@ -244,25 +244,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // keep whatever we already collected
   }
 
-  // Trends: /trends and each live trend page, only once the API has Trends
-  // on (fetchTrendHub is null while TRENDS_ENABLED is off). Entry pages are
-  // noindex and stay out. Best-effort.
+  // Drops: /drops and every live, upcoming and past drop page, only once
+  // the API has them on (null while TRENDS_ENABLED is off). Build and entry
+  // pages are noindex and stay out. Best-effort.
   const trendEntries: MetadataRoute.Sitemap = [];
   try {
-    const trends = await fetchTrendHub();
-    if (trends) {
+    const drops = await fetchDropsPage();
+    if (drops) {
       trendEntries.push({
-        url: `${SITE_URL}/trends`,
+        url: `${SITE_URL}/drops`,
         lastModified: now,
         changeFrequency: "daily",
-        priority: 0.6,
+        priority: 0.7,
       });
-      for (const t of trends)
+      for (const d of [...drops.live, ...drops.soon, ...drops.past])
         trendEntries.push({
-          url: `${SITE_URL}/t/${t.slug}`,
+          url: `${SITE_URL}/drops/${d.slug}`,
           lastModified: now,
-          changeFrequency: "daily",
-          priority: 0.6,
+          changeFrequency: d.phase === "past" ? "weekly" : "daily",
+          priority: d.phase === "past" ? 0.4 : 0.6,
         });
     }
   } catch {

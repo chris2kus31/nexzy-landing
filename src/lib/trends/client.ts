@@ -1,9 +1,13 @@
-// Browser calls for the /t/ pages, through the same-origin proxy
+// Browser calls for the /drops pages, through the same-origin proxy
 // (src/app/api/trends). Errors carry the HTTP status so the UI can tell
 // "sign in", "already joined" and "try again" apart.
 "use client";
 
-import type { TrendChoice, TrendEntryRow } from "@/lib/trends/types";
+import type {
+  DropMatches,
+  TrendChoice,
+  TrendEntryRow,
+} from "@/lib/trends/types";
 
 export class TrendApiError extends Error {
   constructor(
@@ -78,6 +82,33 @@ export async function fetchPreview(
   });
   if (!res.ok) await json(res);
   return res.blob();
+}
+
+/** Save the picks for sharing (no account): the same picks always get the
+ *  same code, so the link has its own page and preview image. */
+export async function saveBuild(
+  slug: string,
+  picks: string[],
+): Promise<{ code: string }> {
+  return json(
+    await fetch(`${base(slug)}/builds`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answers: { picks } }),
+    }),
+  );
+}
+
+/** Players who share most of a build's or an entry's picks. */
+export async function fetchMatches(
+  slug: string,
+  by: { code: string } | { entry: string },
+  signal?: AbortSignal,
+): Promise<DropMatches> {
+  const qs = new URLSearchParams(by as Record<string, string>);
+  return json(
+    await fetch(`${base(slug)}/matches?${qs.toString()}`, { signal }),
+  );
 }
 
 export async function postEntry(

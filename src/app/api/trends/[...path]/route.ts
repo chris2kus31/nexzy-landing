@@ -1,4 +1,4 @@
-// Same-origin proxy for the Trends pages (/t/<slug>). Forwards to nexzy-api
+// Same-origin proxy for the Drops pages (/drops/<slug>). Forwards to nexzy-api
 // /trends/*, only for the exact routes below (no confused-deputy paths).
 //
 // Every request carries the visitor's IP signed with NEWSROOM_WEBHOOK_SECRET
@@ -39,6 +39,14 @@ const SLUG_ROUTES: Record<string, Rule> = {
   "choices GET": { auth: "optional", query: { q: /^[^\n\r]{1,60}$/ } },
   "events POST": { auth: "optional" },
   "preview POST": { auth: "none", binary: true },
+  "builds POST": { auth: "none" },
+  "matches GET": {
+    auth: "optional",
+    query: {
+      code: /^[A-Za-z0-9]{6,12}$/,
+      entry: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    },
+  },
 };
 /** Routes with no slug. */
 const ROOT_ROUTES: Record<string, Rule> = {

@@ -129,8 +129,8 @@ export default function TrendsPanel() {
             Trends
           </Heading>
           <Text fontSize="sm" color="whiteAlpha.600">
-            A title plus what people pick. Live trends show in the app and at
-            nexzyapp.com/t/. Nothing shows to users while TRENDS_ENABLED is off.
+            A title plus what people pick. Each trend is a drop: live ones show
+            at nexzyapp.com/drops. Nothing shows while TRENDS_ENABLED is off.
           </Text>
         </Box>
         <HStack gap={2}>

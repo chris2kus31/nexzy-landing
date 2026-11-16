@@ -205,6 +205,19 @@ export default function Navigation() {
               </NextLink>
             </Link>
 
+            <Link
+              asChild
+              fontSize="sm"
+              fontWeight="medium"
+              color="nexzy.white"
+              _hover={{ color: "nexzy.lightBlue" }}
+              transition="color 0.2s"
+            >
+              <NextLink href="/drops" onClick={() => nav("drops")}>
+                Drops
+              </NextLink>
+            </Link>
+
             {/* Guides dropdown — tap/click to toggle (works on touch, too) */}
             <Box position="relative">
               <HStack
@@ -445,6 +458,18 @@ export default function Navigation() {
                   }}
                 >
                   Videos
+                </NextLink>
+              </Link>
+
+              <Link asChild fontSize="lg" py={2} color="nexzy.white">
+                <NextLink
+                  href="/drops"
+                  onClick={() => {
+                    nav("drops");
+                    close();
+                  }}
+                >
+                  Drops
                 </NextLink>
               </Link>
 

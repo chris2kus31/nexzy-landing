@@ -1,8 +1,8 @@
-// One entry on the trend page: its rendered share image (or a placeholder
+// One posted build (entry) on the Drops pages: its rendered share image (or a placeholder
 // while it renders), the author and hearts. Links to the entry's own page.
 import NextLink from "next/link";
 import { Box, Flex, Image, Text } from "@chakra-ui/react";
-import type { TrendEntryRow } from "@/lib/trends/types";
+import { entryPath, type TrendEntryRow } from "@/lib/trends/types";
 
 export default function EntryCard({
   slug,
@@ -15,19 +15,19 @@ export default function EntryCard({
 }) {
   const img = entry.trend?.images?.portrait ?? null;
   return (
-    <NextLink href={`/t/${slug}/${entry.id}`} style={{ display: "block" }}>
+    <NextLink href={entryPath(slug, entry.id)} style={{ display: "block" }}>
       <Box
         borderRadius="14px"
-        bg="#1E2346"
+        bg="#1A1F47"
         p={2}
-        _hover={{ bg: "#262C57" }}
+        _hover={{ bg: "#232A5C" }}
         transition="background 0.15s"
       >
         <Box
           borderRadius="10px"
           overflow="hidden"
           aspectRatio="4 / 5"
-          bg="#151935"
+          bg="#10132E"
         >
           {img ? (
             <Image
