@@ -44,6 +44,7 @@ import CommentsModerationPanel from "@/components/admin/CommentsModerationPanel"
 import WritersPanel from "@/components/admin/WritersPanel";
 import RewindPanel from "@/components/admin/RewindPanel";
 import AnnouncementsPanel from "@/components/admin/AnnouncementsPanel";
+import TrendsPanel from "@/components/admin/TrendsPanel";
 import OfficialPanel from "@/components/admin/OfficialPanel";
 import CommunityPulsePanel from "@/components/admin/CommunityPulsePanel";
 import UsernamesPanel from "@/components/admin/UsernamesPanel";
@@ -79,6 +80,7 @@ type Tab =
   | "insights"
   | "rewind"
   | "announcements"
+  | "trends"
   | "official"
   | "usernames"
   | "moderation";
@@ -443,6 +445,13 @@ function AdminContent() {
           )}
           {isOwner && (
             <TabButton
+              label="Trends"
+              active={tab === "trends"}
+              onClick={() => setTab("trends")}
+            />
+          )}
+          {isOwner && (
+            <TabButton
               label="Official"
               active={tab === "official"}
               onClick={() => setTab("official")}
@@ -613,6 +622,8 @@ function AdminContent() {
       {tab === "notify" && isOwner && <NotifyPanel />}
 
       {tab === "announcements" && isOwner && <AnnouncementsPanel />}
+
+      {tab === "trends" && isOwner && <TrendsPanel />}
 
       {tab === "official" && isOwner && <OfficialPanel />}
 

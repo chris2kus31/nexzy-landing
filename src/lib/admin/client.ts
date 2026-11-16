@@ -2463,13 +2463,18 @@ export interface GameLite {
   released: string | null;
 }
 
+/** Open missing games. `source`: "user" = games people asked us to add
+ *  (Trends "Ask Nexzy to add it"), most asked first; "content" = the rest;
+ *  unset = all. */
 export async function getUnresolvedGames(
   limit = 25,
   offset = 0,
+  source?: "user" | "content",
 ): Promise<{ items: UnresolvedGameRef[]; total: number }> {
+  const src = source ? `&source=${source}` : "";
   return handle(
     await fetch(
-      `/api/newsroom/admin/games/unresolved?limit=${limit}&offset=${offset}`,
+      `/api/newsroom/admin/games/unresolved?limit=${limit}&offset=${offset}${src}`,
     ),
   );
 }

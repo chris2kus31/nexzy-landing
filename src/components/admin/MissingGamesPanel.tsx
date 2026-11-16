@@ -69,6 +69,45 @@ const outlineBtn = {
 };
 
 type OpRow = { label: string; sub?: string; tone: string };
+type QueueSource = "all" | "content" | "user";
+
+/** A people's request (Trends "Ask Nexzy to add it"): how many asked, what
+ *  they told us, and when someone last asked. */
+function RequestMeta({
+  context,
+  createdAt,
+}: {
+  context: Record<string, unknown> | null;
+  createdAt: string;
+}) {
+  const c = context ?? {};
+  const requests = Number(c.requests) || 1;
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const platform = str(c.platform);
+  const year = typeof c.year === "number" ? String(c.year) : null;
+  const trend = str(c.trend);
+  const last = str(c.lastAt) ?? createdAt;
+  return (
+    <>
+      <Text fontSize="xs" color="nexzy.white" fontWeight="700">
+        {requests} {requests === 1 ? "person" : "people"}
+      </Text>
+      {(platform || year) && (
+        <Text fontSize="xs" color="whiteAlpha.700">
+          {[platform, year].filter(Boolean).join(", ")}
+        </Text>
+      )}
+      {trend && (
+        <Text fontSize="xs" color="nexzy.yellow">
+          from /t/{trend}
+        </Text>
+      )}
+      <Text fontSize="xs" color="whiteAlpha.600">
+        last asked {timeAgo(last)}
+      </Text>
+    </>
+  );
+}
 type OpResult = { title: string; rows: OpRow[] };
 function toneColor(t: string): string {
   return t === "green"
@@ -1036,12 +1075,19 @@ function MissingGameCard({
             </HStack>
           )}
           <HStack gap={2} mt={1} wrap="wrap">
-            <Badge colorPalette="orange" variant="subtle">
-              {item.sourceType}
+            <Badge
+              colorPalette={item.sourceType === "user" ? "yellow" : "orange"}
+              variant="subtle"
+            >
+              {item.sourceType === "user" ? "asked by people" : item.sourceType}
             </Badge>
-            <Text fontSize="xs" color="whiteAlpha.600">
-              {timeAgo(item.createdAt)}
-            </Text>
+            {item.sourceType === "user" ? (
+              <RequestMeta context={item.context} createdAt={item.createdAt} />
+            ) : (
+              <Text fontSize="xs" color="whiteAlpha.600">
+                {timeAgo(item.createdAt)}
+              </Text>
+            )}
             {item.source && (
               <NextLink href={`/admin/posts/${item.source.id}`}>
                 <Text
@@ -1586,6 +1632,9 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   const [working, setWorking] = useState<string | null>(null);
   const [result, setResult] = useState<OpResult | null>(null);
   const [view, setView] = useState<"queue" | "issues">("queue");
+  // Queue filter: everything, content refs only, or games people asked for
+  // (Trends "Ask Nexzy to add it"). ?source=user opens on the requests.
+  const [source, setSource] = useState<QueueSource>("all");
   const [showIgdbImport, setShowIgdbImport] = useState(false);
   const [diags, setDiags] = useState<ImportDiagnostic[]>([]);
   const [diagsLoading, setDiagsLoading] = useState(false);
@@ -1680,13 +1729,14 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
     }
   }
 
-  async function load(page = queuePage) {
+  async function load(page = queuePage, src: QueueSource = source) {
     setLoading(true);
     setError(null);
     try {
       const { items, total } = await getUnresolvedGames(
         PAGE_SIZE,
         page * PAGE_SIZE,
+        src === "all" ? undefined : src,
       );
       setRows(items);
       setQueueTotal(total);
@@ -1730,9 +1780,18 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
   }
 
   useEffect(() => {
-    load();
+    const s = new URLSearchParams(window.location.search).get("source");
+    const initial: QueueSource = s === "user" || s === "content" ? s : "all";
+    setSource(initial);
+    load(0, initial);
     loadDiags();
   }, []);
+
+  const pickSource = (src: QueueSource) => {
+    if (src === source) return;
+    setSource(src);
+    void load(0, src);
+  };
 
   const remove = (id: string, doneNotice?: string) => {
     if (doneNotice) setNotice(doneNotice);
@@ -1865,6 +1924,40 @@ export default function MissingGamesPanel({ isOwner }: { isOwner: boolean }) {
           );
         })}
       </HStack>
+
+      {view === "queue" && (
+        <HStack gap={2} mb={4} wrap="wrap">
+          {(
+            [
+              ["all", "All"],
+              ["content", "From content"],
+              ["user", "Asked by people"],
+            ] as const
+          ).map(([key, label]) => {
+            const active = source === key;
+            return (
+              <Button
+                key={key}
+                size="xs"
+                borderRadius="full"
+                onClick={() => pickSource(key)}
+                bg={active ? "nexzy.yellow" : "transparent"}
+                color={active ? "nexzy.navy" : "nexzy.gray.100"}
+                borderWidth="1px"
+                borderColor={active ? "nexzy.yellow" : "whiteAlpha.300"}
+                _hover={{ bg: active ? "nexzy.yellow" : "whiteAlpha.100" }}
+              >
+                {label}
+              </Button>
+            );
+          })}
+          {source === "user" && (
+            <Text fontSize="xs" color="whiteAlpha.600">
+              Most asked first. Import or map one to add it.
+            </Text>
+          )}
+        </HStack>
+      )}
 
       {error && (
         <Text color="red.300" mb={3}>
