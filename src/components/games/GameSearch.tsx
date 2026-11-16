@@ -1,6 +1,8 @@
 "use client";
-// Website game search. Games the site covers link to their page; every other
-// game in the catalog points to the app ("Not on the web yet"). Typing waits
+// Website game search over the games the site covers (the /games list), each
+// linking to its page. No match = we don't cover it on the web yet, so the
+// empty state points to the app. (`web: false` rows only come from answers
+// cached before that change, and still point to the app.) Typing waits
 // 300 ms, needs 3+ letters, and cancels the previous request; the answer is
 // edge-cached per normalized query, so it costs almost nothing to run.
 import { useEffect, useRef, useState } from "react";
@@ -84,7 +86,7 @@ export default function GameSearch({
           type="search"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Search any game"
+          placeholder="Search games we cover"
           aria-label="Search games"
           autoFocus={autoFocus}
           autoComplete="off"
@@ -110,9 +112,26 @@ export default function GameSearch({
           role="list"
         >
           {hits.length === 0 && (
-            <Text px={4} py={3} color="gray.400" fontSize="sm">
-              No games match that name. Try another spelling.
-            </Text>
+            <Flex
+              asChild
+              align="center"
+              gap={3}
+              px={4}
+              py={3}
+              _hover={{ bg: "whiteAlpha.100" }}
+            >
+              <NextLink href="/get">
+                <Box flex="1" minW={0}>
+                  <Text color="white" fontWeight="600">
+                    Not on the web yet
+                  </Text>
+                  <Text color="gray.400" fontSize="xs">
+                    Check the spelling, or find any game in the Nexzy app
+                  </Text>
+                </Box>
+                <FiSmartphone color="#FFD700" aria-hidden />
+              </NextLink>
+            </Flex>
           )}
           {hits.map((g) => (
             <Flex
