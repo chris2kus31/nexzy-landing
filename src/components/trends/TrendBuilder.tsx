@@ -205,7 +205,11 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         shape,
         handle: user?.username ?? undefined,
       });
-      const jpeg = await toJpeg(blob).catch(() => blob);
+      // The server sends JPEG; convert only if an older API answered WebP.
+      const jpeg =
+        blob.type === "image/jpeg"
+          ? blob
+          : await toJpeg(blob).catch(() => blob);
       setImage({ url: URL.createObjectURL(jpeg), blob: jpeg });
       if (!counted.current.build) {
         counted.current.build = true;

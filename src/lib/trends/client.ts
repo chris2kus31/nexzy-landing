@@ -64,7 +64,8 @@ export async function fetchChoices(
   return r.data;
 }
 
-/** The share image of unposted picks (WebP bytes, made in memory). */
+/** The share image of unposted picks (JPEG bytes, made in memory: the file
+ *  people download and share, so the server encodes it once). */
 export async function fetchPreview(
   slug: string,
   body: { picks: string[]; shape: "portrait" | "tall"; handle?: string },
@@ -76,6 +77,7 @@ export async function fetchPreview(
     body: JSON.stringify({
       answers: { picks: body.picks },
       shape: body.shape,
+      format: "jpeg",
       ...(body.handle ? { handle: body.handle } : {}),
     }),
     signal,
