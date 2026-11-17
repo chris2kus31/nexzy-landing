@@ -59,13 +59,21 @@ export default function HubTrailers({
             title={current.title}
             allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              border: 0,
+            }}
           />
         ) : (
           <chakra.button
             type="button"
             onClick={play}
-            aria-label={hubT("trailers.play", { title: current.title }) || undefined}
+            aria-label={
+              hubT("trailers.play", { title: current.title }) || undefined
+            }
             position="absolute"
             inset={0}
             w="full"
@@ -83,18 +91,28 @@ export default function HubTrailers({
               onLoad={(e) => {
                 // YouTube's "missing maxres" placeholder is 120px wide.
                 const img = e.currentTarget;
-                if (img.naturalWidth <= 120 && img.src !== thumb(current)) img.src = thumb(current);
+                if (img.naturalWidth <= 120 && img.src !== thumb(current))
+                  img.src = thumb(current);
               }}
               onError={(e) => {
                 const img = e.currentTarget;
                 if (img.src !== thumb(current)) img.src = thumb(current);
               }}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
             />
             <Box
               position="absolute"
               inset={0}
-              style={{ background: "linear-gradient(to top, rgba(11,14,31,0.85), rgba(11,14,31,0) 55%)" }}
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(11,14,31,0.85), rgba(11,14,31,0) 55%)",
+              }}
             />
             <Box
               position="absolute"
@@ -104,8 +122,8 @@ export default function HubTrailers({
               w={{ base: "56px", md: "72px" }}
               h={{ base: "56px", md: "72px" }}
               borderRadius="full"
-              bg="#FFD700"
-              color="#11152b"
+              bg="var(--hub-accent, #FFD700)"
+              color="var(--hub-on-accent, #11152b)"
               display="flex"
               alignItems="center"
               justifyContent="center"
@@ -150,7 +168,9 @@ export default function HubTrailers({
                   setPlaying(false);
                 }}
                 aria-pressed={on}
-                aria-label={hubT("trailers.show", { title: t.title }) || undefined}
+                aria-label={
+                  hubT("trailers.show", { title: t.title }) || undefined
+                }
                 flexShrink={0}
                 w={{ base: "150px", md: "180px" }}
                 textAlign="left"
@@ -162,7 +182,9 @@ export default function HubTrailers({
                   borderRadius="10px"
                   overflow="hidden"
                   border="2px solid"
-                  borderColor={on ? "#FFD700" : "transparent"}
+                  borderColor={
+                    on ? "var(--hub-accent, #FFD700)" : "transparent"
+                  }
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -170,10 +192,19 @@ export default function HubTrailers({
                     alt=""
                     loading="lazy"
                     decoding="async"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                 </Box>
-                <Text fontSize="xs" color={on ? "white" : "#9aa3bf"} mt={1} lineClamp={2}>
+                <Text
+                  fontSize="xs"
+                  color={on ? "white" : "#9aa3bf"}
+                  mt={1}
+                  lineClamp={2}
+                >
                   {t.title}
                 </Text>
               </chakra.button>

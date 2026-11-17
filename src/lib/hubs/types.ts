@@ -59,20 +59,30 @@ export interface HubLink {
 
 export const PREDICTION_BANDS = ["elite", "great", "good", "low"] as const;
 export type PredictionBand = (typeof PREDICTION_BANDS)[number];
-export const BAND_INFO: Record<PredictionBand, { score: string; label: string }> =
-  {
-    elite: { score: "9.5+", label: "Masterpiece" },
-    great: { score: "8.5 - 9.4", label: "Great" },
-    good: { score: "7 - 8.4", label: "Good, not GOAT" },
-    low: { score: "Under 7", label: "Overhyped" },
-  };
+export const BAND_INFO: Record<
+  PredictionBand,
+  { score: string; label: string }
+> = {
+  elite: { score: "9.5+", label: "Masterpiece" },
+  great: { score: "8.5 - 9.4", label: "Great" },
+  good: { score: "7 - 8.4", label: "Good, not GOAT" },
+  low: { score: "Under 7", label: "Overhyped" },
+};
 
-export const DAY_ONE_PLATFORMS = ["ps5", "xbox", "switch", "switch2", "pc"] as const;
+export const DAY_ONE_PLATFORMS = [
+  "ps5",
+  "xbox",
+  "switch",
+  "switch2",
+  "pc",
+] as const;
 export type DayOnePlatform = (typeof DAY_ONE_PLATFORMS)[number];
 
 export const HUB_EDITORS = ["Chuy", "Eli", "Leslie"] as const;
 
-export type PredictionTally = Record<PredictionBand, number> & { total: number };
+export type PredictionTally = Record<PredictionBand, number> & {
+  total: number;
+};
 
 export interface HubLive {
   dayOne: number;
@@ -83,6 +93,18 @@ export interface HubMe {
   dayOne: boolean;
   platform: DayOnePlatform | null;
   prediction: PredictionBand | null;
+}
+
+/** Admin "Look and colors", resolved by the API (every field filled).
+ *  Only the fields the website paints are typed; the app uses more. */
+export interface HubThemeColors {
+  accent: string;
+  onAccent: string;
+  accentSoft: string;
+  accentLine: string;
+  glow: string;
+  live: string;
+  onLive: string;
 }
 
 export interface HubProfile {
@@ -104,6 +126,8 @@ export interface HubProfile {
   /** Pinned @nexzyofficial launch-night post (null = none). */
   launchThreadPostId: string | null;
   live: HubLive;
+  /** null / absent = the Nexzy gold look (every component's fallback). */
+  theme?: HubThemeColors | null;
 }
 
 /** Section -> the question heading readers (and AI answers) ask. */
@@ -141,6 +165,8 @@ export function fmtHubDate(iso: string, withTime = false): string {
     month: "short",
     day: "numeric",
     year: "numeric",
-    ...(withTime ? { hour: "numeric", minute: "2-digit", timeZoneName: "short" } : {}),
+    ...(withTime
+      ? { hour: "numeric", minute: "2-digit", timeZoneName: "short" }
+      : {}),
   });
 }

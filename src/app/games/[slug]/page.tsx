@@ -56,6 +56,7 @@ import WhosPlaying from "@/components/games/hub/WhosPlaying";
 import HubRooms from "@/components/games/hub/HubRooms";
 import GuideSections from "@/components/games/guide/GuideSections";
 import HubNav, { type HubNavItem } from "@/components/games/hub/HubNav";
+import { hubThemeVars } from "@/lib/hubs/theme";
 import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
 import { fetchGameDrops } from "@/lib/trends/server";
 import {
@@ -786,7 +787,13 @@ function MegaHub({
       </HubPanel>
     ) : null;
   return (
-    <Box display="flex" flexDirection="column" gap={7} mb={12}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      gap={7}
+      mb={12}
+      style={hubThemeVars(profile.theme)}
+    >
       <Box
         display="grid"
         gridTemplateColumns={{

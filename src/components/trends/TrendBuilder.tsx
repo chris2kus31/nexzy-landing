@@ -23,19 +23,10 @@ import {
 import {
   FiArrowLeft,
   FiArrowRight,
-  FiDownload,
-  FiLink,
   FiPlus,
   FiShare2,
   FiX,
 } from "react-icons/fi";
-import {
-  FaFacebook,
-  FaXTwitter,
-  FaThreads,
-  FaInstagram,
-  FaTiktok,
-} from "react-icons/fa6";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track, trackDownload } from "@/lib/analytics";
@@ -62,6 +53,7 @@ import {
   type TrendView,
 } from "@/lib/trends/types";
 import { D } from "@/components/drops/tokens";
+import SharePanel, { type SharePlatform } from "@/components/drops/SharePanel";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 
 const YELLOW = D.yellow;
@@ -120,6 +112,8 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   /** The saved build behind the share link, and who matches it. */
   const [code, setCode] = useState<string | null>(null);
   const [matches, setMatches] = useState<DropMatches | null>(null);
@@ -290,10 +284,18 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     try {
       await navigator.clipboard.writeText(shareUrl("copy"));
       countShare("copy");
+      setCopied(true);
       setError(null);
     } catch {
       setError("Couldn't copy. Copy the address bar instead.");
     }
+  }
+
+  function shareTo(p: SharePlatform) {
+    if (p === "instagram" || p === "tiktok") void shareImage(p);
+    else if (p === "save") download();
+    else if (p === "copy") void copyLink();
+    else openIntent(p);
   }
 
   /** `afterSignIn`: the modal just signed the reader in, so `user` in this
@@ -487,62 +489,20 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
               <ShapePicker shape={shape} onChange={setShape} />
               <Button
                 h="44px"
+                px={6}
+                flex={{ base: 1, sm: "initial" }}
                 borderRadius="12px"
                 bg={YELLOW}
                 color={NAVY}
                 fontWeight="800"
-                onClick={download}
-              >
-                <FiDownload /> Save image
-              </Button>
-              <Button
-                h="44px"
-                borderRadius="12px"
-                variant="outline"
-                borderColor={YELLOW}
-                color={YELLOW}
-                fontWeight="800"
-                onClick={() => void shareImage("other")}
+                onClick={() => {
+                  setCopied(false);
+                  setShareOpen(true);
+                }}
               >
                 <FiShare2 /> Share
               </Button>
             </HStack>
-            <HStack gap={2} wrap="wrap">
-              <ShareButton
-                label="Instagram"
-                icon={<FaInstagram />}
-                onClick={() => void shareImage("instagram")}
-              />
-              <ShareButton
-                label="TikTok"
-                icon={<FaTiktok />}
-                onClick={() => void shareImage("tiktok")}
-              />
-              <ShareButton
-                label="X"
-                icon={<FaXTwitter />}
-                onClick={() => openIntent("x")}
-              />
-              <ShareButton
-                label="Threads"
-                icon={<FaThreads />}
-                onClick={() => openIntent("threads")}
-              />
-              <ShareButton
-                label="Facebook"
-                icon={<FaFacebook />}
-                onClick={() => openIntent("facebook")}
-              />
-              <ShareButton
-                label="Copy link"
-                icon={<FiLink />}
-                onClick={() => void copyLink()}
-              />
-            </HStack>
-            <Text fontSize="xs" color={MUTED}>
-              On a computer, Instagram and TikTok save the image so you can post
-              it from your phone.
-            </Text>
             {posted ? (
               <Box p={3} borderRadius="12px" bg="#1F3A2C">
                 <Text color="#7EE2A0" fontWeight="700">
@@ -580,6 +540,15 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
           </Text>
         )}
       </Stack>
+
+      <SharePanel
+        open={shareOpen && !!image}
+        onClose={() => setShareOpen(false)}
+        hashtag={trend.hashtag}
+        imageUrl={image?.url ?? null}
+        onShare={shareTo}
+        copied={copied}
+      />
 
       <SignInModal
         open={pending !== null}
@@ -677,29 +646,6 @@ function MatchNote({ matches }: { matches: DropMatches }) {
         </Button>
       </HStack>
     </Flex>
-  );
-}
-
-function ShareButton({
-  label,
-  icon,
-  onClick,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      size="sm"
-      borderRadius="10px"
-      bg="#2A3166"
-      color="white"
-      _hover={{ bg: "#343C78" }}
-      onClick={onClick}
-    >
-      {icon} {label}
-    </Button>
   );
 }
 

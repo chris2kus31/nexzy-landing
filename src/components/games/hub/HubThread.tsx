@@ -6,7 +6,16 @@
 // /api/hubs/<slug>/thread (BFF). Fetched once on view (no polling); readers
 // can refresh by hand. Hides itself if the thread is gone.
 import { useCallback, useEffect, useState } from "react";
-import { Box, Flex, HStack, Heading, Stack, Text, Textarea, chakra } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  HStack,
+  Heading,
+  Stack,
+  Text,
+  Textarea,
+  chakra,
+} from "@chakra-ui/react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
@@ -25,8 +34,8 @@ const C = {
   line: "rgba(255,255,255,0.12)",
   muted: "#9aa3bf",
   text: "#EDF2F7",
-  gold: "#FFD700",
-  ink: "#0b0e1d",
+  gold: "var(--hub-accent, #FFD700)",
+  ink: "var(--hub-on-accent, #0b0e1d)",
 };
 
 function ago(t: HubT, iso: string): string {
@@ -37,7 +46,13 @@ function ago(t: HubT, iso: string): string {
   return t("time.days", { n: Math.floor(s / 86400) });
 }
 
-export function PersonAvatar({ p, size = 32 }: { p: HubPerson | null; size?: number }) {
+export function PersonAvatar({
+  p,
+  size = 32,
+}: {
+  p: HubPerson | null;
+  size?: number;
+}) {
   const [broken, setBroken] = useState(false);
   if (p?.avatarUrl && !broken) {
     return (
@@ -49,7 +64,13 @@ export function PersonAvatar({ p, size = 32 }: { p: HubPerson | null; size?: num
         height={size}
         loading="lazy"
         onError={() => setBroken(true)}
-        style={{ width: size, height: size, borderRadius: 999, objectFit: "cover", flexShrink: 0 }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 999,
+          objectFit: "cover",
+          flexShrink: 0,
+        }}
       />
     );
   }
@@ -172,7 +193,11 @@ function CommentItem({
         <PersonAvatar p={c.author} size={isReply ? 24 : 30} />
         <Box minW={0} flex="1">
           <HStack gap={2} flexWrap="wrap">
-            <Text fontSize="sm" fontWeight="600" color={c.deleted ? C.muted : C.text}>
+            <Text
+              fontSize="sm"
+              fontWeight="600"
+              color={c.deleted ? C.muted : C.text}
+            >
               {c.author ? `@${c.author.username}` : t("thread.deleted")}
             </Text>
             <Text fontSize="xs" color={C.muted}>
@@ -181,7 +206,13 @@ function CommentItem({
             </Text>
           </HStack>
           {!c.deleted && (
-            <Text fontSize="sm" color="#c7cde0" whiteSpace="pre-wrap" wordBreak="break-word" mt={1}>
+            <Text
+              fontSize="sm"
+              color="#c7cde0"
+              whiteSpace="pre-wrap"
+              wordBreak="break-word"
+              mt={1}
+            >
               {c.content}
             </Text>
           )}
@@ -201,7 +232,13 @@ function CommentItem({
           )}
           {replyComposer}
           {c.replies.length > 0 && (
-            <Stack gap={3} mt={3} pl={3} borderLeft="2px solid" borderColor={C.line}>
+            <Stack
+              gap={3}
+              mt={3}
+              pl={3}
+              borderLeft="2px solid"
+              borderColor={C.line}
+            >
               {c.replies.map((r) => (
                 <CommentItem key={r.id} c={r} isReply />
               ))}
@@ -215,7 +252,13 @@ function CommentItem({
 
 type Pending = { text: string; parentId?: string } | null;
 
-export default function HubThread({ slug, gameName }: { slug: string; gameName: string }) {
+export default function HubThread({
+  slug,
+  gameName,
+}: {
+  slug: string;
+  gameName: string;
+}) {
   const { user, loading } = useAuth();
   const t = useHubT();
   const [thread, setThread] = useState<Thread | null>(null);
@@ -230,7 +273,9 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
   const [resetKey, setResetKey] = useState(0);
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/hubs/${slug}/thread`, { cache: "no-store" }).catch(() => null);
+    const r = await fetch(`/api/hubs/${slug}/thread`, {
+      cache: "no-store",
+    }).catch(() => null);
     if (!r) return;
     if (r.status === 404) {
       setGone(true);
@@ -254,7 +299,10 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
         const r = await fetch(`/api/hubs/${slug}/thread/comments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: text, ...(parentId ? { parentCommentId: parentId } : {}) }),
+          body: JSON.stringify({
+            content: text,
+            ...(parentId ? { parentCommentId: parentId } : {}),
+          }),
         });
         const d = await r.json().catch(() => null);
         if (!r.ok) {
@@ -263,11 +311,15 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
               ? t("thread.signInAgain")
               : r.status === 429
                 ? t("errors.slowDown")
-                : (typeof d?.message === "string" && d.message) || t("errors.generic"),
+                : (typeof d?.message === "string" && d.message) ||
+                  t("errors.generic"),
           );
           return false;
         }
-        track("hub_thread_reply", { slug, threaded: parentId ? "true" : "false" });
+        track("hub_thread_reply", {
+          slug,
+          threaded: parentId ? "true" : "false",
+        });
         if (d?.flagged) {
           setNote(t("thread.held"));
         }
@@ -308,7 +360,12 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
       t
         ? {
             ...t,
-            comments: [...t.comments, ...d.comments.filter((x) => !t.comments.some((y) => y.id === x.id))],
+            comments: [
+              ...t.comments,
+              ...d.comments.filter(
+                (x) => !t.comments.some((y) => y.id === x.id),
+              ),
+            ],
             nextCursor: d.nextCursor,
           }
         : d,
@@ -325,12 +382,24 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
       bg={C.panel}
       borderRadius="18px"
       border="1px solid"
-      borderColor="rgba(255,215,0,0.35)"
+      borderColor="var(--hub-accent-line, rgba(255,215,0,0.35))"
       p={{ base: 5, md: 6 }}
       scrollMarginTop="80px"
     >
-      <HStack justify="space-between" align="baseline" flexWrap="wrap" gap={2} mb={4}>
-        <Heading as="h2" id="launch-thread-h" fontFamily="heading" fontSize={{ base: "xl", md: "2xl" }} color="white">
+      <HStack
+        justify="space-between"
+        align="baseline"
+        flexWrap="wrap"
+        gap={2}
+        mb={4}
+      >
+        <Heading
+          as="h2"
+          id="launch-thread-h"
+          fontFamily="heading"
+          fontSize={{ base: "xl", md: "2xl" }}
+          color="white"
+        >
           {t("thread.title", { game: gameName })}
         </Heading>
         <chakra.button
@@ -352,7 +421,13 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
         </Text>
       ) : (
         <>
-          <Box bg={C.card} borderRadius="14px" p={4} border="1px solid" borderColor={C.line}>
+          <Box
+            bg={C.card}
+            borderRadius="14px"
+            p={4}
+            border="1px solid"
+            borderColor={C.line}
+          >
             <HStack gap={3} mb={2}>
               <PersonAvatar p={thread.post.author} size={36} />
               <Box>
@@ -364,13 +439,22 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
                 </Text>
               </Box>
             </HStack>
-            <Text color={C.text} whiteSpace="pre-wrap" wordBreak="break-word" lineHeight="1.6">
+            <Text
+              color={C.text}
+              whiteSpace="pre-wrap"
+              wordBreak="break-word"
+              lineHeight="1.6"
+            >
               {thread.post.content}
             </Text>
             <Text fontSize="xs" color={C.muted} mt={2}>
               {thread.post.commentCount.toLocaleString("en-US")}{" "}
-              {t(thread.post.commentCount === 1 ? "thread.replies.one" : "thread.replies.other")} ·{" "}
-              {t("thread.alsoInApp.web")}
+              {t(
+                thread.post.commentCount === 1
+                  ? "thread.replies.one"
+                  : "thread.replies.other",
+              )}{" "}
+              · {t("thread.alsoInApp.web")}
             </Text>
           </Box>
 
@@ -400,13 +484,16 @@ export default function HubThread({ slug, gameName }: { slug: string; gameName: 
                   key={c.id}
                   c={c}
                   replyOpen={replyTo === c.id}
-                  onReplyToggle={() => setReplyTo((r) => (r === c.id ? null : c.id))}
+                  onReplyToggle={() =>
+                    setReplyTo((r) => (r === c.id ? null : c.id))
+                  }
                   replyComposer={
                     replyTo === c.id ? (
                       <Box mt={2}>
                         <Composer
                           placeholder={t("thread.replyTo", {
-                            user: c.author?.username ?? t("thread.replyToFallback"),
+                            user:
+                              c.author?.username ?? t("thread.replyToFallback"),
                           })}
                           busy={busy}
                           autoFocus

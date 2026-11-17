@@ -4,9 +4,17 @@
 
 export const CRITERIA = [
   { key: "fun", label: "Fun", hint: "How fun is it to actually play?" },
-  { key: "performance", label: "Performance", hint: "Frame rate, bugs, load times" },
+  {
+    key: "performance",
+    label: "Performance",
+    hint: "Frame rate, bugs, load times",
+  },
   { key: "value", label: "Value", hint: "Worth what you paid?" },
-  { key: "presentation", label: "Look and sound", hint: "Visuals, audio, style" },
+  {
+    key: "presentation",
+    label: "Look and sound",
+    hint: "Visuals, audio, style",
+  },
   { key: "story", label: "Story", hint: "Skip it if the game has none" },
 ] as const;
 export type CriterionKey = (typeof CRITERIA)[number]["key"];

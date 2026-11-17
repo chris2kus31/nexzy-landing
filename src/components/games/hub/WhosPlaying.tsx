@@ -5,7 +5,14 @@
 // readers only (public profiles, never team accounts); signed-out readers see
 // the count and a sign-in prompt. Hidden until someone is in.
 import { useCallback, useEffect, useState } from "react";
-import { Box, HStack, Heading, SimpleGrid, Text, chakra } from "@chakra-ui/react";
+import {
+  Box,
+  HStack,
+  Heading,
+  SimpleGrid,
+  Text,
+  chakra,
+} from "@chakra-ui/react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
@@ -19,11 +26,17 @@ const C = {
   line: "rgba(255,255,255,0.12)",
   muted: "#9aa3bf",
   text: "#EDF2F7",
-  gold: "#FFD700",
-  ink: "#0b0e1d",
+  gold: "var(--hub-accent, #FFD700)",
+  ink: "var(--hub-on-accent, #0b0e1d)",
 };
 
-export default function WhosPlaying({ slug, gameName }: { slug: string; gameName: string }) {
+export default function WhosPlaying({
+  slug,
+  gameName,
+}: {
+  slug: string;
+  gameName: string;
+}) {
   const { user, loading } = useAuth();
   const t = useHubT();
   const [page, setPage] = useState<HubPlayersPage | null>(null);
@@ -33,7 +46,9 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/hubs/${slug}/players`, { cache: "no-store" }).catch(() => null);
+    const r = await fetch(`/api/hubs/${slug}/players`, {
+      cache: "no-store",
+    }).catch(() => null);
     if (!r || !r.ok) return;
     const d = (await r.json()) as HubPlayersPage;
     setPage(d);
@@ -53,7 +68,10 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
     ).catch(() => null);
     if (!r || !r.ok) return;
     const d = (await r.json()) as HubPlayersPage;
-    setItems((prev) => [...prev, ...(d.items ?? []).filter((x) => !prev.some((p) => p.id === x.id))]);
+    setItems((prev) => [
+      ...prev,
+      ...(d.items ?? []).filter((x) => !prev.some((p) => p.id === x.id)),
+    ]);
     setPage(d);
   }, [page, slug]);
 
@@ -62,13 +80,19 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
       setBusyId(p.id);
       setError(null);
       const next = !p.following;
-      setItems((prev) => prev.map((x) => (x.id === p.id ? { ...x, following: next } : x)));
+      setItems((prev) =>
+        prev.map((x) => (x.id === p.id ? { ...x, following: next } : x)),
+      );
       try {
-        const r = await fetch(`/api/users/${p.id}/follow`, { method: next ? "POST" : "DELETE" });
+        const r = await fetch(`/api/users/${p.id}/follow`, {
+          method: next ? "POST" : "DELETE",
+        });
         if (!r.ok) throw new Error(String(r.status));
         if (next) track("hub_follow", { slug });
       } catch {
-        setItems((prev) => prev.map((x) => (x.id === p.id ? { ...x, following: !next } : x)));
+        setItems((prev) =>
+          prev.map((x) => (x.id === p.id ? { ...x, following: !next } : x)),
+        );
         setError(t("errors.generic"));
       } finally {
         setBusyId(null);
@@ -90,8 +114,20 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
       p={{ base: 5, md: 6 }}
       scrollMarginTop="80px"
     >
-      <HStack justify="space-between" align="baseline" flexWrap="wrap" gap={2} mb={4}>
-        <Heading as="h2" id="whos-playing-h" fontFamily="heading" fontSize={{ base: "xl", md: "2xl" }} color="white">
+      <HStack
+        justify="space-between"
+        align="baseline"
+        flexWrap="wrap"
+        gap={2}
+        mb={4}
+      >
+        <Heading
+          as="h2"
+          id="whos-playing-h"
+          fontFamily="heading"
+          fontSize={{ base: "xl", md: "2xl" }}
+          color="white"
+        >
           {t("players.title", { game: gameName })}
         </Heading>
         <Text fontSize="sm" color={C.muted}>
@@ -128,14 +164,30 @@ export default function WhosPlaying({ slug, gameName }: { slug: string; gameName
         <>
           <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap={3}>
             {items.map((p) => (
-              <HStack key={p.id} bg={C.card} borderRadius="12px" p={3} gap={3} border="1px solid" borderColor={C.line}>
+              <HStack
+                key={p.id}
+                bg={C.card}
+                borderRadius="12px"
+                p={3}
+                gap={3}
+                border="1px solid"
+                borderColor={C.line}
+              >
                 <PersonAvatar p={p} size={36} />
                 <Box minW={0} flex="1">
-                  <Text fontSize="sm" fontWeight="600" color={C.text} lineClamp={1}>
+                  <Text
+                    fontSize="sm"
+                    fontWeight="600"
+                    color={C.text}
+                    lineClamp={1}
+                  >
                     @{p.username}
                   </Text>
                   <Text fontSize="xs" color={C.muted}>
-                    {[p.dayOne ? t("players.dayOne") : null, p.rated ? t("players.rated") : null]
+                    {[
+                      p.dayOne ? t("players.dayOne") : null,
+                      p.rated ? t("players.rated") : null,
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </Text>

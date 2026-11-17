@@ -104,7 +104,7 @@ export function ShortVersion({
         fontSize="xs"
         fontWeight="700"
         letterSpacing="0.08em"
-        color="#FFD700"
+        color="var(--hub-accent, #FFD700)"
         mb={2}
       >
         {t("shortVersion.title")}
@@ -158,7 +158,7 @@ function FactCard({ fact, t }: { fact: HubFact; t: HubT }) {
         fontSize="xs"
         fontWeight="700"
         letterSpacing="0.06em"
-        color="#FFD700"
+        color="var(--hub-accent, #FFD700)"
       >
         {fact.label.toUpperCase()}
       </Text>
@@ -338,7 +338,7 @@ export function EditionsTable({
                 <td
                   style={{
                     ...cell,
-                    color: "#FFD700",
+                    color: "var(--hub-accent, #FFD700)",
                     whiteSpace: "nowrap",
                     fontFamily: "var(--chakra-fonts-title)",
                   }}

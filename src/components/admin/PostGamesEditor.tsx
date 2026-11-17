@@ -21,6 +21,7 @@ import {
   removePostGame,
   searchGamesForLink,
   searchIgdb,
+  igdbAddonLabel,
   importIgdbGameToPost,
   getGameVideos,
   getGameScreenshots,
@@ -618,6 +619,20 @@ export default function PostGamesEditor({
                   ? ` (${new Date(g.first_release_date * 1000).getFullYear()})`
                   : ""}
               </Text>
+              {igdbAddonLabel(g.gameType) && (
+                <Text
+                  fontSize="2xs"
+                  fontWeight="semibold"
+                  color="whiteAlpha.700"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.300"
+                  borderRadius="sm"
+                  px={1.5}
+                  flexShrink={0}
+                >
+                  {igdbAddonLabel(g.gameType)}
+                </Text>
+              )}
               <Button
                 size="xs"
                 {...primaryBtn}

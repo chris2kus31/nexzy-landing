@@ -7,7 +7,8 @@
 // (a rewrite, not a redirect — Apple rejects redirects on this file).
 //
 // /blog/* is always on. /games/* is GATED behind GAMES_DEEPLINK_ENABLED and
-// /r/* (room invites) behind ROOM_INVITES_DEEPLINK_ENABLED, for the same reason:
+// /r/* (room invites) behind ROOM_INVITES_DEEPLINK_ENABLED and /drops/* behind
+// DROPS_DEEPLINK_ENABLED, for the same reason:
 // the server AASA is read by ALREADY-INSTALLED apps, so adding /games before
 // the app build that ships app/games/[slug].tsx is live in the App Store would
 // make installed OLD apps grab game links with no route to show. The mobile app
@@ -29,6 +30,11 @@ function buildAasa() {
   // (1.1.11) is live in the store; older installed apps have no room screen.
   if (process.env.ROOM_INVITES_DEEPLINK_ENABLED === "true") {
     components.push({ "/": "/r/*", comment: "Squad Room invites" });
+  }
+  // Drops (/drops/*) — only once the app build with drop screens (1.1.11)
+  // is live in the store; older installed apps have no drop screen.
+  if (process.env.DROPS_DEEPLINK_ENABLED === "true") {
+    components.push({ "/": "/drops/*", comment: "Drops and shared builds" });
   }
   return {
     applinks: {

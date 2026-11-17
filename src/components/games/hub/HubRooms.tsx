@@ -25,9 +25,9 @@ const C = {
   line: "rgba(255,255,255,0.12)",
   muted: "#9aa3bf",
   text: "#EDF2F7",
-  gold: "#FFD700",
-  live: "#7EE2A0",
-  ink: "#0b0e1d",
+  gold: "var(--hub-accent, #FFD700)",
+  live: "var(--hub-live, #7EE2A0)",
+  ink: "var(--hub-on-accent, #0b0e1d)",
 };
 
 const SHOW = 6;

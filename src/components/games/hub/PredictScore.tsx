@@ -17,7 +17,11 @@ export interface SettledVerdict {
   band: string;
 }
 
-export default function PredictScore({ settled }: { settled?: SettledVerdict | null }) {
+export default function PredictScore({
+  settled,
+}: {
+  settled?: SettledVerdict | null;
+}) {
   const { slug, live, me, busy, predict, error } = useHubLive();
   const t = useHubT();
   // Bands and their order come from the API with the wording.
@@ -51,16 +55,22 @@ export default function PredictScore({ settled }: { settled?: SettledVerdict | n
               : t("predict.crowdCount", {
                   count: tally.total.toLocaleString("en-US"),
                 })}{" "}
-            {t.parts("predict.gaveIt", { score: settled.score.toFixed(1) }).map(
-              (p, i) =>
+            {t
+              .parts("predict.gaveIt", { score: settled.score.toFixed(1) })
+              .map((p, i) =>
                 p.token === "score" ? (
-                  <Text key={i} as="span" fontFamily="title" color="#FFD700">
+                  <Text
+                    key={i}
+                    as="span"
+                    fontFamily="title"
+                    color="var(--hub-accent, #FFD700)"
+                  >
                     {p.text}
                   </Text>
                 ) : (
                   p.text
                 ),
-            )}
+              )}
           </Text>
           {calledIt !== null && (
             <Text
@@ -83,7 +93,7 @@ export default function PredictScore({ settled }: { settled?: SettledVerdict | n
           const pct = tally.total
             ? Math.round(((tally[b] ?? 0) / tally.total) * 100)
             : 0;
-          const accent = right ? "#7EE2A0" : "#FFD700";
+          const accent = right ? "#7EE2A0" : "var(--hub-accent, #FFD700)";
           return (
             <chakra.button
               key={b}
@@ -96,12 +106,20 @@ export default function PredictScore({ settled }: { settled?: SettledVerdict | n
               textAlign="left"
               bg="#11152b"
               border="1px solid"
-              borderColor={right ? "#7EE2A0" : on ? "#FFD700" : "whiteAlpha.200"}
+              borderColor={
+                right
+                  ? "#7EE2A0"
+                  : on
+                    ? "var(--hub-accent, #FFD700)"
+                    : "whiteAlpha.200"
+              }
               borderRadius="12px"
               p={4}
               cursor={live.locked ? "default" : "pointer"}
               transition="border-color 0.15s"
-              _hover={live.locked ? {} : { borderColor: "#FFD700" }}
+              _hover={
+                live.locked ? {} : { borderColor: "var(--hub-accent, #FFD700)" }
+              }
             >
               {showResults && (
                 <Box
@@ -116,7 +134,13 @@ export default function PredictScore({ settled }: { settled?: SettledVerdict | n
               <Text
                 fontFamily="title"
                 fontSize="xl"
-                color={right ? "#7EE2A0" : on ? "#FFD700" : "white"}
+                color={
+                  right
+                    ? "#7EE2A0"
+                    : on
+                      ? "var(--hub-accent, #FFD700)"
+                      : "white"
+                }
               >
                 {range(b)}
               </Text>
@@ -142,7 +166,9 @@ export default function PredictScore({ settled }: { settled?: SettledVerdict | n
       </SimpleGrid>
       <Text fontSize="xs" color="#9aa3bf" mt={3}>
         {settled
-          ? t("predict.foot.settled", { count: tally.total.toLocaleString("en-US") })
+          ? t("predict.foot.settled", {
+              count: tally.total.toLocaleString("en-US"),
+            })
           : live.locked
             ? t("predict.foot.locked", {
                 count: tally.total.toLocaleString("en-US"),

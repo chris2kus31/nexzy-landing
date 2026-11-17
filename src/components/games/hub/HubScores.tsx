@@ -4,7 +4,15 @@
 // first page of written reviews from build time (crawlable); on mount we
 // fetch fresh numbers once (no polling). Writes go through /api/hubs/* (BFF).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, HStack, SimpleGrid, Stack, Text, Textarea, chakra } from "@chakra-ui/react";
+import {
+  Box,
+  HStack,
+  SimpleGrid,
+  Stack,
+  Text,
+  Textarea,
+  chakra,
+} from "@chakra-ui/react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import SignInModal from "@/components/auth/SignInModal";
 import { track } from "@/lib/analytics";
@@ -30,8 +38,8 @@ const C = {
   line: "rgba(255,255,255,0.12)",
   muted: "#9aa3bf",
   text: "#EDF2F7",
-  gold: "#FFD700",
-  ink: "#0b0e1d",
+  gold: "var(--hub-accent, #FFD700)",
+  ink: "var(--hub-on-accent, #0b0e1d)",
   good: "#7EE2A0",
   warn: "#FFB86B",
 };
@@ -102,7 +110,9 @@ export default function HubScores({
   const t = useHubT();
   const [scores, setScores] = useState<Scores>(initialScores);
   const [reviews, setReviews] = useState<HubReview[]>(initialReviews.items);
-  const [cursor, setCursor] = useState<string | null>(initialReviews.nextCursor);
+  const [cursor, setCursor] = useState<string | null>(
+    initialReviews.nextCursor,
+  );
   const [me, setMe] = useState<MyReviewState | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -115,8 +125,12 @@ export default function HubScores({
 
   const refreshPublic = useCallback(async () => {
     const [s, r] = await Promise.all([
-      fetch(`/api/hubs/${slug}/scores`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
-      fetch(`/api/hubs/${slug}/reviews`).then((x) => (x.ok ? x.json() : null)).catch(() => null),
+      fetch(`/api/hubs/${slug}/scores`)
+        .then((x) => (x.ok ? x.json() : null))
+        .catch(() => null),
+      fetch(`/api/hubs/${slug}/reviews`)
+        .then((x) => (x.ok ? x.json() : null))
+        .catch(() => null),
     ]);
     if (s) setScores(s as Scores);
     if (r) {
@@ -131,7 +145,9 @@ export default function HubScores({
   }, [refreshPublic]);
 
   const loadMe = useCallback(async (): Promise<MyReviewState | null> => {
-    const r = await fetch(`/api/hubs/${slug}/reviews/me`, { cache: "no-store" }).catch(() => null);
+    const r = await fetch(`/api/hubs/${slug}/reviews/me`, {
+      cache: "no-store",
+    }).catch(() => null);
     const d = r && r.ok ? ((await r.json()) as MyReviewState) : null;
     setMe(d);
     return d;
@@ -150,10 +166,13 @@ export default function HubScores({
     async (state: MyReviewState | null) => {
       setError(null);
       if (!state?.canReview) {
-        if (state?.reason) setError(reasonText(t, state.reason, gameName, scores.opensAt));
+        if (state?.reason)
+          setError(reasonText(t, state.reason, gameName, scores.opensAt));
         return;
       }
-      const r = await fetch(`/api/hubs/${slug}/reviews/start`, { method: "POST" }).catch(() => null);
+      const r = await fetch(`/api/hubs/${slug}/reviews/start`, {
+        method: "POST",
+      }).catch(() => null);
       if (!r || !r.ok) {
         setError(r ? await readError(t, r) : t("errors.network"));
         return;
@@ -169,7 +188,9 @@ export default function HubScores({
                 performance: mine.criteria.performance,
                 value: mine.criteria.value,
                 presentation: mine.criteria.presentation,
-                ...(mine.criteria.story != null ? { story: mine.criteria.story } : {}),
+                ...(mine.criteria.story != null
+                  ? { story: mine.criteria.story }
+                  : {}),
               },
               storyNa: mine.criteria.story == null,
               platform: mine.platform,
@@ -277,7 +298,10 @@ export default function HubScores({
   const share = useCallback(
     async (reviewId: string, score: number) => {
       const url = `${window.location.origin}/games/${slug}/rated/${reviewId}`;
-      const text = t("scores.shareText", { game: gameName, score: score.toFixed(1) });
+      const text = t("scores.shareText", {
+        game: gameName,
+        score: score.toFixed(1),
+      });
       setShareNote(null);
       try {
         if (typeof navigator.share === "function") {
@@ -298,10 +322,15 @@ export default function HubScores({
 
   const loadMore = useCallback(async () => {
     if (!cursor) return;
-    const r = await fetch(`/api/hubs/${slug}/reviews?cursor=${encodeURIComponent(cursor)}`).catch(() => null);
+    const r = await fetch(
+      `/api/hubs/${slug}/reviews?cursor=${encodeURIComponent(cursor)}`,
+    ).catch(() => null);
     if (!r || !r.ok) return;
     const d = (await r.json()) as HubReviewPage;
-    setReviews((prev) => [...prev, ...d.items.filter((x) => !prev.some((p) => p.id === x.id))]);
+    setReviews((prev) => [
+      ...prev,
+      ...d.items.filter((x) => !prev.some((p) => p.id === x.id)),
+    ]);
     setCursor(d.nextCursor);
   }, [cursor, slug]);
 
@@ -336,16 +365,23 @@ export default function HubScores({
                 : t("scores.opens")
               : p.score != null
                 ? t("scores.count", { count: p.count.toLocaleString("en-US") })
-                : t(p.needed === 1 ? "scores.needed.one" : "scores.needed.other", {
-                    n: p.needed,
-                  })
+                : t(
+                    p.needed === 1
+                      ? "scores.needed.one"
+                      : "scores.needed.other",
+                    {
+                      n: p.needed,
+                    },
+                  )
           }
         />
       </SimpleGrid>
 
       {(p.recommended || p.split || p.frozen || scores.settled) && (
         <HStack gap={2} mt={3} flexWrap="wrap">
-          {p.recommended && <Tag color={C.good}>{t("scores.tag.recommended")}</Tag>}
+          {p.recommended && (
+            <Tag color={C.good}>{t("scores.tag.recommended")}</Tag>
+          )}
           {p.split && <Tag color={C.warn}>{t("scores.tag.split")}</Tag>}
           {p.frozen && <Tag color={C.warn}>{t("scores.tag.frozen")}</Tag>}
           {scores.settled && (
@@ -374,8 +410,12 @@ export default function HubScores({
             ))}
           </HStack>
           <HStack justify="space-between" mt={1}>
-            <Text fontSize="xs" color={C.muted}>1</Text>
-            <Text fontSize="xs" color={C.muted}>10</Text>
+            <Text fontSize="xs" color={C.muted}>
+              1
+            </Text>
+            <Text fontSize="xs" color={C.muted}>
+              10
+            </Text>
           </HStack>
         </Box>
       )}
@@ -383,7 +423,13 @@ export default function HubScores({
       {/* The viewer's own rating, or the button to rate. */}
       <Box mt={5}>
         {mine && !formOpen ? (
-          <Box bg={C.card} border="1px solid" borderColor={C.line} borderRadius="12px" p={4}>
+          <Box
+            bg={C.card}
+            border="1px solid"
+            borderColor={C.line}
+            borderRadius="12px"
+            p={4}
+          >
             <HStack justify="space-between" flexWrap="wrap" gap={2}>
               <Text color={C.text}>
                 {t("scores.yourRating")}{" "}
@@ -393,17 +439,27 @@ export default function HubScores({
               </Text>
               <HStack gap={2} flexWrap="wrap">
                 {mine.status !== "removed" && (
-                  <PrimaryButton onClick={() => void share(mine.id, mine.score)} disabled={busy}>
+                  <PrimaryButton
+                    onClick={() => void share(mine.id, mine.score)}
+                    disabled={busy}
+                  >
                     {t("scores.share")}
                   </PrimaryButton>
                 )}
                 {me?.canReview && (
-                  <GhostButton onClick={() => void startForm(me)} disabled={busy}>
+                  <GhostButton
+                    onClick={() => void startForm(me)}
+                    disabled={busy}
+                  >
                     {t("scores.edit")}
                   </GhostButton>
                 )}
                 <GhostButton onClick={() => void remove()} disabled={busy}>
-                  {t(confirmDelete ? "scores.removeConfirm.web" : "scores.remove")}
+                  {t(
+                    confirmDelete
+                      ? "scores.removeConfirm.web"
+                      : "scores.remove",
+                  )}
                 </GhostButton>
               </HStack>
             </HStack>
@@ -473,14 +529,19 @@ export default function HubScores({
           </Stack>
           {cursor && (
             <Box mt={3}>
-              <GhostButton onClick={() => void loadMore()}>{t("scores.more")}</GhostButton>
+              <GhostButton onClick={() => void loadMore()}>
+                {t("scores.more")}
+              </GhostButton>
             </Box>
           )}
         </Box>
       )}
 
       <Text fontSize="xs" color={C.muted} mt={5}>
-        <a href="/how-player-scores-work" style={{ color: C.muted, textDecoration: "underline" }}>
+        <a
+          href="/how-player-scores-work"
+          style={{ color: C.muted, textDecoration: "underline" }}
+        >
           {t("scores.how")}
         </a>
       </Text>
@@ -513,11 +574,29 @@ function ScoreCard({
   gold?: boolean;
 }) {
   return (
-    <Box bg={C.card} border="1px solid" borderColor={gold ? "rgba(255,215,0,0.35)" : C.line} borderRadius="14px" p={5}>
-      <Text fontSize="xs" letterSpacing="0.08em" textTransform="uppercase" color={C.muted}>
+    <Box
+      bg={C.card}
+      border="1px solid"
+      borderColor={
+        gold ? "var(--hub-accent-line, rgba(255,215,0,0.35))" : C.line
+      }
+      borderRadius="14px"
+      p={5}
+    >
+      <Text
+        fontSize="xs"
+        letterSpacing="0.08em"
+        textTransform="uppercase"
+        color={C.muted}
+      >
         {label}
       </Text>
-      <Text fontFamily="title" fontSize={{ base: "4xl", md: "5xl" }} lineHeight="1.1" color={gold ? C.gold : "white"}>
+      <Text
+        fontFamily="title"
+        fontSize={{ base: "4xl", md: "5xl" }}
+        lineHeight="1.1"
+        color={gold ? C.gold : "white"}
+      >
         {score != null ? fmt1(score) : "--"}
         {score != null && outOf && (
           <Text as="span" fontSize="lg" color={C.muted}>
@@ -533,15 +612,35 @@ function ScoreCard({
   );
 }
 
-function Tag({ color, children }: { color: string; children: React.ReactNode }) {
+function Tag({
+  color,
+  children,
+}: {
+  color: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Text as="span" fontSize="xs" fontWeight="600" color={color} border="1px solid" borderColor={color} borderRadius="999px" px={3} py={1}>
+    <Text
+      as="span"
+      fontSize="xs"
+      fontWeight="600"
+      color={color}
+      border="1px solid"
+      borderColor={color}
+      borderRadius="999px"
+      px={3}
+      py={1}
+    >
       {children}
     </Text>
   );
 }
 
-function PrimaryButton(props: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+function PrimaryButton(props: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <chakra.button
       type="button"
@@ -561,7 +660,11 @@ function PrimaryButton(props: { onClick: () => void; disabled?: boolean; childre
   );
 }
 
-function GhostButton(props: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+function GhostButton(props: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <chakra.button
       type="button"
@@ -584,7 +687,12 @@ function GhostButton(props: { onClick: () => void; disabled?: boolean; children:
   );
 }
 
-function Chip(props: { on: boolean; onClick: () => void; label: string; ariaLabel?: string }) {
+function Chip(props: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+  ariaLabel?: string;
+}) {
   return (
     <chakra.button
       type="button"
@@ -631,7 +739,13 @@ function RateForm({
 }) {
   const t = useHubT();
   return (
-    <Box bg={C.card} border="1px solid" borderColor={C.line} borderRadius="14px" p={{ base: 4, md: 5 }}>
+    <Box
+      bg={C.card}
+      border="1px solid"
+      borderColor={C.line}
+      borderRadius="14px"
+      p={{ base: 4, md: 5 }}
+    >
       <Text fontWeight="700" color="white" mb={1}>
         {t("rate.title", { game: gameName })}
       </Text>
@@ -651,12 +765,22 @@ function RateForm({
               <HStack justify="space-between" flexWrap="wrap" gap={1} mb={2}>
                 <Text color={C.text} fontWeight="600">
                   {cr.label}{" "}
-                  <Text as="span" fontSize="xs" color={C.muted} fontWeight="400">
+                  <Text
+                    as="span"
+                    fontSize="xs"
+                    color={C.muted}
+                    fontWeight="400"
+                  >
                     {cr.hint}
                   </Text>
                 </Text>
               </HStack>
-              <HStack gap={2} flexWrap="wrap" role="radiogroup" aria-label={cr.label}>
+              <HStack
+                gap={2}
+                flexWrap="wrap"
+                role="radiogroup"
+                aria-label={cr.label}
+              >
                 {[1, 2, 3, 4, 5].map((v) => (
                   <Chip
                     key={v}
@@ -781,7 +905,14 @@ function RateForm({
 function ReviewItem({ r }: { r: HubReview }) {
   const t = useHubT();
   return (
-    <Box as="article" bg={C.card} border="1px solid" borderColor={C.line} borderRadius="12px" p={4}>
+    <Box
+      as="article"
+      bg={C.card}
+      border="1px solid"
+      borderColor={C.line}
+      borderRadius="12px"
+      p={4}
+    >
       <HStack justify="space-between" align="start" gap={3}>
         <Box minW={0}>
           <Text color={C.text} fontWeight="600" lineClamp={1}>
@@ -800,7 +931,9 @@ function ReviewItem({ r }: { r: HubReview }) {
       {(r.dayOne || r.state !== "counted") && (
         <HStack gap={2} mt={2} flexWrap="wrap">
           {r.dayOne && <Tag color={C.gold}>{t("scores.dayOneReviewer")}</Tag>}
-          {r.state === "held" && <Tag color={C.muted}>{t("scores.notCounted")}</Tag>}
+          {r.state === "held" && (
+            <Tag color={C.muted}>{t("scores.notCounted")}</Tag>
+          )}
           {r.state === "team" && <Tag color={C.muted}>{t("scores.team")}</Tag>}
         </HStack>
       )}

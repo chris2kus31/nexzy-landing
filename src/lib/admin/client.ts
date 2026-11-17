@@ -2493,6 +2493,26 @@ export interface IgdbSearchHit {
   slug?: string;
   // Unix seconds (IGDB convention).
   first_release_date?: number;
+  /** IGDB game type (main_game, dlc, season, bundle...). The API lists
+   *  standalone games first, add-ons after; null when unknown. */
+  gameType?: string | null;
+}
+
+const STANDALONE_TYPES = new Set([
+  "main_game",
+  "remake",
+  "remaster",
+  "expanded_game",
+  "standalone_expansion",
+]);
+
+/** Short tag for an add-on hit ("DLC", "Season"); null for a real game. */
+export function igdbAddonLabel(type?: string | null): string | null {
+  if (!type || STANDALONE_TYPES.has(type)) return null;
+  if (type === "dlc" || type === "dlc_addon") return "DLC";
+  if (type === "pack_addon") return "Pack";
+  const words = type.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** Owner-only: search IGDB by name (candidates for the in-editor import). */

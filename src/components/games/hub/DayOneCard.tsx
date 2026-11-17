@@ -47,7 +47,7 @@ export default function DayOneCard({
     <Box
       bg="#11152b"
       border="1px solid"
-      borderColor="rgba(255,215,0,0.35)"
+      borderColor="var(--hub-accent-line, rgba(255,215,0,0.35))"
       borderRadius="16px"
       p={{ base: 4, md: 5 }}
     >
@@ -57,7 +57,7 @@ export default function DayOneCard({
             <Text
               fontFamily="title"
               fontSize={{ base: "3xl", md: "4xl" }}
-              color="#FFD700"
+              color="var(--hub-accent, #FFD700)"
               lineHeight="1"
               style={{ fontVariantNumeric: "tabular-nums" }}
               aria-live="polite"
@@ -73,7 +73,7 @@ export default function DayOneCard({
             <Text
               fontFamily="title"
               fontSize={{ base: "xl", md: "2xl" }}
-              color="#FFD700"
+              color="var(--hub-accent, #FFD700)"
               lineHeight="1.15"
             >
               {t(inIt ? "dayOne.title.in" : "dayOne.title.empty")}
@@ -91,9 +91,9 @@ export default function DayOneCard({
               onClick={leaveDayOne}
               disabled={busy}
               variant="outline"
-              borderColor="#FFD700"
-              color="#FFD700"
-              _hover={{ bg: "rgba(255,215,0,0.08)" }}
+              borderColor="var(--hub-accent, #FFD700)"
+              color="var(--hub-accent, #FFD700)"
+              _hover={{ bg: "var(--hub-accent-soft, rgba(255,215,0,0.08))" }}
               borderRadius="10px"
               title={t("dayOne.inHint") || undefined}
             >
@@ -103,10 +103,10 @@ export default function DayOneCard({
             <Button
               onClick={() => joinDayOne()}
               disabled={busy || live.locked}
-              bg="#FFD700"
-              color="#11152b"
+              bg="var(--hub-accent, #FFD700)"
+              color="var(--hub-on-accent, #11152b)"
               fontWeight="700"
-              _hover={{ bg: "#ffe24d" }}
+              _hover={{ bg: "var(--hub-accent-hover, #ffe24d)" }}
               borderRadius="10px"
             >
               {t("dayOne.cta")}
@@ -143,10 +143,18 @@ export default function DayOneCard({
                 borderRadius="999px"
                 fontSize="xs"
                 fontWeight="600"
-                bg={on ? "rgba(255,215,0,0.16)" : "whiteAlpha.100"}
-                color={on ? "#FFD700" : "#c7cde0"}
+                bg={
+                  on
+                    ? "var(--hub-accent-soft, rgba(255,215,0,0.16))"
+                    : "whiteAlpha.100"
+                }
+                color={on ? "var(--hub-accent, #FFD700)" : "#c7cde0"}
                 border="1px solid"
-                borderColor={on ? "rgba(255,215,0,0.5)" : "transparent"}
+                borderColor={
+                  on
+                    ? "var(--hub-accent-line, rgba(255,215,0,0.5))"
+                    : "transparent"
+                }
                 cursor={on ? "default" : "pointer"}
               >
                 {t(`platform.${p}`)}

@@ -42,6 +42,7 @@ import {
   createTaxonomyEntry,
   getPlatformFamilies,
   searchIgdb,
+  igdbAddonLabel,
   importGameByIgdbId,
   type IgdbSearchHit,
 } from "@/lib/admin/client";
@@ -1601,6 +1602,20 @@ function IgdbImportBox() {
                     >
                       {h.name}
                     </Text>
+                    {igdbAddonLabel(h.gameType) && (
+                      <Text
+                        fontSize="2xs"
+                        fontWeight="semibold"
+                        color="whiteAlpha.700"
+                        borderWidth="1px"
+                        borderColor="whiteAlpha.300"
+                        borderRadius="sm"
+                        px={1.5}
+                        flexShrink={0}
+                      >
+                        {igdbAddonLabel(h.gameType)}
+                      </Text>
+                    )}
                     <Text fontSize="xs" color="whiteAlpha.500">
                       {yearOf(h)}
                     </Text>

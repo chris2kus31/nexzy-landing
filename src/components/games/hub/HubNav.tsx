@@ -81,9 +81,9 @@ export default function HubNav({
                 whiteSpace="nowrap"
                 fontSize="sm"
                 fontWeight={on ? "700" : "600"}
-                color={on ? "#FFD700" : "#cfd5e6"}
+                color={on ? "var(--hub-accent, #FFD700)" : "#cfd5e6"}
                 borderBottom="2px solid"
-                borderColor={on ? "#FFD700" : "transparent"}
+                borderColor={on ? "var(--hub-accent, #FFD700)" : "transparent"}
                 _hover={{ color: "white" }}
               >
                 <a
