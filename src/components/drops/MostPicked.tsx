@@ -77,7 +77,7 @@ export default function MostPicked({
                 {k + 1}
               </Text>
               <Box w="40px" flexShrink={0}>
-                <CoverTile cover={p.cover} radius="5px" />
+                <CoverTile cover={p.cover} name={p.name} radius="5px" />
               </Box>
               <Box flex="1" minW={0}>
                 <Text fontWeight="700" truncate>

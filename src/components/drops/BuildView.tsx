@@ -136,7 +136,7 @@ export default function BuildView({
                     {p.badge ?? i + 1}
                   </Flex>
                   <Box w="30px" flexShrink={0}>
-                    <CoverTile cover={p.cover} radius="4px" />
+                    <CoverTile cover={p.cover} name={p.name} radius="4px" />
                   </Box>
                   <Box minW={0}>
                     <Text fontWeight="700">
