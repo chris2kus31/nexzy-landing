@@ -142,7 +142,14 @@ export interface TrendEntryRow {
   trend: {
     slug: string;
     hashtag: string;
-    images: { portrait: string; tall: string; link: string } | null;
+    /** feed: 720 px for cards (newer entries); portrait: the 1080 px share
+     *  file; link: the crawler preview. */
+    images: {
+      feed?: string;
+      portrait: string;
+      tall: string;
+      link: string;
+    } | null;
   } | null;
 }
 

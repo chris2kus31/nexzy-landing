@@ -46,8 +46,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   // Full public path from the API (chapter-aware); must be a safe local path.
   let path = "";
   let parentPath = "";
+  // Bulk imports (hub entries/guide pages) send every public page they touched
+  // so ONE IndexNow ping covers them all, even on an "update" event.
+  let indexPaths: string[] = [];
   const localPath = (v: unknown): string =>
-    typeof v === "string" && /^\/[a-z0-9\-/]+$/i.test(v) && !v.includes("//")
+    typeof v === "string" &&
+    // "_" is allowed: hub type and checklist keys may contain it.
+    /^\/[a-z0-9_\-/]+$/i.test(v) &&
+    !v.includes("//")
       ? v.replace(/\/+$/, "")
       : "";
   try {
@@ -55,6 +61,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     slug = typeof body?.slug === "string" ? body.slug : "";
     path = localPath(body?.path);
     parentPath = localPath(body?.parentPath);
+    if (Array.isArray(body?.indexPaths))
+      indexPaths = [
+        ...new Set(
+          (body.indexPaths as unknown[])
+            .map(localPath)
+            .filter((p): p is string => !!p),
+        ),
+      ].slice(0, 1000);
     if (
       body?.type === "guide" ||
       body?.type === "list" ||
@@ -111,9 +125,23 @@ export async function POST(req: NextRequest): Promise<Response> {
   // (a single feed-level freshness nudge, not per-URL spam).
   // Pings only on publish: an update/unpublish isn't a new URL for engines.
   if (event !== "publish") {
-    return NextResponse.json({ ok: true, revalidated: true, event });
+    // Bulk-import pages are new or changed URLs: submit them (one request).
+    const indexNowStatus = indexPaths.length
+      ? await pingIndexNow(indexPaths.map((p) => `${SITE_URL}${p}`))
+      : undefined;
+    return NextResponse.json({
+      ok: true,
+      revalidated: true,
+      event,
+      ...(indexNowStatus !== undefined ? { indexNowStatus } : {}),
+    });
   }
-  const urls = pagePath && indexable ? [`${SITE_URL}${pagePath}`] : [];
+  // Rewind episode stubs (/rewind/<slug>) are noindex on purpose; their day
+  // hub is found via the sitemap, so never submit the stub itself.
+  const urls =
+    pagePath && indexable && type !== "rewind"
+      ? [`${SITE_URL}${pagePath}`]
+      : [];
   const [indexNowStatus, webSubStatus] = await Promise.all([
     pingIndexNow(urls),
     pingWebSub(),

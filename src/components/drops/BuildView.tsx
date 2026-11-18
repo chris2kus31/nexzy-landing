@@ -50,7 +50,18 @@ export default function BuildView({
             bg={D.panel}
           >
             {image ? (
-              <Image src={image} alt={heading} w="100%" h="auto" />
+              // The page's main image (its largest paint): load it first and
+              // reserve its 4:5 box so nothing jumps when it arrives.
+              <Image
+                src={image}
+                alt={heading}
+                w="100%"
+                h="auto"
+                width={1080}
+                height={1350}
+                fetchPriority="high"
+                decoding="async"
+              />
             ) : (
               <Box p={{ base: 4, md: 5 }}>
                 <Text

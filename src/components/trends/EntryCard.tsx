@@ -13,7 +13,10 @@ export default function EntryCard({
   hashtag: string;
   entry: TrendEntryRow;
 }) {
-  const img = entry.trend?.images?.portrait ?? null;
+  // 720 px fits a card at under half the bytes of the 1080 px share file;
+  // entries rendered before it existed fall back to the share file.
+  const img =
+    entry.trend?.images?.feed ?? entry.trend?.images?.portrait ?? null;
   return (
     <NextLink href={entryPath(slug, entry.id)} style={{ display: "block" }}>
       <Box
@@ -38,6 +41,8 @@ export default function EntryCard({
               objectFit="cover"
               loading="lazy"
               decoding="async"
+              width={720}
+              height={900}
             />
           ) : (
             <Flex h="100%" align="center" justify="center" px={3}>
