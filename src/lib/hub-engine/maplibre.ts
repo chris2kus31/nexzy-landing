@@ -12,6 +12,8 @@
 //    plain <img> (no CORS), it reuses that copy and WebGL refuses it. A
 //    query flag gives the map its own browser cache entry. The CDN ignores
 //    query strings for caching, so it is still the same cached file there.
+import { baseZoom, imageCorners } from "@/lib/hub-engine/coords";
+
 type MapLibre = typeof import("maplibre-gl");
 
 let loading: Promise<MapLibre> | null = null;
@@ -61,6 +63,34 @@ export function fitWholeArt(
   m.on("resize", () => relax(false));
 }
 
+/** Lowest zoom a tile pyramid is cut from (make_tiles.py MINZ). */
+const TILES_MIN_ZOOM = 2;
+
+/**
+ * The style source that draws a template map's art: one picture ("image")
+ * or a tile pyramid ("tiles") that loads sharper tiles as readers zoom in.
+ * Both sit on the same corners, so pins and every other layer line up.
+ */
+export function artSource(map: {
+  kind: string;
+  url: string;
+  width: number;
+  height: number;
+}): import("maplibre-gl").SourceSpecification {
+  const corners = imageCorners(map.width, map.height);
+  if (map.kind === "tiles")
+    return {
+      type: "raster",
+      tiles: [map.url],
+      tileSize: 512,
+      minzoom: TILES_MIN_ZOOM,
+      maxzoom: Math.round(baseZoom(map.width, map.height)),
+      // Only request tiles over the art: [west, south, east, north].
+      bounds: [corners[3][0], corners[3][1], corners[1][0], corners[1][1]],
+    };
+  return { type: "image", url: mapArtUrl(map.url), coordinates: corners };
+}
+
 const CDN_HUB = "https://cdn.nexzyapp.com/hub/";
 
 /** Same-origin copy of a CDN art URL (the /cdn-hub rewrite in
@@ -93,6 +123,9 @@ export function artErrorRetry(
   let tried = false;
   return (ev: unknown) => {
     if ((ev as { sourceId?: string }).sourceId !== "art") return;
+    // A tile map loads hundreds of tiles: one missing tile is not a dead map.
+    if ((m.getSource("art") as { type?: string } | undefined)?.type !== "image")
+      return;
     const fb = mapArtFallbackUrl(artUrl);
     if (!tried && fb) {
       tried = true;

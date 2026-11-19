@@ -42,7 +42,7 @@ import {
   artErrorRetry,
   fitWholeArt,
   loadMapLibre,
-  mapArtUrl,
+  artSource,
 } from "@/lib/hub-engine/maplibre";
 import {
   entryPath,
@@ -346,11 +346,7 @@ export default function GuideMap({
           style: {
             version: 8,
             sources: {
-              art: {
-                type: "image",
-                url: mapArtUrl(map.url),
-                coordinates: corners,
-              },
+              art: artSource(map),
             },
             layers: [
               {

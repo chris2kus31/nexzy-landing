@@ -863,6 +863,8 @@ function MapsEditor({
             j === i
               ? {
                   ...x,
+                  // Replacing a tile map's art makes it a single picture.
+                  kind: "image" as const,
                   url: r.url,
                   width: r.width,
                   height: r.height,
@@ -994,6 +996,7 @@ function MapsEditor({
               </Labeled>
               <Box>
                 <Text fontSize="xs" color={C.faint}>
+                  {m.kind === "tiles" ? "Tile map · " : ""}
                   {m.width} x {m.height} px · art v{m.artVersion}
                 </Text>
                 <HStack mt={1} gap={2}>

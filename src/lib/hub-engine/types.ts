@@ -50,7 +50,10 @@ export interface HubEntryType {
 export interface HubMapDef {
   key: string;
   name: string;
-  kind: "image";
+  /** "image": one picture at `url`. "tiles": a 512px Web Mercator tile
+   *  pyramid at `url` ({z}/{x}/{y}), cut so its top zoom is the art at 1:1
+   *  (coords.ts baseZoom); width/height stay the art's pixel size for pins. */
+  kind: "image" | "tiles";
   url: string;
   width: number;
   height: number;
