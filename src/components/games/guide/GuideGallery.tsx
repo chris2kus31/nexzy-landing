@@ -379,7 +379,7 @@ export default function GuideGallery({
             >
               <NextImage
                 src={img.url}
-                alt=""
+                alt={label(img) || `Photo ${i + 1}`}
                 fill
                 sizes="88px"
                 style={{ objectFit: "cover" }}

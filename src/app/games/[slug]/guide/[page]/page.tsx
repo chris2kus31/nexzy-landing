@@ -13,6 +13,7 @@ import { guidePath, type HubResolvedBlock } from "@/lib/hub-engine/types";
 import { G } from "@/components/games/guide/GuideBits";
 import GuidePageBody from "@/components/games/guide/GuidePageBody";
 import { jsonLdString } from "@/lib/seo/jsonld";
+import { fitTitle } from "@/lib/seo/title";
 
 export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -51,16 +52,23 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug, page } = await params;
   const d = await load(slug, page);
   if (!d) return { title: "Page not found", robots: { index: false } };
-  const title = (d.page.seoTitle || `${d.page.title} - ${d.short} Guide`).slice(
-    0,
-    70,
+  const title = fitTitle(
+    d.page.seoTitle
+      ? [d.page.seoTitle]
+      : [
+          `${d.page.title} - ${d.short} Guide`,
+          `${d.page.title} - ${d.short}`,
+          d.page.title,
+        ],
   );
   const description = (
     d.page.seoDescription ||
     d.page.summary ||
     `${d.page.title} in ${d.short}: Nexzy's guide with maps, trackers and tips.`
   ).slice(0, 160);
-  const img = firstPhoto(d.page.blocks);
+  // No photo: the game's generated share card (not inherited, see above).
+  const img =
+    firstPhoto(d.page.blocks) ?? `${SITE_URL}/games/${slug}/opengraph-image`;
   return {
     title,
     description,
@@ -69,7 +77,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title,
       description,
       type: "article",
-      ...(img ? { images: [img] } : {}),
+      images: [img],
     },
   };
 }

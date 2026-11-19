@@ -85,7 +85,7 @@ export default function HubTrailers({
             <img
               key={current.youtubeId}
               src={bigThumb(current)}
-              alt=""
+              alt={current.title}
               loading="lazy"
               decoding="async"
               onLoad={(e) => {
@@ -189,7 +189,7 @@ export default function HubTrailers({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={thumb(t)}
-                    alt=""
+                    alt={t.title}
                     loading="lazy"
                     decoding="async"
                     style={{

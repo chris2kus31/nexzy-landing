@@ -281,6 +281,7 @@ function Body({
       )}
 
       <GuideContentsHub
+        topLevel
         slug={slug}
         config={config}
         pages={pages}

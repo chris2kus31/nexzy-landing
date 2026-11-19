@@ -37,6 +37,7 @@ import {
 import GuideMapScreen from "@/components/games/guide/GuideMapScreen";
 import { bestPin, floorsOf } from "@/lib/hub-engine/maps";
 import { jsonLdString } from "@/lib/seo/jsonld";
+import { fitTitle } from "@/lib/seo/title";
 
 export const revalidate = 300;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -120,12 +121,19 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const d = await load(slug, type, entry);
   if (!d) return { title: "Not found", robots: { index: false } };
   if ("mapOnly" in d) return { robots: { index: false } };
-  const title = `${d.entry.title} - ${d.short} ${d.t.label}`.slice(0, 70);
+  const title = fitTitle([
+    `${d.entry.title} - ${d.short} ${d.t.label}`,
+    `${d.entry.title} - ${d.short}`,
+    d.entry.title,
+  ]);
   const description = (
     d.entry.summary ||
     `${d.entry.title}: where it is in ${d.short}, how to get it and what it links to.`
   ).slice(0, 160);
-  const img = d.entry.media[0]?.url;
+  // No photo: the game's generated share card, not none (a page openGraph
+  // replaces the parent's, so it is not inherited).
+  const img =
+    d.entry.media[0]?.url ?? `${SITE_URL}/games/${slug}/opengraph-image`;
   return {
     title,
     description,
@@ -134,7 +142,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title,
       description,
       type: "article",
-      ...(img ? { images: [img] } : {}),
+      images: [img],
     },
   };
 }

@@ -177,6 +177,7 @@ export function GuideContentsHub({
   pages,
   counts,
   limit = 8,
+  topLevel = false,
 }: {
   slug: string;
   config: HubTemplateConfig;
@@ -184,6 +185,8 @@ export function GuideContentsHub({
   counts: Record<string, number> | null;
   /** Links per group before "All N" (the guide index shows everything). */
   limit?: number;
+  /** Hub only: the Guides column lists top-level pages, not sub-pages. */
+  topLevel?: boolean;
 }) {
   const groups = useGuideGroups(slug, config, pages, counts);
   if (!groups.length) return null;
@@ -198,52 +201,60 @@ export function GuideContentsHub({
         gap={3}
         alignItems="start"
       >
-        {groups.map((g) => (
-          <Box
-            key={g.key}
-            bg={G.panel}
-            border="1px solid"
-            borderColor={G.line}
-            borderRadius="14px"
-            p={3}
-          >
-            <Text
-              px={2.5}
-              pb={1.5}
-              fontSize="xs"
-              fontWeight="800"
-              color={G.muted}
-              textTransform="uppercase"
-              letterSpacing="0.06em"
+        {groups.map((g) => {
+          // Hub view: the Guides column lists top-level pages only (each
+          // parent page and the sidebar link its sub-pages), so every main
+          // guide is one click from the hub instead of behind "All N".
+          const top = topLevel && g.key === "guides";
+          const links = top ? g.links.filter((l) => !l.child) : g.links;
+          const max = top ? Math.max(MAX, 12) : MAX;
+          return (
+            <Box
+              key={g.key}
+              bg={G.panel}
+              border="1px solid"
+              borderColor={G.line}
+              borderRadius="14px"
+              p={3}
             >
-              {g.title}
-            </Text>
-            <Stack gap={0}>
-              {g.links.length === 0 && g.href && (
-                <LinkRow
-                  l={{
-                    key: g.key,
-                    href: g.href,
-                    label: `Open the ${g.title.toLowerCase()}`,
-                  }}
-                />
+              <Text
+                px={2.5}
+                pb={1.5}
+                fontSize="xs"
+                fontWeight="800"
+                color={G.muted}
+                textTransform="uppercase"
+                letterSpacing="0.06em"
+              >
+                {g.title}
+              </Text>
+              <Stack gap={0}>
+                {g.links.length === 0 && g.href && (
+                  <LinkRow
+                    l={{
+                      key: g.key,
+                      href: g.href,
+                      label: `Open the ${g.title.toLowerCase()}`,
+                    }}
+                  />
+                )}
+                {links.slice(0, max).map((l) => (
+                  <LinkRow key={l.key} l={l} />
+                ))}
+              </Stack>
+              {links.length > max && (
+                <Box px={2.5} pt={1.5}>
+                  <NextLink
+                    href={g.href ?? `/games/${slug}/guide`}
+                    style={{ color: G.gold, fontSize: 13, fontWeight: 700 }}
+                  >
+                    All {links.length}
+                  </NextLink>
+                </Box>
               )}
-              {g.links.slice(0, MAX).map((l) => (
-                <LinkRow key={l.key} l={l} />
-              ))}
-            </Stack>
-            {g.links.length > MAX && (
-              <Box px={2.5} pt={1.5}>
-                <NextLink
-                  href={g.href ?? `/games/${slug}/guide`}
-                  style={{ color: G.gold, fontSize: 13, fontWeight: 700 }}
-                >
-                  All {g.links.length}
-                </NextLink>
-              </Box>
-            )}
-          </Box>
-        ))}
+            </Box>
+          );
+        })}
       </SimpleGrid>
     </Box>
   );
