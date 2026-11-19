@@ -26,6 +26,7 @@ import {
   saveEngineDraft,
   setEngineEnabled,
   type EngineTemplate,
+  pingChangedEnginePages,
 } from "@/lib/admin/client-hub-engine";
 import type { HubTemplateConfig } from "@/lib/hub-engine/types";
 import {
@@ -223,6 +224,26 @@ export default function GuidesPanel() {
     if (gameId) void load(gameId);
   }, [gameId, load]);
 
+  // Search engines: resubmit pages changed in the last 24 hours (SQL edits
+  // never notify the site on their own).
+  const pingChanged = async (id: string) => {
+    setBusy(true);
+    setErr([]);
+    setNote("");
+    try {
+      const r = await pingChangedEnginePages(id, 24);
+      setNote(
+        r.count
+          ? `Sent ${r.count} changed page${r.count === 1 ? "" : "s"} to search engines (IndexNow).`
+          : "No pages changed in the last 24 hours.",
+      );
+    } catch (e) {
+      setErr(errorLines(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const act = async (fn: () => Promise<EngineTemplate>, done: string) => {
     setBusy(true);
     setErr([]);
@@ -371,6 +392,14 @@ export default function GuidesPanel() {
               >
                 {tpl.enabled ? "Switch off" : "Go live"}
               </Plain>
+              {tpl.enabled && (
+                <Plain
+                  onClick={() => void pingChanged(tpl.game.id)}
+                  disabled={busy}
+                >
+                  Ping changed pages
+                </Plain>
+              )}
               {tpl.history.length > 0 && (
                 <Box w="230px">
                   <Pick

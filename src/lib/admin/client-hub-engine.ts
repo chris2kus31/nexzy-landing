@@ -208,6 +208,13 @@ export const restoreEngineVersion = (gameId: string, version: number) =>
   adminRequest<EngineTemplate>(`${base(gameId)}/restore/${version}`, {
     method: "POST",
   });
+/** Submit the live guide's pages changed in the last `hours` to IndexNow
+ *  (catches edits made outside the admin, e.g. SQL). */
+export const pingChangedEnginePages = (gameId: string, hours = 24) =>
+  adminRequest<{ count: number; paths: string[] }>(
+    `${base(gameId)}/ping-changed?hours=${hours}`,
+    { method: "POST" },
+  );
 export const setEngineEnabled = (gameId: string, enabled: boolean) =>
   adminRequest<EngineTemplate>(`${base(gameId)}/enabled`, {
     method: "PUT",
