@@ -115,6 +115,34 @@ function checkIcon(): ImageData | null {
   return cx.getImageData(0, 0, sz, sz);
 }
 
+/** One white digit for the cluster numbers. The map style has no font
+ *  server, so a text layer can't draw them; ten digit images are added
+ *  once and each number is laid out from them (see the cluster-count
+ *  layers). */
+function digitIcon(d: string): ImageData | null {
+  const w = 24;
+  const h = 40;
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = h;
+  const cx = cv.getContext("2d");
+  if (!cx) return null;
+  cx.fillStyle = "#ffffff";
+  cx.textAlign = "center";
+  cx.textBaseline = "middle";
+  cx.font = '800 28px system-ui, -apple-system, "Segoe UI", sans-serif';
+  cx.fillText(d, w / 2, h / 2 + 1);
+  return cx.getImageData(0, 0, w, h);
+}
+/** Space between digits, in screen pixels (icon-size 1). */
+const DIGIT_W = 9.5;
+/** Cluster numbers have at most this many digits (pinsPerMap is 5000). */
+const COUNT_DIGITS = 4;
+
+/** A world map this busy, with no place pins to start from, opens with
+ *  only its guide-page types on (regions, places) instead of every pin. */
+const BUSY_MAP_PINS = 300;
+
 // Desktop = the details panel sits over the right side of the map.
 const WIDE = "(min-width: 48em)";
 const PANEL_W = 380;
@@ -256,12 +284,18 @@ export default function GuideMap({
   useEffect(() => {
     if (preview || !isWorld || defaulted.current || !pins) return;
     defaulted.current = true;
-    if (
-      !placeTypes.size ||
-      placeTypes.size === new Set(pins.map((p) => p[2])).size
-    )
-      return;
-    const keep = new Set(placeTypes);
+    const all = new Set(pins.map((p) => p[2]));
+    // No pin opens its own map (GTA's Leonida): a busy map starts with
+    // only the types that have guide pages, if that leaves some on and
+    // some off. Maps with place pins (Zelda) keep the rule below as is.
+    let start = placeTypes;
+    if (!placeTypes.size && pins.length > BUSY_MAP_PINS) {
+      start = new Set(
+        [...all].filter((t) => typeOf(config, t)?.page !== false),
+      );
+    }
+    if (!start.size || start.size === all.size) return;
+    const keep = new Set(start);
     const opened = focusPin
       ? pins.find((p) => p[0] === focusPin)
       : focusEntry
@@ -269,7 +303,7 @@ export default function GuideMap({
         : undefined;
     if (opened) keep.add(opened[2]);
     setOff(new Set(pins.map((p) => p[2]).filter((t) => !keep.has(t))));
-  }, [pins, placeTypes, preview, isWorld, focusPin, focusEntry]);
+  }, [pins, placeTypes, preview, isWorld, focusPin, focusEntry, config]);
 
   // Pins after the reader's filters, as GeoJSON for the GPU layer.
   const data = useMemo(() => {
@@ -434,6 +468,59 @@ export default function GuideMap({
               ],
             },
           });
+          // The number of pins in each cluster, so a bubble never reads
+          // as an empty pin: one layer per digit place, built from the
+          // ten digit images.
+          let digits = true;
+          for (let d = 0; d < 10; d++) {
+            const img = digitIcon(String(d));
+            if (!img) {
+              digits = false;
+              break;
+            }
+            if (!instance.hasImage(`cnt-d${d}`))
+              instance.addImage(`cnt-d${d}`, img, { pixelRatio: 2 });
+          }
+          if (digits && !preview) {
+            const label = ["to-string", ["get", "point_count"]];
+            const len = ["length", label];
+            for (let i = 0; i < COUNT_DIGITS; i++) {
+              const offsets = [1, 2, 3, 4].flatMap((n) => [
+                n,
+                ["literal", [(i - (n - 1) / 2) * DIGIT_W, 0]],
+              ]);
+              instance.addLayer({
+                id: `cluster-count-${i}`,
+                type: "symbol",
+                source: "pins",
+                filter: ["all", ["has", "point_count"], [">", len, i]] as never,
+                layout: {
+                  "icon-image": [
+                    "concat",
+                    "cnt-d",
+                    ["slice", label, i, i + 1],
+                  ] as never,
+                  "icon-offset": [
+                    "match",
+                    len,
+                    ...offsets,
+                    ["literal", [0, 0]],
+                  ] as never,
+                  "icon-size": [
+                    "step",
+                    ["get", "point_count"],
+                    0.8,
+                    10,
+                    0.9,
+                    50,
+                    1,
+                  ],
+                  "icon-allow-overlap": true,
+                  "icon-ignore-placement": true,
+                },
+              });
+            }
+          }
           // One paint for normal and lit-up pins.
           const pinPaint = {
             // Found pins turn dark green with a check: clearly done.

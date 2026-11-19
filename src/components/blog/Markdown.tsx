@@ -82,6 +82,9 @@ const TONES = {
     quoteBorder: "nexzy.blue",
     quoteText: "gray.300",
     caption: "gray.400",
+    tableBorder: "whiteAlpha.200",
+    tableHeadBg: "whiteAlpha.100",
+    tableStripe: "whiteAlpha.50",
   },
   paper: {
     body: "#3a2f22",
@@ -91,6 +94,9 @@ const TONES = {
     quoteBorder: "#c9a24a",
     quoteText: "#5a4b36",
     caption: "#6b5b45",
+    tableBorder: "#d8c7a3",
+    tableHeadBg: "#efe2c4",
+    tableStripe: "#f6edd9",
   },
 } as const;
 
@@ -205,6 +211,62 @@ export default function Markdown({
           ) : null}
         </Box>
       ) : null,
+    // GFM tables (| a | b |): bordered, padded, striped, and horizontally
+    // scrollable on narrow screens instead of squishing cells together.
+    table: ({ children }) => (
+      <Box
+        my={6}
+        overflowX="auto"
+        borderWidth="1px"
+        borderColor={c.tableBorder}
+        borderRadius="lg"
+      >
+        <Box
+          as="table"
+          w="full"
+          fontSize="md"
+          lineHeight="1.5"
+          borderCollapse="collapse"
+        >
+          {children}
+        </Box>
+      </Box>
+    ),
+    thead: ({ children }) => (
+      <Box as="thead" bg={c.tableHeadBg}>
+        {children}
+      </Box>
+    ),
+    tbody: ({ children }) => <Box as="tbody">{children}</Box>,
+    tr: ({ children }) => (
+      <Box
+        as="tr"
+        borderBottomWidth="1px"
+        borderColor={c.tableBorder}
+        _last={{ borderBottomWidth: 0 }}
+        _even={{ bg: c.tableStripe }}
+      >
+        {children}
+      </Box>
+    ),
+    th: ({ children }) => (
+      <Box
+        as="th"
+        px={4}
+        py={3}
+        textAlign="left"
+        fontWeight="700"
+        color={c.heading}
+        whiteSpace="nowrap"
+      >
+        {children}
+      </Box>
+    ),
+    td: ({ children }) => (
+      <Box as="td" px={4} py={3} verticalAlign="top">
+        {children}
+      </Box>
+    ),
     spoiler: ({ children }) => <Spoiler>{children}</Spoiler>,
   };
   return (
