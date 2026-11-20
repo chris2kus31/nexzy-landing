@@ -66,15 +66,26 @@ export interface DealData {
 }
 
 /** Patch Notes beat: one structured change. buff/nerf/rework = competitive
- * balance; new/change = content or system update. */
+ * balance; new/change = content or system update; fix = bug fix; known =
+ * known issue. group/from/to are optional (board groups + old -> new). */
 export interface PatchChange {
-  kind: "buff" | "nerf" | "rework" | "new" | "change";
+  kind: "buff" | "nerf" | "rework" | "new" | "change" | "fix" | "known";
   name: string;
+  group?: string | null;
+  from?: string | null;
+  to?: string | null;
   detail?: string | null;
 }
 
-/** Patch Notes beat: TL;DR + structured changes + meta note. */
+/** Patch Notes beat: header + TL;DR + structured changes + meta note. */
 export interface PatchData {
+  title?: string | null;
+  version?: string | null;
+  date?: string | null;
+  platforms?: string | null;
+  size?: string | null;
+  impact?: "minor" | "medium" | "major" | null;
+  who?: string[] | null;
   tldr?: string[];
   changes?: PatchChange[];
   metaNote?: string | null;

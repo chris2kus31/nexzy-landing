@@ -58,10 +58,21 @@ export interface PublicPost {
       worthNote?: string | null;
     };
     patch?: {
+      // Header + "who it hits" (all optional; older posts have none).
+      title?: string | null;
+      version?: string | null;
+      date?: string | null;
+      platforms?: string | null;
+      size?: string | null;
+      impact?: "minor" | "medium" | "major" | null;
+      who?: string[] | null;
       tldr?: string[];
       changes?: {
-        kind: "buff" | "nerf" | "rework" | "new" | "change";
+        kind: "buff" | "nerf" | "rework" | "new" | "change" | "fix" | "known";
         name: string;
+        group?: string | null;
+        from?: string | null;
+        to?: string | null;
         detail?: string | null;
       }[];
       metaNote?: string | null;

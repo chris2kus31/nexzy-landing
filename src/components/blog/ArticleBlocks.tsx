@@ -43,6 +43,8 @@ import {
 } from "react-icons/fa6";
 import type { BlockKind, Embed } from "@/lib/blog/md-blocks";
 import CompareSlider from "@/components/blog/CompareSlider";
+import PatchBoard from "@/components/blog/PatchBoard";
+import type { PatchBoardData } from "@/lib/blog/patch";
 
 export type Palette = Record<
   | "body"
@@ -97,16 +99,6 @@ const KINDS: Record<BlockKind, { label: string; icon: IconType; ink: Ink }> = {
   FAQ: { label: "Questions", icon: FiHelpCircle, ink: "blue" },
   READ: { label: "Read next", icon: FiBookOpen, ink: "gold" },
   COMPARE: { label: "Compare", icon: FiColumns, ink: "gold" },
-};
-
-const TAGS: Record<string, { label: string; ink: Ink }> = {
-  NEW: { label: "New", ink: "green" },
-  FIX: { label: "Fix", ink: "blue" },
-  BUFF: { label: "Buff", ink: "green" },
-  NERF: { label: "Nerf", ink: "red" },
-  CHANGE: { label: "Change", ink: "gold" },
-  REMOVED: { label: "Removed", ink: "gray" },
-  KNOWN: { label: "Known issue", ink: "purple" },
 };
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -313,28 +305,6 @@ function listCss(
           letterSpacing: "0.08em",
           textTransform: "uppercase",
           color: accent,
-        },
-      };
-    case "PATCH":
-      return {
-        "& li": { pl: 4 },
-        "& li::before": {
-          content: '""',
-          position: "absolute",
-          left: 0,
-          top: "0.72em",
-          w: "5px",
-          h: "5px",
-          borderRadius: "full",
-          bg: `${accent}99`,
-        },
-        "& h2, & h3, & h4": {
-          fontSize: "xs",
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: accent,
-          mt: 5,
-          mb: 2,
         },
       };
     default:
@@ -694,6 +664,10 @@ export function blockComponents(c: Palette, tone: Tone) {
       const k = KINDS[kind] ?? KINDS.NOTE;
       const accent = ink(k.ink);
 
+      if (kind === "PATCH") {
+        const data = json<PatchBoardData>(rest["data-patch"]);
+        return data ? <PatchBoard data={data} /> : null;
+      }
       if (kind === "QUOTE") return <Quote by={title}>{children}</Quote>;
       if (kind === "VERDICT")
         return (
@@ -820,32 +794,6 @@ export function blockComponents(c: Palette, tone: Tone) {
         {children}
       </Text>
     ),
-
-    nxchip: (rest: P) => {
-      const t = TAGS[str(rest["data-tag"])] ?? TAGS.CHANGE;
-      const col = ink(t.ink);
-      return (
-        <Text
-          as="span"
-          display="inline-block"
-          mr={2}
-          px={1.5}
-          py="1px"
-          borderRadius="5px"
-          fontSize="2xs"
-          fontWeight="800"
-          letterSpacing="0.08em"
-          textTransform="uppercase"
-          verticalAlign="0.12em"
-          color={col}
-          bg={`${col}1f`}
-          borderWidth="1px"
-          borderColor={`${col}55`}
-        >
-          {t.label}
-        </Text>
-      );
-    },
 
     nxmedia: (rest: P) => {
       const e = json<Embed>(rest["data-embed"]);

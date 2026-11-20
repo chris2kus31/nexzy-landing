@@ -13,6 +13,11 @@
 // ============================================
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 import { streamableId } from "@/lib/blog/media";
+import {
+  applyPatchMeta,
+  parsePatchLine,
+  type PatchBoardData,
+} from "@/lib/blog/patch";
 
 export const BLOCK_KINDS = [
   "TIP",
@@ -36,21 +41,6 @@ export const BLOCK_KINDS = [
 ] as const;
 export type BlockKind = (typeof BLOCK_KINDS)[number];
 
-/** Patch-note line tags: `- [FIX] Text`. Value = canonical tag. */
-export const PATCH_TAGS: Record<string, string> = {
-  NEW: "NEW",
-  ADDED: "NEW",
-  FIX: "FIX",
-  FIXED: "FIX",
-  BUFF: "BUFF",
-  NERF: "NERF",
-  CHANGE: "CHANGE",
-  CHANGED: "CHANGE",
-  BALANCE: "CHANGE",
-  REMOVED: "REMOVED",
-  KNOWN: "KNOWN",
-};
-
 type MdNode = {
   type: string;
   value?: string;
@@ -63,7 +53,6 @@ type MdNode = {
 
 // [!KIND] or [!KIND|Custom label]; the rest of the line is the title.
 const MARKER = /^\[!([A-Za-z]+)(?:\|([^\]\n]{1,40}))?\][ \t]*([^\n]*)\n?/;
-const TAG = /^\[([A-Za-z]+)\][ \t]*/;
 
 const textOf = (n: MdNode): string =>
   n.type === "text" || n.type === "inlineCode"
@@ -266,16 +255,33 @@ function toBlock(q: MdNode): MdNode | null {
 
   if (kind === "FACTS" || kind === "TIMELINE") eachItem(q, labelize);
 
-  if (kind === "PATCH")
-    eachItem(q, (li) => {
-      const p = li.children?.[0];
-      const t = p?.type === "paragraph" ? p.children?.[0] : undefined;
-      const tm = t?.type === "text" ? t.value?.match(TAG) : null;
-      const tag = tm ? PATCH_TAGS[tm[1].toUpperCase()] : undefined;
-      if (!t || !tm || !tag) return;
-      t.value = t.value!.slice(tm[0].length);
-      p!.children!.unshift(el("nxchip", { dataTag: tag }));
-    });
+  // PATCH -> patch board data (lib/blog/patch.ts): "### Group" headings,
+  // "- [TAG] Name: old -> new | detail" lines, "- Date: ..." header lines,
+  // plain paragraphs become the "What it means" note.
+  if (kind === "PATCH") {
+    const data: PatchBoardData = { title: title || null, items: [], tldr: [] };
+    let group: string | null = null;
+    const notes: string[] = [];
+    for (const k of q.children ?? []) {
+      if (k.type === "heading") group = textOf(k).trim() || null;
+      else if (k.type === "list")
+        for (const li of k.children ?? []) {
+          const line = textOf(li).trim();
+          if (applyPatchMeta(data, line)) continue;
+          const it = parsePatchLine(line, group);
+          if (it) data.items.push(it);
+          else data.tldr!.push(line);
+        }
+      else if (k.type === "paragraph")
+        for (const line of textOf(k).split("\n"))
+          if (line.trim() && !applyPatchMeta(data, line))
+            notes.push(line.trim());
+    }
+    if (!data.items.length) return null;
+    if (notes.length) data.metaNote = notes.join(" ");
+    props.dataPatch = JSON.stringify(data);
+    q.children = [];
+  }
 
   if (kind === "FAQ") {
     const out: MdNode[] = [];

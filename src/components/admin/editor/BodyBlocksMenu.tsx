@@ -146,10 +146,10 @@ const BODY_BLOCKS: {
   },
   {
     label: "Patch notes",
-    hint: "Tagged lines: NEW FIX BUFF NERF",
+    hint: "Board: buffs vs nerfs, fixes",
     icon: FiTool,
     md: () =>
-      "> [!PATCH] Update 1.04\n> ### Gameplay\n> - [NEW] Added ...\n> - [BUFF] ...\n> - [NERF] ...\n> ### Fixes\n> - [FIX] Fixed ...\n> - [KNOWN] Still looking into ...",
+      "> [!PATCH] Game Update 1.04\n> - Date: \n> - Platforms: \n> - Size: \n> - Impact: Medium\n> - Who: Solo players, Ranked\n>\n> ### Weapons\n> - [BUFF] Name: 40 -> 44 | short detail\n> - [NERF] Name: 2.1s -> 2.6s\n> ### World\n> - [NEW] Name | short detail\n> - [FIX] What was fixed\n> - [KNOWN] Known issue",
   },
   {
     label: "Spoiler block",
