@@ -12,6 +12,7 @@ Next.js 16 (App Router) + Chakra UI v3. The **public site + admin** for Nexzy. R
 - `src/app/blog`, `src/app/guides`, `src/app/lists` — the three public content page types (article / guide / list). Each has JSON-LD (Article / HowTo / ItemList), canonical, `ViewPing` read counts.
 - `src/app/admin` — the admin: Leads, Review queue, Published, Subscribers, Marketing, **Content**, Forum, Analytics, Tools.
 - `src/app/sitemap.ts` — dynamic sitemap (auto-includes guides/lists). `src/app/api/published/route.ts` — publish webhook (type-aware revalidate + IndexNow).
+- Article bodies: `src/components/blog/Markdown.tsx` (news, lists, reviews, admin Preview) and `src/components/guides/GuideMarkdown.tsx` (guides, walkthroughs) share the article blocks: syntax in `src/lib/blog/md-blocks.ts`, renderers in `src/components/blog/ArticleBlocks.tsx`, patch board in `src/components/blog/PatchBoard.tsx` + `src/lib/blog/patch.ts`. Cheat sheet: Project doc `build/NEXZY_ARTICLE_BLOCKS.md`. Any new body renderer must use the same pieces, or blocks show as raw text.
 - `src/lib/admin/client.ts` — admin API client. `src/components/admin/` — panels (ContentPanel, ListPanel, MarketingPanel…).
 
 ## Standing rules (see ../CLAUDE.md for the full list)

@@ -251,6 +251,83 @@ function eachItem(block: MdNode, fn: (li: MdNode) => void): void {
     if (k.type === "list") for (const li of k.children ?? []) fn(li);
 }
 
+// FACTS layout limits (characters of value text).
+const LEAD_MAX = 24;
+const CHIP_MAX = 28;
+
+const isLabel = (n?: MdNode) =>
+  n?.type === "nxEl" && (n.data as { hName?: string })?.hName === "nxlabel";
+
+/**
+ * FACTS list -> lead stat + chips + rows (ArticleBlocks renders them).
+ * The first fact becomes the big "lead" when it is a short labeled plain value;
+ * other short values become chips and long ones one-line rows. Same markdown
+ * as before, so every existing post just re-lays out.
+ */
+function toFacts(list: MdNode): MdNode {
+  const facts = (list.children ?? []).map((li) => {
+    const kids = li.children ?? [];
+    const single = kids.length === 1 && kids[0].type === "paragraph";
+    let value = single ? [...(kids[0].children ?? [])] : kids;
+    let label = "";
+    if (single && isLabel(value[0])) {
+      label = textOf(value[0]).trim();
+      value = value.slice(1);
+    }
+    const text = value.map(textOf).join("").trim();
+    return { single, label, value, text };
+  });
+
+  const first = facts[0];
+  const lead =
+    first?.label &&
+    first.single &&
+    first.text.length <= LEAD_MAX &&
+    first.value.every((n) => n.type === "text")
+      ? first
+      : null;
+  const rest = lead ? facts.slice(1) : facts;
+  const chips = rest.filter(
+    (f) => f.single && f.label && f.text.length <= CHIP_MAX,
+  );
+  const rows = rest.filter((f) => !chips.includes(f));
+  const fact = (role: string, f: (typeof facts)[number]) =>
+    el("nxfact", { dataRole: role, dataLabel: f.label }, f.value);
+
+  const body: MdNode[] = [];
+  if (chips.length)
+    body.push(
+      el(
+        "nxfactchips",
+        {},
+        chips.map((f) => fact("chip", f)),
+      ),
+    );
+  if (rows.length)
+    body.push(
+      el(
+        "nxfactrows",
+        {},
+        rows.map((f) => fact("row", f)),
+      ),
+    );
+  const out: MdNode[] = [];
+  if (lead)
+    out.push(
+      el(
+        "nxfact",
+        {
+          dataRole: "lead",
+          dataLabel: lead.label,
+          dataSolo: body.length ? "" : "1",
+        },
+        lead.value,
+      ),
+    );
+  if (body.length) out.push(el("nxfactbody", {}, body));
+  return el("nxfacts", {}, out);
+}
+
 function toBlock(q: MdNode): MdNode | null {
   const first = q.children?.[0];
   const text = first?.type === "paragraph" ? first.children?.[0] : undefined;
@@ -270,6 +347,10 @@ function toBlock(q: MdNode): MdNode | null {
   };
 
   if (kind === "FACTS" || kind === "TIMELINE") eachItem(q, labelize);
+  if (kind === "FACTS")
+    q.children = (q.children ?? []).map((k) =>
+      k.type === "list" && k.children?.length ? toFacts(k) : k,
+    );
 
   // PATCH -> patch board data (lib/blog/patch.ts): "### Group" headings,
   // "- [TAG] Name: old -> new | detail" lines, "- Date: ..." header lines,

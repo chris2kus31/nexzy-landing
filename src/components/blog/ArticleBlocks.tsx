@@ -256,32 +256,17 @@ function listCss(
         "& ul li::before": diamond["& li::before"],
       };
     case "FACTS":
+      // Layout lives in the nxfact* components; this only covers a fact with
+      // extra paragraphs/lists (kept whole as a row) and loose text.
       return {
-        "& ul": {
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: 2,
-        },
-        "& li": {
-          mb: 0,
-          px: 3.5,
-          py: 2.5,
-          borderRadius: "10px",
-          bg: c.tCard,
-          borderWidth: "1px",
-          borderColor: c.tRule,
-          color: c.heading,
-          fontWeight: 600,
-          lineHeight: "1.45",
-        },
+        ...diamond,
         "& [data-nxlabel]": {
-          display: "block",
           fontSize: "2xs",
           fontWeight: 800,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
           color: accent,
-          mb: 0.5,
+          mr: 2,
         },
       };
     case "TIMELINE":
@@ -804,6 +789,111 @@ export function blockComponents(c: Palette, tone: Tone) {
         <Chevron />
       </Flex>
     ),
+
+    // FACTS: lead stat | chips + rows (built in md-blocks toFacts).
+    nxfacts: ({ children }: P) => (
+      <Flex
+        direction={{ base: "column", sm: "row" }}
+        align="stretch"
+        gap={{ base: 3, sm: 5 }}
+        mb={2}
+        css={{ "&:last-child": { mb: 0 } }}
+      >
+        {children}
+      </Flex>
+    ),
+    nxfactbody: ({ children }: P) => (
+      <Flex direction="column" gap={2.5} flex="1" minW={0}>
+        {children}
+      </Flex>
+    ),
+    nxfactchips: ({ children }: P) => (
+      <Flex wrap="wrap" gap={2}>
+        {children}
+      </Flex>
+    ),
+    nxfactrows: ({ children }: P) => <Box>{children}</Box>,
+    nxfact: ({ children, ...rest }: P) => {
+      const role = str(rest["data-role"]);
+      const label = str(rest["data-label"]);
+      const accent = ink("blue");
+      const tag = (size: string) =>
+        label ? (
+          <Text
+            as="span"
+            fontSize={size}
+            fontWeight="800"
+            letterSpacing="0.12em"
+            textTransform="uppercase"
+            color={accent}
+            mr={2}
+          >
+            {label}
+          </Text>
+        ) : null;
+      if (role === "lead") {
+        const solo = str(rest["data-solo"]) === "1";
+        return (
+          <Flex
+            direction="column"
+            justify="center"
+            flex="0 0 auto"
+            maxW={{ sm: "45%" }}
+            pr={solo ? 0 : { sm: 5 }}
+            pb={solo ? 0 : { base: 3, sm: 0 }}
+            borderRightWidth={solo ? 0 : { base: 0, sm: "1px" }}
+            borderBottomWidth={solo ? 0 : { base: "1px", sm: 0 }}
+            borderColor={c.tRule}
+          >
+            <Box lineHeight="1.4">{tag("2xs")}</Box>
+            <Text
+              fontSize={{ base: "2xl", md: "3xl" }}
+              fontWeight="800"
+              lineHeight="1.15"
+              letterSpacing="-0.01em"
+              color={c.heading}
+            >
+              {children}
+            </Text>
+          </Flex>
+        );
+      }
+      if (role === "chip")
+        return (
+          <Box
+            as="span"
+            display="inline-block"
+            maxW="100%"
+            px={3}
+            py={1.5}
+            borderRadius="16px"
+            bg={c.tCard}
+            borderWidth="1px"
+            borderColor={c.tRule}
+            fontSize="sm"
+            fontWeight="600"
+            lineHeight="1.35"
+            color={c.heading}
+          >
+            {tag("2xs")}
+            {children}
+          </Box>
+        );
+      return (
+        <Box
+          py={1.5}
+          fontSize="md"
+          lineHeight="1.5"
+          color={c.heading}
+          borderTopWidth="1px"
+          borderColor={c.tRule}
+          css={{ "&:first-of-type": { borderTopWidth: 0, pt: 0 } }}
+        >
+          {tag("2xs")}
+          {children}
+        </Box>
+      );
+    },
 
     nxlabel: ({ children }: P) => (
       <Text as="span" data-nxlabel fontWeight="700" color={c.heading} mr={1}>
