@@ -253,16 +253,18 @@ function eachItem(block: MdNode, fn: (li: MdNode) => void): void {
 
 // FACTS layout limits (characters of value text).
 const LEAD_MAX = 24;
-const CHIP_MAX = 28;
+const SUB_MAX = 20;
 
 const isLabel = (n?: MdNode) =>
   n?.type === "nxEl" && (n.data as { hName?: string })?.hName === "nxlabel";
 
 /**
- * FACTS list -> lead stat + chips + rows (ArticleBlocks renders them).
- * The first fact becomes the big "lead" when it is a short labeled plain value;
- * other short values become chips and long ones one-line rows. Same markdown
- * as before, so every existing post just re-lays out.
+ * FACTS list -> lead stat + chips (ArticleBlocks renders them).
+ * The first fact becomes the big "lead" when it is a labeled plain value whose
+ * main part (before the first comma) is short; the rest after the comma is the
+ * small line under it ("Update: 1.21 Florin, free" -> "1.21 Florin" / "free").
+ * Every other one-line fact is a chip; a fact with extra paragraphs or lists
+ * stays a row. Same markdown as before, so existing posts just re-lay out.
  */
 function toFacts(list: MdNode): MdNode {
   const facts = (list.children ?? []).map((li) => {
@@ -279,18 +281,24 @@ function toFacts(list: MdNode): MdNode {
   });
 
   const first = facts[0];
-  const lead =
+  let lead: { label: string; main: string; sub: string } | null = null;
+  if (
     first?.label &&
     first.single &&
-    first.text.length <= LEAD_MAX &&
     first.value.every((n) => n.type === "text")
-      ? first
-      : null;
+  ) {
+    // Split only for a short single tail ("1.21 Florin, free"), never a list
+    // ("PS5, Xbox Series X|S, PC" stays whole and is too long to lead).
+    const i = first.text.indexOf(",");
+    const tail = i > 0 ? first.text.slice(i + 1).trim() : "";
+    const split = !!tail && tail.length <= SUB_MAX && !tail.includes(",");
+    const main = (split ? first.text.slice(0, i) : first.text).trim();
+    const sub = split ? tail : "";
+    if (main.length <= LEAD_MAX) lead = { label: first.label, main, sub };
+  }
   const rest = lead ? facts.slice(1) : facts;
-  const chips = rest.filter(
-    (f) => f.single && f.label && f.text.length <= CHIP_MAX,
-  );
-  const rows = rest.filter((f) => !chips.includes(f));
+  const chips = rest.filter((f) => f.single);
+  const rows = rest.filter((f) => !f.single);
   const fact = (role: string, f: (typeof facts)[number]) =>
     el("nxfact", { dataRole: role, dataLabel: f.label }, f.value);
 
@@ -319,9 +327,10 @@ function toFacts(list: MdNode): MdNode {
         {
           dataRole: "lead",
           dataLabel: lead.label,
+          dataSub: lead.sub,
           dataSolo: body.length ? "" : "1",
         },
-        lead.value,
+        [{ type: "text", value: lead.main }],
       ),
     );
   if (body.length) out.push(el("nxfactbody", {}, body));
@@ -348,9 +357,11 @@ function toBlock(q: MdNode): MdNode | null {
 
   if (kind === "FACTS" || kind === "TIMELINE") eachItem(q, labelize);
   if (kind === "FACTS")
-    q.children = (q.children ?? []).map((k) =>
-      k.type === "list" && k.children?.length ? toFacts(k) : k,
-    );
+    q.children = (q.children ?? []).map((k) => {
+      if (k.type !== "list" || !k.children?.length) return k;
+      props.dataFacts = "1";
+      return toFacts(k);
+    });
 
   // PATCH -> patch board data (lib/blog/patch.ts): "### Group" headings,
   // "- [TAG] Name: old -> new | detail" lines, "- Date: ..." header lines,

@@ -669,6 +669,40 @@ export function blockComponents(c: Palette, tone: Tone) {
         kind === "PATCH" ? json<PatchBoardData>(rest["data-patch"]) : null;
       if (patch?.items?.length) return <PatchBoard data={patch} />;
       if (kind === "QUOTE") return <Quote by={title}>{children}</Quote>;
+      // FACTS with a list: lead stat + chips card (no header unless the
+      // writer set a custom [!FACTS|Label]).
+      if (kind === "FACTS" && str(rest["data-facts"]) === "1")
+        return (
+          <Box
+            as="aside"
+            my={7}
+            borderRadius="14px"
+            borderWidth="1px"
+            borderColor={tone === "dark" ? "rgba(255,255,255,0.10)" : c.tBorder}
+            bg={tone === "dark" ? "rgba(255,255,255,0.035)" : c.tFrame}
+            px={{ base: 4, md: 5 }}
+            py={4}
+            fontSize="md"
+            lineHeight="1.6"
+            css={{
+              "&&": mergeCss(bodyCss(c), {
+                "& [data-nxlabel]": {
+                  fontSize: "xs",
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: accent,
+                  mr: 2,
+                },
+              }),
+            }}
+          >
+            {name ? (
+              <Head kind={kind} accent={accent} label={name} mb={3} />
+            ) : null}
+            {children}
+          </Box>
+        );
       if (kind === "VERDICT")
         return (
           <Verdict title={title} name={name}>
@@ -807,8 +841,13 @@ export function blockComponents(c: Palette, tone: Tone) {
         {children}
       </Flex>
     ),
+    // Phone: label | value rows. Desktop (sm+): wrapping chips.
     nxfactchips: ({ children }: P) => (
-      <Flex wrap="wrap" gap={2}>
+      <Flex
+        direction={{ base: "column", sm: "row" }}
+        wrap={{ base: "nowrap", sm: "wrap" }}
+        gap={2}
+      >
         {children}
       </Flex>
     ),
@@ -816,80 +855,108 @@ export function blockComponents(c: Palette, tone: Tone) {
     nxfact: ({ children, ...rest }: P) => {
       const role = str(rest["data-role"]);
       const label = str(rest["data-label"]);
-      const accent = ink("blue");
-      const tag = (size: string) =>
-        label ? (
-          <Text
-            as="span"
-            fontSize={size}
-            fontWeight="800"
-            letterSpacing="0.12em"
-            textTransform="uppercase"
-            color={accent}
-            mr={2}
-          >
-            {label}
-          </Text>
-        ) : null;
+      const blue = ink("blue");
+      const rule = tone === "dark" ? "rgba(255,255,255,0.12)" : c.tBorder;
+      const chipBg = tone === "dark" ? "rgba(255,255,255,0.05)" : c.tCardHead;
       if (role === "lead") {
         const solo = str(rest["data-solo"]) === "1";
+        const sub = str(rest["data-sub"]);
+        // Phone: label + big value left, sub line right. Desktop: stacked.
         return (
           <Flex
-            direction="column"
-            justify="center"
+            direction={{ base: "row", sm: "column" }}
+            align={{ base: "flex-end", sm: "stretch" }}
+            justify={{ sm: "center" }}
             flex="0 0 auto"
             maxW={{ sm: "45%" }}
-            pr={solo ? 0 : { sm: 5 }}
+            pr={solo ? 0 : { sm: 6 }}
             pb={solo ? 0 : { base: 3, sm: 0 }}
             borderRightWidth={solo ? 0 : { base: 0, sm: "1px" }}
             borderBottomWidth={solo ? 0 : { base: "1px", sm: 0 }}
-            borderColor={c.tRule}
+            borderColor={rule}
           >
-            <Box lineHeight="1.4">{tag("2xs")}</Box>
-            <Text
-              fontSize={{ base: "2xl", md: "3xl" }}
-              fontWeight="800"
-              lineHeight="1.15"
-              letterSpacing="-0.01em"
-              color={c.heading}
-            >
-              {children}
-            </Text>
+            <Box minW={0}>
+              <Text
+                fontSize="xs"
+                fontWeight="600"
+                letterSpacing="0.1em"
+                textTransform="uppercase"
+                color={c.caption}
+                lineHeight="1.4"
+              >
+                {label}
+              </Text>
+              <Text
+                fontSize={{ base: "2xl", md: "3xl" }}
+                fontWeight="800"
+                lineHeight="1.15"
+                letterSpacing="-0.01em"
+                color={c.heading}
+              >
+                {children}
+              </Text>
+            </Box>
+            {sub ? (
+              <Text
+                ml={{ base: "auto", sm: 0 }}
+                pl={{ base: 3, sm: 0 }}
+                mb={{ base: "3px", sm: 0 }}
+                mt={{ sm: 0.5 }}
+                fontSize="sm"
+                fontWeight="600"
+                lineHeight="1.4"
+                textAlign={{ base: "right", sm: "left" }}
+                color={ink("green")}
+                css={{ "&::first-letter": { textTransform: "uppercase" } }}
+              >
+                {sub}
+              </Text>
+            ) : null}
           </Flex>
         );
       }
+      const tag = label ? (
+        <Text
+          as="span"
+          fontSize="xs"
+          fontWeight="700"
+          letterSpacing="0.1em"
+          textTransform="uppercase"
+          color={blue}
+          mr={{ base: 0, sm: 2 }}
+          pt={{ base: "3px", sm: 0 }}
+        >
+          {label}
+        </Text>
+      ) : null;
       if (role === "chip")
         return (
           <Box
             as="span"
-            display="inline-block"
+            display={{ base: "grid", sm: "inline-block" }}
+            gridTemplateColumns={{ base: "96px minmax(0, 1fr)" }}
+            columnGap={3}
             maxW="100%"
-            px={3}
-            py={1.5}
-            borderRadius="16px"
-            bg={c.tCard}
-            borderWidth="1px"
-            borderColor={c.tRule}
-            fontSize="sm"
-            fontWeight="600"
-            lineHeight="1.35"
+            px={{ base: 0, sm: 3.5 }}
+            py={{ base: 0, sm: 1.5 }}
+            borderRadius={{ base: 0, sm: "16px" }}
+            bg={{ base: "transparent", sm: chipBg }}
+            borderWidth={{ base: 0, sm: "1px" }}
+            borderColor={rule}
+            fontSize="md"
+            fontWeight="500"
+            lineHeight="1.4"
             color={c.heading}
           >
-            {tag("2xs")}
-            {children}
+            {tag}
+            <Box as="span" gridColumn={label ? undefined : "1 / -1"}>
+              {children}
+            </Box>
           </Box>
         );
       return (
-        <Box
-          py={1.5}
-          fontSize="md"
-          lineHeight="1.5"
-          color={c.heading}
-          borderTopWidth="1px"
-          borderColor={c.tRule}
-          css={{ "&:first-of-type": { borderTopWidth: 0, pt: 0 } }}
-        >
-          {tag("2xs")}
+        <Box py={1.5} fontSize="md" lineHeight="1.5" color={c.heading}>
+          {tag}
           {children}
         </Box>
       );
