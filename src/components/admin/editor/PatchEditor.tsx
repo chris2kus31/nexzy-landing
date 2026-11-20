@@ -121,13 +121,13 @@ export default function PatchEditor({
       </Text>
 
       <Grid templateColumns={{ base: "1fr", md: "2fr 1fr 1fr" }} gap={2} mb={2}>
-        {field("Title", "title", "GTA 6 Update 1.04")}
-        {field("Version", "version", "1.04")}
-        {field("Date", "date", "Nov 20, 2026")}
+        {field("Title", "title", "e.g. Update 1.04 or Season 3 patch")}
+        {field("Version", "version", "e.g. 1.04")}
+        {field("Date", "date", "e.g. Nov 20, 2026")}
       </Grid>
       <Grid templateColumns={{ base: "1fr", md: "2fr 1fr 1fr" }} gap={2} mb={2}>
-        {field("Platforms", "platforms", "PS5, Xbox Series X|S, PC")}
-        {field("Download size", "size", "9 GB")}
+        {field("Platforms", "platforms", "e.g. PS5, PC")}
+        {field("Download size", "size", "e.g. 9 GB")}
         <Box>
           <Text {...labelProps}>Impact</Text>
           <select
@@ -159,7 +159,7 @@ export default function PatchEditor({
                 .filter(Boolean),
             })
           }
-          placeholder="Story players, Snipers, Heist crews"
+          placeholder="e.g. Ranked players, Solo players"
           {...inputProps}
         />
       </Box>
@@ -225,7 +225,7 @@ export default function PatchEditor({
             fontFamily="mono"
             fontSize="sm"
             placeholder={
-              "### Weapons\n- [BUFF] Starter pistol damage: 40 -> 44 | Early missions get easier\n- [NERF] Sniper reload time: 2.1s -> 2.6s\n### World\n- [NERF] Police heli spawns: Fewer | 3 stars and up\n- [NEW] Photo mode: 12 new filters\n- [FIX] Saves not loading after chapter 2\n- [KNOWN] Texture pop-in at night"
+              "Example:\n### Weapons\n- [BUFF] Starter pistol damage: 40 -> 44 | Early missions get easier\n- [NERF] Sniper reload time: 2.1s -> 2.6s\n### World\n- [NERF] Police heli spawns: Fewer | 3 stars and up\n- [NEW] Photo mode: 12 new filters\n- [FIX] Saves not loading after chapter 2\n- [KNOWN] Texture pop-in at night"
             }
             {...inputProps}
           />
@@ -272,13 +272,13 @@ export default function PatchEditor({
                   onChange={(e) =>
                     setChange(i, { group: e.target.value || null })
                   }
-                  placeholder="Group (Weapons)"
+                  placeholder="Group (optional)"
                   {...inputProps}
                 />
                 <Input
                   value={c.name}
                   onChange={(e) => setChange(i, { name: e.target.value })}
-                  placeholder="What changed (Starter pistol damage)"
+                  placeholder="What changed"
                   {...inputProps}
                 />
                 <Button
@@ -292,29 +292,27 @@ export default function PatchEditor({
                   <FiX />
                 </Button>
               </Grid>
-              <Grid
-                templateColumns={{ base: "1fr 1fr", md: "1fr 1fr 2fr" }}
-                gap={2}
-              >
+              <Grid templateColumns="1fr 1fr" gap={2}>
                 <Input
                   value={c.from ?? ""}
                   onChange={(e) =>
                     setChange(i, { from: e.target.value || null })
                   }
-                  placeholder="Old value (40)"
+                  placeholder="Old value (optional)"
                   {...inputProps}
                 />
                 <Input
                   value={c.to ?? ""}
                   onChange={(e) => setChange(i, { to: e.target.value || null })}
-                  placeholder="New value (44 or Fewer)"
+                  placeholder="New value (optional)"
                   {...inputProps}
                 />
-                <Input
+                <Textarea
                   value={c.detail ?? ""}
                   onChange={(e) => setChange(i, { detail: e.target.value })}
-                  placeholder="Short detail"
-                  gridColumn={{ base: "span 2", md: "auto" }}
+                  placeholder="Short detail (optional)"
+                  gridColumn="span 2"
+                  rows={2}
                   {...inputProps}
                 />
               </Grid>
