@@ -496,9 +496,11 @@ export function blockComponents(c: Palette, tone: Tone) {
 
   const Verdict = ({
     title,
+    name,
     children,
   }: {
     title: string;
+    name?: string;
     children: ReactNode;
   }) => {
     const accent = ink("gold");
@@ -557,7 +559,12 @@ export function blockComponents(c: Palette, tone: Tone) {
             </Box>
           ) : null}
           <Box flex="1" minW={0}>
-            <Head kind="VERDICT" accent={accent} mb={1} />
+            <Head
+              kind="VERDICT"
+              accent={accent}
+              label={name || undefined}
+              mb={1}
+            />
             {word ? <Title>{word}</Title> : null}
             <Box>{children}</Box>
           </Box>
@@ -569,10 +576,12 @@ export function blockComponents(c: Palette, tone: Tone) {
   const ReadNext = ({
     href,
     label,
+    kicker,
     children,
   }: {
     href: string;
     label: string;
+    kicker: string;
     children: ReactNode;
   }) => {
     const accent = ink("gold");
@@ -597,7 +606,7 @@ export function blockComponents(c: Palette, tone: Tone) {
             <Box color={accent}>
               <FiBookOpen size={13} />
             </Box>
-            <Label accent={accent}>Read next</Label>
+            <Label accent={accent}>{kicker}</Label>
           </Flex>
           <Text
             fontWeight="700"
@@ -680,17 +689,24 @@ export function blockComponents(c: Palette, tone: Tone) {
     nxblock: ({ children, ...rest }: P) => {
       const kind = str(rest["data-kind"]) as BlockKind;
       const title = str(rest["data-title"]);
+      // [!KIND|Custom label] overrides the small label on any block.
+      const name = str(rest["data-name"]);
       const k = KINDS[kind] ?? KINDS.NOTE;
       const accent = ink(k.ink);
 
       if (kind === "QUOTE") return <Quote by={title}>{children}</Quote>;
       if (kind === "VERDICT")
-        return <Verdict title={title}>{children}</Verdict>;
+        return (
+          <Verdict title={title} name={name}>
+            {children}
+          </Verdict>
+        );
       if (kind === "READ")
         return (
           <ReadNext
             href={str(rest["data-href"])}
             label={str(rest["data-label"])}
+            kicker={name || "Read next"}
           >
             {children}
           </ReadNext>
@@ -709,7 +725,7 @@ export function blockComponents(c: Palette, tone: Tone) {
           <Frame accent={accent} as="details" css={disclosureCss}>
             <Flex as="summary" align="center" gap={2.5}>
               <Chip icon={k.icon} accent={accent} tone={tone} />
-              <Label accent={accent}>Spoiler</Label>
+              <Label accent={accent}>{name || "Spoiler"}</Label>
               <Text as="span" fontWeight="700" color={c.heading} fontSize="md">
                 {title || "Tap to reveal"}
               </Text>
@@ -739,7 +755,7 @@ export function blockComponents(c: Palette, tone: Tone) {
             <Head
               kind="FAQ"
               accent={accent}
-              label={title || undefined}
+              label={name || title || undefined}
               mb={1}
             />
             {children}
@@ -763,7 +779,7 @@ export function blockComponents(c: Palette, tone: Tone) {
           <Head
             kind={kind}
             accent={accent}
-            label={asLabel && title ? title : undefined}
+            label={name || (asLabel && title ? title : undefined)}
             aside={stamp ? title : undefined}
             mb={asTitle ? 1.5 : 2.5}
           />

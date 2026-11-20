@@ -61,7 +61,8 @@ type MdNode = {
   data?: Record<string, unknown>;
 };
 
-const MARKER = /^\[!([A-Za-z]+)\][ \t]*([^\n]*)\n?/;
+// [!KIND] or [!KIND|Custom label]; the rest of the line is the title.
+const MARKER = /^\[!([A-Za-z]+)(?:\|([^\]\n]{1,40}))?\][ \t]*([^\n]*)\n?/;
 const TAG = /^\[([A-Za-z]+)\][ \t]*/;
 
 const textOf = (n: MdNode): string =>
@@ -256,8 +257,12 @@ function toBlock(q: MdNode): MdNode | null {
   text.value = text.value.slice(m[0].length);
   if (!text.value) first.children!.shift();
   if (!first.children!.length) q.children!.shift();
-  const title = m[2].trim();
-  const props: Record<string, unknown> = { dataKind: kind, dataTitle: title };
+  const title = m[3].trim();
+  const props: Record<string, unknown> = {
+    dataKind: kind,
+    dataTitle: title,
+    dataName: (m[2] ?? "").trim(),
+  };
 
   if (kind === "FACTS" || kind === "TIMELINE") eachItem(q, labelize);
 
