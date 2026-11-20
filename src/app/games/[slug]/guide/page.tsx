@@ -9,6 +9,8 @@ import { fetchGameHub } from "@/lib/blog/api";
 import { fetchEnginePage } from "@/lib/hub-engine/server";
 import { G } from "@/components/games/guide/GuideBits";
 import GuideIndexBody from "@/components/games/guide/GuideIndexBody";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 
 export const revalidate = 300;
 
@@ -60,12 +62,23 @@ export default async function GuideIndex({ params }: Params) {
       <Heading as="h1" fontSize={{ base: "2xl", md: "4xl" }} color="white">
         {d.short} guide
       </Heading>
+      <Box mt={4}>
+        <ReaderRow location="hub_guide" kind="progress" mb={0} />
+      </Box>
       <Box mt={6}>
         <GuideIndexBody
           slug={slug}
           config={d.config}
           pages={d.pages}
           counts={d.counts}
+        />
+      </Box>
+      <Box mt={10}>
+        <AppCta
+          variant="inline"
+          location="hub_guide"
+          heading={`Take the ${d.short} guide with you`}
+          subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
         />
       </Box>
     </Container>

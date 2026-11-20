@@ -17,6 +17,8 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import {
   fetchEngineChecklist,
   fetchEngineEntry,
@@ -221,6 +223,9 @@ export default async function GuideEntryPage({ params }: Params) {
           {entry.summary}
         </Text>
       )}
+      <Box mt={4}>
+        <ReaderRow location="hub_entry" kind="progress" mb={0} />
+      </Box>
 
       {entry.media[0] && (
         <Box
@@ -347,6 +352,14 @@ export default async function GuideEntryPage({ params }: Params) {
         })}
         . Unofficial guide by Nexzy.
       </Text>
+      <Box mt={10}>
+        <AppCta
+          variant="inline"
+          location="hub_entry"
+          heading={`Take the ${d.short} guide with you`}
+          subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
+        />
+      </Box>
     </Container>
   );
 }

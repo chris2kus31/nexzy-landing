@@ -32,10 +32,14 @@ const PREFERRED_SOURCE_URL =
 
 export default function PreferredSourceButton({
   label = "Add Nexzy as a preferred source on Google",
+  size = "md",
 }: {
   /** Override the button copy (e.g. a shorter label in tight spots). */
   label?: string;
+  /** "sm": the compact pill used inside the reader row. */
+  size?: "md" | "sm";
 }) {
+  const sm = size === "sm";
   return (
     <Link
       href={PREFERRED_SOURCE_URL}
@@ -44,16 +48,17 @@ export default function PreferredSourceButton({
       aria-label="Add Nexzy as a preferred source on Google"
       display="inline-flex"
       alignItems="center"
-      gap={2.5}
-      px={5}
-      py="11px"
+      gap={sm ? 2 : 2.5}
+      px={sm ? 3.5 : 5}
+      py={sm ? "9px" : "11px"}
       borderRadius="full"
       bg="white"
       color="nexzy.navy"
-      fontSize="sm"
+      fontSize={sm ? "xs" : "sm"}
       fontWeight="700"
       lineHeight="1"
-      boxShadow="0 4px 16px rgba(77,163,255,0.30)"
+      whiteSpace="nowrap"
+      boxShadow={sm ? "none" : "0 4px 16px rgba(77,163,255,0.30)"}
       _hover={{
         bg: "nexzy.gray.100",
         textDecoration: "none",
@@ -62,7 +67,7 @@ export default function PreferredSourceButton({
       }}
       transition="all 0.2s"
     >
-      <FcGoogle size={18} aria-hidden />
+      <FcGoogle size={sm ? 15 : 18} aria-hidden />
       {label}
     </Link>
   );

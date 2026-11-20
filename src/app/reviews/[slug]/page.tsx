@@ -23,6 +23,7 @@ import ArticleBody from "@/components/blog/ArticleBody";
 import ArticleGallery from "@/components/blog/ArticleGallery";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
+import ReaderRow from "@/components/ReaderRow";
 import { authorJsonLd } from "@/lib/blog/authors";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
@@ -286,13 +287,15 @@ export default async function ReviewPage({
           </Box>
         )}
 
-        <Box mb={8}>
+        <Box mb={4}>
           <Byline
             author={post.author}
             date={post.publishedAt}
             updated={post.updatedAt}
           />
         </Box>
+
+        <ReaderRow location="reviews" mb={8} />
 
         {post.heroImageUrl && (
           <Box

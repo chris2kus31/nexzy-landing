@@ -6,12 +6,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
-import { Container, Heading, Text } from "@chakra-ui/react";
+import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import { fetchEngineGuidePage, fetchEnginePage } from "@/lib/hub-engine/server";
 import {
   guidePath,
   labelOf,
+  walkOf,
   type HubResolvedBlock,
 } from "@/lib/hub-engine/types";
 import { G } from "@/components/games/guide/GuideBits";
@@ -132,6 +135,17 @@ export default async function GuidePage({ params }: Params) {
           })),
         }
       : null;
+  // Reader row line: on any walkthrough page (the walkthrough, a chapter
+  // or a step) count the steps across the whole walkthrough.
+  const inWalk = !!(page.walk || page.story || page.chapter || page.chaptered);
+  const walkSteps = inWalk ? walkOf(d.pages).steps.length : 0;
+  const readerLine =
+    walkSteps > 1
+      ? `Track all ${walkSteps} walkthrough steps in the Nexzy app, and your progress syncs.`
+      : undefined;
+  // End box: not on every step a reader passes through, only on the last
+  // step of each chapter (or of the walkthrough) and on every other page.
+  const showEnd = !(page.isStep && page.position < page.siblings);
   const ld = [
     {
       "@context": "https://schema.org",
@@ -228,6 +242,7 @@ export default async function GuidePage({ params }: Params) {
         })}
         . Unofficial guide by Nexzy.
       </Text>
+      <ReaderRow location="hub_page" kind="progress" line={readerLine} />
       <GuidePageBody
         slug={slug}
         config={d.config}
@@ -235,6 +250,16 @@ export default async function GuidePage({ params }: Params) {
         page={page}
         counts={d.counts}
       />
+      {showEnd && (
+        <Box mt={10}>
+          <AppCta
+            variant="inline"
+            location="hub_page"
+            heading={`Take the ${d.short} guide with you`}
+            subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
+          />
+        </Box>
+      )}
     </Container>
   );
 }

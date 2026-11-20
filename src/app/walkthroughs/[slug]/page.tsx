@@ -20,6 +20,7 @@ import GameCard from "@/components/blog/GameCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
+import ReaderRow from "@/components/ReaderRow";
 import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
@@ -167,13 +168,15 @@ export default async function WalkthroughOverviewPage({
           {w.title}
         </Heading>
 
-        <Box mb={6}>
+        <Box mb={4}>
           <Byline
             author={w.author}
             date={w.publishedAt}
             updated={w.updatedAt}
           />
         </Box>
+
+        <ReaderRow location="walkthroughs" game={w.game?.name} />
 
         {w.game && (
           <Box mb={6}>

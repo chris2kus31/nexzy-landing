@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import NextLink from "next/link";
 import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import {
   fetchEngineMapEntryTypes,
   fetchEnginePage,
@@ -81,6 +83,7 @@ export default async function GuideMapPage({ params }: Params) {
       >
         {d.short} interactive map
       </Heading>
+      <ReaderRow location="hub_map" kind="progress" mb={4} />
       <Suspense fallback={<Box h="70vh" bg="#0a0f22" borderRadius="14px" />}>
         <GuideMapScreen slug={slug} config={d.config} sections={d.sections} />
       </Suspense>
@@ -88,6 +91,14 @@ export default async function GuideMapPage({ params }: Params) {
         Unofficial fan map by Nexzy. Pins are placed by the Nexzy team;
         unconfirmed ones are marked.
       </Text>
+      <Box mt={10}>
+        <AppCta
+          variant="inline"
+          location="hub_map"
+          heading={`Take the ${d.short} guide with you`}
+          subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
+        />
+      </Box>
     </Container>
   );
 }

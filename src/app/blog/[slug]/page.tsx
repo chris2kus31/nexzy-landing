@@ -27,7 +27,7 @@ import type { ArticleMedia } from "@/lib/blog/api";
 import ArticleBody from "@/components/blog/ArticleBody";
 import AppCta from "@/components/blog/AppCta";
 import Byline from "@/components/blog/Byline";
-import PreferredSourceButton from "@/components/PreferredSourceButton";
+import ReaderRow from "@/components/ReaderRow";
 import ShareRow from "@/components/blog/ShareRow";
 import BlogCard from "@/components/blog/BlogCard";
 import MoreOnGame from "@/components/blog/MoreOnGame";
@@ -305,15 +305,9 @@ export default async function BlogArticlePage({
           />
         </Box>
 
-        {/* Preferred-source CTA in the byline area — the Top-Stories placement
-            gaming publishers use (e.g. Focus Gaming News puts it above the
-            title). Nexzy is a newsroom, so this lever is available to us: a
-            reader who marks us preferred sees more of our content in Top
-            Stories / Discover / AI Overviews. Becomes selectable as the domain
-            gets indexed. */}
-        <Box mb={8}>
-          <PreferredSourceButton />
-        </Box>
+        {/* Reader row: the app line + the Google preferred-source button
+            (Top-Stories placement in the byline area). */}
+        <ReaderRow location="blog" mb={8} />
 
         {post.heroImageUrl && (
           <Box

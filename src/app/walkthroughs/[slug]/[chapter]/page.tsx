@@ -20,6 +20,8 @@ import { fetchChapter } from "@/lib/blog/api";
 import GuideMarkdown from "@/components/guides/GuideMarkdown";
 import GameCard from "@/components/blog/GameCard";
 import Byline from "@/components/blog/Byline";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
@@ -276,13 +278,15 @@ export default async function WalkthroughChapterPage({
               {c.title}
             </Heading>
 
-            <Box mb={6}>
+            <Box mb={4}>
               <Byline
                 author={c.author}
                 date={c.publishedAt}
                 updated={c.updatedAt}
               />
             </Box>
+
+            <ReaderRow location="walkthrough_chapter" game={c.game?.name} />
 
             {c.heroImageUrl && (
               <Box
@@ -353,6 +357,14 @@ export default async function WalkthroughChapterPage({
                 <span />
               )}
             </Flex>
+
+            {/* End box on the LAST chapter only, not on every chapter a
+                reader passes through. */}
+            {!next && (
+              <Box mt={10}>
+                <AppCta variant="inline" location="walkthrough_chapter" />
+              </Box>
+            )}
           </Box>
         </Flex>
       </Container>

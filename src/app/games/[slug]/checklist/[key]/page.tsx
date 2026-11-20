@@ -4,8 +4,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
-import { Container, Heading, Text } from "@chakra-ui/react";
+import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
 import GuideChecklist from "@/components/games/guide/GuideChecklist";
 import { G } from "@/components/games/guide/GuideBits";
@@ -78,7 +80,16 @@ export default async function ChecklistPage({ params }: Params) {
           See them on the map
         </NextLink>
       </Text>
+      <ReaderRow location="hub_checklist" kind="progress" mb={4} />
       <GuideChecklist slug={slug} config={d.config} list={d.list} />
+      <Box mt={10}>
+        <AppCta
+          variant="inline"
+          location="hub_checklist"
+          heading={`Take the ${d.short} guide with you`}
+          subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
+        />
+      </Box>
     </Container>
   );
 }

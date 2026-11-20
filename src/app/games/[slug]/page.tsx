@@ -33,6 +33,7 @@ import {
 } from "@/lib/blog/api";
 import AppCta from "@/components/blog/AppCta";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
+import ReaderRow from "@/components/ReaderRow";
 import GameViewPing from "@/components/games/GameViewPing";
 import HubTabs, { type HubTab } from "@/components/games/HubTabs";
 import GameMedia from "@/components/games/GameMedia";
@@ -540,6 +541,15 @@ export default async function GameHubPage({
             {game.name}
           </Text>
         </HStack>
+
+        {/* Reader row for EVERY game hub (plain or mega), set here at page
+            level so no hub component changes. "progress" copy only when the
+            game has a live guide engine (ticks really sync to the app). */}
+        <ReaderRow
+          location={profile ? "hub_home" : "game_hub"}
+          kind={guide?.enabled ? "progress" : "follow"}
+          game={game.name}
+        />
 
         {profile && copy ? (
           <HubCopyProvider copy={copy}>

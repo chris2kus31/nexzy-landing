@@ -4,8 +4,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import NextLink from "next/link";
-import { Container, Heading, Text } from "@chakra-ui/react";
+import { Box, Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
+import ReaderRow from "@/components/ReaderRow";
+import AppCta from "@/components/blog/AppCta";
 import {
   fetchEnginePage,
   fetchEngineTypeEntries,
@@ -116,12 +118,21 @@ export default async function GuideTypePage({ params }: Params) {
           ? `All ${d.items.length} in the Nexzy guide.`
           : "Entries are being added."}
       </Text>
+      <ReaderRow location="hub_type" kind="progress" />
       {d.items.length > 0 && (
         <GuideTypeList slug={slug} config={d.config} items={d.items} />
       )}
       <Text fontSize="xs" color={G.muted} mt={8}>
         Unofficial guide by Nexzy.
       </Text>
+      <Box mt={10}>
+        <AppCta
+          variant="inline"
+          location="hub_type"
+          heading={`Take the ${d.short} guide with you`}
+          subtext="Your finds and checklist ticks sync between the site and the Nexzy app. Free on iOS and Android."
+        />
+      </Box>
     </Container>
   );
 }
