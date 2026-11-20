@@ -4,12 +4,18 @@ import remarkGfm from "remark-gfm";
 import NextLink from "next/link";
 import { Heading, Text, Link, List, Box, Image } from "@chakra-ui/react";
 import Spoiler from "@/components/blog/Spoiler";
+import {
+  blockComponents,
+  StatTable,
+  type Palette,
+} from "@/components/blog/ArticleBlocks";
+import { remarkArticleBlocks, rehypeTableLabels } from "@/lib/blog/md-blocks";
 
 // react-markdown's Components type has no slot for our custom `spoiler` element,
 // so widen it locally (a variable of this type is still assignable to the prop).
 type MdComponents = Components & {
   spoiler?: (props: { children?: ReactNode }) => ReactNode;
-};
+} & ReturnType<typeof blockComponents>;
 
 /**
  * Turns `||hidden text||` into a spoiler node (rendered by <Spoiler/>). A tiny
@@ -82,9 +88,18 @@ const TONES = {
     quoteBorder: "nexzy.blue",
     quoteText: "gray.300",
     caption: "gray.400",
-    tableBorder: "whiteAlpha.200",
-    tableHeadBg: "whiteAlpha.100",
-    tableStripe: "whiteAlpha.50",
+    // Tables + article blocks (see ArticleBlocks.tsx).
+    tFrame: "rgba(255,255,255,0.025)",
+    tBorder: "rgba(255,255,255,0.08)",
+    tRule: "rgba(255,255,255,0.06)",
+    tRail: "linear-gradient(90deg, #FFD700 0%, #FFB800 35%, #4DA3FF 100%)",
+    tLabel: "#FFD700",
+    tHeadBg: "rgba(255,215,0,0.045)",
+    tHeadRule: "rgba(255,215,0,0.22)",
+    tName: "white",
+    tHover: "rgba(77,163,255,0.07)",
+    tCard: "rgba(255,255,255,0.03)",
+    tCardHead: "rgba(255,215,0,0.07)",
   },
   paper: {
     body: "#3a2f22",
@@ -94,11 +109,19 @@ const TONES = {
     quoteBorder: "#c9a24a",
     quoteText: "#5a4b36",
     caption: "#6b5b45",
-    tableBorder: "#d8c7a3",
-    tableHeadBg: "#efe2c4",
-    tableStripe: "#f6edd9",
+    tFrame: "#f8f0de",
+    tBorder: "#d8c7a3",
+    tRule: "#e6d7b6",
+    tRail: "linear-gradient(90deg, #b23a1e 0%, #c9a24a 100%)",
+    tLabel: "#8a3a1a",
+    tHeadBg: "#efe2c4",
+    tHeadRule: "#c9a24a",
+    tName: "#1c140a",
+    tHover: "#f1e5c9",
+    tCard: "#f8f0de",
+    tCardHead: "#efe2c4",
   },
-} as const;
+} as const satisfies Record<"dark" | "paper", Palette>;
 
 /**
  * Renders article markdown into themed Chakra elements (server-rendered for
@@ -211,68 +234,25 @@ export default function Markdown({
           ) : null}
         </Box>
       ) : null,
-    // GFM tables (| a | b |): bordered, padded, striped, and horizontally
-    // scrollable on narrow screens instead of squishing cells together.
-    table: ({ children }) => (
-      <Box
-        my={6}
-        overflowX="auto"
-        borderWidth="1px"
-        borderColor={c.tableBorder}
-        borderRadius="lg"
-      >
-        <Box
-          as="table"
-          w="full"
-          fontSize="md"
-          lineHeight="1.5"
-          borderCollapse="collapse"
-        >
-          {children}
-        </Box>
-      </Box>
-    ),
-    thead: ({ children }) => (
-      <Box as="thead" bg={c.tableHeadBg}>
-        {children}
-      </Box>
-    ),
-    tbody: ({ children }) => <Box as="tbody">{children}</Box>,
-    tr: ({ children }) => (
-      <Box
-        as="tr"
-        borderBottomWidth="1px"
-        borderColor={c.tableBorder}
-        _last={{ borderBottomWidth: 0 }}
-        _even={{ bg: c.tableStripe }}
+    // GFM tables -> "stat card"; 3+ columns become row cards on phones.
+    table: ({ children, ...rest }) => (
+      <StatTable
+        c={c}
+        stack={(rest as Record<string, unknown>)["data-stack"] === "true"}
       >
         {children}
-      </Box>
+      </StatTable>
     ),
-    th: ({ children }) => (
-      <Box
-        as="th"
-        px={4}
-        py={3}
-        textAlign="left"
-        fontWeight="700"
-        color={c.heading}
-        whiteSpace="nowrap"
-      >
-        {children}
-      </Box>
-    ),
-    td: ({ children }) => (
-      <Box as="td" px={4} py={3} verticalAlign="top">
-        {children}
-      </Box>
-    ),
+    // Article blocks: > [!TIP], [!PATCH], [!FAQ]..., bare video/social links,
+    // image galleries. Syntax in lib/blog/md-blocks.ts.
+    ...blockComponents(c, tone),
     spoiler: ({ children }) => <Spoiler>{children}</Spoiler>,
   };
   return (
     <Box color={c.body} lineHeight="1.8" fontSize="lg">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkSpoiler]}
+        remarkPlugins={[remarkGfm, remarkSpoiler, remarkArticleBlocks]}
+        rehypePlugins={[rehypeTableLabels]}
         components={components as Components}
       >
         {stripUnfilledShotMarkers(children)}
