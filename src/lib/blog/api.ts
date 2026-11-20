@@ -703,13 +703,18 @@ export interface GameWithContent {
   updatedAt: string | null;
 }
 
-/** A game's public hub (basics + all its published content). null if none. */
+/** A game's public hub (basics + all its published content). null if none.
+ *  Only a real 404 means "no hub": any other failure (5xx during a deploy,
+ *  a load spike) THROWS so an ISR rebuild fails and Next keeps serving the
+ *  last good page instead of caching a 404 for the whole window (same rule
+ *  as lib/hub-engine/server.ts). */
 export async function fetchGameHub(slug: string): Promise<GameHub | null> {
   const res = await fetch(
     `${API}/newsroom/public/games/${encodeURIComponent(slug)}`,
     cacheInit(CACHE_HUB),
   );
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Game hub ${res.status} for ${slug}`);
   return res.json();
 }
 

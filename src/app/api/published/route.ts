@@ -92,28 +92,47 @@ export async function POST(req: NextRequest): Promise<Response> {
   // over the type+slug guess (a chapter's real URL is nested under its parent);
   // `parentPath` additionally refreshes the page that lists it (the overview).
   const pagePath = path || (slug ? `${base}/${slug}` : "");
-  if (pagePath) revalidatePath(pagePath);
-  if (parentPath) revalidatePath(parentPath);
-  revalidatePath(base);
-  revalidatePath("/sitemap.xml");
-  revalidatePath("/news-sitemap.xml");
-  revalidatePath("/rss.xml");
-  // Every other page that can show this content. These now cache for 30 min to
-  // 24 h, so they must be refreshed here or a new/changed article would not
-  // appear on them until their window ran out. Dynamic patterns ("…/[slug]",
-  // "page") refresh every page of that route, since the webhook doesn't carry
-  // the linked games/author/tags.
-  revalidatePath("/"); // homepage rails + Top Story hero
-  revalidatePath("/blog"); // Top Story hero shows the featured post of ANY type
-  revalidatePath("/games");
-  revalidatePath("/games/[slug]", "page"); // game hubs list linked content
-  revalidatePath("/author/[slug]", "page");
-  revalidatePath("/blog/topic/[tag]", "page");
-  if (type === "walkthrough") {
-    revalidatePath("/walkthroughs/[slug]/[chapter]", "page");
-  }
-  if (type === "rewind") {
-    revalidatePath("/rewind/on-this-day/[date]", "page");
+
+  // Mega hub notifies (engine/profile edits; their paths live under /games/)
+  // only change their own game's pages. Refresh those plus the sitemap and
+  // STOP — never the article surfaces (home, /blog, authors, topics, feeds),
+  // or one entry edit marks most of the site stale. Hub subpages (guide,
+  // map, lists) self-heal inside their 5-min window; the hub root caches
+  // 6 h, so it is always refreshed here explicitly.
+  const hubPaths = [pagePath, ...indexPaths].filter((p) =>
+    p.startsWith("/games/"),
+  );
+  if (hubPaths.length) {
+    const refresh = new Set<string>(hubPaths);
+    for (const p of hubPaths) refresh.add(`/games/${p.split("/")[2]}`);
+    if (parentPath) refresh.add(parentPath);
+    for (const p of refresh) revalidatePath(p);
+    revalidatePath("/games");
+    revalidatePath("/sitemap.xml");
+  } else {
+    if (pagePath) revalidatePath(pagePath);
+    if (parentPath) revalidatePath(parentPath);
+    revalidatePath(base);
+    revalidatePath("/sitemap.xml");
+    revalidatePath("/news-sitemap.xml");
+    revalidatePath("/rss.xml");
+    // Every other page that can show this content. These now cache for 30 min to
+    // 24 h, so they must be refreshed here or a new/changed article would not
+    // appear on them until their window ran out. Dynamic patterns ("…/[slug]",
+    // "page") refresh every page of that route, since the webhook doesn't carry
+    // the linked games/author/tags.
+    revalidatePath("/"); // homepage rails + Top Story hero
+    revalidatePath("/blog"); // Top Story hero shows the featured post of ANY type
+    revalidatePath("/games");
+    revalidatePath("/games/[slug]", "page"); // game hubs list linked content
+    revalidatePath("/author/[slug]", "page");
+    revalidatePath("/blog/topic/[tag]", "page");
+    if (type === "walkthrough") {
+      revalidatePath("/walkthroughs/[slug]/[chapter]", "page");
+    }
+    if (type === "rewind") {
+      revalidatePath("/rewind/on-this-day/[date]", "page");
+    }
   }
 
   // IndexNow best practice: submit ONLY the specific URL that changed, and only
