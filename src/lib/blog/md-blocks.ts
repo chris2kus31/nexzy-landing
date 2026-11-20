@@ -104,6 +104,12 @@ export function embedOf(raw: string): Embed | null {
     return null;
   }
   const host = u.hostname.replace(/^www\.|^m\./, "");
+  // Shape override: "#short" / "#vertical" = portrait, "#wide" = 16:9.
+  const force = /^#(short|vertical)$/i.test(u.hash)
+    ? true
+    : /^#wide$/i.test(u.hash)
+      ? false
+      : null;
   const yt = youtubeId(raw);
   if (yt && /youtube\.com|youtu\.be|youtube-nocookie\.com/.test(host)) {
     const start = seconds(
@@ -112,7 +118,7 @@ export function embedOf(raw: string): Embed | null {
     return {
       kind: "frame",
       host: "youtube",
-      portrait: isYoutubeShort(raw),
+      portrait: force ?? isYoutubeShort(raw),
       src: `https://www.youtube-nocookie.com/embed/${yt}?rel=0${start ? `&start=${start}` : ""}`,
     };
   }
@@ -122,7 +128,7 @@ export function embedOf(raw: string): Embed | null {
       ? {
           kind: "frame",
           host: "streamable",
-          portrait: false,
+          portrait: force ?? false,
           src: `https://streamable.com/e/${id}`,
         }
       : null;
@@ -133,7 +139,7 @@ export function embedOf(raw: string): Embed | null {
       ? {
           kind: "frame",
           host: "tiktok",
-          portrait: true,
+          portrait: force ?? true,
           src: `https://www.tiktok.com/player/v1/${id}?music_info=1&description=1&rel=0`,
         }
       : null;

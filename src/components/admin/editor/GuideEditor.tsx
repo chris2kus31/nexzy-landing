@@ -12,7 +12,9 @@ import {
   Textarea,
   Button,
 } from "@chakra-ui/react";
+import { useRef } from "react";
 import Markdown from "@/components/blog/Markdown";
+import BodyBlocksMenu from "./BodyBlocksMenu";
 import SectionEditor from "@/components/admin/SectionEditor";
 import { regeneratePost } from "@/lib/admin/client";
 import { labelProps, inputProps } from "./shared";
@@ -36,6 +38,7 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
   const { post, form, set, run, busy, preview, setPreview, notice, error, id } =
     ed;
   const isPublished = ed.isPublished;
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   if (!post || !form) return null;
 
   // Screenshot slots + section co-authoring apply to guides AND walkthrough
@@ -176,6 +179,13 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
                   )}
                 </HStack>
               </Flex>
+              {!isPublished && !preview && (
+                <BodyBlocksMenu
+                  textareaRef={bodyRef}
+                  value={form.bodyMarkdown ?? ""}
+                  onChange={(v) => set("bodyMarkdown", v)}
+                />
+              )}
               {preview ? (
                 <Box
                   flex="1"
@@ -192,6 +202,7 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
                 </Box>
               ) : (
                 <Textarea
+                  ref={bodyRef}
                   value={form.bodyMarkdown}
                   onChange={(e) => set("bodyMarkdown", e.target.value)}
                   flex="1"
