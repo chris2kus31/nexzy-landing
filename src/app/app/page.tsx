@@ -40,14 +40,14 @@ function readShots(): Record<string, string> {
 
 const TITLE = "Nexzy App: Follow the Games You Love | Free Gaming Feed";
 const DESCRIPTION =
-  "Nexzy is a free gaming app for iPhone and Android. Follow any game and get its news, trailers and updates in one feed, keep your library and wishlist, and meet gamers who play what you play.";
+  "Nexzy is a free gaming app for iPhone and Android. Follow any game, keep your library and wishlist, play through mega hub walkthroughs and maps, squad up in rooms and join weekly Drops.";
 const SHARE_TITLE = "The new Nexzy: follow the games you love";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
   keywords:
-    "gaming app, gaming feed, follow games, game news app, game trailers, game library app, wishlist, gaming community app, gaming social app",
+    "gaming app, gaming feed, follow games, game news app, game walkthrough app, interactive game map, game checklist, squad rooms, gaming community app, gaming social app",
   alternates: { canonical: "/app" },
   openGraph: {
     title: SHARE_TITLE,
@@ -82,12 +82,24 @@ const FAQ: { q: string; a: string }[] = [
     a: "Yes. Post screenshots, GIFs and polls, tag the game so the right players see it, reply, and follow gamers who share your taste.",
   },
   {
+    q: "What is a Nexzy mega hub?",
+    a: "The biggest games get an official Nexzy hub: the full walkthrough step by step, an interactive map, collectible checklists and your progress. Mark a step done on the website or in the app and it follows you.",
+  },
+  {
+    q: "What are Squad Rooms?",
+    a: "Rooms you start around a game, for launch night, a play-along or a hunt. Chat, make a plan, see who's in and, when the game has a map, drop pins on it. Open a room to anyone, approve who joins, or keep it invite only.",
+  },
+  {
+    q: "What are Drops?",
+    a: "A new drop every week, like #GameDNA: the 9 games that made you. Pick your games, share your build, and see which players picked the same ones.",
+  },
+  {
     q: "What devices does the app run on?",
     a: "Nexzy runs on iPhone via the App Store and on Android via Google Play.",
   },
   {
     q: "How is the app different from the Nexzy website?",
-    a: "The website is the newsroom: news, guides and walkthroughs anyone can read. The app is your feed: the games you follow, their news and trailers, and the gamers who play them.",
+    a: "The website is the newsroom: news, guides and walkthroughs anyone can read. The app is yours: the games you follow, mega hubs that track your progress, Squad Rooms, Drops, and the gamers who play what you play.",
   },
 ];
 

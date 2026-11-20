@@ -4,6 +4,7 @@
 // love"). Written for someone who has never heard of Nexzy, in this order:
 //   1. Hero: what Nexzy is (plain words) + the real feed on a phone
 //   2. How it works: 3 steps, each next to the real screen
+//   2b. New in the app: mega hubs, Squad Rooms, Drops (real screens)
 //   3. Why we built it: before / the new Nexzy
 //   4. See it in action: the promo video
 //   5. More of the app: screenshot carousel
@@ -12,7 +13,8 @@
 // Screenshots come from /public/follow/shots (read at build in page.tsx) and
 // are picked by name: pillar-1 (feed), pillar-2 (library), pillar-3 (post),
 // store-1 (game page), store-2 (wishlist), store-3 (gamer card),
-// store-4 (new post), store-5 (activity).
+// store-4 (new post), store-5 (activity), hub-1 (mega hub), rooms-1 (room
+// setup), drops-1 (Drops list).
 // ============================================
 "use client";
 
@@ -43,6 +45,10 @@ import {
   FaXmark,
   FaUserGroup,
   FaNewspaper,
+  FaMap,
+  FaComments,
+  FaLayerGroup,
+  FaArrowRight,
 } from "react-icons/fa6";
 import { BsFillLightningChargeFill } from "react-icons/bs";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
@@ -94,6 +100,51 @@ const STEPS: {
     title: "Meet gamers who play what you play",
     body: "Post screenshots, GIFs and polls, tag the game so the right players see it, reply, and follow people who share your taste.",
     chips: ["Posts", "Replies", "Polls and GIFs"],
+  },
+];
+
+// New in the app. Copy matches what the app does today (code: megahub guide,
+// rooms, drops); every game's hub, room kinds and drops are data, so nothing
+// here is tied to one game.
+const NEW_IN_APP: {
+  shot: string;
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  body: string;
+  chips: string[];
+  link?: { href: string; label: string };
+}[] = [
+  {
+    shot: "hub-1",
+    icon: <FaMap />,
+    eyebrow: "Mega hubs",
+    title: "The biggest games get a mega hub",
+    body: "Games like Grand Theft Auto VI get an official Nexzy hub in the app: the full walkthrough step by step, an interactive map, collectible checklists and your progress at a glance. Mark a step done on the website or in the app and it follows you.",
+    chips: [
+      "Walkthroughs",
+      "Interactive maps",
+      "Checklists",
+      "Progress that syncs",
+    ],
+    link: { href: "/games", label: "See the games we cover" },
+  },
+  {
+    shot: "rooms-1",
+    icon: <FaComments />,
+    eyebrow: "Squad Rooms",
+    title: "Squad up in a room",
+    body: "Start a room around a game, for launch night, a play-along or a hunt. Chat, make a plan, see who's in and, when the game has a map, drop pins on it. Open it to anyone, approve who joins, or keep it invite only.",
+    chips: ["Chat", "Plans", "Map pins", "Invite links"],
+  },
+  {
+    shot: "drops-1",
+    icon: <FaLayerGroup />,
+    eyebrow: "Drops",
+    title: "Your games, curated by you",
+    body: "A new drop every week, like #GameDNA: the 9 games that made you. Pick your games, share your build, and see which players picked the same ones.",
+    chips: ["New every week", "Share your build", "See who matches"],
+    link: { href: "/drops", label: "See this week's drops" },
   },
 ];
 
@@ -632,6 +683,125 @@ function HowItWorks({ shots }: { shots: Shots }) {
   );
 }
 
+function NewInApp({ shots }: { shots: Shots }) {
+  const items = NEW_IN_APP.filter((x) => shots[x.shot]);
+  if (!items.length) return null;
+  return (
+    <Box as="section" py={SECTION_PY} bg="nexzy.navy">
+      <Container maxW="6xl" px={{ base: 5, md: 6 }}>
+        <Stack gap={3} textAlign="center" mb={{ base: 12, md: 16 }}>
+          <Text
+            fontSize="xs"
+            fontWeight="700"
+            textTransform="uppercase"
+            letterSpacing="0.16em"
+            color="nexzy.gold"
+          >
+            New in the app
+          </Text>
+          <Heading
+            as="h2"
+            fontFamily="title"
+            size={{ base: "2xl", md: "3xl" }}
+            color="white"
+          >
+            Hubs, rooms and drops.
+          </Heading>
+        </Stack>
+        <Stack gap={{ base: 14, md: 20 }}>
+          {items.map((x, i) => {
+            const flip = i % 2 === 1;
+            return (
+              <Flex
+                key={x.title}
+                direction={{ base: "column", md: flip ? "row-reverse" : "row" }}
+                align="center"
+                justify="center"
+                gap={{ base: 8, md: 16 }}
+              >
+                <Stack
+                  flex={1}
+                  maxW="lg"
+                  gap={4}
+                  textAlign={{ base: "center", md: "left" }}
+                  align={{ base: "center", md: "start" }}
+                >
+                  <HStack gap={2} color="nexzy.gold">
+                    <Icon boxSize={5}>{x.icon}</Icon>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="700"
+                      textTransform="uppercase"
+                      letterSpacing="0.16em"
+                    >
+                      {x.eyebrow}
+                    </Text>
+                  </HStack>
+                  <Heading
+                    as="h3"
+                    fontFamily="title"
+                    size={{ base: "xl", md: "2xl" }}
+                    color="white"
+                    lineHeight="1.15"
+                  >
+                    {x.title}
+                  </Heading>
+                  <Text
+                    color="#c9d1e6"
+                    fontSize={{ base: "md", md: "lg" }}
+                    lineHeight="1.7"
+                  >
+                    {x.body}
+                  </Text>
+                  <HStack
+                    gap={2}
+                    flexWrap="wrap"
+                    justify={{ base: "center", md: "start" }}
+                  >
+                    {x.chips.map((c) => (
+                      <Box
+                        key={c}
+                        px={3}
+                        py={1}
+                        borderRadius="full"
+                        bg="#262C50"
+                        border="1px solid"
+                        borderColor="#333B66"
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="white"
+                      >
+                        {c}
+                      </Box>
+                    ))}
+                  </HStack>
+                  {x.link ? (
+                    <Link
+                      href={x.link.href}
+                      color="nexzy.gold"
+                      fontWeight="700"
+                      onClick={() =>
+                        track("app_page_feature_click", { feature: x.eyebrow })
+                      }
+                    >
+                      {x.link.label} <FaArrowRight />
+                    </Link>
+                  ) : null}
+                </Stack>
+                <PhoneShot
+                  src={shots[x.shot]}
+                  alt={`${x.eyebrow} in the Nexzy app`}
+                  w={{ base: "230px", md: "260px" }}
+                />
+              </Flex>
+            );
+          })}
+        </Stack>
+      </Container>
+    </Box>
+  );
+}
+
 function BeforeNow() {
   return (
     <Box as="section" py={SECTION_PY} bg="nexzy.navy">
@@ -950,6 +1120,7 @@ export default function FollowLaunch({ shots }: { shots: Shots }) {
     <>
       <Hero shots={shots} live={live} goLive={goLive} />
       <HowItWorks shots={shots} />
+      <NewInApp shots={shots} />
       <BeforeNow />
       <VideoSection />
       <Carousel shots={shots} />
