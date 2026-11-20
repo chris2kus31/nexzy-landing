@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Box, Container, Heading, Text } from "@chakra-ui/react";
-import { fetchGamesPage } from "@/lib/blog/api";
+import { fetchGamesPage, fetchWebFeatured } from "@/lib/blog/api";
 import GamesGrid from "@/components/games/GamesGrid";
+import FeaturedGames from "@/components/games/FeaturedGames";
 import GameSearch from "@/components/games/GameSearch";
 import { jsonLdString } from "@/lib/seo/jsonld";
 
@@ -18,7 +19,10 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 60;
 
 export default async function GamesIndexPage() {
-  const { items: games, total } = await fetchGamesPage(1, PAGE_SIZE);
+  const [{ items: games, total }, featured] = await Promise.all([
+    fetchGamesPage(1, PAGE_SIZE),
+    fetchWebFeatured(),
+  ]);
 
   const collectionLd = {
     "@context": "https://schema.org",
@@ -106,6 +110,8 @@ export default async function GamesIndexPage() {
           Our guides, walkthroughs, lists and news for each game — gathered in
           one place, and growing every week.
         </Text>
+
+        <FeaturedGames items={featured.items} />
 
         <GameSearch />
 

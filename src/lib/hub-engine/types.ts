@@ -526,7 +526,10 @@ export interface HubLiveCard {
 }
 
 /** "11-step walkthrough · Interactive map · 100 Gold Skulltulas". */
-export function hubParts(h: HubLiveCard, max = 3): string[] {
+export function hubParts(
+  h: Pick<HubLiveCard, "steps" | "hasMap" | "highlights">,
+  max = 3,
+): string[] {
   const out: string[] = [];
   if (h.steps > 0) out.push(`${h.steps}-step walkthrough`);
   if (h.hasMap) out.push("Interactive map");

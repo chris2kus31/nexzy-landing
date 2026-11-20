@@ -29,6 +29,7 @@ import ReviewsPanel from "@/components/admin/ReviewsPanel";
 import RoomsPanel from "@/components/admin/RoomsPanel";
 import GuidesPanel from "@/components/admin/guide/GuidesPanel";
 import FeaturedPanel from "@/components/admin/FeaturedPanel";
+import WebFeaturedPanel from "@/components/admin/WebFeaturedPanel";
 import NotifyPanel from "@/components/admin/NotifyPanel";
 import TrendingPanel from "@/components/admin/TrendingPanel";
 import MarketingPanel from "@/components/admin/MarketingPanel";
@@ -73,6 +74,7 @@ type Tab =
   | "rooms"
   | "hubguides"
   | "featured"
+  | "webfeatured"
   | "writers"
   | "tools"
   | "notify"
@@ -403,9 +405,16 @@ function AdminContent() {
           />
           {isOwner && (
             <TabButton
-              label="Featured"
+              label="Featured (app)"
               active={tab === "featured"}
               onClick={() => setTab("featured")}
+            />
+          )}
+          {isOwner && (
+            <TabButton
+              label="Featured on web"
+              active={tab === "webfeatured"}
+              onClick={() => setTab("webfeatured")}
             />
           )}
           {isOwner && (
@@ -614,6 +623,9 @@ function AdminContent() {
       {tab === "rooms" && <RoomsPanel isOwner={isOwner} />}
       {tab === "hubguides" && <GuidesPanel />}
       {tab === "featured" && isOwner && <FeaturedPanel isOwner={isOwner} />}
+      {tab === "webfeatured" && isOwner && (
+        <WebFeaturedPanel isOwner={isOwner} />
+      )}
 
       {tab === "writers" && isOwner && <WritersPanel />}
 

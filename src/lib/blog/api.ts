@@ -803,6 +803,44 @@ export interface GamesPage {
   pageSize: number;
 }
 
+/** One card in the /games "Featured" row (Admin -> Featured on web). */
+export interface WebFeaturedCard {
+  slug: string;
+  name: string;
+  image: string | null;
+  /** Live mega hub stats, or null for a game without one. */
+  hub: {
+    steps: number;
+    pages: number;
+    hasMap: boolean;
+    highlights: Array<{ type: string; label: string; count: number }>;
+  } | null;
+}
+
+/**
+ * The website's featured games (separate from the app's Discover hero):
+ * the admin's picks, else the newest live mega hubs. Same revalidate as the
+ * /games page; a change in admin refreshes it at once. A real 404 (API not
+ * deployed yet) means "no row"; any other failure THROWS so an ISR rebuild
+ * keeps the last good /games page.
+ */
+export async function fetchWebFeatured(): Promise<{
+  source: "pinned" | "auto" | "none";
+  items: WebFeaturedCard[];
+}> {
+  const res = await fetch(
+    `${API}/newsroom/public/featured-games`,
+    cacheInit(CACHE_LIST),
+  );
+  if (res.status === 404) return { source: "none", items: [] };
+  if (!res.ok) throw new Error(`Featured games ${res.status}`);
+  const d = await res.json();
+  return {
+    source: d?.source ?? "none",
+    items: Array.isArray(d?.items) ? d.items : [],
+  };
+}
+
 /** A single page of game hubs (sorted by coverage) for the paginated /games grid. */
 export async function fetchGamesPage(
   page = 1,

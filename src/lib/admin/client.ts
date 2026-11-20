@@ -2613,6 +2613,50 @@ export async function reorderFeaturedGames(
   );
 }
 
+// --- Featured on web (the /games "Featured" row; NOT the app's Discover hero) ---
+
+export interface WebFeaturedGame extends GameLite {
+  webFeaturedRank: number | null;
+  /** Still has a website page (article, video or mega hub). */
+  covered: boolean;
+}
+
+export async function listWebFeaturedGames(): Promise<WebFeaturedGame[]> {
+  return handle(await fetch(`/api/newsroom/admin/web-featured`));
+}
+
+export async function addWebFeaturedGame(
+  gameId: string,
+): Promise<WebFeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/web-featured/${gameId}`, {
+      method: "POST",
+    }),
+  );
+}
+
+export async function removeWebFeaturedGame(
+  gameId: string,
+): Promise<WebFeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/web-featured/${gameId}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+export async function reorderWebFeaturedGames(
+  ids: string[],
+): Promise<WebFeaturedGame[]> {
+  return handle(
+    await fetch(`/api/newsroom/admin/web-featured/order`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
+  );
+}
+
 export interface HiddenGame extends GameLite {
   notabilityScore: number | null;
   isMature: boolean;
