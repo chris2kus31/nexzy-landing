@@ -7,7 +7,7 @@
 // with collapsible groups. Story titles past the reader's spoiler setting
 // are masked; done steps get a check (same progress as the map).
 import { mapChoices } from "@/lib/hub-engine/maps";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NextLink from "next/link";
 import { Box, Flex, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { FiCheck, FiChevronDown, FiChevronRight } from "react-icons/fi";
@@ -36,6 +36,12 @@ type Link = {
   meta?: string;
   /** A step's chapter (the sidebar opens only the reader's chapter). */
   chapter?: string;
+  /** Guides: nesting depth (0 = top-level page) and the slugs of the
+   *  pages above it, so the sidebar can fold each branch. */
+  depth?: number;
+  parents?: string[];
+  /** Guides: the page has sub-pages (the sidebar shows a fold toggle). */
+  kids?: boolean;
 };
 type Group = { key: string; title: string; href?: string; links: Link[] };
 
@@ -107,21 +113,29 @@ export function useGuideGroups(
     groups.push({
       key: "guides",
       title: "Guides",
-      links: others.flatMap((p) => [
-        {
-          key: p.slug,
-          href: guidePath(slug, p.slug),
-          label: masked(p, "Spoiler page"),
-        },
-        ...p.children.map((c, i) => ({
-          key: c.slug,
-          href: guidePath(slug, c.slug),
-          label: masked(c, p.steps ? "Spoiler step" : "Spoiler page"),
-          child: true,
-          // Sub-pages of a Steps page are numbered, with Done marks.
-          ...(p.steps ? { n: i + 1, done: isDone(c) } : {}),
-        })),
-      ]),
+      // Every level (Collectibles > Collectible Cards > a card set), parents
+      // first. Sub-pages of a Steps page are numbered, with Done marks.
+      links: others.flatMap((p) => {
+        const walk = (
+          n: HubPageNode,
+          parents: string[],
+          parent: HubPageNode | null,
+          i: number,
+        ): Link[] => [
+          {
+            key: n.slug,
+            href: guidePath(slug, n.slug),
+            label: masked(n, parent?.steps ? "Spoiler step" : "Spoiler page"),
+            child: parents.length > 0,
+            depth: parents.length,
+            parents,
+            kids: n.children.length > 0,
+            ...(parent?.steps ? { n: i + 1, done: isDone(n) } : {}),
+          },
+          ...n.children.flatMap((c, j) => walk(c, [...parents, n.slug], n, j)),
+        ];
+        return walk(p, [], null, 0);
+      }),
     });
   // With a story page, its checklist would repeat the walkthrough.
   const lists = config.checklists.filter((c) => !(story && isStory(c)));
@@ -165,16 +179,29 @@ export function useGuideGroups(
 
 const ON_BG = "rgba(255,215,0,0.10)";
 
-function LinkRow({ l, current }: { l: Link; current?: string }) {
+function LinkRow({
+  l,
+  current,
+  fold,
+}: {
+  l: Link;
+  current?: string;
+  /** Sidebar: a page with sub-pages gets a fold toggle on its right. */
+  fold?: { open: boolean; toggle: () => void };
+}) {
   const on = l.key === current;
-  return (
+  const indent =
+    l.depth != null ? [2.5, 6, 9, 12][Math.min(l.depth, 3)] : l.child ? 6 : 2.5;
+  const row = (
     <Flex
       asChild
       align="center"
       gap={2}
       px={2.5}
       py={1.5}
-      pl={l.child ? 6 : 2.5}
+      pl={indent}
+      flex={fold ? "1" : undefined}
+      minW={0}
       borderRadius="0 8px 8px 0"
       borderLeft="2px solid"
       borderColor={on ? G.gold : "transparent"}
@@ -206,6 +233,22 @@ function LinkRow({ l, current }: { l: Link; current?: string }) {
         )}
         {l.done && <FiCheck aria-label="Done" color={GREEN} />}
       </NextLink>
+    </Flex>
+  );
+  if (!fold) return row;
+  return (
+    <Flex align="center">
+      {row}
+      <Box asChild color={G.muted} p={1.5} _hover={{ color: "white" }}>
+        <button
+          type="button"
+          onClick={fold.toggle}
+          aria-expanded={fold.open}
+          aria-label={`${fold.open ? "Collapse" : "Expand"} ${l.label}`}
+        >
+          {fold.open ? <FiChevronDown /> : <FiChevronRight />}
+        </button>
+      </Box>
     </Flex>
   );
 }
@@ -339,6 +382,43 @@ export function GuideContentsSidebar({
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(groups.filter(holds).map((g) => g.key)),
   );
+  // Guides: each page with sub-pages folds on its own. The branch holding
+  // the current page starts open (and the current page's own sub-pages).
+  const [openPages, setOpenPages] = useState<Set<string>>(() => {
+    const here = groups
+      .find((g) => g.key === "guides")
+      ?.links.find((l) => l.key === current);
+    return new Set([
+      ...(here?.parents ?? []),
+      ...(here?.kids ? [current] : []),
+    ]);
+  });
+  // Moving to another page (client navigation keeps this component):
+  // open the new page's branch too, without closing what the reader opened.
+  const here = groups
+    .find((g) => g.key === "guides")
+    ?.links.find((l) => l.key === current);
+  const branch = [
+    ...(here?.parents ?? []),
+    ...(here?.kids ? [current] : []),
+  ].join("|");
+  useEffect(() => {
+    if (!branch) return;
+    setOpenPages((cur) => {
+      const add = branch.split("|").filter((k) => !cur.has(k));
+      return add.length ? new Set([...cur, ...add]) : cur;
+    });
+    if (!groups.find((g) => g.key === "guides")) return;
+    setOpen((cur) => (cur.has("guides") ? cur : new Set([...cur, "guides"])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branch]);
+  const togglePage = (k: string) =>
+    setOpenPages((cur) => {
+      const n = new Set(cur);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
   const toggle = (k: string) =>
     setOpen((cur) => {
       const n = new Set(cur);
@@ -426,12 +506,25 @@ export function GuideContentsSidebar({
                 {g.links
                   .filter(
                     (l) =>
-                      !l.chapter ||
-                      l.chapter === current ||
-                      l.chapter === currentChapter,
+                      (!l.chapter ||
+                        l.chapter === current ||
+                        l.chapter === currentChapter) &&
+                      (l.parents ?? []).every((k) => openPages.has(k)),
                   )
                   .map((l) => (
-                    <LinkRow key={l.key} l={l} current={current} />
+                    <LinkRow
+                      key={l.key}
+                      l={l}
+                      current={current}
+                      fold={
+                        l.kids
+                          ? {
+                              open: openPages.has(l.key),
+                              toggle: () => togglePage(l.key),
+                            }
+                          : undefined
+                      }
+                    />
                   ))}
               </Stack>
             )}
