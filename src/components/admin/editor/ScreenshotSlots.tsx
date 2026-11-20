@@ -1,5 +1,6 @@
 "use client";
 
+import { FiCamera } from "react-icons/fi";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Box, Flex, Text, Button, VStack } from "@chakra-ui/react";
 import { uploadBodyImage } from "@/lib/admin/client";
@@ -116,7 +117,8 @@ export default function ScreenshotSlots({
             py={2}
           >
             <Text fontSize="sm" color="nexzy.white" lineClamp={2}>
-              📷 {m.desc || "(no description)"}
+              <FiCamera style={{ display: "inline", verticalAlign: "-2px" }} />{" "}
+              {m.desc || "(no description)"}
             </Text>
             <Button
               size="xs"

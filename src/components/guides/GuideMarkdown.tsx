@@ -4,12 +4,19 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import NextLink from "next/link";
 import { Heading, Text, Link, Box, Image } from "@chakra-ui/react";
+import { TONES } from "@/components/blog/Markdown";
+import { blockComponents, StatTable } from "@/components/blog/ArticleBlocks";
+import { remarkArticleBlocks, rehypeTableLabels } from "@/lib/blog/md-blocks";
 
 /**
  * GUIDE-ONLY markdown renderer. A separate component from the shared
  * `Markdown` (news/blog) on purpose: guides can restyle freely — numbered-step
  * pills, framed screenshot figures, the Nexzy brand palette — with zero risk to
  * any other beat. News/blog keep using `components/blog/Markdown`.
+ *
+ * Article blocks (`> [!TIP]`, `[!PATCH]`, video/social links, galleries) and
+ * the stat-card tables come from the same shared pieces as news, so a block
+ * written in the guide editor renders the same on the live guide.
  */
 
 // Only ever strip the guide writer's exact unfilled marker (with the camera).
@@ -23,8 +30,18 @@ export default function GuideMarkdown({ children }: { children: string }) {
   return (
     <Box color="gray.200" fontSize="lg" lineHeight="1.8">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkArticleBlocks]}
+        rehypePlugins={[rehypeTableLabels]}
         components={{
+          ...blockComponents(TONES.dark, "dark"),
+          table: ({ children, ...rest }) => (
+            <StatTable
+              c={TONES.dark}
+              stack={(rest as Record<string, unknown>)["data-stack"] === "true"}
+            >
+              {children}
+            </StatTable>
+          ),
           h2: ({ children }) => (
             <Heading
               as="h2"
@@ -141,7 +158,7 @@ export default function GuideMarkdown({ children }: { children: string }) {
             </Box>
           ),
           img: ({ src, alt }) =>
-            typeof src === "string" ? (
+            typeof src === "string" && src ? (
               <Box as="figure" my={6}>
                 <Image
                   src={src}

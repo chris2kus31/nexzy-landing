@@ -568,7 +568,7 @@ export default function GrowthPanel({ isOwner }: { isOwner: boolean }) {
               borderRadius="xl"
               p={{ base: 4, md: 6 }}
             >
-              <Markdown>{data.briefMarkdown}</Markdown>
+              <Markdown blocks={false}>{data.briefMarkdown}</Markdown>
             </Box>
           ) : (
             <Box

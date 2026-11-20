@@ -79,7 +79,7 @@ function stripUnfilledShotMarkers(md: string): string {
 
 /** Colour palette per tone. "dark" = the standard on-navy article; "paper" =
  *  the Rewind cream "retro paper" panel (dark ink on aged paper). */
-const TONES = {
+export const TONES = {
   dark: {
     body: "gray.200",
     heading: "white",
@@ -132,9 +132,13 @@ const TONES = {
 export default function Markdown({
   children,
   tone = "dark",
+  blocks = true,
 }: {
   children: string;
   tone?: "dark" | "paper";
+  /** Article blocks + bare-link embeds (lib/blog/md-blocks.ts). Off for
+   *  non-article text (e.g. the admin growth brief). Tables style either way. */
+  blocks?: boolean;
 }) {
   const c = TONES[tone];
   const components: MdComponents = {
@@ -207,7 +211,7 @@ export default function Markdown({
       </Box>
     ),
     img: ({ src, alt }) =>
-      typeof src === "string" ? (
+      typeof src === "string" && src ? (
         <Box as="figure" my={6}>
           <Image
             src={src}
@@ -251,7 +255,11 @@ export default function Markdown({
   return (
     <Box color={c.body} lineHeight="1.8" fontSize="lg">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkSpoiler, remarkArticleBlocks]}
+        remarkPlugins={
+          blocks
+            ? [remarkGfm, remarkSpoiler, remarkArticleBlocks]
+            : [remarkGfm, remarkSpoiler]
+        }
         rehypePlugins={[rehypeTableLabels]}
         components={components as Components}
       >

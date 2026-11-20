@@ -160,7 +160,18 @@ const bodyCss = (c: Palette) => ({
   "& h2:first-child, & h3:first-child, & h4:first-child": { mt: 0 },
   "& ul, & ol": { pl: 0, mb: 0, listStyleType: "none" },
   "& li::marker": { content: '""' },
-  "& li": { position: "relative", mb: 2 },
+  "& li": { position: "relative", mb: 2, minH: 0, pl: 0 },
+  // Neutral base so a host renderer's list bullets never bleed in; each kind
+  // then draws its own marker (see listCss).
+  "& li::before": {
+    content: "none",
+    border: "none",
+    background: "none",
+    boxShadow: "none",
+    width: "auto",
+    height: "auto",
+    borderRadius: 0,
+  },
   "& li:last-child": { mb: 0 },
 });
 
@@ -355,7 +366,9 @@ export function blockComponents(c: Palette, tone: Tone) {
         bgImage: rail ? c.tRail : undefined,
         bg: rail ? undefined : accent,
       }}
-      css={mergeCss(bodyCss(c), css)}
+      // "&&" doubles the class so these list rules win over the host
+      // renderer's own ul/ol/li styles (GuideMarkdown's numbered pills).
+      css={{ "&&": mergeCss(bodyCss(c), css) }}
     >
       {children}
     </Box>
@@ -664,10 +677,12 @@ export function blockComponents(c: Palette, tone: Tone) {
       const k = KINDS[kind] ?? KINDS.NOTE;
       const accent = ink(k.ink);
 
-      if (kind === "PATCH") {
-        const data = json<PatchBoardData>(rest["data-patch"]);
-        return data ? <PatchBoard data={data} /> : null;
-      }
+      // PATCH / READ / COMPARE fall through to the plain card below when
+      // their data is missing (no tagged lines, no link, < 2 images), so a
+      // half-written block never renders as raw text or disappears.
+      const patch =
+        kind === "PATCH" ? json<PatchBoardData>(rest["data-patch"]) : null;
+      if (patch?.items?.length) return <PatchBoard data={patch} />;
       if (kind === "QUOTE") return <Quote by={title}>{children}</Quote>;
       if (kind === "VERDICT")
         return (
@@ -675,7 +690,7 @@ export function blockComponents(c: Palette, tone: Tone) {
             {children}
           </Verdict>
         );
-      if (kind === "READ")
+      if (kind === "READ" && str(rest["data-href"]))
         return (
           <ReadNext
             href={str(rest["data-href"])}
@@ -688,11 +703,12 @@ export function blockComponents(c: Palette, tone: Tone) {
       if (kind === "COMPARE") {
         const imgs =
           json<{ src: string; alt: string }[]>(rest["data-images"]) ?? [];
-        if (imgs.length < 2) return null;
-        const [l = "", r = ""] = title.split("|").map((s) => s.trim());
-        return (
-          <CompareSlider images={imgs} labels={[l, r]} border={c.tBorder} />
-        );
+        if (imgs.length >= 2) {
+          const [l = "", r = ""] = title.split("|").map((s) => s.trim());
+          return (
+            <CompareSlider images={imgs} labels={[l, r]} border={c.tBorder} />
+          );
+        }
       }
       if (kind === "SPOILER")
         return (
@@ -926,10 +942,13 @@ export function blockComponents(c: Palette, tone: Tone) {
           }}
           css={{
             "& figure": { my: 0 },
+            // contain, never cover: screenshots keep their edges (HUD,
+            // subtitles); mixed sizes letterbox on the dark frame.
             "& img": {
               aspectRatio: "16 / 10",
-              objectFit: "cover",
+              objectFit: "contain",
               width: "100%",
+              background: "rgba(0,0,0,0.35)",
             },
           }}
         >

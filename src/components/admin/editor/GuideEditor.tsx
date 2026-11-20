@@ -13,7 +13,7 @@ import {
   Button,
 } from "@chakra-ui/react";
 import { useRef } from "react";
-import Markdown from "@/components/blog/Markdown";
+import GuideMarkdown from "@/components/guides/GuideMarkdown";
 import BodyBlocksMenu from "./BodyBlocksMenu";
 import SectionEditor from "@/components/admin/SectionEditor";
 import { regeneratePost } from "@/lib/admin/client";
@@ -198,7 +198,9 @@ export default function GuideEditor({ ed }: { ed: PostEditor }) {
                   p={4}
                   color="gray.200"
                 >
-                  <Markdown>{form.bodyMarkdown || "_(empty)_"}</Markdown>
+                  <GuideMarkdown>
+                    {form.bodyMarkdown || "_(empty)_"}
+                  </GuideMarkdown>
                 </Box>
               ) : (
                 <Textarea

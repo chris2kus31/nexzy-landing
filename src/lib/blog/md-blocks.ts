@@ -69,6 +69,21 @@ const el = (
   children,
 });
 
+/**
+ * Block props skip react-markdown's own URL sanitizing, so every URL a block
+ * carries goes through here: only http(s) and site-relative "/" paths survive.
+ */
+export function safeUrl(raw: string | null | undefined): string {
+  const v = (raw ?? "").trim();
+  if (v.startsWith("/") && !v.startsWith("//")) return v;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.href : "";
+  } catch {
+    return "";
+  }
+}
+
 // ---- media on its own line -------------------------------------------------
 
 export type Embed =
@@ -93,6 +108,7 @@ export function embedOf(raw: string): Embed | null {
   } catch {
     return null;
   }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
   const host = u.hostname.replace(/^www\.|^m\./, "");
   // Shape override: "#short" / "#vertical" = portrait, "#wide" = 16:9.
   const force = /^#(short|vertical)$/i.test(u.hash)
@@ -136,33 +152,33 @@ export function embedOf(raw: string): Embed | null {
   }
   const seg = u.pathname.split("/").filter(Boolean);
   if ((host === "x.com" || host === "twitter.com") && seg[1] === "status")
-    return { kind: "social", platform: "x", handle: `@${seg[0]}`, url: raw };
+    return { kind: "social", platform: "x", handle: `@${seg[0]}`, url: u.href };
   if (host === "bsky.app" && seg[0] === "profile" && seg[2] === "post")
     return {
       kind: "social",
       platform: "bluesky",
       handle: `@${seg[1]}`,
-      url: raw,
+      url: u.href,
     };
   if (host.endsWith("reddit.com") && seg[0] === "r" && seg[2] === "comments")
     return {
       kind: "social",
       platform: "reddit",
       handle: `r/${seg[1]}`,
-      url: raw,
+      url: u.href,
     };
   if (host === "instagram.com" && (seg[0] === "p" || seg[0] === "reel"))
     return {
       kind: "social",
       platform: "instagram",
       handle: "Instagram",
-      url: raw,
+      url: u.href,
     };
   if (
     (host === "threads.net" || host === "threads.com") &&
     seg[0]?.startsWith("@")
   )
-    return { kind: "social", platform: "threads", handle: seg[0], url: raw };
+    return { kind: "social", platform: "threads", handle: seg[0], url: u.href };
   return null;
 }
 
@@ -277,10 +293,12 @@ function toBlock(q: MdNode): MdNode | null {
           if (line.trim() && !applyPatchMeta(data, line))
             notes.push(line.trim());
     }
-    if (!data.items.length) return null;
-    if (notes.length) data.metaNote = notes.join(" ");
-    props.dataPatch = JSON.stringify(data);
-    q.children = [];
+    // No tagged lines: keep it as a plain "Patch notes" card (never raw text).
+    if (data.items.length) {
+      if (notes.length) data.metaNote = notes.join(" ");
+      props.dataPatch = JSON.stringify(data);
+      q.children = [];
+    }
   }
 
   if (kind === "FAQ") {
@@ -303,28 +321,34 @@ function toBlock(q: MdNode): MdNode | null {
       const i = (p.children ?? []).findIndex((k) => k.type === "link");
       if (i < 0) continue;
       const link = p.children![i];
+      // An unsafe link (javascript: etc.) stays in the text as a plain label.
+      if (!safeUrl(link.url)) break;
       href = link.url ?? "";
       label = textOf(link);
       p.children!.splice(i, 1);
       break;
     }
-    if (!href) return null;
     q.children = (q.children ?? []).filter((p) => textOf(p).trim());
-    props.dataHref = href;
-    props.dataLabel = label;
+    // No usable link: falls back to a plain card with the remaining text.
+    if (safeUrl(href)) {
+      props.dataHref = safeUrl(href);
+      props.dataLabel = label;
+    }
   }
 
   if (kind === "COMPARE") {
     const imgs: { src: string; alt: string }[] = [];
     const find = (n: MdNode) => {
-      if (n.type === "image" && n.url)
-        imgs.push({ src: n.url, alt: n.alt ?? "" });
+      if (n.type === "image" && safeUrl(n.url))
+        imgs.push({ src: safeUrl(n.url), alt: n.alt ?? "" });
       (n.children ?? []).forEach(find);
     };
     find(q);
-    if (imgs.length < 2) return null;
-    props.dataImages = JSON.stringify(imgs.slice(0, 2));
-    q.children = [];
+    // Fewer than 2 images: plain card, the images render as normal figures.
+    if (imgs.length >= 2) {
+      props.dataImages = JSON.stringify(imgs.slice(0, 2));
+      q.children = [];
+    }
   }
 
   q.data = { hName: "nxblock", hProperties: props };
@@ -355,6 +379,11 @@ function walk(node: MdNode): void {
 
 export const remarkArticleBlocks = () => (tree: unknown) =>
   walk(tree as MdNode);
+
+/** Plain-text helpers (JSON-LD, word counts): drop block markers. */
+export function stripBlockMarkers(md: string): string {
+  return md.replace(/\[!([A-Za-z]+)(?:\|[^\]\n]*)?\]/g, " ");
+}
 
 // ---- tables (rehype) -----------------------------------------------------------
 

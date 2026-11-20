@@ -26,6 +26,7 @@ import { authorJsonLd } from "@/lib/blog/authors";
 import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import { jsonLdString } from "@/lib/seo/jsonld";
+import { stripBlockMarkers } from "@/lib/blog/md-blocks";
 
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.nexzyapp.com";
@@ -41,7 +42,7 @@ function toHowToSteps(markdown?: string): { name: string; text: string }[] {
       if (current) steps.push(current);
       current = { name: h[1].replace(/[#*`]/g, "").trim(), text: "" };
     } else if (current) {
-      const clean = line
+      const clean = stripBlockMarkers(line)
         .replace(/[#*_`>[\]()]/g, " ")
         .replace(/\s+/g, " ")
         .trim();

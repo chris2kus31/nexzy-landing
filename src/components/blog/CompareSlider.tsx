@@ -56,6 +56,7 @@ export default function CompareSlider({
       <img
         src={b.src}
         alt={b.alt || labels[1]}
+        loading="lazy"
         style={{ display: "block", width: "100%" }}
       />
       <Box
@@ -67,6 +68,7 @@ export default function CompareSlider({
         <img
           src={a.src}
           alt={a.alt || labels[0]}
+          loading="lazy"
           style={{
             display: "block",
             width: "100%",

@@ -33,6 +33,7 @@ import ViewPing from "@/components/blog/ViewPing";
 import ArticleAnalytics from "@/components/blog/ArticleAnalytics";
 import SourcesBlock from "@/components/blog/SourcesBlock";
 import { jsonLdString } from "@/lib/seo/jsonld";
+import { stripBlockMarkers } from "@/lib/blog/md-blocks";
 
 // ISR: guide pages are cached and rebuilt in the background (fast + crawlable).
 export const revalidate = 86400; // 24 h; the publish webhook refreshes it instantly
@@ -61,7 +62,7 @@ function toHowToSteps(markdown?: string): { name: string; text: string }[] {
       if (current) steps.push(current);
       current = { name: h[1].replace(/[#*`]/g, "").trim(), text: "" };
     } else if (current) {
-      const clean = line
+      const clean = stripBlockMarkers(line)
         .replace(/[#*_`>[\]()]/g, " ")
         .replace(/\s+/g, " ")
         .trim();

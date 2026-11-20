@@ -1,5 +1,6 @@
 "use client";
 
+import { FiZap } from "react-icons/fi";
 import { useRef, useState } from "react";
 import {
   Box,
@@ -453,7 +454,7 @@ export default function RightRail({ ed }: { ed: PostEditor }) {
             onClick={suggestAltText}
             flexShrink={0}
           >
-            ✨ Suggest
+            <FiZap /> Suggest
           </Button>
         </HStack>
         <Text color="nexzy.gray.100" fontSize="xs" mt={1}>

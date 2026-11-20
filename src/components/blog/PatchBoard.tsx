@@ -109,20 +109,23 @@ function BoxHead({
 
 /** Buff/nerf row: name, old -> new (or detail), big change on the right. */
 function StatRow({ it, color }: { it: PatchItem; color: string }) {
+  // Numbers: big "+10%", sub "~~40~~ -> 44". Words: big "12+ levels", sub
+  // "was Trivial". A lone value is the big word.
   const pct = patchDelta(it.from, it.to);
-  const big = pct ?? (it.from ? null : it.to) ?? null;
-  const sub =
-    it.from && it.to ? (
-      <>
-        <Text as="s" opacity={0.8}>
-          {it.from}
-        </Text>{" "}
-        &rarr; {it.to}
-        {it.detail ? ` · ${it.detail}` : ""}
-      </>
-    ) : (
-      it.detail
-    );
+  const big = pct ?? it.to ?? null;
+  const sub = pct ? (
+    <>
+      <Text as="s" opacity={0.8}>
+        {it.from}
+      </Text>{" "}
+      &rarr; {it.to}
+      {it.detail ? ` \u00b7 ${it.detail}` : ""}
+    </>
+  ) : (
+    [it.from && it.to ? `was ${it.from}` : null, it.detail]
+      .filter(Boolean)
+      .join(" \u00b7 ") || null
+  );
   return (
     <Grid
       templateColumns="1fr auto"
