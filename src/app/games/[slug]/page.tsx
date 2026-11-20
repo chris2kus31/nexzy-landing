@@ -61,6 +61,7 @@ import { fetchEngineChecklist, fetchEnginePage } from "@/lib/hub-engine/server";
 import { fetchGameDrops } from "@/lib/trends/server";
 import {
   isStory,
+  walkOf,
   type HubChecklistPage,
   type HubEnginePage,
 } from "@/lib/hub-engine/types";
@@ -739,7 +740,7 @@ function MegaHub({
   // yet); the story checklist only stands in for games without one.
   const storyPage = guide?.pages?.find((p) => p.story);
   const walkthrough = storyPage
-    ? storyPage.children.length > 0
+    ? walkOf(guide?.pages ?? []).steps.length > 0
     : checklists.some((c) => storyKeys.has(c.key) && c.items.length > 0);
   const navItems: HubNavItem[] = [
     ...(hasGuide ? [{ id: "guide", label: t("nav.guide.web") }] : []),

@@ -236,14 +236,99 @@ export interface HubPageNode {
   summary: string | null;
   spoilerStage: string | null;
   eras: string[];
-  /** Story walkthrough page: its children are the steps and the hub strip
-   *  shows them (older APIs omit). */
+  /** Short name for lists and breadcrumbs (older APIs omit: use title). */
+  label?: string;
+  /** Story walkthrough page: its children are the chapters (`chaptered`)
+   *  or the steps, and the hub strip shows the steps (older APIs omit). */
   story?: boolean;
-  /** Its children are walkthrough steps (story page or a Steps block). */
+  /** Story page that holds chapters (Walkthrough > Chapter > Step). */
+  chaptered?: boolean;
+  /** A chapter of the story walkthrough (its children are steps). */
+  chapter?: boolean;
+  /** Its children are walkthrough steps (a chapter, the story page without
+   *  chapters, or a Steps page). */
   steps?: boolean;
+  /** A story step's number across the whole walkthrough. */
+  step?: number | null;
   /** The entry this page is about (a step's mission), public only. */
   entry?: HubCard | null;
   children: HubPageNode[];
+}
+
+/** A page's short name (falls back to its title). */
+export const labelOf = (p: { title: string; label?: string }) =>
+  p.label || p.title;
+
+/** Every page of the tree, parents first (any depth). */
+export function allPages(pages: HubPageNode[]): HubPageNode[] {
+  const out: HubPageNode[] = [];
+  const walk = (list: HubPageNode[]) =>
+    list.forEach((p) => {
+      out.push(p);
+      walk(p.children);
+    });
+  walk(pages);
+  return out;
+}
+
+export const findPage = (pages: HubPageNode[], slug: string) =>
+  allPages(pages).find((p) => p.slug === slug) ?? null;
+
+export interface WalkStep {
+  node: HubPageNode;
+  /** Number across the whole story. */
+  n: number;
+  chapter: WalkChapter | null;
+  /** Number inside its chapter (= n without chapters). */
+  inChapter: number;
+}
+export interface WalkChapter {
+  node: HubPageNode;
+  /** Chapter number (1-based). */
+  n: number;
+  steps: WalkStep[];
+}
+
+/** The story walkthrough of any game, one shape for every view: chapters
+ *  (optional) and every step in reading order. Without chapters the story
+ *  page's sub-pages are the steps; with chapters, a story sub-page that is
+ *  not a chapter (e.g. Missables) is listed in `extras`, not a step. */
+export function walkOf(pages: HubPageNode[]): {
+  story: HubPageNode | null;
+  chapters: WalkChapter[];
+  steps: WalkStep[];
+  extras: HubPageNode[];
+} {
+  const story = pages.find((p) => p.story) ?? null;
+  if (!story) return { story, chapters: [], steps: [], extras: [] };
+  const steps: WalkStep[] = [];
+  if (!story.chaptered) {
+    story.children.forEach((c, i) =>
+      steps.push({ node: c, n: i + 1, chapter: null, inChapter: i + 1 }),
+    );
+    return { story, chapters: [], steps, extras: [] };
+  }
+  const chapters: WalkChapter[] = story.children
+    .filter((c) => c.chapter)
+    .map((c, i) => ({ node: c, n: i + 1, steps: [] }));
+  for (const ch of chapters)
+    ch.node.children.forEach((c, i) => {
+      const s = { node: c, n: steps.length + 1, chapter: ch, inChapter: i + 1 };
+      ch.steps.push(s);
+      steps.push(s);
+    });
+  return {
+    story,
+    chapters,
+    steps,
+    extras: story.children.filter((c) => !c.chapter),
+  };
+}
+
+export interface HubPageRef {
+  slug: string;
+  title: string;
+  label?: string;
 }
 
 export interface HubCaptionedImage extends HubImage {
@@ -351,19 +436,39 @@ export interface HubGuidePage {
   seoTitle: string | null;
   seoDescription: string | null;
   updatedAt: string;
-  parent: { slug: string; title: string } | null;
-  prev: { slug: string; title: string } | null;
-  next: { slug: string; title: string } | null;
+  /** Short name (older APIs omit these: use title / parent). */
+  label?: string;
+  parent: HubPageRef | null;
+  /** Every page above this one, top first (Walkthrough, Chapter 2). */
+  crumbs?: HubPageRef[];
+  /** A story step's Previous / Next cross chapters. */
+  prev: HubPageRef | null;
+  next: HubPageRef | null;
   position: number;
   siblings: number;
-  children: Array<{ slug: string; title: string; summary: string | null }>;
+  children: Array<{
+    slug: string;
+    title: string;
+    label?: string;
+    summary: string | null;
+  }>;
   blocks: HubResolvedBlock[];
   /** This page is the story walkthrough (older APIs omit these). */
   story?: boolean;
+  /** The story page holds chapters. */
+  chaptered?: boolean;
+  /** A chapter of the story walkthrough. */
+  chapter?: boolean;
   /** Its sub-pages are walkthrough steps. */
   steps?: boolean;
   /** The parent's sub-pages are steps: this page is a step. */
   isStep?: boolean;
+  /** A story step: its place in the whole walkthrough and its chapter. */
+  walk?: {
+    position: number;
+    total: number;
+    chapter: (HubPageRef & { position: number; total: number }) | null;
+  } | null;
   entry?: HubCard | null;
   pins?: Array<{ id: string; map: string; x: number; y: number }>;
 }

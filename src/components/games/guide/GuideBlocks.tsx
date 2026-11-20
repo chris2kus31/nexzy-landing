@@ -22,7 +22,9 @@ import {
 import {
   entryPath,
   eraVisible,
+  findPage,
   spoilerVisible,
+  walkOf,
   typeOf,
   type HubCaptionedImage,
   type HubPageNode,
@@ -44,7 +46,11 @@ import GuideEntryDialog from "@/components/games/guide/GuideEntryDialog";
 import { usePageMaps } from "@/components/games/guide/GuidePageMaps";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
 import { useVisible } from "@/components/games/guide/GuideSections";
-import { StepCards, stepsOfNode } from "@/components/games/guide/GuideSteps";
+import {
+  StepCards,
+  stepsOfNode,
+  stepsOfWalk,
+} from "@/components/games/guide/GuideSteps";
 
 const GREEN = "#7EE2A0";
 
@@ -146,15 +152,20 @@ function Block({
 }) {
   switch (b.kind) {
     case "steps": {
-      // This page's sub-pages as walkthrough steps.
-      const node = pages.find((p) => p.slug === pageSlug);
+      // This page's sub-pages as walkthrough steps (the story page with
+      // chapters: every step across its chapters).
+      const node = pageSlug ? findPage(pages, pageSlug) : null;
       if (!node) return null;
       return (
         <StepCards
           config={config}
           title={b.title}
           show={b.show}
-          steps={stepsOfNode(slug, node)}
+          steps={
+            node.chaptered
+              ? stepsOfWalk(slug, walkOf(pages).steps)
+              : stepsOfNode(slug, node)
+          }
           allHref="#all-steps"
         />
       );

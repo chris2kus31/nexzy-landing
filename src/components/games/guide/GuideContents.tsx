@@ -14,7 +14,9 @@ import { FiCheck, FiChevronDown, FiChevronRight } from "react-icons/fi";
 import {
   guidePath,
   isStory,
+  labelOf,
   spoilerVisible,
+  walkOf,
   type HubPageNode,
   type HubTemplateConfig,
 } from "@/lib/hub-engine/types";
@@ -30,6 +32,10 @@ type Link = {
   n?: number;
   done?: boolean;
   child?: boolean;
+  /** Right side, e.g. a chapter's "6/18". */
+  meta?: string;
+  /** A step's chapter (the sidebar opens only the reader's chapter). */
+  chapter?: string;
 };
 type Group = { key: string; title: string; href?: string; links: Link[] };
 
@@ -48,22 +54,53 @@ export function useGuideGroups(
     config.features.spoilers &&
     (hides(p.spoilerStage) || hides(p.entry?.spoilerStage))
       ? fallback
-      : p.title;
+      : labelOf(p);
   const groups: Group[] = [];
-  // The Story page is the walkthrough (its steps, numbered).
-  const story = pages.find((p) => p.story);
+  // The Story page is the walkthrough: its steps, numbered, or with
+  // chapters each chapter (with its done count) and its steps under it.
+  const w = walkOf(pages);
+  const story = w.story;
+  const isDone = (p: HubPageNode) => !!p.entry && found.has(p.entry.id);
   if (story)
     groups.push({
       key: "walkthrough",
-      title: story.title,
+      title: labelOf(story),
       href: guidePath(slug, story.slug),
-      links: story.children.map((c, i) => ({
-        key: c.slug,
-        href: guidePath(slug, c.slug),
-        label: masked(c, "Spoiler step"),
-        n: i + 1,
-        done: !!c.entry && found.has(c.entry.id),
-      })),
+      links: story.chaptered
+        ? story.children.flatMap((c) => {
+            const ch = w.chapters.find((x) => x.node === c);
+            const head: Link = {
+              key: c.slug,
+              href: guidePath(slug, c.slug),
+              label: masked(c, "Spoiler page"),
+            };
+            if (!ch) return [head];
+            const tracked = ch.steps.filter((x) => x.node.entry);
+            return [
+              {
+                ...head,
+                meta: tracked.length
+                  ? `${tracked.filter((x) => isDone(x.node)).length}/${tracked.length}`
+                  : undefined,
+              },
+              ...ch.steps.map((x) => ({
+                key: x.node.slug,
+                href: guidePath(slug, x.node.slug),
+                label: masked(x.node, "Spoiler step"),
+                n: x.inChapter,
+                done: isDone(x.node),
+                child: true,
+                chapter: c.slug,
+              })),
+            ];
+          })
+        : w.steps.map((x) => ({
+            key: x.node.slug,
+            href: guidePath(slug, x.node.slug),
+            label: masked(x.node, "Spoiler step"),
+            n: x.n,
+            done: isDone(x.node),
+          })),
     });
   const others = pages.filter((p) => p !== story);
   if (others.length)
@@ -82,9 +119,7 @@ export function useGuideGroups(
           label: masked(c, p.steps ? "Spoiler step" : "Spoiler page"),
           child: true,
           // Sub-pages of a Steps page are numbered, with Done marks.
-          ...(p.steps
-            ? { n: i + 1, done: !!c.entry && found.has(c.entry.id) }
-            : {}),
+          ...(p.steps ? { n: i + 1, done: isDone(c) } : {}),
         })),
       ]),
     });
@@ -164,6 +199,11 @@ function LinkRow({ l, current }: { l: Link; current?: string }) {
         <Text as="span" flex="1" lineClamp={2}>
           {l.label}
         </Text>
+        {l.meta && (
+          <Text as="span" fontSize="xs" color={G.muted} fontWeight="700">
+            {l.meta}
+          </Text>
+        )}
         {l.done && <FiCheck aria-label="Done" color={GREEN} />}
       </NextLink>
     </Flex>
@@ -205,7 +245,12 @@ export function GuideContentsHub({
           // Hub view: the Guides column lists top-level pages only (each
           // parent page and the sidebar link its sub-pages), so every main
           // guide is one click from the hub instead of behind "All N".
-          const top = topLevel && g.key === "guides";
+          // With chapters the Walkthrough column lists the chapters (each
+          // with its done count) the same way.
+          const top =
+            topLevel &&
+            (g.key === "guides" ||
+              (g.key === "walkthrough" && g.links.some((l) => l.chapter)));
           const links = top ? g.links.filter((l) => !l.child) : g.links;
           const max = top ? Math.max(MAX, 12) : MAX;
           return (
@@ -226,7 +271,14 @@ export function GuideContentsHub({
                 textTransform="uppercase"
                 letterSpacing="0.06em"
               >
-                {g.title}
+                {/* The walkthrough's own page is one click from its column. */}
+                {g.href && g.links.length > 0 ? (
+                  <NextLink href={g.href} style={{ color: "inherit" }}>
+                    {g.title}
+                  </NextLink>
+                ) : (
+                  g.title
+                )}
               </Text>
               <Stack gap={0}>
                 {g.links.length === 0 && g.href && (
@@ -275,6 +327,12 @@ export function GuideContentsSidebar({
   current: string;
 }) {
   const groups = useGuideGroups(slug, config, pages, counts);
+  // Walkthrough with chapters: the sidebar lists every chapter and opens
+  // the steps of the reader's chapter only.
+  const currentChapter =
+    groups
+      .find((g) => g.key === "walkthrough")
+      ?.links.find((l) => l.key === current)?.chapter ?? null;
   const holds = (g: Group) =>
     g.links.some((l) => l.key === current) ||
     (g.key === "walkthrough" && g.href?.endsWith(`/${current}`));
@@ -365,9 +423,16 @@ export function GuideContentsSidebar({
             </Flex>
             {isOpen && canOpen && (
               <Stack gap={0} pl={1}>
-                {g.links.map((l) => (
-                  <LinkRow key={l.key} l={l} current={current} />
-                ))}
+                {g.links
+                  .filter(
+                    (l) =>
+                      !l.chapter ||
+                      l.chapter === current ||
+                      l.chapter === currentChapter,
+                  )
+                  .map((l) => (
+                    <LinkRow key={l.key} l={l} current={current} />
+                  ))}
               </Stack>
             )}
           </Box>

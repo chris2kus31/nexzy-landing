@@ -11,11 +11,13 @@ import { Box, Heading, HStack, SimpleGrid, Text } from "@chakra-ui/react";
 import {
   eraVisible,
   guidePath,
+  labelOf,
   spoilerVisible,
   typeOf,
   type HubCard,
   type HubPageNode,
   type HubTemplateConfig,
+  type WalkStep,
 } from "@/lib/hub-engine/types";
 import { G, hasFieldValue } from "@/components/games/guide/GuideBits";
 import { useGuideProgress } from "@/components/games/guide/GuideProgress";
@@ -26,6 +28,8 @@ export type Step = {
   key: string;
   n: number;
   title: string;
+  /** Card label instead of "STEP n" (e.g. "CH 2 · STEP 5"). */
+  kicker?: string;
   href: string;
   /** The entry behind the step (done state, reward). */
   card: HubCard | null;
@@ -38,11 +42,27 @@ export function stepsOfNode(slug: string, node: HubPageNode): Step[] {
   return node.children.map((c, i) => ({
     key: c.slug,
     n: i + 1,
-    title: c.title,
+    title: labelOf(c),
     href: guidePath(slug, c.slug),
     card: c.entry ?? null,
     spoilerStage: c.spoilerStage,
     eras: c.eras,
+  }));
+}
+
+/** Story steps across chapters (the hub strip): "CH 2 · STEP 5". */
+export function stepsOfWalk(slug: string, steps: WalkStep[]): Step[] {
+  return steps.map((x) => ({
+    key: x.node.slug,
+    n: x.n,
+    title: labelOf(x.node),
+    kicker: x.chapter
+      ? `CH ${x.chapter.n} · STEP ${x.inChapter}`
+      : `STEP ${x.n}`,
+    href: guidePath(slug, x.node.slug),
+    card: x.node.entry ?? null,
+    spoilerStage: x.node.spoilerStage,
+    eras: x.node.eras,
   }));
 }
 
@@ -144,7 +164,7 @@ export function StepCards({
               >
                 <HStack justify="space-between">
                   <Text fontSize="xs" fontWeight="700" color={G.muted}>
-                    STEP {x.n}
+                    {x.kicker ?? `STEP ${x.n}`}
                   </Text>
                   <Text
                     fontSize="xs"

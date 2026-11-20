@@ -174,6 +174,8 @@ function blankBlock(kind: BlockKind, config: HubTemplateConfig): HubBlock {
   }
 }
 
+type TreeNode = { page: EnginePageRow; children: TreeNode[] };
+
 const move = <T,>(list: T[], i: number, d: number): T[] => {
   const j = i + d;
   if (j < 0 || j >= list.length) return list;
@@ -215,28 +217,34 @@ export default function GuidePagesEditor({
     void load();
   }, [load]);
 
-  // Tree order: each top page, then its children.
+  // Tree order: each top page, then its sub-pages (the story walkthrough
+  // can hold chapters that hold steps: three levels).
   const tree = useMemo(() => {
     const ids = new Set(rows.map((r) => r.id));
-    const top = rows.filter((r) => !r.parentId || !ids.has(r.parentId));
-    return top.map((t) => ({
-      page: t,
-      children: rows.filter((r) => r.parentId === t.id),
-    }));
+    const build = (p: EnginePageRow, depth: number): TreeNode => ({
+      page: p,
+      children:
+        depth < 3
+          ? rows
+              .filter((r) => r.parentId === p.id)
+              .map((r) => build(r, depth + 1))
+          : [],
+    });
+    return rows
+      .filter((r) => !r.parentId || !ids.has(r.parentId))
+      .map((r) => build(r, 1));
   }, [rows]);
 
   /** Send the whole order after a move / indent. */
-  const commit = async (
-    next: { page: EnginePageRow; children: EnginePageRow[] }[],
-  ) => {
+  const commit = async (next: TreeNode[]) => {
     const items: { id: string; parentId: string | null; sortOrder: number }[] =
       [];
-    next.forEach((t, i) => {
-      items.push({ id: t.page.id, parentId: null, sortOrder: (i + 1) * 10 });
-      t.children.forEach((c, j) =>
-        items.push({ id: c.id, parentId: t.page.id, sortOrder: (j + 1) * 10 }),
-      );
-    });
+    const walk = (list: TreeNode[], parentId: string | null) =>
+      list.forEach((t, i) => {
+        items.push({ id: t.page.id, parentId, sortOrder: (i + 1) * 10 });
+        walk(t.children, t.page.id);
+      });
+    walk(next, null);
     setBusy(true);
     setErr([]);
     try {
@@ -265,8 +273,15 @@ export default function GuidePagesEditor({
         config={config}
         page={open === "new" ? null : open}
         parents={tree
-          .map((t) => t.page)
-          .filter((p) => open === "new" || p.id !== open.id)}
+          .flatMap((t) =>
+            t.page.story
+              ? [
+                  { page: t.page, depth: 0 },
+                  ...t.children.map((c) => ({ page: c.page, depth: 1 })),
+                ]
+              : [{ page: t.page, depth: 0 }],
+          )
+          .filter((x) => open === "new" || x.page.id !== open.id)}
         onDirtyChange={onDirtyChange}
         onClose={(changed) => {
           setOpen(null);
@@ -278,11 +293,11 @@ export default function GuidePagesEditor({
   const statusOf = (s: PageStatus) => STATUS.find((x) => x.key === s)!;
   const Row = ({
     p,
-    child,
+    depth,
     tools,
   }: {
     p: EnginePageRow;
-    child: boolean;
+    depth: number;
     tools: React.ReactNode;
   }) => (
     <Flex
@@ -292,7 +307,7 @@ export default function GuidePagesEditor({
       borderRadius="10px"
       px={3}
       py={2}
-      ml={child ? 8 : 0}
+      ml={depth * 8}
       wrap="wrap"
     >
       <Box flex="1" minW="200px">
@@ -370,6 +385,100 @@ export default function GuidePagesEditor({
     </Box>
   );
 
+  /** The list at `path` (indexes from the top) changed: rebuild the tree. */
+  const withList = (
+    list: TreeNode[],
+    path: number[],
+    fn: (l: TreeNode[]) => TreeNode[],
+  ): TreeNode[] =>
+    path.length
+      ? list.map((x, k) =>
+          k === path[0]
+            ? { ...x, children: withList(x.children, path.slice(1), fn) }
+            : x,
+        )
+      : fn(list);
+  /** One level of the tree with its tools (any depth; the API checks the
+   *  layout: three levels only under the story walkthrough). */
+  const level = (list: TreeNode[], path: number[]): React.ReactNode =>
+    list.map((t, i) => (
+      <Stack key={t.page.id} gap={2}>
+        <Row
+          p={t.page}
+          depth={path.length}
+          tools={
+            <>
+              <Icon
+                label="Move up"
+                disabled={i === 0}
+                onClick={() =>
+                  void commit(withList(tree, path, (l) => move(l, i, -1)))
+                }
+              >
+                <FiArrowUp />
+              </Icon>
+              <Icon
+                label="Move down"
+                disabled={i === list.length - 1}
+                onClick={() =>
+                  void commit(withList(tree, path, (l) => move(l, i, 1)))
+                }
+              >
+                <FiArrowDown />
+              </Icon>
+              <Icon
+                label="Put under the page above"
+                disabled={i === 0}
+                onClick={() =>
+                  void commit(
+                    withList(tree, path, (l) =>
+                      l
+                        .filter((_, j) => j !== i)
+                        .map((x) =>
+                          x.page.id === l[i - 1].page.id
+                            ? { ...x, children: [...x.children, t] }
+                            : x,
+                        ),
+                    ),
+                  )
+                }
+              >
+                <FiArrowRight />
+              </Icon>
+              {path.length > 0 && (
+                <Icon
+                  label="Move up a level"
+                  onClick={() => {
+                    const up = path.slice(0, -1);
+                    const at = path[path.length - 1];
+                    void commit(
+                      withList(tree, up, (l) => {
+                        const out = l.map((x, k) =>
+                          k === at
+                            ? {
+                                ...x,
+                                children: x.children.filter(
+                                  (y) => y.page.id !== t.page.id,
+                                ),
+                              }
+                            : x,
+                        );
+                        out.splice(at + 1, 0, t);
+                        return out;
+                      }),
+                    );
+                  }}
+                >
+                  <FiArrowLeft />
+                </Icon>
+              )}
+            </>
+          }
+        />
+        {level(t.children, [...path, i])}
+      </Stack>
+    ));
+
   return (
     <Stack gap={4}>
       <Card
@@ -383,7 +492,9 @@ export default function GuidePagesEditor({
         <Text fontSize="sm" color={C.muted} mb={3}>
           This list is the guide&apos;s table of contents. Arrows change the
           order; the right arrow puts a page under the one above it (for
-          walkthrough steps), the left arrow brings it back to the top.
+          walkthrough steps), the left arrow moves it up a level. The story
+          walkthrough can hold chapters, each holding its steps (Walkthrough
+          &gt; Chapter &gt; Step).
         </Text>
         <Problems lines={err} />
         {loading ? (
@@ -395,110 +506,7 @@ export default function GuidePagesEditor({
             with a page per chapter under it).
           </Text>
         ) : (
-          <Stack gap={2}>
-            {tree.map((t, i) => (
-              <Stack key={t.page.id} gap={2}>
-                <Row
-                  p={t.page}
-                  child={false}
-                  tools={
-                    <>
-                      <Icon
-                        label="Move up"
-                        disabled={i === 0}
-                        onClick={() => void commit(move(tree, i, -1))}
-                      >
-                        <FiArrowUp />
-                      </Icon>
-                      <Icon
-                        label="Move down"
-                        disabled={i === tree.length - 1}
-                        onClick={() => void commit(move(tree, i, 1))}
-                      >
-                        <FiArrowDown />
-                      </Icon>
-                      <Icon
-                        label="Put under the page above"
-                        disabled={i === 0 || t.children.length > 0}
-                        onClick={() => {
-                          const next = tree
-                            .filter((_, j) => j !== i)
-                            .map((x) =>
-                              x.page.id === tree[i - 1].page.id
-                                ? { ...x, children: [...x.children, t.page] }
-                                : x,
-                            );
-                          void commit(next);
-                        }}
-                      >
-                        <FiArrowRight />
-                      </Icon>
-                    </>
-                  }
-                />
-                {t.children.map((c, j) => (
-                  <Row
-                    key={c.id}
-                    p={c}
-                    child
-                    tools={
-                      <>
-                        <Icon
-                          label="Move up"
-                          disabled={j === 0}
-                          onClick={() =>
-                            void commit(
-                              tree.map((x, k) =>
-                                k === i
-                                  ? { ...x, children: move(x.children, j, -1) }
-                                  : x,
-                              ),
-                            )
-                          }
-                        >
-                          <FiArrowUp />
-                        </Icon>
-                        <Icon
-                          label="Move down"
-                          disabled={j === t.children.length - 1}
-                          onClick={() =>
-                            void commit(
-                              tree.map((x, k) =>
-                                k === i
-                                  ? { ...x, children: move(x.children, j, 1) }
-                                  : x,
-                              ),
-                            )
-                          }
-                        >
-                          <FiArrowDown />
-                        </Icon>
-                        <Icon
-                          label="Bring back to the top level"
-                          onClick={() => {
-                            const next = tree.map((x, k) =>
-                              k === i
-                                ? {
-                                    ...x,
-                                    children: x.children.filter(
-                                      (y) => y.id !== c.id,
-                                    ),
-                                  }
-                                : x,
-                            );
-                            next.splice(i + 1, 0, { page: c, children: [] });
-                            void commit(next);
-                          }}
-                        >
-                          <FiArrowLeft />
-                        </Icon>
-                      </>
-                    }
-                  />
-                ))}
-              </Stack>
-            ))}
-          </Stack>
+          <Stack gap={2}>{level(tree, [])}</Stack>
         )}
       </Card>
       <Text fontSize="xs" color={C.faint}>
@@ -524,7 +532,8 @@ function PageForm({
   gameSlug: string;
   config: HubTemplateConfig;
   page: EnginePage | null;
-  parents: EnginePageRow[];
+  /** Top-level pages, and the story walkthrough's chapters (depth 1). */
+  parents: Array<{ page: EnginePageRow; depth: number }>;
   onClose: (changed: boolean) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
@@ -723,9 +732,13 @@ function PageForm({
               }
               options={[
                 { value: "", label: "Top level" },
-                ...parents.map((p) => ({
+                ...parents.map(({ page: p, depth }) => ({
                   value: p.id,
-                  label: p.story ? `${p.title} (story walkthrough)` : p.title,
+                  label: p.story
+                    ? `${p.title} (story walkthrough)`
+                    : depth
+                      ? `- ${p.title} (chapter)`
+                      : p.title,
                 })),
               ]}
             />
@@ -750,7 +763,7 @@ function PageForm({
         <Flex gap={6} mt={3} wrap="wrap" align="flex-end">
           {!v.parentId && (
             <Check
-              label="Story walkthrough: the pages under this one are the steps, in order (one per game)"
+              label="Story walkthrough: the pages under this one are the steps, or chapters holding the steps, in order (one per game)"
               checked={!!v.story}
               onChange={(story) => set({ story })}
             />
@@ -1319,7 +1332,8 @@ function BlockCard({
                 Shows the pages under this page as numbered steps. Each step
                 page gets Step X of N and Previous / Next step. Link a mission
                 on a step page (This page is about) for its reward, Mark done
-                and map pin. Use it on a top-level page.
+                and map pin. Use it on a top-level page or a walkthrough
+                chapter.
               </Text>
             </>
           )}

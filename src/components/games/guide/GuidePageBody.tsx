@@ -14,9 +14,13 @@ import {
   FiList,
 } from "react-icons/fi";
 import {
+  allPages,
+  findPage,
   guidePath,
+  labelOf,
   spoilerVisible,
   typeOf,
+  walkOf,
   type HubGuidePage,
   type HubPageNode,
   type HubTemplateConfig,
@@ -149,7 +153,11 @@ function ChildList({
   page: HubGuidePage;
 }) {
   const { found, spoiler } = useGuideProgress();
-  const node = pages.find((p) => p.slug === page.slug);
+  const node = findPage(pages, page.slug);
+  // The story page with chapters: every chapter with its progress, then
+  // the walkthrough's other pages (e.g. Missables).
+  if (node?.chaptered)
+    return <ChapterList slug={slug} config={config} pages={pages} />;
   // Steps: every step as walkthrough cards (Up next / Done / reward),
   // unless a Steps block on this page already shows them all.
   if (node && (node.steps || node.story || page.steps)) {
@@ -210,9 +218,9 @@ function ChildList({
             </Text>
             <Box flex="1">
               <Text color="white" fontWeight="700">
-                {title(c.slug, c.title)}
+                {title(c.slug, labelOf(c))}
               </Text>
-              {c.summary && title(c.slug, c.title) === c.title && (
+              {c.summary && title(c.slug, labelOf(c)) === labelOf(c) && (
                 <Text color={G.muted} fontSize="sm" lineClamp={2}>
                   {c.summary}
                 </Text>
@@ -234,6 +242,100 @@ function ChildList({
           </NextLink>
         </Flex>
       ))}
+    </Stack>
+  );
+}
+
+/** The story walkthrough's chapters: progress bar and steps count each
+ *  (the same Mark done ticks as the steps), then its other pages. */
+function ChapterList({
+  slug,
+  config,
+  pages,
+}: {
+  slug: string;
+  config: HubTemplateConfig;
+  pages: HubPageNode[];
+}) {
+  const { found, spoiler } = useGuideProgress();
+  const w = walkOf(pages);
+  const hidden = (p: HubPageNode) =>
+    config.features.spoilers &&
+    [p.spoilerStage, p.entry?.spoilerStage].some(
+      (s) => !!s && !spoilerVisible(config.spoilerStages, s, spoiler),
+    );
+  const row = (p: HubPageNode, kicker: string, extra?: React.ReactNode) => (
+    <Flex
+      key={p.slug}
+      asChild
+      direction="column"
+      gap={2}
+      bg={G.panel}
+      border="1px solid"
+      borderColor={G.line}
+      borderRadius="14px"
+      p={4}
+      _hover={{ borderColor: G.gold }}
+    >
+      <NextLink href={guidePath(slug, p.slug)}>
+        <Flex align="center" gap={3}>
+          <Box flex="1">
+            <Text fontSize="xs" fontWeight="800" color={G.muted}>
+              {kicker}
+            </Text>
+            <Text color="white" fontWeight="700">
+              {hidden(p) ? "Spoiler page" : labelOf(p)}
+            </Text>
+          </Box>
+          <FiArrowRight aria-hidden color={G.gold} />
+        </Flex>
+        {!hidden(p) && p.summary && (
+          <Text color={G.muted} fontSize="sm" lineClamp={2}>
+            {p.summary}
+          </Text>
+        )}
+        {extra}
+      </NextLink>
+    </Flex>
+  );
+  return (
+    <Stack gap={3} mt={8} id="all-steps" scrollMarginTop="140px">
+      <Text color={G.muted} fontSize="sm" fontWeight="700">
+        {w.chapters.length} chapters · {w.steps.length} steps
+      </Text>
+      {w.chapters.map((ch) => {
+        const tracked = ch.steps.filter((x) => x.node.entry);
+        const done = tracked.filter((x) => found.has(x.node.entry!.id)).length;
+        const pct = tracked.length
+          ? Math.round((done / tracked.length) * 100)
+          : 0;
+        return row(
+          ch.node,
+          `CHAPTER ${ch.n} · ${ch.steps.length} STEP${ch.steps.length === 1 ? "" : "S"}`,
+          tracked.length > 0 && (
+            <Flex align="center" gap={3}>
+              <Box
+                flex="1"
+                h="4px"
+                bg="rgba(255,255,255,0.08)"
+                borderRadius="999px"
+                overflow="hidden"
+              >
+                <Box h="100%" w={`${pct}%`} bg={GREEN} />
+              </Box>
+              <Text fontSize="xs" color={done ? GREEN : G.muted}>
+                {done} of {tracked.length} done
+              </Text>
+            </Flex>
+          ),
+        );
+      })}
+      {w.extras.length > 0 && (
+        <Text color={G.muted} fontSize="sm" fontWeight="700" mt={3}>
+          Also in the walkthrough
+        </Text>
+      )}
+      {w.extras.map((p) => row(p, "GUIDE"))}
     </Stack>
   );
 }
@@ -476,18 +578,30 @@ function PrevNext({
 }) {
   const { spoiler } = useGuideProgress();
   if (!page.prev && !page.next) return null;
-  const all = pages.flatMap((p) => [p, ...p.children]);
+  const all = allPages(pages);
   // A later step's title can give the story away: hide it like the TOC does.
-  const titleOf = (p: { slug: string; title: string }) => {
+  const titleOf = (p: { slug: string; title: string; label?: string }) => {
     const n = all.find((x) => x.slug === p.slug);
     return config.features.spoilers &&
       [n?.spoilerStage, n?.entry?.spoilerStage].some(
         (s) => !!s && !spoilerVisible(config.spoilerStages, s, spoiler),
       )
       ? "Spoiler page"
-      : p.title;
+      : labelOf(p);
   };
-  const card = (dir: "prev" | "next", p: { slug: string; title: string }) => (
+  // A step's neighbour in another chapter says so ("Chapter 3 · ...").
+  const chapterOf = (p: { slug: string }) =>
+    page.walk ? walkOf(pages).steps.find((x) => x.node.slug === p.slug) : null;
+  const crossing = (p: { slug: string }) => {
+    const x = chapterOf(p);
+    return x?.chapter && x.chapter.node.slug !== page.parent?.slug
+      ? `Chapter ${x.chapter.n}`
+      : null;
+  };
+  const card = (
+    dir: "prev" | "next",
+    p: { slug: string; title: string; label?: string },
+  ) => (
     <Flex
       asChild
       flex="1"
@@ -519,6 +633,7 @@ function PrevNext({
             : page.isStep
               ? "Next step"
               : "Next"}
+          {crossing(p) && ` · ${crossing(p)}`}
           {dir === "next" && <FiArrowRight aria-hidden />}
         </Flex>
         <Text color="white" fontWeight="700">

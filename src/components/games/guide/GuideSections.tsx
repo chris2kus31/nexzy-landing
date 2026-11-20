@@ -24,8 +24,10 @@ import { FiCheck, FiChevronRight, FiHelpCircle } from "react-icons/fi";
 import {
   entryPath,
   guidePath,
+  labelOf,
   isStory,
   eraVisible,
+  walkOf,
   spoilerVisible,
   typeOf,
   type HubCard,
@@ -43,7 +45,11 @@ import {
 } from "@/components/games/guide/GuideBits";
 import GuideMap from "@/components/games/guide/GuideMap";
 import { GuideContentsHub } from "@/components/games/guide/GuideContents";
-import { StepCards, type Step } from "@/components/games/guide/GuideSteps";
+import {
+  StepCards,
+  stepsOfWalk,
+  type Step,
+} from "@/components/games/guide/GuideSteps";
 import {
   GuideProgressProvider,
   useGuideProgress,
@@ -189,17 +195,12 @@ function Body({
   // The story walkthrough: once the guide has a Story page it is the ONLY
   // walkthrough (its steps; none yet = no strip). The story checklist's
   // items stand in only for games without a Story page.
-  const storyPage = pages.find((p) => p.story);
+  // With chapters (Walkthrough > Chapter > Step) the steps run across
+  // every chapter in story order.
+  const story = walkOf(pages);
+  const storyPage = story.story;
   const steps: Step[] | null = storyPage
-    ? storyPage.children.map((c, i) => ({
-        key: c.slug,
-        n: i + 1,
-        title: c.title,
-        href: guidePath(slug, c.slug),
-        card: c.entry ?? null,
-        spoilerStage: c.spoilerStage,
-        eras: c.eras,
-      }))
+    ? stepsOfWalk(slug, story.steps)
     : walk
       ? walk.items.map((c, i) => ({
           key: c.id,
@@ -260,6 +261,14 @@ function Body({
                 walk && storyPage ? guidePath(slug, storyPage.slug) : null
               }
               storyKey={walk?.key ?? null}
+              chapters={story.chapters.map((ch) => ({
+                key: ch.node.slug,
+                title: labelOf(ch.node),
+                href: guidePath(slug, ch.node.slug),
+                ids: ch.steps
+                  .map((x) => x.node.entry?.id)
+                  .filter((x): x is string => !!x),
+              }))}
             />
           )}
         </Flex>
@@ -270,7 +279,9 @@ function Body({
           id="guide-walkthrough"
           show="next"
           config={config}
-          title={storyPage?.title ?? walk?.title ?? "Walkthrough"}
+          title={
+            (storyPage && labelOf(storyPage)) ?? walk?.title ?? "Walkthrough"
+          }
           allHref={
             storyPage
               ? guidePath(slug, storyPage.slug)
@@ -320,12 +331,16 @@ function ProgressCard({
   lists,
   storyHref = null,
   storyKey = null,
+  chapters = [],
 }: {
   slug: string;
   lists: HubChecklistPage[];
   /** The story checklist row opens the walkthrough page when there is one. */
   storyHref?: string | null;
   storyKey?: string | null;
+  /** Walkthrough chapters: one row each under the story row (their steps'
+   *  missions, the same Mark done ticks). */
+  chapters?: Array<{ key: string; title: string; href: string; ids: string[] }>;
 }) {
   const { found, signedIn } = useGuideProgress();
   const rows = lists.map((c) => {
@@ -370,39 +385,78 @@ function ProgressCard({
         </Text>
       </HStack>
       <Stack gap={2}>
-        {rows.map(({ c, done: d, total }) => (
-          <NextLink
-            key={c.key}
-            href={
-              storyHref && c.key === storyKey
-                ? storyHref
-                : `/games/${slug}/checklist/${c.key}`
-            }
-          >
-            <Box
-              bg={G.card}
-              border="1px solid"
-              borderColor={G.line}
-              borderRadius="10px"
-              px={3}
-              py={2.5}
-              _hover={{ borderColor: G.gold }}
+        {rows
+          .map(({ c, done: d, total }) => (
+            <NextLink
+              key={c.key}
+              href={
+                storyHref && c.key === storyKey
+                  ? storyHref
+                  : `/games/${slug}/checklist/${c.key}`
+              }
             >
-              <HStack justify="space-between" mb={1.5}>
-                <Text fontSize="sm" fontWeight="600" color="white">
-                  {c.title}
-                </Text>
-                <HStack gap={1} color={G.muted} fontSize="sm">
-                  <Text>
-                    {d} / {total}
+              <Box
+                bg={G.card}
+                border="1px solid"
+                borderColor={G.line}
+                borderRadius="10px"
+                px={3}
+                py={2.5}
+                _hover={{ borderColor: G.gold }}
+              >
+                <HStack justify="space-between" mb={1.5}>
+                  <Text fontSize="sm" fontWeight="600" color="white">
+                    {c.title}
                   </Text>
-                  <FiChevronRight aria-hidden />
+                  <HStack gap={1} color={G.muted} fontSize="sm">
+                    <Text>
+                      {d} / {total}
+                    </Text>
+                    <FiChevronRight aria-hidden />
+                  </HStack>
                 </HStack>
-              </HStack>
-              <Bar pct={total ? Math.round((d / total) * 100) : 0} />
-            </Box>
-          </NextLink>
-        ))}
+                <Bar pct={total ? Math.round((d / total) * 100) : 0} />
+              </Box>
+            </NextLink>
+          ))
+          .flatMap((row, i) =>
+            rows[i].c.key === storyKey && storyKey
+              ? [
+                  row,
+                  ...chapters
+                    .filter((ch) => ch.ids.length > 0)
+                    .map((ch) => {
+                      const d = ch.ids.filter((id) => found.has(id)).length;
+                      return (
+                        <NextLink key={`ch-${ch.key}`} href={ch.href}>
+                          <Box
+                            ml={4}
+                            borderLeft="2px solid"
+                            borderColor={G.line}
+                            pl={3}
+                            py={1.5}
+                            _hover={{ borderColor: G.gold }}
+                          >
+                            <HStack justify="space-between" mb={1}>
+                              <Text
+                                fontSize="xs"
+                                fontWeight="600"
+                                color={G.text}
+                              >
+                                {ch.title}
+                              </Text>
+                              <Text fontSize="xs" color={G.muted}>
+                                {d} / {ch.ids.length}
+                              </Text>
+                            </HStack>
+                            <Bar pct={Math.round((d / ch.ids.length) * 100)} />
+                          </Box>
+                        </NextLink>
+                      );
+                    }),
+                ]
+              : [row],
+          )}
       </Stack>
     </Box>
   );

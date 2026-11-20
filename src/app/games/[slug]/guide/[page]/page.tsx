@@ -9,7 +9,11 @@ import NextLink from "next/link";
 import { Container, Heading, Text } from "@chakra-ui/react";
 import { fetchGameHub } from "@/lib/blog/api";
 import { fetchEngineGuidePage, fetchEnginePage } from "@/lib/hub-engine/server";
-import { guidePath, type HubResolvedBlock } from "@/lib/hub-engine/types";
+import {
+  guidePath,
+  labelOf,
+  type HubResolvedBlock,
+} from "@/lib/hub-engine/types";
 import { G } from "@/components/games/guide/GuideBits";
 import GuidePageBody from "@/components/games/guide/GuidePageBody";
 import { jsonLdString } from "@/lib/seo/jsonld";
@@ -89,19 +93,45 @@ export default async function GuidePage({ params }: Params) {
   const { page } = d;
   const url = `${SITE_URL}${guidePath(slug, page.slug)}`;
   const photo = firstPhoto(page.blocks);
+  // Every page above this one (Walkthrough > Chapter 2), short names.
+  const above = page.crumbs ?? (page.parent ? [page.parent] : []);
   const crumbs = [
     { name: d.short, item: `${SITE_URL}/games/${slug}` },
     { name: "Guide", item: `${SITE_URL}/games/${slug}/guide` },
-    ...(page.parent
-      ? [
-          {
-            name: page.parent.title,
-            item: `${SITE_URL}${guidePath(slug, page.parent.slug)}`,
-          },
-        ]
-      : []),
-    { name: page.title, item: url },
+    ...above.map((x) => ({
+      name: labelOf(x),
+      item: `${SITE_URL}${guidePath(slug, x.slug)}`,
+    })),
+    { name: labelOf(page), item: url },
   ];
+  // A walkthrough step: "Chapter 2 · Step 6 of 18" and its place overall.
+  const kicker = page.walk?.chapter
+    ? `Chapter ${page.walk.chapter.position} · Step ${page.position} of ${page.siblings}`
+    : page.parent && page.siblings > 1
+      ? `${page.isStep ? "Step" : "Page"} ${page.position} of ${page.siblings}`
+      : null;
+  const overall =
+    page.walk?.chapter && page.walk.total > page.siblings
+      ? `Step ${page.walk.position} of ${page.walk.total} in the walkthrough`
+      : null;
+  // Pages that list steps or chapters: an ItemList for search and AI
+  // answers (the order is the walkthrough order).
+  const listed =
+    (page.steps || page.chaptered) && page.children.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: labelOf(page),
+          itemListOrder: "https://schema.org/ItemListOrderAscending",
+          numberOfItems: page.children.length,
+          itemListElement: page.children.map((c, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: labelOf(c),
+            url: `${SITE_URL}${guidePath(slug, c.slug)}`,
+          })),
+        }
+      : null;
   const ld = [
     {
       "@context": "https://schema.org",
@@ -121,6 +151,16 @@ export default async function GuidePage({ params }: Params) {
       dateModified: page.updatedAt,
       mainEntityOfPage: url,
       ...(photo ? { image: [photo] } : {}),
+      // A step or chapter is part of the walkthrough above it.
+      ...(above.length
+        ? {
+            isPartOf: {
+              "@type": "CreativeWork",
+              name: above[above.length - 1].title,
+              url: `${SITE_URL}${guidePath(slug, above[above.length - 1].slug)}`,
+            },
+          }
+        : {}),
       about: { "@type": "VideoGame", name: d.short },
       author: { "@type": "Organization", name: "Nexzy", url: SITE_URL },
       publisher: {
@@ -129,6 +169,7 @@ export default async function GuidePage({ params }: Params) {
         logo: { "@type": "ImageObject", url: `${SITE_URL}/NexzyLogo.png` },
       },
     },
+    ...(listed ? [listed] : []),
   ];
   return (
     <Container maxW="7xl" py={{ base: 6, md: 10 }}>
@@ -139,16 +180,14 @@ export default async function GuidePage({ params }: Params) {
       <Text fontSize="sm" color={G.muted} mb={2}>
         <NextLink href={`/games/${slug}`}>{d.short}</NextLink> /{" "}
         <NextLink href={`/games/${slug}/guide`}>Guide</NextLink>
-        {page.parent && (
-          <>
+        {above.map((x) => (
+          <span key={x.slug}>
             {" / "}
-            <NextLink href={guidePath(slug, page.parent.slug)}>
-              {page.parent.title}
-            </NextLink>
-          </>
-        )}
+            <NextLink href={guidePath(slug, x.slug)}>{labelOf(x)}</NextLink>
+          </span>
+        ))}
       </Text>
-      {page.parent && page.siblings > 1 && (
+      {kicker && (
         <Text
           fontSize="xs"
           fontWeight="800"
@@ -157,7 +196,13 @@ export default async function GuidePage({ params }: Params) {
           letterSpacing="0.08em"
           mb={1}
         >
-          {page.isStep ? "Step" : "Page"} {page.position} of {page.siblings}
+          {kicker}
+          {overall && (
+            <Text as="span" color={G.muted}>
+              {" · "}
+              {overall}
+            </Text>
+          )}
         </Text>
       )}
       <Heading
