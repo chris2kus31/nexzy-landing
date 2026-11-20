@@ -273,14 +273,10 @@ export default function GuidePagesEditor({
         config={config}
         page={open === "new" ? null : open}
         parents={tree
-          .flatMap((t) =>
-            t.page.story
-              ? [
-                  { page: t.page, depth: 0 },
-                  ...t.children.map((c) => ({ page: c.page, depth: 1 })),
-                ]
-              : [{ page: t.page, depth: 0 }],
-          )
+          .flatMap((t) => [
+            { page: t.page, depth: 0 },
+            ...t.children.map((c) => ({ page: c.page, depth: 1 })),
+          ])
           .filter((x) => open === "new" || x.page.id !== open.id)}
         onDirtyChange={onDirtyChange}
         onClose={(changed) => {
@@ -399,7 +395,7 @@ export default function GuidePagesEditor({
         )
       : fn(list);
   /** One level of the tree with its tools (any depth; the API checks the
-   *  layout: three levels only under the story walkthrough). */
+   *  layout: three levels at most). */
   const level = (list: TreeNode[], path: number[]): React.ReactNode =>
     list.map((t, i) => (
       <Stack key={t.page.id} gap={2}>
@@ -491,10 +487,11 @@ export default function GuidePagesEditor({
       >
         <Text fontSize="sm" color={C.muted} mb={3}>
           This list is the guide&apos;s table of contents. Arrows change the
-          order; the right arrow puts a page under the one above it (for
-          walkthrough steps), the left arrow moves it up a level. The story
-          walkthrough can hold chapters, each holding its steps (Walkthrough
-          &gt; Chapter &gt; Step).
+          order; the right arrow puts a page under the one above it, the left
+          arrow moves it up a level. Pages go up to three levels deep: the story
+          walkthrough holds chapters that hold steps (Walkthrough &gt; Chapter
+          &gt; Step), and any other page can do the same (Collectibles &gt;
+          Collectible Cards &gt; a card set).
         </Text>
         <Problems lines={err} />
         {loading ? (
@@ -532,7 +529,8 @@ function PageForm({
   gameSlug: string;
   config: HubTemplateConfig;
   page: EnginePage | null;
-  /** Top-level pages, and the story walkthrough's chapters (depth 1). */
+  /** Top-level pages and their sub-pages (depth 1): the story's chapters,
+   *  or a section's sub-pages (Collectibles > Collectible Cards). */
   parents: Array<{ page: EnginePageRow; depth: number }>;
   onClose: (changed: boolean) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -723,7 +721,10 @@ function PageForm({
               })}
             </HStack>
           </Labeled>
-          <Labeled label="Under page" hint="For walkthrough steps or chapters">
+          <Labeled
+            label="Under page"
+            hint="For sub-pages, walkthrough chapters and steps (three levels at most)"
+          >
             <Pick
               label="Under page"
               value={v.parentId ?? ""}
@@ -737,7 +738,7 @@ function PageForm({
                   label: p.story
                     ? `${p.title} (story walkthrough)`
                     : depth
-                      ? `- ${p.title} (chapter)`
+                      ? `- ${p.title}`
                       : p.title,
                 })),
               ]}
