@@ -914,9 +914,14 @@ export default function MegaHubsPanel() {
                       style={{ accentColor: C.good, width: 18, height: 18 }}
                     />
                     <Text fontWeight="600">
-                      {draft.enabled ? "Hub is live" : "Hub is off"}
+                      {draft.enabled ? "Mega hub is live" : "Mega hub is off"}
                     </Text>
                   </label>
+                  <Text fontSize="sm" color={C.muted}>
+                    {draft.enabled
+                      ? "Full treatment: badge, theme, Hub tab modules."
+                      : "Off = lite hub: guides, walkthroughs and rooms still run on their own switches (Hub guides and the Rooms tab)."}
+                  </Text>
                   <Text fontSize="sm" color={C.muted}>
                     {detail.live.dayOne.toLocaleString()} day one ·{" "}
                     {detail.live.predictions.total.toLocaleString()} predictions

@@ -85,8 +85,16 @@ export function artSource(map: {
       tileSize: 512,
       minzoom: TILES_MIN_ZOOM,
       maxzoom: Math.round(baseZoom(map.width, map.height)),
-      // Only request tiles over the art: [west, south, east, north].
-      bounds: [corners[3][0], corners[3][1], corners[1][0], corners[1][1]],
+      // Only request tiles over the art: [west, south, east, north],
+      // inset half a source pixel. An edge exactly on a tile boundary
+      // (power-of-two art sides) makes MapLibre request one extra
+      // row/column that was never cut, so S3 answers 403 on every zoom.
+      bounds: [
+        corners[3][0] + (corners[1][0] - corners[3][0]) / map.width / 2,
+        corners[3][1] + (corners[1][1] - corners[3][1]) / map.height / 2,
+        corners[1][0] - (corners[1][0] - corners[3][0]) / map.width / 2,
+        corners[1][1] - (corners[1][1] - corners[3][1]) / map.height / 2,
+      ],
     };
   return { type: "image", url: mapArtUrl(map.url), coordinates: corners };
 }
