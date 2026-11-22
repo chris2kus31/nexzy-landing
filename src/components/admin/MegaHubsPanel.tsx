@@ -47,10 +47,17 @@ import {
   FACT_STATUSES,
   HUB_EDITORS,
   HUB_MODULES,
+  HUB_PHASES,
+  HUB_SECTIONS,
+  HUB_TILES,
   type HubEdition,
   type HubFact,
   type HubFaq,
+  type HubLifecycle,
   type HubModule,
+  type HubPhase,
+  type HubSection,
+  type HubTile,
 } from "@/lib/hubs/types";
 import RoomProfileCard from "@/components/admin/RoomProfileCard";
 import RoomListsCard from "@/components/admin/RoomListsCard";
@@ -60,6 +67,7 @@ import HubThemeEditor from "@/components/admin/HubThemeEditor";
 
 type HubTab =
   | "overview"
+  | "lifecycle"
   | "seo"
   | "facts"
   | "editions"
@@ -72,6 +80,7 @@ type HubTab =
 const TAB_KEY = "nexzy-admin-megahubs-tab";
 const HUB_TABS: HubTab[] = [
   "overview",
+  "lifecycle",
   "seo",
   "facts",
   "editions",
@@ -170,6 +179,248 @@ const MODULE_LABEL: Record<HubModule, string> = {
   editions: "Editions and price",
   faq: "FAQ",
 };
+
+// Lifecycle tab wording.
+const PHASE_LABEL: Record<HubPhase, string> = {
+  pre: "Pre-launch",
+  launch: "Launch window",
+  evergreen: "Evergreen",
+};
+const SECTION_LABEL: Record<HubSection, string> = {
+  ...MODULE_LABEL,
+  thread: "Launch thread",
+  shortVersion: "The short version",
+  rooms: "Rooms tile (app)",
+  players: "Who's playing tile (app)",
+};
+const TILE_LABEL: Record<HubTile, string> = {
+  rooms: "Rooms",
+  thread: "Launch thread",
+  predict: "Predict the score",
+  scores: "Critics vs Players",
+  shortVersion: "The short version",
+  players: "Who's playing",
+};
+
+/** Admin > Mega hubs > Lifecycle: the launch window, a phase hold, the
+ *  after-launch status line, which phases each section shows in, and the
+ *  app's tile order. The API resolves and enforces it; this only edits. */
+function LifecycleTab({
+  value,
+  phase,
+  phaseEndsAt,
+  onChange,
+}: {
+  value: HubLifecycle;
+  phase: HubPhase | undefined;
+  phaseEndsAt: string | null | undefined;
+  onChange: (v: HubLifecycle) => void;
+}) {
+  const togglePhase = (sec: HubSection, ph: HubPhase, on: boolean) => {
+    const cur = value.phases[sec] ?? [];
+    const next = on ? [...cur, ph] : cur.filter((x) => x !== ph);
+    onChange({
+      ...value,
+      phases: {
+        ...value.phases,
+        [sec]: HUB_PHASES.filter((x) => next.includes(x)),
+      },
+    });
+  };
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= value.tileOrder.length) return;
+    const order = [...value.tileOrder];
+    [order[i], order[j]] = [order[j], order[i]];
+    onChange({ ...value, tileOrder: order });
+  };
+  return (
+    <>
+      <Card
+        title="Phase"
+        hint="Pre-launch until the launch date, then the launch window, then evergreen for good. The app and the website both follow this."
+      >
+        <Flex gap={4} wrap="wrap" align="end">
+          <Box minW="200px">
+            <Text fontSize="sm" color={C.muted}>
+              Right now
+            </Text>
+            <Text fontWeight="700" color={C.gold}>
+              {phase ? PHASE_LABEL[phase] : "Save to see"}
+              {phaseEndsAt
+                ? ` until ${new Date(phaseEndsAt).toLocaleString()}`
+                : ""}
+            </Text>
+          </Box>
+          <Box w="160px">
+            <Field label="Launch window (days)">
+              <Input
+                {...inputProps}
+                type="number"
+                min={1}
+                max={365}
+                value={value.windowDays}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    windowDays: Math.max(
+                      1,
+                      Math.min(365, Number(e.target.value) || 1),
+                    ),
+                  })
+                }
+              />
+            </Field>
+          </Box>
+          <Box w="240px">
+            <Field label="Phase">
+              <Sel
+                value={value.override ?? ""}
+                options={[
+                  { value: "", label: "Automatic (by dates)" },
+                  ...HUB_PHASES.map((ph) => ({
+                    value: ph,
+                    label: `Hold in ${PHASE_LABEL[ph]}`,
+                  })),
+                ]}
+                onChange={(v) =>
+                  onChange({
+                    ...value,
+                    override: v ? (v as HubPhase) : null,
+                  })
+                }
+              />
+            </Field>
+          </Box>
+        </Flex>
+        <Box mt={3}>
+          <Field
+            label="Status line (after launch, optional)"
+            hint={<Counter n={(value.statusLine ?? "").length} max={120} />}
+          >
+            <Input
+              {...inputProps}
+              placeholder="Update 1.04 is out: new heists and photo mode"
+              value={value.statusLine ?? ""}
+              onChange={(e) =>
+                onChange({ ...value, statusLine: e.target.value || null })
+              }
+            />
+          </Field>
+        </Box>
+      </Card>
+
+      <Card
+        title="What shows in each phase"
+        hint="A section also needs its own switch on (Overview > Modules), a pinned thread or a short version."
+      >
+        <Box overflowX="auto">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: 6, color: C.muted }}>
+                  Section
+                </th>
+                {HUB_PHASES.map((ph) => (
+                  <th
+                    key={ph}
+                    style={{ padding: 6, color: C.muted, fontWeight: 600 }}
+                  >
+                    {PHASE_LABEL[ph]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {HUB_SECTIONS.map((sec) => (
+                <tr key={sec} style={{ borderTop: `1px solid ${C.line}` }}>
+                  <td style={{ padding: 6, fontSize: 14 }}>
+                    {SECTION_LABEL[sec]}
+                  </td>
+                  {HUB_PHASES.map((ph) => (
+                    <td key={ph} style={{ textAlign: "center", padding: 6 }}>
+                      <input
+                        type="checkbox"
+                        aria-label={`${SECTION_LABEL[sec]}: ${PHASE_LABEL[ph]}`}
+                        checked={(value.phases[sec] ?? []).includes(ph)}
+                        onChange={(e) => togglePhase(sec, ph, e.target.checked)}
+                        style={{
+                          accentColor: C.accent,
+                          width: 16,
+                          height: 16,
+                        }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Box>
+      </Card>
+
+      <Card
+        title="Tile order (app)"
+        hint="The order of the tiles on the app's Hub tab. Tiles that are off in the current phase are skipped."
+      >
+        <Box display="flex" flexDirection="column" gap={1}>
+          {value.tileOrder.map((tile, i) => (
+            <Flex
+              key={tile}
+              align="center"
+              justify="space-between"
+              bg={C.raised}
+              border="1px solid"
+              borderColor={C.line}
+              borderRadius="8px"
+              px={3}
+              py={1.5}
+            >
+              <Text fontSize="sm">
+                {i + 1}. {TILE_LABEL[tile]}
+              </Text>
+              <HStack gap={1}>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color={C.muted}
+                  onClick={() => move(i, -1)}
+                  disabled={i === 0}
+                  aria-label={`Move ${TILE_LABEL[tile]} up`}
+                >
+                  <FiArrowUp />
+                </Button>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  color={C.muted}
+                  onClick={() => move(i, 1)}
+                  disabled={i === value.tileOrder.length - 1}
+                  aria-label={`Move ${TILE_LABEL[tile]} down`}
+                >
+                  <FiArrowDown />
+                </Button>
+              </HStack>
+            </Flex>
+          ))}
+        </Box>
+      </Card>
+    </>
+  );
+}
+
+/** A lifecycle with every field filled (an older API sends none). */
+function lifecycleOf(lc: HubLifecycle | undefined): HubLifecycle {
+  const phases = {} as Record<HubSection, HubPhase[]>;
+  for (const sec of HUB_SECTIONS) phases[sec] = lc?.phases?.[sec] ?? [];
+  return {
+    windowDays: lc?.windowDays ?? 30,
+    override: lc?.override ?? null,
+    statusLine: lc?.statusLine ?? null,
+    tileOrder: lc?.tileOrder?.length ? lc.tileOrder : [...HUB_TILES],
+    phases,
+  };
+}
 
 const newId = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`;
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
@@ -941,6 +1192,7 @@ export default function MegaHubsPanel() {
                 onChange={setTab}
                 tabs={[
                   { key: "overview", label: "Overview" },
+                  { key: "lifecycle", label: "Lifecycle" },
                   {
                     key: "seo",
                     label: "Search and SEO",
@@ -1054,6 +1306,15 @@ export default function MegaHubsPanel() {
                     </Flex>
                   </Card>
                 </>
+              )}
+
+              {tab === "lifecycle" && (
+                <LifecycleTab
+                  value={lifecycleOf(draft.lifecycle)}
+                  phase={detail.profile.phase}
+                  phaseEndsAt={detail.profile.phaseEndsAt}
+                  onChange={(v) => set("lifecycle", v)}
+                />
               )}
 
               {tab === "thread" && (

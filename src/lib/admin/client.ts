@@ -8,8 +8,10 @@ import type {
   HubFact,
   HubFaq,
   HubLink,
+  HubLifecycle,
   HubLive,
   HubModules,
+  HubPhase,
 } from "@/lib/hubs/types";
 
 /** One embedded video in an article's media gallery (multi-video support). */
@@ -5366,12 +5368,17 @@ export interface GameProfileInput {
   facts: HubFact[];
   faqs: HubFaq[];
   editions: HubEdition[];
+  /** Lifecycle settings (resolved by the API; saved with the profile). */
+  lifecycle?: HubLifecycle;
 }
 
 export interface GameProfileDetail {
   game: { id: string; name: string; slug: string; released: string | null };
   profile: GameProfileInput & {
     factsUpdatedAt: string | null;
+    /** The phase right now and when it ends on its own (read only). */
+    phase?: HubPhase;
+    phaseEndsAt?: string | null;
     /** Pinned launch-night thread (managed by its own calls, not saves). */
     launchThreadPostId?: string | null;
   };

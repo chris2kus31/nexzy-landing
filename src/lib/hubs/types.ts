@@ -13,6 +13,40 @@ export const HUB_MODULES = [
 export type HubModule = (typeof HUB_MODULES)[number];
 export type HubModules = Record<HubModule, boolean>;
 
+// Lifecycle: pre-launch / launch window / evergreen. The API decides the
+// phase and what shows in it (profile.phase / profile.show); this site only
+// renders it. Mirrors game-profile.types.ts (keep in lockstep).
+export const HUB_PHASES = ["pre", "launch", "evergreen"] as const;
+export type HubPhase = (typeof HUB_PHASES)[number];
+
+export const HUB_SECTIONS = [
+  ...HUB_MODULES,
+  "thread",
+  "shortVersion",
+  "rooms",
+  "players",
+] as const;
+export type HubSection = (typeof HUB_SECTIONS)[number];
+
+/** The app's hub tiles, in their default order (Admin can reorder). */
+export const HUB_TILES = [
+  "rooms",
+  "thread",
+  "predict",
+  "scores",
+  "shortVersion",
+  "players",
+] as const;
+export type HubTile = (typeof HUB_TILES)[number];
+
+export interface HubLifecycle {
+  windowDays: number;
+  override: HubPhase | null;
+  statusLine: string | null;
+  tileOrder: HubTile[];
+  phases: Record<HubSection, HubPhase[]>;
+}
+
 export const FACT_SECTIONS = [
   "release",
   "platforms",
@@ -128,6 +162,25 @@ export interface HubProfile {
   live: HubLive;
   /** null / absent = the Nexzy gold look (every component's fallback). */
   theme?: HubThemeColors | null;
+  /** Lifecycle (absent on an older API: render as before, from modules). */
+  lifecycle?: HubLifecycle;
+  phase?: HubPhase;
+  phaseEndsAt?: string | null;
+  /** What shows in the current phase (module switch + phase). */
+  show?: Record<HubSection, boolean>;
+}
+
+/** What this hub shows right now. The API's `show` (phase-aware); an older
+ *  API without it falls back to the module switches, i.e. today's page. */
+export function hubShows(p: HubProfile): Record<HubSection, boolean> {
+  if (p.show) return p.show;
+  return {
+    ...p.modules,
+    thread: !!p.launchThreadPostId,
+    shortVersion: !!p.summary?.trim(),
+    rooms: true,
+    players: true,
+  };
 }
 
 /** Section -> the question heading readers (and AI answers) ask. */

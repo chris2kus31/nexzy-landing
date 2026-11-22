@@ -41,7 +41,11 @@ import { youtubeEmbedUrl } from "@/lib/blog/youtube";
 import type { ReactNode } from "react";
 import { jsonLdString } from "@/lib/seo/jsonld";
 import { authorJsonLd } from "@/lib/blog/authors";
-import type { DayOnePlatform, HubProfile } from "@/lib/hubs/types";
+import {
+  hubShows,
+  type DayOnePlatform,
+  type HubProfile,
+} from "@/lib/hubs/types";
 import HubLiveProvider from "@/components/games/hub/HubLiveProvider";
 import { HubCopyProvider } from "@/components/games/hub/HubCopyProvider";
 import { makeHubT, type HubCopy } from "@/lib/hubs/copy";
@@ -451,7 +455,7 @@ export default async function GameHubPage({
   // Visible FAQ only (Google retired FAQ rich results in 2026; the markup is
   // kept because it mirrors the page text exactly and other engines read it).
   const faqLd =
-    profile?.modules.faq && profile.faqs.length
+    profile && hubShows(profile).faq && profile.faqs.length
       ? {
           "@context": "https://schema.org",
           "@type": "FAQPage",
@@ -466,7 +470,7 @@ export default async function GameHubPage({
   // Trailers. No VideoObject markup yet: we only know when a video was added
   // to Nexzy, not its YouTube upload date, and we never publish a wrong date.
   const trailers =
-    profile && profile.modules.trailers ? hubTrailers(videos, game.name) : [];
+    profile && hubShows(profile).trailers ? hubTrailers(videos, game.name) : [];
 
   const contentTabs = [
     { key: "walkthroughs", label: "Walkthroughs", items: content.walkthroughs },
@@ -708,8 +712,14 @@ function MegaHub({
   guide: HubEnginePage | null;
   checklists: HubChecklistPage[];
 }) {
-  const m = profile.modules;
+  // What shows in the hub's current phase (pre-launch / launch window /
+  // evergreen), decided by the API. Same rules as the app.
+  const m = hubShows(profile);
   const t = makeHubT(copy);
+  const statusLine =
+    profile.phase && profile.phase !== "pre"
+      ? (profile.lifecycle?.statusLine ?? null)
+      : null;
   const short = profile.aliases[0] || game.name;
   const launchAt =
     profile.launchAt ||
@@ -859,6 +869,19 @@ function MegaHub({
               {profile.launchNote}
             </Text>
           )}
+          {statusLine && (
+            <Text
+              fontSize="sm"
+              fontWeight="700"
+              color="#FFD166"
+              bg="rgba(255,209,102,0.1)"
+              borderRadius="8px"
+              px={3}
+              py={2}
+            >
+              {statusLine}
+            </Text>
+          )}
           {facts.length > 0 && (
             <Box
               display="grid"
@@ -945,11 +968,9 @@ function MegaHub({
         </Box>
       </Box>
 
-      {profile.launchThreadPostId && (
-        <HubThread slug={game.slug} gameName={short} />
-      )}
+      {m.thread && <HubThread slug={game.slug} gameName={short} />}
 
-      {profile.summary && (
+      {m.shortVersion && profile.summary && (
         <ShortVersion
           t={t}
           gameName={short}
@@ -999,11 +1020,11 @@ function MegaHub({
 
       {!scores?.open && scoresPanel}
 
-      {(m.dayOne || m.scores) && (
+      {m.players && (profile.modules.dayOne || profile.modules.scores) && (
         <WhosPlaying slug={game.slug} gameName={short} />
       )}
 
-      <HubRooms slug={game.slug} gameName={short} />
+      {m.rooms && <HubRooms slug={game.slug} gameName={short} />}
 
       {m.facts && (
         <EverythingWeKnow
