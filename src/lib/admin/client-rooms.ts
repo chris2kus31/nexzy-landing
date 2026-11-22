@@ -309,6 +309,30 @@ export interface RoomKindConfig {
   joinMode?: RoomJoinMode;
 }
 
+/** Room timers (Admin > Rooms). A missing field = the API default. */
+export interface RoomTimers {
+  /** Host not in the room this long -> it passes to someone active. */
+  hostAwayMinutes?: number;
+  /** Live, quiet and nobody in it this long -> ended. */
+  idleMinutes?: number;
+  /** Live this long -> ended. */
+  liveCapHours?: number;
+}
+export type RoomTimerKey = keyof RoomTimers;
+export type RoomTimerLimits = Record<RoomTimerKey, [number, number]>;
+
+/** Used only when an older API doesn't send its own. */
+export const FALLBACK_TIMER_DEFAULTS: Required<RoomTimers> = {
+  hostAwayMinutes: 30,
+  idleMinutes: 120,
+  liveCapHours: 12,
+};
+export const FALLBACK_TIMER_LIMITS: RoomTimerLimits = {
+  hostAwayMinutes: [10, 240],
+  idleMinutes: [30, 720],
+  liveCapHours: [1, 48],
+};
+
 export interface RoomProfileInput {
   enabled: boolean;
   kinds: RoomKindConfig[];
@@ -316,6 +340,7 @@ export interface RoomProfileInput {
   crewPlatforms: string[];
   spoilerStages: Array<{ key: string; label: string }>;
   minAge: number;
+  timers: RoomTimers;
 }
 
 /** Saved profile as the API returns it (lists are edited on their own tab
@@ -329,6 +354,8 @@ export interface RoomProfileAdmin {
   profile:
     | (RoomProfileStored & { updatedAt: string; updatedBy: string | null })
     | null;
+  timerDefaults?: Required<RoomTimers>;
+  timerLimits?: RoomTimerLimits;
 }
 
 export const getRoomProfile = (gameId: string) =>
@@ -348,6 +375,7 @@ export const EMPTY_ROOM_PROFILE: RoomProfileInput = {
   crewPlatforms: [],
   spoilerStages: [],
   minAge: 18,
+  timers: {},
 };
 
 // ───────────────────────── recommended lists (Mega hubs > Room lists) ─────────────────────────

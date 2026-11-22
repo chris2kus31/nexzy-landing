@@ -28,6 +28,8 @@ import {
 import {
   CREW_PLATFORM_OPTIONS,
   EMPTY_ROOM_PROFILE,
+  FALLBACK_TIMER_DEFAULTS,
+  FALLBACK_TIMER_LIMITS,
   JOIN_MODE_OPTIONS,
   ROOM_PROFILE_LIMITS as L,
   ROOM_TAB_OPTIONS,
@@ -36,7 +38,37 @@ import {
   type RoomJoinMode,
   type RoomKindConfig,
   type RoomProfileInput,
+  type RoomTimerKey,
+  type RoomTimerLimits,
+  type RoomTimers,
 } from "@/lib/admin/client-rooms";
+
+/** The three room timers, in the order Admin shows them. */
+const TIMER_FIELDS: Array<{
+  key: RoomTimerKey;
+  label: string;
+  unit: string;
+  hint: string;
+}> = [
+  {
+    key: "hostAwayMinutes",
+    label: "Host away",
+    unit: "minutes",
+    hint: "Host not in the room this long, while someone else is active, passes it on. The host gets a push 5 minutes before.",
+  },
+  {
+    key: "idleMinutes",
+    label: "Idle close",
+    unit: "minutes",
+    hint: "Live, quiet and nobody has it open this long, the room ends. The host gets a push 15 minutes before.",
+  },
+  {
+    key: "liveCapHours",
+    label: "Longest session",
+    unit: "hours",
+    hint: "A live room ends after this long, whatever is going on. Crew rooms never end on their own.",
+  },
+];
 
 const C = {
   surface: "#222849",
@@ -213,8 +245,14 @@ function Toggle({
   );
 }
 
-function problems(d: RoomProfileInput): string[] {
+function problems(d: RoomProfileInput, limits: RoomTimerLimits): string[] {
   const out: string[] = [];
+  for (const f of TIMER_FIELDS) {
+    const v = d.timers[f.key];
+    const [lo, hi] = limits[f.key];
+    if (v != null && (!Number.isInteger(v) || v < lo || v > hi))
+      out.push(`${f.label}: a whole number from ${lo} to ${hi} ${f.unit}.`);
+  }
   const dup = (what: string, keys: string[]) => {
     if (new Set(keys).size !== keys.length)
       out.push(`Two ${what} share a key.`);
@@ -419,6 +457,12 @@ export default function RoomProfileCard({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [timerDefaults, setTimerDefaults] = useState<Required<RoomTimers>>(
+    FALLBACK_TIMER_DEFAULTS,
+  );
+  const [timerLimits, setTimerLimits] = useState<RoomTimerLimits>(
+    FALLBACK_TIMER_LIMITS,
+  );
   // Kinds whose options are expanded (by row; cleared when a row is removed).
   const [openKinds, setOpenKinds] = useState<Set<number>>(new Set());
 
@@ -436,8 +480,11 @@ export default function RoomProfileCard({
             crewPlatforms: p.crewPlatforms ?? [],
             spoilerStages: p.spoilerStages ?? [],
             minAge: p.minAge ?? 18,
+            timers: p.timers ?? {},
           }
         : EMPTY_ROOM_PROFILE;
+      if (r.timerDefaults) setTimerDefaults(r.timerDefaults);
+      if (r.timerLimits) setTimerLimits(r.timerLimits);
       setSaved(input);
       setDraft(input);
       setOpenKinds(new Set());
@@ -453,7 +500,10 @@ export default function RoomProfileCard({
     void load();
   }, [load]);
 
-  const issues = useMemo(() => (draft ? problems(draft) : []), [draft]);
+  const issues = useMemo(
+    () => (draft ? problems(draft, timerLimits) : []),
+    [draft, timerLimits],
+  );
   const dirty = useMemo(
     () => JSON.stringify(draft && clean(draft)) !== JSON.stringify(saved),
     [draft, saved],
@@ -824,6 +874,51 @@ export default function RoomProfileCard({
               ))}
             </NativeSelect.Field>
           </NativeSelect.Root>
+        </Section>
+
+        <Section
+          label="Room timers"
+          hint="Leave a box empty to use the default. Applies to rooms already open, from the next minute."
+        >
+          <Flex direction="column" gap={3} mt={2}>
+            {TIMER_FIELDS.map((f) => {
+              const [lo, hi] = timerLimits[f.key];
+              const v = draft.timers[f.key];
+              return (
+                <Flex key={f.key} gap={3} align="start" wrap="wrap">
+                  <Box w="140px" flexShrink={0} pt={1}>
+                    <Text fontSize="sm" color={C.text}>
+                      {f.label}
+                    </Text>
+                    <Text fontSize="xs" color={C.faint}>
+                      {lo} to {hi} {f.unit}
+                    </Text>
+                  </Box>
+                  <Input
+                    {...inputProps}
+                    w="110px"
+                    type="number"
+                    inputMode="numeric"
+                    min={lo}
+                    max={hi}
+                    aria-label={`${f.label} (${f.unit})`}
+                    placeholder={`${timerDefaults[f.key]} (default)`}
+                    value={v == null ? "" : String(v)}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      const next = { ...draft.timers };
+                      if (raw === "") delete next[f.key];
+                      else next[f.key] = Number(raw);
+                      set("timers", next);
+                    }}
+                  />
+                  <Text fontSize="xs" color={C.muted} flex="1" minW="200px">
+                    {f.hint}
+                  </Text>
+                </Flex>
+              );
+            })}
+          </Flex>
         </Section>
 
         {issues.length > 0 && (
