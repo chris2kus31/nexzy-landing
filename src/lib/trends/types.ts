@@ -45,6 +45,8 @@ export interface DropsPage {
   soon: DropCard[];
   past: DropCard[];
   totals: { builds: number; shares: number; matched: number };
+  /** Player drops Admin put on the website (older APIs: absent). */
+  players?: Array<DropCard & { startedBy: string | null }>;
 }
 
 /** A game page's "On 44% of #GameDNA builds". */
@@ -110,6 +112,9 @@ export interface TrendView extends Omit<TrendCard, "covers"> {
     cardGames?: string[];
   };
   startedBy: string | null;
+  /** Player drops: on the website (listed and indexed). Older APIs: absent,
+   *  read as on. */
+  webVisible?: boolean;
 }
 
 export interface TrendPick {

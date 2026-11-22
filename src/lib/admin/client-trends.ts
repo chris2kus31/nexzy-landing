@@ -168,3 +168,48 @@ export const previewTrend = (
     body,
     signal,
   });
+
+// ── Player drops (drops players start) ──
+
+export interface AdminPlayerDrop {
+  id: string;
+  slug: string;
+  hashtag: string;
+  title: string;
+  status: string;
+  startedBy: string | null;
+  startedById: string | null;
+  entryCount: number;
+  /** Builds in the last 7 days. */
+  weekCount: number;
+  reportCount: number;
+  reasons: Array<{ reason: string; count: number }>;
+  /** Hidden from the app's Players tab by reports. */
+  hiddenAt: string | null;
+  webVisible: boolean;
+  endsAt: string | null;
+  createdAt: string;
+}
+
+export type PlayerDropFilter = "all" | "reported" | "hidden" | "web";
+
+export const listPlayerDrops = (filter: PlayerDropFilter) =>
+  adminRequest<AdminPlayerDrop[]>(
+    `trends/players${filter === "all" ? "" : `?filter=${filter}`}`,
+  );
+
+/** endsAt: an ISO date, or null for no end. keep: clears its reports. */
+export const updatePlayerDrop = (
+  id: string,
+  body: { endsAt?: string | null; webVisible?: boolean; keep?: true },
+) =>
+  adminRequest<{ ok: true }>(`trends/${enc(id)}/player`, {
+    method: "POST",
+    body,
+  });
+
+/** Takes the drop down with every build in it. */
+export const removePlayerDrop = (id: string) =>
+  adminRequest<{ posts: number }>(`trends/${enc(id)}/remove-all`, {
+    method: "POST",
+  });

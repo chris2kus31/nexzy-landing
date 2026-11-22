@@ -257,7 +257,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "daily",
         priority: 0.7,
       });
-      for (const d of [...drops.live, ...drops.soon, ...drops.past])
+      // Player drops only once Admin put them on the website (players).
+      for (const d of [
+        ...drops.live,
+        ...drops.soon,
+        ...drops.past,
+        ...(drops.players ?? []),
+      ])
         trendEntries.push({
           url: `${SITE_URL}/drops/${d.slug}`,
           lastModified: now,

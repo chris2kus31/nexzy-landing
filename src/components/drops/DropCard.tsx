@@ -21,7 +21,12 @@ function when(d: Drop): string {
   return d.endsAt ? `Ends ${shortDate(d.endsAt)}` : "Always on";
 }
 
-export default function DropCard({ drop }: { drop: Drop }) {
+export default function DropCard({
+  drop,
+}: {
+  /** Player drops carry who started them (no drop number). */
+  drop: Drop & { startedBy?: string | null };
+}) {
   const live = drop.phase === "live";
   const soon = drop.phase === "soon";
   const covers = drop.covers.slice(0, 3);
@@ -52,7 +57,9 @@ export default function DropCard({ drop }: { drop: Drop }) {
           fontSize="sm"
           color={D.muted}
         >
-          Drop {String(drop.number).padStart(2, "0")}
+          {drop.origin === "user"
+            ? `by @${drop.startedBy ?? "a player"}`
+            : `Drop ${String(drop.number).padStart(2, "0")}`}
         </Text>
         {drop.pickSize && (
           <Text

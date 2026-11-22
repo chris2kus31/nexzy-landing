@@ -62,6 +62,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: url },
+    // A player drop is on the website only once Nexzy turns it on; until
+    // then its page opens from a shared link but stays out of search.
+    ...(t.webVisible === false
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title,
       description,

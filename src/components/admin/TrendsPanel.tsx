@@ -23,6 +23,7 @@ import {
 } from "@/lib/admin/client-trends";
 import TrendEditor from "@/components/admin/trends/TrendEditor";
 import TrendStats from "@/components/admin/trends/TrendStats";
+import PlayerDrops from "@/components/admin/trends/PlayerDrops";
 import {
   Kpi,
   StatusChip,
@@ -33,6 +34,7 @@ import {
 
 type View =
   | { kind: "list" }
+  | { kind: "players" }
   | { kind: "edit"; id: string | null }
   | { kind: "stats"; id: string };
 
@@ -99,6 +101,8 @@ export default function TrendsPanel() {
         onStats={(id) => setView({ kind: "stats", id })}
       />
     );
+  if (view.kind === "players")
+    return <PlayerDrops onBack={() => setView({ kind: "list" })} />;
   if (view.kind === "stats")
     return (
       <TrendStats
@@ -108,7 +112,8 @@ export default function TrendsPanel() {
       />
     );
 
-  const trends = list?.data ?? [];
+  // Nexzy's own drops; drops players start have their own page.
+  const trends = (list?.data ?? []).filter((t) => t.origin !== "user");
   const count = (s: TrendStatus) => trends.filter((t) => t.status === s).length;
   const shown =
     filter === "all" ? trends : trends.filter((t) => t.status === filter);
@@ -138,6 +143,13 @@ export default function TrendsPanel() {
             <a href="/admin?tab=games&source=user">
               Game requests{requests ? ` (${num(requests)})` : ""}
             </a>
+          </Button>
+          <Button
+            size="sm"
+            {...outlineBtn}
+            onClick={() => setView({ kind: "players" })}
+          >
+            Player drops
           </Button>
           <Button size="sm" {...outlineBtn} onClick={load} loading={loading}>
             Refresh
