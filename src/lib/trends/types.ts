@@ -115,6 +115,9 @@ export interface TrendView extends Omit<TrendCard, "covers"> {
   /** Player drops: on the website (listed and indexed). Older APIs: absent,
    *  read as on. */
   webVisible?: boolean;
+  /** Share copy: {title}/{hashtag} filled in, {link} for the client. Older
+   *  APIs: absent. */
+  share?: { text: string; cta: string };
 }
 
 export interface TrendPick {

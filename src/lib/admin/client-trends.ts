@@ -43,6 +43,14 @@ export interface TrendTheme {
   cardGames?: string[];
 }
 
+/** Share copy (nexzy-api trend-steps.ts TrendShare). Empty = defaults. */
+export interface TrendShare {
+  /** Post text. Placeholders: {title}, {hashtag}, {link}. */
+  text?: string;
+  /** Call to action in the image footer. */
+  cta?: string;
+}
+
 export interface AdminTrend {
   id: string;
   slug: string;
@@ -59,6 +67,8 @@ export interface AdminTrend {
   steps: TrendSteps;
   source: TrendSource;
   theme: TrendTheme;
+  /** Older APIs: absent. */
+  share?: TrendShare;
   entryCount: number;
   entryCountToday: number;
   createdAt: string;
@@ -85,6 +95,7 @@ export interface TrendInput {
   steps: TrendSteps;
   source: TrendSource;
   theme: TrendTheme;
+  share: TrendShare;
   startsAt: string | null;
   endsAt: string | null;
   featured: boolean;
@@ -158,6 +169,7 @@ export const previewTrend = (
     title: string;
     slug: string;
     theme: TrendTheme;
+    share: TrendShare;
     count: number;
     ranked: boolean;
   },

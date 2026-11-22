@@ -232,7 +232,15 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         : dropPath(trend.slug);
     return `${SITE_URL}${path}?s=${tag}`;
   };
-  const shareText = `My #${trend.hashtag} build: ${trend.title}. Do you match?`;
+  /** The drop's share copy from the API ({link} filled per platform). Older
+   *  APIs send none: the same default the API uses. */
+  const shareText = (platform: string) => {
+    const t =
+      trend.share?.text ??
+      `My #${trend.hashtag} picks are in. Make yours: {link}`;
+    const url = shareUrl(platform);
+    return t.includes("{link}") ? t.replace(/\{link\}/g, url) : `${t} ${url}`;
+  };
   const fileName = `nexzy-${trend.slug}.jpg`;
 
   function countShare(platform: string) {
@@ -261,7 +269,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
       try {
         await navigator.share({
           files: [file],
-          text: `${shareText} ${shareUrl(platform)}`,
+          text: shareText(platform),
         });
         countShare(platform);
       } catch {
@@ -273,13 +281,13 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   }
 
   function openIntent(platform: "x" | "threads" | "facebook") {
-    const url = shareUrl(platform);
+    const text = encodeURIComponent(shareText(platform));
     const href =
       platform === "x"
-        ? `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`
+        ? `https://x.com/intent/tweet?text=${text}`
         : platform === "threads"
-          ? `https://www.threads.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`
-          : `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+          ? `https://www.threads.com/intent/post?text=${text}`
+          : `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl(platform))}`;
     window.open(href, "_blank", "noopener,noreferrer");
     countShare(platform);
   }

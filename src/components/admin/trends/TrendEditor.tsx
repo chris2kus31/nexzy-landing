@@ -35,6 +35,7 @@ import {
   type TrendGameLite,
   type TrendInput,
   type TrendShape,
+  type TrendShare,
   type TrendSource,
   type TrendStatus,
   type TrendStep,
@@ -62,6 +63,13 @@ const MAX_LIST = 300;
 /** Games on the drop's card at /drops until people have picked. */
 const MAX_CARD_GAMES = 3;
 const HEX = /^#[0-9a-f]{6}$/i;
+/** The API's share copy defaults and limits (nexzy-api trend-steps.ts). */
+const SHARE_DEFAULTS = {
+  text: "My #{hashtag} picks are in. Make yours: {link}",
+  cta: "Do you match? Make yours",
+};
+const SHARE_TEXT_MAX = 200;
+const SHARE_CTA_MAX = 32;
 
 type SourceKind = TrendSource["kind"];
 
@@ -87,6 +95,8 @@ interface Form {
   accent: string;
   background: string;
   card: string;
+  shareText: string;
+  shareCta: string;
   startsAt: string;
   endsAt: string;
   featured: boolean;
@@ -113,6 +123,8 @@ const EMPTY: Form = {
   listGames: [],
   cardGames: [],
   ...DEFAULT_THEME,
+  shareText: "",
+  shareCta: "",
   startsAt: "",
   endsAt: "",
   featured: false,
@@ -159,6 +171,25 @@ function isEditableSteps(steps: TrendStep[]): boolean {
   );
 }
 
+/** Only what Admin typed: empty fields are left out (the API defaults). */
+function shareOf(f: Form): TrendShare {
+  const text = f.shareText.trim();
+  const cta = f.shareCta.trim();
+  return { ...(text ? { text } : {}), ...(cta ? { cta } : {}) };
+}
+
+/** The share text as a post would read (same rules as the API). */
+function sharePreview(f: Form): string {
+  const tag = f.hashtag.trim().replace(/^#/, "") || "YourTrend";
+  const text = (f.shareText.trim() || SHARE_DEFAULTS.text)
+    .replace(/\{hashtag\}/g, tag)
+    .replace(/\{title\}/g, f.title.trim() || "Your trend title");
+  const link = `nexzyapp.com/drops/${f.slug.trim() || "your-drop"}/...`;
+  return text.includes("{link}")
+    ? text.replace(/\{link\}/g, link)
+    : `${text} ${link}`;
+}
+
 function formFrom(
   t: AdminTrend,
   listGames: TrendGameLite[],
@@ -191,6 +222,8 @@ function formFrom(
     accent: t.theme?.accent ?? DEFAULT_THEME.accent,
     background: t.theme?.background ?? DEFAULT_THEME.background,
     card: t.theme?.card ?? DEFAULT_THEME.card,
+    shareText: t.share?.text ?? "",
+    shareCta: t.share?.cta ?? "",
     startsAt: toLocalInput(t.startsAt),
     endsAt: toLocalInput(t.endsAt),
     featured: t.featured,
@@ -245,6 +278,9 @@ const CODES: Record<string, string> = {
   SOURCE_FILTER: "choose at least one filter (and years in order)",
   SOURCE_LIST: "add 1 to 300 games to the list",
   STEPS_COUNT: "add at least one step",
+  SHARE_TEXT_LENGTH: `share text: up to ${SHARE_TEXT_MAX} characters`,
+  SHARE_TEXT_PLACEHOLDER: "share text: only {title}, {hashtag} and {link}",
+  SHARE_CTA: `image call to action: up to ${SHARE_CTA_MAX} characters`,
 };
 const friendly = (msg: string) =>
   msg.replace(/\b[A-Z][A-Z_]{3,}\b/g, (c) => CODES[c] ?? c);
@@ -314,6 +350,7 @@ export default function TrendEditor({
           ? { cardGames: form.cardGames.map((g) => g.id) }
           : {}),
       },
+      share: shareOf(form),
       startsAt: fromLocalInput(form.startsAt),
       endsAt: fromLocalInput(form.endsAt),
       featured: form.featured,
@@ -714,6 +751,45 @@ export default function TrendEditor({
             </Flex>
           </Section>
 
+          <Section
+            title="Sharing"
+            sub="What people post when they share a build, and the call to action on the image. Empty = the default."
+          >
+            <VStack align="stretch" gap={3}>
+              <Box>
+                <FieldLabel>Share text</FieldLabel>
+                <Textarea
+                  {...inputProps}
+                  rows={3}
+                  value={form.shareText}
+                  maxLength={SHARE_TEXT_MAX}
+                  placeholder={SHARE_DEFAULTS.text}
+                  onChange={(e) => set("shareText", e.target.value)}
+                />
+                <Hint>
+                  {form.shareText.length}/{SHARE_TEXT_MAX}. Use {"{title}"},{" "}
+                  {"{hashtag}"} and {"{link}"}. No {"{link}"}: the link goes at
+                  the end. Example: {sharePreview(form)}
+                </Hint>
+              </Box>
+              <Box>
+                <FieldLabel>Image call to action</FieldLabel>
+                <Input
+                  {...inputProps}
+                  value={form.shareCta}
+                  maxLength={SHARE_CTA_MAX}
+                  placeholder={SHARE_DEFAULTS.cta}
+                  onChange={(e) => set("shareCta", e.target.value)}
+                />
+                <Hint>
+                  {form.shareCta.length}/{SHARE_CTA_MAX}. Shown above the link
+                  at the bottom of the image. Applies to images made from now
+                  on.
+                </Hint>
+              </Box>
+            </VStack>
+          </Section>
+
           <Section title="Publishing">
             <VStack align="stretch" gap={3}>
               <Flex gap={3} wrap="wrap">
@@ -1008,6 +1084,7 @@ function Preview({ form }: { form: Form }) {
         ...(HEX.test(form.background) ? { background: form.background } : {}),
         ...(HEX.test(form.card) ? { card: form.card } : {}),
       },
+      share: form.shareCta.trim() ? { cta: form.shareCta.trim() } : {},
       count,
       ranked: form.rank,
     }),
@@ -1019,6 +1096,7 @@ function Preview({ form }: { form: Form }) {
       form.accent,
       form.background,
       form.card,
+      form.shareCta,
       count,
       form.rank,
     ],
