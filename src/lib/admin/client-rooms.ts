@@ -333,6 +333,32 @@ export const FALLBACK_TIMER_LIMITS: RoomTimerLimits = {
   liveCapHours: [1, 48],
 };
 
+/** Who may host (Admin > Rooms). A missing field = the API default.
+ *  Team accounts skip all three. */
+export interface RoomHostRules {
+  /** Account age in days before someone can host. 0 = no wait. */
+  accountDays?: number;
+  /** Open rooms one person may host for this game. */
+  maxOpen?: number;
+  /** Hosting needs a follow on the game. */
+  followToHost?: boolean;
+}
+export type RoomHostLimits = Record<
+  "accountDays" | "maxOpen",
+  [number, number]
+>;
+
+/** Used only when an older API doesn't send its own. */
+export const FALLBACK_HOST_DEFAULTS: Required<RoomHostRules> = {
+  accountDays: 7,
+  maxOpen: 2,
+  followToHost: true,
+};
+export const FALLBACK_HOST_LIMITS: RoomHostLimits = {
+  accountDays: [0, 90],
+  maxOpen: [1, 10],
+};
+
 export interface RoomProfileInput {
   enabled: boolean;
   kinds: RoomKindConfig[];
@@ -341,6 +367,7 @@ export interface RoomProfileInput {
   spoilerStages: Array<{ key: string; label: string }>;
   minAge: number;
   timers: RoomTimers;
+  hosting: RoomHostRules;
 }
 
 /** Saved profile as the API returns it (lists are edited on their own tab
@@ -356,6 +383,8 @@ export interface RoomProfileAdmin {
     | null;
   timerDefaults?: Required<RoomTimers>;
   timerLimits?: RoomTimerLimits;
+  hostDefaults?: Required<RoomHostRules>;
+  hostLimits?: RoomHostLimits;
 }
 
 export const getRoomProfile = (gameId: string) =>
@@ -376,6 +405,7 @@ export const EMPTY_ROOM_PROFILE: RoomProfileInput = {
   spoilerStages: [],
   minAge: 18,
   timers: {},
+  hosting: {},
 };
 
 // ───────────────────────── recommended lists (Mega hubs > Room lists) ─────────────────────────

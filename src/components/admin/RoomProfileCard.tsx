@@ -33,11 +33,15 @@ import {
   JOIN_MODE_OPTIONS,
   ROOM_PROFILE_LIMITS as L,
   ROOM_TAB_OPTIONS,
+  FALLBACK_HOST_DEFAULTS,
+  FALLBACK_HOST_LIMITS,
   getRoomProfile,
   saveRoomProfile,
   type RoomJoinMode,
   type RoomKindConfig,
   type RoomProfileInput,
+  type RoomHostLimits,
+  type RoomHostRules,
   type RoomTimerKey,
   type RoomTimerLimits,
   type RoomTimers,
@@ -245,8 +249,39 @@ function Toggle({
   );
 }
 
-function problems(d: RoomProfileInput, limits: RoomTimerLimits): string[] {
+/** The two numeric hosting rules, in the order Admin shows them. */
+const HOST_FIELDS: Array<{
+  key: "accountDays" | "maxOpen";
+  label: string;
+  unit: string;
+  hint: string;
+}> = [
+  {
+    key: "accountDays",
+    label: "Account age to host",
+    unit: "days",
+    hint: "How old an account must be before it can host. 0 = no wait. Joining is never limited.",
+  },
+  {
+    key: "maxOpen",
+    label: "Open rooms per host",
+    unit: "rooms",
+    hint: "Rooms one person can have waiting or live for this game at once.",
+  },
+];
+
+function problems(
+  d: RoomProfileInput,
+  limits: RoomTimerLimits,
+  hostLimits: RoomHostLimits,
+): string[] {
   const out: string[] = [];
+  for (const f of HOST_FIELDS) {
+    const v = d.hosting[f.key];
+    const [lo, hi] = hostLimits[f.key];
+    if (v != null && (!Number.isInteger(v) || v < lo || v > hi))
+      out.push(`${f.label}: a whole number from ${lo} to ${hi} ${f.unit}.`);
+  }
   for (const f of TIMER_FIELDS) {
     const v = d.timers[f.key];
     const [lo, hi] = limits[f.key];
@@ -463,6 +498,11 @@ export default function RoomProfileCard({
   const [timerLimits, setTimerLimits] = useState<RoomTimerLimits>(
     FALLBACK_TIMER_LIMITS,
   );
+  const [hostDefaults, setHostDefaults] = useState<Required<RoomHostRules>>(
+    FALLBACK_HOST_DEFAULTS,
+  );
+  const [hostLimits, setHostLimits] =
+    useState<RoomHostLimits>(FALLBACK_HOST_LIMITS);
   // Kinds whose options are expanded (by row; cleared when a row is removed).
   const [openKinds, setOpenKinds] = useState<Set<number>>(new Set());
 
@@ -481,10 +521,13 @@ export default function RoomProfileCard({
             spoilerStages: p.spoilerStages ?? [],
             minAge: p.minAge ?? 18,
             timers: p.timers ?? {},
+            hosting: p.hosting ?? {},
           }
         : EMPTY_ROOM_PROFILE;
       if (r.timerDefaults) setTimerDefaults(r.timerDefaults);
       if (r.timerLimits) setTimerLimits(r.timerLimits);
+      if (r.hostDefaults) setHostDefaults(r.hostDefaults);
+      if (r.hostLimits) setHostLimits(r.hostLimits);
       setSaved(input);
       setDraft(input);
       setOpenKinds(new Set());
@@ -501,8 +544,8 @@ export default function RoomProfileCard({
   }, [load]);
 
   const issues = useMemo(
-    () => (draft ? problems(draft, timerLimits) : []),
-    [draft, timerLimits],
+    () => (draft ? problems(draft, timerLimits, hostLimits) : []),
+    [draft, timerLimits, hostLimits],
   );
   const dirty = useMemo(
     () => JSON.stringify(draft && clean(draft)) !== JSON.stringify(saved),
@@ -874,6 +917,69 @@ export default function RoomProfileCard({
               ))}
             </NativeSelect.Field>
           </NativeSelect.Root>
+        </Section>
+
+        <Section
+          label="Who can host"
+          hint="Leave a box empty to use the default. Nexzy team accounts skip these."
+        >
+          <Flex direction="column" gap={3} mt={2}>
+            {HOST_FIELDS.map((f) => {
+              const [lo, hi] = hostLimits[f.key];
+              const v = draft.hosting[f.key];
+              return (
+                <Flex key={f.key} gap={3} align="start" wrap="wrap">
+                  <Box w="140px" flexShrink={0} pt={1}>
+                    <Text fontSize="sm" color={C.text}>
+                      {f.label}
+                    </Text>
+                    <Text fontSize="xs" color={C.faint}>
+                      {lo} to {hi} {f.unit}
+                    </Text>
+                  </Box>
+                  <Input
+                    {...inputProps}
+                    w="110px"
+                    type="number"
+                    inputMode="numeric"
+                    min={lo}
+                    max={hi}
+                    aria-label={`${f.label} (${f.unit})`}
+                    placeholder={`${hostDefaults[f.key]} (default)`}
+                    value={v == null ? "" : String(v)}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      const next = { ...draft.hosting };
+                      if (raw === "") delete next[f.key];
+                      else next[f.key] = Number(raw);
+                      set("hosting", next);
+                    }}
+                  />
+                  <Text fontSize="xs" color={C.muted} flex="1" minW="200px">
+                    {f.hint}
+                  </Text>
+                </Flex>
+              );
+            })}
+            <Box>
+              <Toggle
+                checked={
+                  draft.hosting.followToHost ?? hostDefaults.followToHost
+                }
+                onChange={(v) =>
+                  set("hosting", {
+                    ...draft.hosting,
+                    followToHost: v,
+                  })
+                }
+                label="Host must follow the game"
+              />
+              <Text fontSize="xs" color={C.muted} mt={1}>
+                Off = anyone can host. On, the app offers Follow and create in
+                one tap.
+              </Text>
+            </Box>
+          </Flex>
         </Section>
 
         <Section
