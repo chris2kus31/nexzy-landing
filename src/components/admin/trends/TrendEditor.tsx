@@ -66,7 +66,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 /** The API's share copy defaults and limits (nexzy-api trend-steps.ts). */
 const SHARE_DEFAULTS = {
   text: "My #{hashtag} picks are in. Make yours: {link}",
-  cta: "Do you match? Make yours",
+  cta: "Your turn. Make yours",
 };
 const SHARE_TEXT_MAX = 200;
 const SHARE_CTA_MAX = 32;
@@ -769,7 +769,9 @@ export default function TrendEditor({
                 <Hint>
                   {form.shareText.length}/{SHARE_TEXT_MAX}. Use {"{title}"},{" "}
                   {"{hashtag}"} and {"{link}"}. No {"{link}"}: the link goes at
-                  the end. Example: {sharePreview(form)}
+                  the end. Example: {sharePreview(form)}. When the website
+                  shares the image itself, {"{link}"} is left out (the image
+                  shows the address), so keep it at the end of a sentence.
                 </Hint>
               </Box>
               <Box>

@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     .slice(0, 3)
     .map((p) => p.name)
     .join(", ");
-  const description = `${names}${b.picks.length > 3 ? " and more" : ""}. Do you match? Make yours on Nexzy.`;
+  const description = `${names}${b.picks.length > 3 ? " and more" : ""}. Your turn: make yours on Nexzy.`;
   const image = b.build.images?.link;
   const url = `${SITE_URL}${buildPath(t.slug, b.build.code)}`;
   return {

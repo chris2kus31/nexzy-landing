@@ -1,13 +1,16 @@
 "use client";
 
-// Share a build from the website: one panel with the image people will post,
-// a button per platform, Save and Copy link. Same idea as the app's share
-// panel. Websites can't open Instagram's or TikTok's composer directly (Meta
-// and TikTok only allow that from installed apps), so on a phone those open
-// the phone's share menu with the image; on a computer they save the image.
+// Share a build from the website. The image is what gets shared, not a
+// link: link posts get little reach on X, and a picture of the 9 games is
+// the post people want anyway (the card already prints the drop's address).
+// Phones (and browsers that can hand files to the OS) open the share menu
+// with the image attached, so the person picks Instagram, X, Threads,
+// TikTok or Messages there. Computers save the image, then open the site
+// they picked so they can attach it. Copy link stays for DMs and chats.
 import { useEffect, useState } from "react";
 import {
   Box,
+  Button,
   Dialog,
   Flex,
   Image,
@@ -15,7 +18,7 @@ import {
   Text,
   chakra,
 } from "@chakra-ui/react";
-import { FiDownload, FiLink, FiX } from "react-icons/fi";
+import { FiDownload, FiLink, FiShare, FiX } from "react-icons/fi";
 import {
   FaFacebook,
   FaInstagram,
@@ -25,17 +28,12 @@ import {
 } from "react-icons/fa6";
 import { D } from "@/components/drops/tokens";
 
-export type SharePlatform =
-  | "instagram"
-  | "tiktok"
-  | "x"
-  | "threads"
-  | "facebook"
-  | "save"
-  | "copy";
+/** Where a computer sends people after saving the image. */
+export type ShareSite = "instagram" | "tiktok" | "x" | "threads" | "facebook";
+export type ShareAction = "sheet" | "save" | "copy" | ShareSite;
 
-const TARGETS: Array<{
-  key: SharePlatform;
+const SITES: Array<{
+  key: ShareSite;
   label: string;
   icon: React.ReactNode;
   color: string;
@@ -55,12 +53,10 @@ const TARGETS: Array<{
     icon: <FaFacebook />,
     color: "#1877F2",
   },
-  { key: "save", label: "Save", icon: <FiDownload />, color: D.yellow },
-  { key: "copy", label: "Copy link", icon: <FiLink />, color: D.white },
 ];
 
-/** Can this browser hand an image file to the phone's share menu? */
-function canShareFiles(): boolean {
+/** Can this browser hand an image file to the OS share menu? */
+export function canShareFiles(): boolean {
   try {
     const nav = navigator as Navigator & {
       canShare?: (d: ShareData) => boolean;
@@ -80,18 +76,33 @@ export default function SharePanel({
   imageUrl,
   onShare,
   copied = false,
+  saved = false,
 }: {
   open: boolean;
   onClose: () => void;
   hashtag: string;
   imageUrl: string | null;
-  onShare: (platform: SharePlatform) => void;
+  onShare: (action: ShareAction) => void;
   /** The link was just copied: the Copy link button says so. */
   copied?: boolean;
+  /** This image was already saved: the Save button says so. */
+  saved?: boolean;
 }) {
   // Checked in the browser only (no navigator during server render).
-  const [phone, setPhone] = useState(false);
-  useEffect(() => setPhone(canShareFiles()), []);
+  const [sheet, setSheet] = useState(false);
+  useEffect(() => setSheet(canShareFiles()), []);
+
+  const secondary = {
+    flex: 1,
+    h: "46px",
+    borderRadius: "12px",
+    bg: D.panel,
+    color: D.white,
+    border: "1px solid",
+    borderColor: D.line,
+    fontWeight: "700",
+    _hover: { borderColor: D.yellow },
+  } as const;
 
   return (
     <Dialog.Root
@@ -150,9 +161,9 @@ export default function SharePanel({
             {imageUrl && (
               <Box
                 mx="auto"
-                mb={5}
+                mb={4}
                 w="100%"
-                maxW="260px"
+                maxW="220px"
                 borderRadius="14px"
                 overflow="hidden"
                 border="1px solid"
@@ -167,62 +178,90 @@ export default function SharePanel({
               </Box>
             )}
 
-            {/* One row, equal columns. */}
-            <Flex>
-              {TARGETS.map((t) => (
-                <chakra.button
-                  key={t.key}
-                  flex={1}
-                  minW={0}
-                  display="flex"
-                  flexDirection="column"
-                  alignItems="center"
-                  gap="6px"
-                  onClick={() => onShare(t.key)}
-                  aria-label={
-                    t.key === "save" || t.key === "copy"
-                      ? t.label
-                      : `Share to ${t.label}`
-                  }
-                  _focusVisible={{ outline: `2px solid ${D.yellow}` }}
-                  borderRadius="12px"
-                  py={1}
+            {sheet ? (
+              <>
+                <Button
+                  w="100%"
+                  h="52px"
+                  borderRadius="14px"
+                  bg={D.yellow}
+                  color={D.base}
+                  fontWeight="800"
+                  fontSize="md"
+                  onClick={() => onShare("sheet")}
                 >
-                  <Flex
-                    w="46px"
-                    h="46px"
-                    borderRadius="full"
-                    bg={D.panel}
-                    border="1px solid"
-                    borderColor={D.line}
-                    align="center"
-                    justify="center"
-                    fontSize="20px"
-                    color={t.color}
-                    _hover={{ borderColor: D.yellow }}
-                  >
-                    {t.icon}
-                  </Flex>
-                  <Text
-                    fontSize="11px"
-                    color={D.dim}
-                    fontWeight="600"
-                    whiteSpace="nowrap"
-                    overflow="hidden"
-                    textOverflow="ellipsis"
-                    maxW="100%"
-                  >
-                    {t.key === "copy" && copied ? "Copied" : t.label}
-                  </Text>
-                </chakra.button>
-              ))}
-            </Flex>
+                  <FiShare /> Share image
+                </Button>
+                <Text fontSize="xs" color={D.muted} mt={2} textAlign="center">
+                  Pick Instagram, TikTok, X, Threads or a chat. The image goes
+                  with it.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text fontSize="sm" color={D.white} fontWeight="700" mb={1}>
+                  Post it on
+                </Text>
+                <Text fontSize="xs" color={D.muted} mb={3}>
+                  We save the image and open the site. Attach the saved image to
+                  your post.
+                </Text>
+                <Flex>
+                  {SITES.map((t) => (
+                    <chakra.button
+                      key={t.key}
+                      flex={1}
+                      minW={0}
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      gap="6px"
+                      onClick={() => onShare(t.key)}
+                      aria-label={`Save the image and open ${t.label}`}
+                      _focusVisible={{ outline: `2px solid ${D.yellow}` }}
+                      borderRadius="12px"
+                      py={1}
+                    >
+                      <Flex
+                        w="46px"
+                        h="46px"
+                        borderRadius="full"
+                        bg={D.panel}
+                        border="1px solid"
+                        borderColor={D.line}
+                        align="center"
+                        justify="center"
+                        fontSize="20px"
+                        color={t.color}
+                        _hover={{ borderColor: D.yellow }}
+                      >
+                        {t.icon}
+                      </Flex>
+                      <Text
+                        fontSize="11px"
+                        color={D.dim}
+                        fontWeight="600"
+                        whiteSpace="nowrap"
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        maxW="100%"
+                      >
+                        {t.label}
+                      </Text>
+                    </chakra.button>
+                  ))}
+                </Flex>
+              </>
+            )}
 
-            <Text fontSize="xs" color={D.muted} mt={4} textAlign="center">
-              {phone
-                ? "Instagram and TikTok open your phone's share menu with the image. Pick Story or post there."
-                : "On a computer, Instagram and TikTok save the image so you can post it from your phone."}
-            </Text>
+            <Flex gap={2} mt={4}>
+              <Button {...secondary} onClick={() => onShare("save")}>
+                <FiDownload /> {saved ? "Saved" : "Save image"}
+              </Button>
+              <Button {...secondary} onClick={() => onShare("copy")}>
+                <FiLink /> {copied ? "Copied" : "Copy link"}
+              </Button>
+            </Flex>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>

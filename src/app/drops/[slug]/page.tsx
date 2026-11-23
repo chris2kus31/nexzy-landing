@@ -55,8 +55,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const [top] = await fetchTrendEntries(slug, "top", 12).catch(() => []);
   const title = `#${t.hashtag}: ${t.title} | Nexzy Drops`;
   const description =
-    t.description ||
-    `${t.title}. Make your build, share it, and see who matches you on Nexzy.`;
+    t.description || `${t.title}. Make your build and share it on Nexzy.`;
   const image = top?.trend?.images?.link;
   const url = `${SITE_URL}${dropPath(t.slug)}`;
   return {
@@ -342,7 +341,8 @@ export default async function DropPage({ params }: Params) {
                   ))}
                 </SimpleGrid>
                 <Text fontSize="sm" color={D.muted} mt={3}>
-                  See every build, and who matches you, in the Nexzy app.
+                  See every build in the Nexzy app and follow the players who
+                  pick like you.
                 </Text>
               </Box>
             )}

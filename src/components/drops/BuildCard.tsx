@@ -85,7 +85,7 @@ export default function BuildCard({
         fontSize={`${Math.round(width / 30)}px`}
         color={D.white}
       >
-        Do you match?{" "}
+        Make yours:{" "}
         <Text as="span" color={D.yellow}>
           nexzyapp.com/drops
         </Text>

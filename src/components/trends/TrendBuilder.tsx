@@ -1,7 +1,7 @@
 "use client";
 // The /drops/<slug> builder: pick games, get the share image (rendered by
-// the server), then save it, share it, or post it on Nexzy with a reader
-// account. Making the image also saves the build (no account), so the share
+// the server), then save or share it. Posting a build to the drop happens in
+// the app. Making the image also saves the build (no account), so the share
 // link opens its own page (/drops/<slug>/b/<code>) with its own preview,
 // and shows how many players share the picks. Games that aren't on Nexzy can
 // be requested. Only pick-games drops (optionally ranked) are built here;
@@ -37,7 +37,6 @@ import {
   fetchMatches,
   fetchPreview,
   logTrendEvent,
-  postEntry,
   requestGame,
   saveBuild,
 } from "@/lib/trends/client";
@@ -46,7 +45,6 @@ import {
   VISIT_TAG,
   buildPath,
   dropPath,
-  entryPath,
   isRanked,
   pickRange,
   STORY_LABEL,
@@ -56,7 +54,11 @@ import {
   type TrendView,
 } from "@/lib/trends/types";
 import { D } from "@/components/drops/tokens";
-import SharePanel, { type SharePlatform } from "@/components/drops/SharePanel";
+import SharePanel, {
+  canShareFiles,
+  type ShareAction,
+  type ShareSite,
+} from "@/components/drops/SharePanel";
 import { APP_STORE_URL, googlePlayUrl } from "@/lib/storeUrls";
 
 const YELLOW = D.yellow;
@@ -66,7 +68,8 @@ const LINE = D.line;
 const MUTED = D.muted;
 
 type Shape = "portrait" | "tall";
-type Pending = "post" | "request" | "choices" | null;
+type CardImage = { url: string; blob: Blob };
+type Pending = "request" | "choices" | null;
 
 /** WebP from the API -> JPEG, which every app accepts for upload. */
 async function toJpeg(blob: Blob): Promise<Blob> {
@@ -110,10 +113,14 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   const [results, setResults] = useState<TrendChoice[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [shape, setShape] = useState<Shape>("portrait");
-  const [image, setImage] = useState<{ url: string; blob: Blob } | null>(null);
+  /** One rendered card per shape: switching back is instant, no re-render. */
+  const [images, setImages] = useState<Partial<Record<Shape, CardImage>>>({});
   const [making, setMaking] = useState(false);
-  const [posting, setPosting] = useState(false);
-  const [posted, setPosted] = useState<string | null>(null);
+  /** The card was made and the picks grid is open again to change them. */
+  const [editing, setEditing] = useState(false);
+  /** The image URL last saved (so Save says Saved, and a site button doesn't
+   *  download the same file twice). */
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -127,12 +134,20 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     null,
   );
   const counted = useRef({ try: false, build: false });
+  const root = useRef<HTMLDivElement | null>(null);
+  /** Bumped on every pick change: a card or build that comes back for
+   *  older picks is dropped instead of shown as this build. */
+  const picksVer = useRef(0);
   const abort = useRef<AbortController | null>(null);
 
   const full = picks.length >= max;
   const ready = picks.length >= min;
   const chosen = useMemo(() => new Set(picks.map((p) => p.id)), [picks]);
   const canSearch = !needsAccount || !!user;
+  const image = images[shape] ?? null;
+  const hasCard = !!(images.portrait || images.tall);
+  /** What the preview shows: this shape, or the other one while it renders. */
+  const shown = image ?? images.portrait ?? images.tall ?? null;
 
   // Search the games this trend allows (first load: the most popular ones).
   useEffect(() => {
@@ -157,14 +172,16 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     return () => clearTimeout(t);
   }, [q, trend.slug, canSearch]);
 
-  // A new pick list makes the old image stale.
+  // A new pick list makes the old images stale (the shape doesn't: the
+  // post and the build are the same in either shape).
   useEffect(() => {
-    setImage((old) => {
-      if (old) URL.revokeObjectURL(old.url);
-      return null;
+    picksVer.current += 1;
+    setImages((old) => {
+      for (const img of Object.values(old))
+        if (img) URL.revokeObjectURL(img.url);
+      return {};
     });
-    setPosted(null);
-  }, [picks, shape]);
+  }, [picks]);
   // New picks are a new build (same picks keep their code).
   useEffect(() => {
     setCode(null);
@@ -174,7 +191,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   // Once the card is made: the newest Nexzy piece for the picked games
   // (best effort; a failure just hides the section).
   useEffect(() => {
-    if (!image) return;
+    if (!hasCard) return;
     const ctl = new AbortController();
     fetchGameStories(
       picks.map((p) => p.id),
@@ -183,7 +200,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
       .then(setStories)
       .catch(() => {});
     return () => ctl.abort();
-  }, [image, picks]);
+  }, [hasCard, picks]);
   useEffect(() => {
     setStories(null);
   }, [picks]);
@@ -212,24 +229,28 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
       return next;
     });
 
-  async function make() {
-    if (!ready) return;
+  /** Renders the card in shape `s`. Returns false when it failed. */
+  async function make(s: Shape = shape): Promise<boolean> {
+    if (!ready) return false;
     setMaking(true);
     setError(null);
     const ids = picks.map((p) => p.id);
+    const ver = picksVer.current;
     // Save the build alongside (best effort): the share link then opens its
     // own page, and the match count can load. The image never waits on it.
     if (!code)
       void saveBuild(trend.slug, ids)
         .then(async (b) => {
+          if (ver !== picksVer.current) return;
           setCode(b.code);
-          setMatches(await fetchMatches(trend.slug, { code: b.code }));
+          const m = await fetchMatches(trend.slug, { code: b.code });
+          if (ver === picksVer.current) setMatches(m);
         })
         .catch(() => undefined);
     try {
       const blob = await fetchPreview(trend.slug, {
         picks: ids,
-        shape,
+        shape: s,
         handle: user?.username ?? undefined,
       });
       // The server sends JPEG; convert only if an older API answered WebP.
@@ -237,37 +258,59 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         blob.type === "image/jpeg"
           ? blob
           : await toJpeg(blob).catch(() => blob);
-      setImage({ url: URL.createObjectURL(jpeg), blob: jpeg });
+      // The picks changed while it rendered: this card is for old picks.
+      if (ver !== picksVer.current) return false;
+      const url = URL.createObjectURL(jpeg);
+      const first = !hasCard;
+      setImages((m) => ({ ...m, [s]: { url, blob: jpeg } }));
+      setEditing(false);
+      // The card replaces the grid: bring the top of the builder into view
+      // so the card is the first thing on screen, not below the fold.
+      if (first)
+        requestAnimationFrame(() =>
+          root.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        );
       if (!counted.current.build) {
         counted.current.build = true;
         logTrendEvent(trend.slug, "build");
       }
-      track("trend_image_made", { trend: trend.slug, shape, source: "web" });
+      track("trend_image_made", { trend: trend.slug, shape: s, source: "web" });
+      return true;
     } catch (e) {
       setError(errorText(e));
+      return false;
     } finally {
       setMaking(false);
     }
   }
 
+  /** Switching shape after the card exists renders the other shape once. */
+  async function pickShape(s: Shape) {
+    if (s === shape || making) return;
+    const prev = shape;
+    setShape(s);
+    if (images[s]) return;
+    if (!(await make(s))) setShape(prev);
+  }
+
   const shareUrl = (platform: string) => {
     const tag = VISIT_TAG[platform] ?? "other";
-    const path = posted
-      ? entryPath(trend.slug, posted)
-      : code
-        ? buildPath(trend.slug, code)
-        : dropPath(trend.slug);
+    const path = code ? buildPath(trend.slug, code) : dropPath(trend.slug);
     return `${SITE_URL}${path}?s=${tag}`;
   };
-  /** The drop's share copy from the API ({link} filled per platform). Older
-   *  APIs send none: the same default the API uses. */
-  const shareText = (platform: string) => {
-    const t =
+  /** The caption that goes with the image: the drop's share copy from the
+   *  API without its {link} (the card already prints the drop's address,
+   *  and link posts get little reach on X). */
+  const caption = (() => {
+    const t = (
       trend.share?.text ??
-      `My #${trend.hashtag} picks are in. Make yours: {link}`;
-    const url = shareUrl(platform);
-    return t.includes("{link}") ? t.replace(/\{link\}/g, url) : `${t} ${url}`;
-  };
+      `My #${trend.hashtag} picks are in. Make yours: {link}`
+    )
+      .replace(/\s*\{link\}/g, "")
+      .replace(/[\s:,-]+$/, "")
+      .trim();
+    return /[.!?]$/.test(t) ? t : `${t}.`;
+  })();
   const fileName = `nexzy-${trend.slug}.jpg`;
 
   function countShare(platform: string) {
@@ -275,48 +318,50 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     track("trend_share", { trend: trend.slug, platform, source: "web" });
   }
 
-  function download() {
+  function save(count = true) {
     if (!image) return;
     const a = document.createElement("a");
     a.href = image.url;
     a.download = fileName;
     a.click();
-    countShare("save");
-    track("trend_download", { trend: trend.slug, source: "web" });
+    setSavedUrl(image.url);
+    if (count) {
+      countShare("save");
+      track("trend_download", { trend: trend.slug, source: "web" });
+    }
   }
 
-  /** The phone's share sheet with the image when it can, else a download. */
-  async function shareImage(platform: "instagram" | "tiktok" | "other") {
+  /** The OS share menu with the image attached (phones, Safari on Mac). */
+  async function shareSheet() {
     if (!image) return;
     const file = new File([image.blob], fileName, { type: "image/jpeg" });
-    const nav = navigator as Navigator & {
-      canShare?: (d: ShareData) => boolean;
-    };
-    if (nav.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          text: shareText(platform),
-        });
-        countShare(platform);
-      } catch {
-        // closed the sheet: nothing to do
-      }
+    if (!canShareFiles()) {
+      save();
       return;
     }
-    download();
+    try {
+      await navigator.share({ files: [file], text: caption });
+      countShare("other");
+    } catch {
+      // closed the menu: nothing to do
+    }
   }
 
-  function openIntent(platform: "x" | "threads" | "facebook") {
-    const text = encodeURIComponent(shareText(platform));
-    const href =
-      platform === "x"
-        ? `https://x.com/intent/tweet?text=${text}`
-        : platform === "threads"
-          ? `https://www.threads.com/intent/post?text=${text}`
-          : `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl(platform))}`;
+  /** Computers: save the image, then open the site to attach it. X and
+   *  Threads get the caption prefilled; the others can't take text. */
+  function openSite(site: ShareSite) {
+    if (!image) return;
+    if (savedUrl !== image.url) save(false);
+    const text = encodeURIComponent(caption);
+    const href = {
+      x: `https://x.com/intent/tweet?text=${text}`,
+      threads: `https://www.threads.com/intent/post?text=${text}`,
+      facebook: "https://www.facebook.com/",
+      instagram: "https://www.instagram.com/",
+      tiktok: "https://www.tiktok.com/upload",
+    }[site];
     window.open(href, "_blank", "noopener,noreferrer");
-    countShare(platform);
+    countShare(site);
   }
 
   async function copyLink() {
@@ -330,34 +375,11 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     }
   }
 
-  function shareTo(p: SharePlatform) {
-    if (p === "instagram" || p === "tiktok") void shareImage(p);
-    else if (p === "save") download();
-    else if (p === "copy") void copyLink();
-    else openIntent(p);
-  }
-
-  /** `afterSignIn`: the modal just signed the reader in, so `user` in this
-   *  closure is still the old value; the proxy checks the cookie anyway. */
-  async function post(afterSignIn = false) {
-    if (!user && !afterSignIn) {
-      setPending("post");
-      return;
-    }
-    setPosting(true);
-    setError(null);
-    try {
-      const r = await postEntry(
-        trend.slug,
-        picks.map((p) => p.id),
-      );
-      setPosted(r.id);
-      track("trend_entry_post", { trend: trend.slug, source: "web" });
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setPosting(false);
-    }
+  function shareTo(a: ShareAction) {
+    if (a === "sheet") void shareSheet();
+    else if (a === "save") save();
+    else if (a === "copy") void copyLink();
+    else openSite(a);
   }
 
   if (!trend.joinable) {
@@ -395,6 +417,8 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   return (
     <Box
       id="make"
+      ref={root}
+      scrollMarginTop="88px"
       p={{ base: 4, md: 5 }}
       borderRadius="18px"
       bg={CARD}
@@ -402,112 +426,134 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
       borderColor={LINE}
     >
       <Stack gap={4}>
-        <Box>
-          <Text fontWeight="800" fontSize="lg" color="white">
-            Make your build, no account needed
-          </Text>
-          <Text color={MUTED} fontSize="sm">
-            {min === max ? `Pick ${max} games` : `Pick ${min} to ${max} games`}
-            {ranked ? ", then put them in order." : "."}
-          </Text>
-        </Box>
-
-        <PickGrid
-          picks={picks}
-          max={max}
-          ranked={ranked}
-          onRemove={remove}
-          onMove={move}
-          onEmpty={() =>
-            canSearch ? setPickerOpen(true) : setPending("choices")
-          }
-        />
-
-        {!canSearch ? (
-          <Box>
-            <Text color={MUTED} fontSize="sm" mb={2}>
-              This trend uses the games in your Nexzy{" "}
-              {trend.source.kind === "library" ? "library" : "wishlist"}.
-            </Text>
-            <Button
-              bg="#2A3166"
-              color="white"
-              borderRadius="12px"
-              onClick={() => setPending("choices")}
-            >
-              Sign in to see your games
-            </Button>
-          </Box>
-        ) : (
-          <Box>
-            {full ? (
-              <Text color={MUTED} fontSize="sm">
-                That&apos;s {max}. Remove one to swap it.
+        {(!hasCard || editing) && (
+          <>
+            <Box>
+              <Text fontWeight="800" fontSize="lg" color="white">
+                Make your build, no account needed
               </Text>
+              <Text color={MUTED} fontSize="sm">
+                {min === max
+                  ? `Pick ${max} games`
+                  : `Pick ${min} to ${max} games`}
+                {ranked ? ", then put them in order." : "."}
+              </Text>
+            </Box>
+
+            <PickGrid
+              picks={picks}
+              max={max}
+              ranked={ranked}
+              onRemove={remove}
+              onMove={move}
+              onEmpty={() =>
+                canSearch ? setPickerOpen(true) : setPending("choices")
+              }
+            />
+
+            {!canSearch ? (
+              <Box>
+                <Text color={MUTED} fontSize="sm" mb={2}>
+                  This trend uses the games in your Nexzy{" "}
+                  {trend.source.kind === "library" ? "library" : "wishlist"}.
+                </Text>
+                <Button
+                  bg="#2A3166"
+                  color="white"
+                  borderRadius="12px"
+                  onClick={() => setPending("choices")}
+                >
+                  Sign in to see your games
+                </Button>
+              </Box>
             ) : (
-              <Button
-                h="46px"
-                px={5}
-                borderRadius="12px"
-                bg="#2A3166"
-                color="white"
-                onClick={() => setPickerOpen(true)}
-              >
-                <FiPlus /> Add games
-              </Button>
+              <Box>
+                {full ? (
+                  <Text color={MUTED} fontSize="sm">
+                    That&apos;s {max}. Remove one to swap it.
+                  </Text>
+                ) : (
+                  <Button
+                    h="46px"
+                    px={5}
+                    borderRadius="12px"
+                    bg="#2A3166"
+                    color="white"
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    <FiPlus /> Add games
+                  </Button>
+                )}
+              </Box>
             )}
-          </Box>
+
+            {ready && (
+              <HStack gap={3} wrap="wrap">
+                <Button
+                  h="46px"
+                  px={5}
+                  borderRadius="12px"
+                  bg={YELLOW}
+                  color={NAVY}
+                  fontWeight="800"
+                  loading={making}
+                  loadingText="Making it"
+                  onClick={() => (hasCard ? setEditing(false) : void make())}
+                >
+                  {hasCard ? "Back to my card" : "Make my build"}
+                </Button>
+              </HStack>
+            )}
+          </>
         )}
 
-        {ready && !image && (
-          <HStack gap={3} wrap="wrap">
-            <ShapePicker shape={shape} onChange={setShape} />
-            <Button
-              h="46px"
-              px={5}
-              borderRadius="12px"
-              bg={YELLOW}
-              color={NAVY}
-              fontWeight="800"
-              loading={making}
-              loadingText="Making it"
-              onClick={make}
-            >
-              Make my build
-            </Button>
-          </HStack>
-        )}
-
-        {image && (
+        {shown && !editing && (
           <Stack gap={3}>
-            <Text
-              fontFamily="title"
-              fontWeight="700"
-              fontSize="2xl"
-              color="white"
-              lineHeight="1.1"
-            >
-              Your build is ready
-            </Text>
+            <Flex align="center" justify="space-between" gap={3}>
+              <Text
+                fontFamily="title"
+                fontWeight="700"
+                fontSize="2xl"
+                color="white"
+                lineHeight="1.1"
+              >
+                Your build is ready
+              </Text>
+              <Button
+                size="sm"
+                variant="ghost"
+                color={MUTED}
+                _hover={{ color: "white", bg: "transparent" }}
+                onClick={() => setEditing(true)}
+              >
+                Change picks
+              </Button>
+            </Flex>
             <Box
               mx="auto"
               w="100%"
-              maxW={shape === "tall" ? "280px" : "420px"}
+              maxW={shown === images.tall ? "280px" : "420px"}
               borderRadius="14px"
               overflow="hidden"
               border="1px solid"
               borderColor={LINE}
+              opacity={image ? 1 : 0.5}
+              transition="opacity 0.2s"
+              aria-busy={!image}
             >
               <Image
-                src={image.url}
+                src={shown.url}
                 alt={`My #${trend.hashtag} build`}
                 w="100%"
                 h="auto"
               />
             </Box>
-            {matches && <MatchNote matches={matches} />}
             <HStack gap={2} wrap="wrap">
-              <ShapePicker shape={shape} onChange={setShape} />
+              <ShapePicker
+                shape={shape}
+                onChange={(s) => void pickShape(s)}
+                busy={making}
+              />
               <Button
                 h="44px"
                 px={6}
@@ -516,6 +562,8 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
                 bg={YELLOW}
                 color={NAVY}
                 fontWeight="800"
+                loading={!image}
+                loadingText="Making it"
                 onClick={() => {
                   setCopied(false);
                   setShareOpen(true);
@@ -524,34 +572,10 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
                 <FiShare2 /> Share
               </Button>
             </HStack>
-            {posted ? (
-              <Box p={3} borderRadius="12px" bg="#1F3A2C">
-                <Text color="#7EE2A0" fontWeight="700">
-                  Posted on Nexzy.
-                </Text>
-                <Text color="#CDEFD9" fontSize="sm">
-                  Your build is in the drop now.{" "}
-                  <NextLink
-                    href={entryPath(trend.slug, posted)}
-                    style={{ color: YELLOW, fontWeight: 700 }}
-                  >
-                    Open it
-                  </NextLink>
-                </Text>
-              </Box>
-            ) : (
-              <Button
-                h="44px"
-                borderRadius="12px"
-                bg="#2A3166"
-                color="white"
-                fontWeight="700"
-                loading={posting}
-                onClick={() => void post()}
-              >
-                {user ? "Post it on Nexzy" : "Sign in to post on Nexzy"}
-              </Button>
-            )}
+            <Text color={MUTED} fontSize="sm" mt={-1}>
+              Share it and dare your friends to make theirs.
+            </Text>
+            <NextSteps matches={matches} count={picks.length} />
             {stories && <NewForYourGames picks={picks} stories={stories} />}
           </Stack>
         )}
@@ -569,6 +593,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         hashtag={trend.hashtag}
         imageUrl={image?.url ?? null}
         onShare={shareTo}
+        saved={!!image && savedUrl === image.url}
         copied={copied}
       />
 
@@ -667,63 +692,60 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         onSignedIn={() => {
           const p = pending;
           setPending(null);
-          if (p === "post") void post(true);
           if (p === "request") setAsking(true);
         }}
         title="Sign in to Nexzy"
         subtitle={
           pending === "request"
             ? "We'll tell you when the game is added."
-            : pending === "choices"
-              ? "See the games in your library and wishlist."
-              : "Post your picks and see who matches you."
+            : "See the games in your library and wishlist."
         }
       />
     </Box>
   );
 }
 
-/** After the build is saved: how many players share its picks (the app
- *  shows who). */
-function MatchNote({ matches }: { matches: DropMatches }) {
-  const any = matches.count > 0;
+/** Under the card: share first (every shared card brings the next
+ *  builder), then the app, where the picks become a feed. The count of
+ *  players with the same picks shows only when there are some. */
+function NextSteps({
+  matches,
+  count,
+}: {
+  matches: DropMatches | null;
+  count: number;
+}) {
+  const same = matches && matches.count > 0 ? matches : null;
   return (
-    <Flex
-      p={3.5}
-      gap={3}
-      align="center"
+    <Box
+      p={4}
       borderRadius="14px"
       bg={NAVY}
       border="1px solid"
       borderColor={LINE}
-      wrap="wrap"
     >
       <Text
-        fontFamily="title"
-        fontWeight="700"
-        fontSize="3xl"
         color={YELLOW}
-        minW="56px"
-        textAlign="center"
+        fontWeight="800"
+        fontSize="xs"
+        letterSpacing="0.08em"
       >
-        {matches.count.toLocaleString("en-US")}
+        FREE ON IPHONE AND ANDROID
       </Text>
-      <Box flex="1" minW="180px">
-        <Text color="white" fontWeight="700" fontSize="sm">
-          {any
-            ? `${matches.count === 1 ? "player shares" : "players share"} ${matches.threshold} or more of your picks`
-            : "Nobody matches you yet. Be the first they find."}
-        </Text>
-        <Text color={MUTED} fontSize="xs" mt={0.5}>
-          {any
-            ? "See who they are and follow them in the Nexzy app."
-            : "Post it in the Nexzy app and get matched as people join."}
-        </Text>
-      </Box>
-      <HStack gap={2}>
+      <Text color="white" fontWeight="800" fontSize="lg" mt={1}>
+        Follow your {count} on Nexzy
+      </Text>
+      <Text color={MUTED} fontSize="sm" mt={1}>
+        {same
+          ? `${same.count.toLocaleString("en-US")} ${same.count === 1 ? "player" : "players"} picked ${same.threshold} or more of the same games. See who in the app, follow them and squad up in a Room.`
+          : "News, guides and price drops for every game you picked, in one feed. Follow the players who pick like you and squad up in a Room."}
+      </Text>
+      <HStack gap={2} mt={3}>
         <Button
           asChild
           size="sm"
+          h="40px"
+          px={4}
           borderRadius="10px"
           bg="white"
           color={NAVY}
@@ -741,6 +763,8 @@ function MatchNote({ matches }: { matches: DropMatches }) {
         <Button
           asChild
           size="sm"
+          h="40px"
+          px={4}
           borderRadius="10px"
           bg={YELLOW}
           color={NAVY}
@@ -756,7 +780,7 @@ function MatchNote({ matches }: { matches: DropMatches }) {
           </a>
         </Button>
       </HStack>
-    </Flex>
+    </Box>
   );
 }
 
@@ -842,9 +866,11 @@ function NewForYourGames({
 function ShapePicker({
   shape,
   onChange,
+  busy,
 }: {
   shape: Shape;
   onChange: (s: Shape) => void;
+  busy?: boolean;
 }) {
   return (
     <HStack
@@ -868,6 +894,7 @@ function ShapePicker({
           color={shape === k ? NAVY : "white"}
           fontWeight="700"
           onClick={() => onChange(k)}
+          disabled={busy && shape !== k}
           aria-pressed={shape === k}
         >
           {label}

@@ -1,5 +1,5 @@
 // One build's page (a posted entry or a saved web build): the share image,
-// "Do you match? Make yours", a line of social proof, then "Inside their 9"
+// "Make yours", a line of social proof, then "Inside their 9"
 // (each pick with the newest Nexzy piece about it) and the app pitch.
 import NextLink from "next/link";
 import {
@@ -138,7 +138,7 @@ export default function BuildView({
               _hover={{ opacity: 0.92 }}
             >
               <NextLink href={`${dropPath(drop.slug)}#make`}>
-                Do you match? Make yours
+                Your turn. Make yours
               </NextLink>
             </Button>
           )}

@@ -14,8 +14,8 @@ const POINTS = [
   },
   {
     icon: FiUsers,
-    title: "See who matches you",
-    body: "Find the players with your taste and follow them.",
+    title: "Players who pick like you",
+    body: "See who picked the same games and follow them.",
   },
   {
     icon: FiMessageCircle,
