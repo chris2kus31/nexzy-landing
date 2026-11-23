@@ -1,6 +1,6 @@
 // One build's page (a posted entry or a saved web build): the share image,
-// the picks in order (each linked to its game page when the site has one),
-// a line of social proof, and "Do you match? Make yours".
+// "Do you match? Make yours", a line of social proof, then "Inside their 9"
+// (each pick with the newest Nexzy piece about it) and the app pitch.
 import NextLink from "next/link";
 import {
   Box,
@@ -13,12 +13,13 @@ import {
   Text,
 } from "@chakra-ui/react";
 import CoverTile from "@/components/drops/CoverTile";
-import StoreButtons from "@/components/drops/StoreButtons";
+import AppPitch from "@/components/drops/AppPitch";
+import GameStories from "@/components/drops/GameStories";
 import { D } from "@/components/drops/tokens";
 import {
   dropPath,
-  gameHref,
   type BuildPick,
+  type GameStory,
   type TrendView,
 } from "@/lib/trends/types";
 
@@ -27,6 +28,7 @@ export default function BuildView({
   heading,
   image,
   picks,
+  stories,
   proof,
   location,
 }: {
@@ -34,7 +36,9 @@ export default function BuildView({
   heading: string;
   image: string | null;
   picks: BuildPick[];
-  /** "312 players share 5+ of these picks" / "48 hearts on Nexzy". */
+  /** The newest Nexzy piece per picked game (missing = nothing recent). */
+  stories: Record<string, GameStory>;
+  /** "312 players share 5+ of these picks" (+ hearts once it has any). */
   proof: React.ReactNode;
   location: string;
 }) {
@@ -57,8 +61,8 @@ export default function BuildView({
                 alt={heading}
                 w="100%"
                 h="auto"
-                width={1080}
-                height={1350}
+                aspectRatio="4 / 5"
+                objectFit="contain"
                 fetchPriority="high"
                 decoding="async"
               />
@@ -115,58 +119,11 @@ export default function BuildView({
           <Text color={D.dim} fontSize="lg">
             {drop.title}
           </Text>
-          <Stack as="ol" gap={2.5} listStyleType="none" m={0} p={0}>
-            {picks.map((p, i) => {
-              const href = gameHref(p);
-              return (
-                <Flex as="li" key={p.id} gap={3} align="center">
-                  <Flex
-                    w="26px"
-                    h="26px"
-                    flexShrink={0}
-                    borderRadius="7px"
-                    bg={D.yellow}
-                    color={D.base}
-                    fontFamily="title"
-                    fontWeight="700"
-                    fontSize="sm"
-                    align="center"
-                    justify="center"
-                  >
-                    {p.badge ?? i + 1}
-                  </Flex>
-                  <Box w="30px" flexShrink={0}>
-                    <CoverTile cover={p.cover} name={p.name} radius="4px" />
-                  </Box>
-                  <Box minW={0}>
-                    <Text fontWeight="700">
-                      {href ? (
-                        <NextLink
-                          href={href}
-                          style={{
-                            textDecoration: "underline",
-                            textUnderlineOffset: 3,
-                          }}
-                        >
-                          {p.name}
-                        </NextLink>
-                      ) : (
-                        p.name
-                      )}
-                    </Text>
-                    {p.reason && (
-                      <Text fontSize="sm" color={D.muted}>
-                        {p.reason}
-                      </Text>
-                    )}
-                  </Box>
-                </Flex>
-              );
-            })}
-          </Stack>
-          <Box fontSize="sm" color={D.muted}>
-            {proof}
-          </Box>
+          {proof && (
+            <Box fontSize="sm" color={D.muted}>
+              {proof}
+            </Box>
+          )}
           {drop.joinable && (
             <Button
               asChild
@@ -185,22 +142,12 @@ export default function BuildView({
               </NextLink>
             </Button>
           )}
-          <Box
-            mt={2}
-            p={5}
-            borderRadius="18px"
-            border="1px solid rgba(110,139,255,0.45)"
-            bg="linear-gradient(135deg, rgba(59,107,255,0.20), rgba(26,31,71,0.7))"
-          >
-            <Text fontFamily="title" fontWeight="700" fontSize="xl">
-              See who matches you
-            </Text>
-            <Text color={D.dim} fontSize="sm" mt={1} mb={4}>
-              Compare picks, follow the players who match you and start a Squad
-              Room in the Nexzy app.
-            </Text>
-            <StoreButtons location={location} />
-          </Box>
+          {picks.length > 0 && (
+            <Box mt={2}>
+              <GameStories picks={picks} stories={stories} />
+            </Box>
+          )}
+          <AppPitch location={location} />
         </Stack>
       </Flex>
     </Container>

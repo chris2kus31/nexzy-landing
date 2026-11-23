@@ -131,6 +131,26 @@ export interface TrendPick {
   hasPage?: boolean;
 }
 
+/** The newest Nexzy piece for one game (Drops "Inside their 9"). */
+export interface GameStory {
+  title: string;
+  /** Site path, e.g. /guides/<slug> or /games/<slug>/guide/<page>. */
+  path: string;
+  type: string;
+  image: string | null;
+  publishedAt: string | null;
+}
+
+/** Label shown above a story. */
+export const STORY_LABEL: Record<string, string> = {
+  article: "News",
+  guide: "Guide",
+  walkthrough: "Walkthrough",
+  list: "List",
+  review: "Review",
+  rewind: "Rewind",
+};
+
 export interface TrendChoice {
   id: string;
   name: string;

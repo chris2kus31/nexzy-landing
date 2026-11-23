@@ -14,6 +14,7 @@ import type {
   DropMatches,
   DropsPage,
   GameDropShare,
+  GameStory,
   TrendEntryPage,
   TrendEntryRow,
   TrendPick,
@@ -71,6 +72,21 @@ export function fetchBuildMatches(
   );
 }
 
+/** Players who share most of a posted entry's picks. Never fails the page. */
+export async function fetchEntryMatches(
+  slug: string,
+  entry: string,
+): Promise<DropMatches | null> {
+  try {
+    return await get<DropMatches>(
+      `/trends/${enc(slug)}/matches?entry=${enc(entry)}`,
+      300,
+    );
+  } catch {
+    return null;
+  }
+}
+
 /** "On X% of #Tag builds" for a game page. Never fails the page. */
 export async function fetchGameDrops(gameId: string): Promise<GameDropShare[]> {
   try {
@@ -113,4 +129,22 @@ export function fetchTrendEntry(
     `/trends/${enc(slug)}/entries/${enc(postId)}`,
     300,
   );
+}
+
+/** The newest Nexzy piece per game (up to 9 ids). Never fails the page:
+ *  an error or a missing route just means no story rows. */
+export async function fetchGameStories(
+  ids: string[],
+): Promise<Record<string, GameStory>> {
+  const list = ids.slice(0, 9);
+  if (!list.length) return {};
+  try {
+    const r = await get<{ data: Record<string, GameStory> }>(
+      `/trends/stories?ids=${list.map(enc).join(",")}`,
+      600,
+    );
+    return r?.data ?? {};
+  } catch {
+    return {};
+  }
 }

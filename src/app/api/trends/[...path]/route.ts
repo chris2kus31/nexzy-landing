@@ -51,6 +51,12 @@ const SLUG_ROUTES: Record<string, Rule> = {
 /** Routes with no slug. */
 const ROOT_ROUTES: Record<string, Rule> = {
   "request-game POST": { auth: "required" },
+  "stories GET": {
+    auth: "none",
+    query: {
+      ids: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(,[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}){0,8}$/i,
+    },
+  },
 };
 
 function signedIp(ip: string): Record<string, string> | null {

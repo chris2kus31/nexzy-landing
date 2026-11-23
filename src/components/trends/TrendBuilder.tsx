@@ -33,6 +33,7 @@ import { track, trackDownload } from "@/lib/analytics";
 import {
   TrendApiError,
   fetchChoices,
+  fetchGameStories,
   fetchMatches,
   fetchPreview,
   logTrendEvent,
@@ -48,7 +49,9 @@ import {
   entryPath,
   isRanked,
   pickRange,
+  STORY_LABEL,
   type DropMatches,
+  type GameStory,
   type TrendChoice,
   type TrendView,
 } from "@/lib/trends/types";
@@ -119,6 +122,10 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   const [matches, setMatches] = useState<DropMatches | null>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [asking, setAsking] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [stories, setStories] = useState<Record<string, GameStory> | null>(
+    null,
+  );
   const counted = useRef({ try: false, build: false });
   const abort = useRef<AbortController | null>(null);
 
@@ -164,6 +171,26 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     setMatches(null);
   }, [picks]);
   useEffect(() => () => abort.current?.abort(), []);
+  // Once the card is made: the newest Nexzy piece for the picked games
+  // (best effort; a failure just hides the section).
+  useEffect(() => {
+    if (!image) return;
+    const ctl = new AbortController();
+    fetchGameStories(
+      picks.map((p) => p.id),
+      ctl.signal,
+    )
+      .then(setStories)
+      .catch(() => {});
+    return () => ctl.abort();
+  }, [image, picks]);
+  useEffect(() => {
+    setStories(null);
+  }, [picks]);
+  // The picker closes itself once the build is full.
+  useEffect(() => {
+    if (full) setPickerOpen(false);
+  }, [full]);
 
   function add(g: TrendChoice) {
     if (chosen.has(g.id) || full) return;
@@ -391,6 +418,9 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
           ranked={ranked}
           onRemove={remove}
           onMove={move}
+          onEmpty={() =>
+            canSearch ? setPickerOpen(true) : setPending("choices")
+          }
         />
 
         {!canSearch ? (
@@ -410,51 +440,21 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
           </Box>
         ) : (
           <Box>
-            <chakra.label htmlFor="trend-q" fontSize="sm" color={MUTED}>
-              Search a game
-            </chakra.label>
-            <HStack mt={1}>
-              <Input
-                id="trend-q"
-                value={q}
-                onChange={(e) => setQ(e.target.value.slice(0, 60))}
-                placeholder="Try: zelda, gta 6, halo"
-                autoComplete="off"
-                h="46px"
-                borderRadius="12px"
-                borderColor={LINE}
-                bg={NAVY}
-                color="white"
-                _placeholder={{ color: "#5A6399" }}
-                disabled={full}
-              />
-              {searching && <Spinner size="sm" color={MUTED} />}
-            </HStack>
             {full ? (
-              <Text color={MUTED} fontSize="sm" mt={2}>
+              <Text color={MUTED} fontSize="sm">
                 That&apos;s {max}. Remove one to swap it.
               </Text>
             ) : (
-              <Results
-                results={results}
-                chosen={chosen}
-                onAdd={add}
-                onAsk={() => setAsking(true)}
-                searched={q.trim().length > 0}
-              />
-            )}
-            {asking && (
-              <AskToAdd
-                initialName={q.trim()}
-                trendSlug={trend.slug}
-                signedIn={!!user}
-                onNeedSignIn={() => setPending("request")}
-                onFound={(name) => {
-                  setQ(name);
-                  setAsking(false);
-                }}
-                onClose={() => setAsking(false)}
-              />
+              <Button
+                h="46px"
+                px={5}
+                borderRadius="12px"
+                bg="#2A3166"
+                color="white"
+                onClick={() => setPickerOpen(true)}
+              >
+                <FiPlus /> Add games
+              </Button>
             )}
           </Box>
         )}
@@ -480,6 +480,15 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
 
         {image && (
           <Stack gap={3}>
+            <Text
+              fontFamily="title"
+              fontWeight="700"
+              fontSize="2xl"
+              color="white"
+              lineHeight="1.1"
+            >
+              Your build is ready
+            </Text>
             <Box
               mx="auto"
               w="100%"
@@ -543,6 +552,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
                 {user ? "Post it on Nexzy" : "Sign in to post on Nexzy"}
               </Button>
             )}
+            {stories && <NewForYourGames picks={picks} stories={stories} />}
           </Stack>
         )}
 
@@ -561,6 +571,95 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
         onShare={shareTo}
         copied={copied}
       />
+
+      {pickerOpen && canSearch && (
+        <Flex
+          position="fixed"
+          inset="0"
+          zIndex={1400}
+          bg="rgba(5, 8, 24, 0.72)"
+          align={{ base: "flex-end", md: "center" }}
+          justify="center"
+          onClick={() => {
+            setPickerOpen(false);
+            setAsking(false);
+          }}
+        >
+          <Flex
+            direction="column"
+            onClick={(e) => e.stopPropagation()}
+            w={{ base: "100%", md: "520px" }}
+            maxH={{ base: "85dvh", md: "80vh" }}
+            bg="#151A3C"
+            border="1px solid"
+            borderColor={LINE}
+            borderTopRadius="16px"
+            borderBottomRadius={{ base: "0", md: "16px" }}
+            p={4}
+            gap={3}
+          >
+            <Flex align="center" justify="space-between">
+              <Text color="white" fontWeight="800">
+                Add games{" "}
+                <chakra.span color={MUTED} fontWeight="600" fontSize="sm">
+                  {picks.length} of {max}
+                </chakra.span>
+              </Text>
+              <Button
+                size="sm"
+                variant="plain"
+                color={MUTED}
+                aria-label="Close"
+                onClick={() => {
+                  setPickerOpen(false);
+                  setAsking(false);
+                }}
+              >
+                <FiX size={18} />
+              </Button>
+            </Flex>
+            <HStack>
+              <Input
+                id="trend-q"
+                value={q}
+                onChange={(e) => setQ(e.target.value.slice(0, 60))}
+                placeholder="Try: zelda, gta 6, halo"
+                autoComplete="off"
+                autoFocus
+                h="46px"
+                borderRadius="12px"
+                borderColor={LINE}
+                bg={NAVY}
+                color="white"
+                _placeholder={{ color: "#5A6399" }}
+              />
+              {searching && <Spinner size="sm" color={MUTED} />}
+            </HStack>
+            <Box flex="1" minH={0} overflowY="auto">
+              <Results
+                results={results}
+                chosen={chosen}
+                onAdd={add}
+                onAsk={() => setAsking(true)}
+                searched={q.trim().length > 0}
+              />
+              {asking && (
+                <AskToAdd
+                  initialName={q.trim()}
+                  trendSlug={trend.slug}
+                  signedIn={!!user}
+                  onNeedSignIn={() => setPending("request")}
+                  onFound={(name) => {
+                    setQ(name);
+                    setAsking(false);
+                  }}
+                  onClose={() => setAsking(false)}
+                />
+              )}
+            </Box>
+          </Flex>
+        </Flex>
+      )}
 
       <SignInModal
         open={pending !== null}
@@ -661,6 +760,85 @@ function MatchNote({ matches }: { matches: DropMatches }) {
   );
 }
 
+/** "New for your games": the three freshest Nexzy pieces among the picks
+ *  (mega hub walkthroughs first, then the newest dated pieces). */
+function NewForYourGames({
+  picks,
+  stories,
+}: {
+  picks: TrendChoice[];
+  stories: Record<string, GameStory>;
+}) {
+  const top = picks
+    .map((p) => ({ p, s: stories[p.id] }))
+    .filter((x): x is { p: TrendChoice; s: GameStory } => !!x.s)
+    .sort(
+      (a, b) =>
+        (b.s.publishedAt
+          ? Date.parse(b.s.publishedAt)
+          : Number.MAX_SAFE_INTEGER) -
+        (a.s.publishedAt
+          ? Date.parse(a.s.publishedAt)
+          : Number.MAX_SAFE_INTEGER),
+    )
+    .slice(0, 3);
+  if (!top.length) return null;
+  return (
+    <Box mt={2}>
+      <Text color="white" fontWeight="800" mb={2}>
+        New for your games
+      </Text>
+      <Stack gap={2}>
+        {top.map(({ p, s }) => (
+          <NextLink key={p.id} href={s.path} style={{ display: "block" }}>
+            <Flex
+              gap={3}
+              align="center"
+              p={2.5}
+              borderRadius="12px"
+              bg="#1A1F47"
+              _hover={{ bg: "#232A5C" }}
+              transition="background 0.15s"
+            >
+              <Box
+                w="60px"
+                h="42px"
+                flexShrink={0}
+                borderRadius="8px"
+                bg="#232A52"
+                bgImage={
+                  s.image || p.cover ? `url(${s.image ?? p.cover})` : undefined
+                }
+                bgSize="cover"
+                bgPos="center"
+              />
+              <Box minW={0}>
+                <Text
+                  color={YELLOW}
+                  fontWeight="800"
+                  fontSize="2xs"
+                  letterSpacing="0.08em"
+                  textTransform="uppercase"
+                >
+                  {STORY_LABEL[s.type] ?? "Story"} · {p.name}
+                </Text>
+                <Text
+                  color="white"
+                  fontSize="sm"
+                  fontWeight="700"
+                  lineClamp={2}
+                >
+                  {s.title}
+                </Text>
+              </Box>
+            </Flex>
+          </NextLink>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
 function ShapePicker({
   shape,
   onChange,
@@ -705,12 +883,14 @@ function PickGrid({
   ranked,
   onRemove,
   onMove,
+  onEmpty,
 }: {
   picks: TrendChoice[];
   max: number;
   ranked: boolean;
   onRemove: (id: string) => void;
   onMove: (i: number, d: -1 | 1) => void;
+  onEmpty: () => void;
 }) {
   const cols = max <= 3 ? max : max === 4 ? 2 : 3;
   return (
@@ -723,19 +903,23 @@ function PickGrid({
         const g = picks[i];
         if (!g)
           return (
-            <Flex
+            <chakra.button
               key={`empty-${i}`}
+              type="button"
+              display="flex"
               aspectRatio="1"
               borderRadius="10px"
               border="2px dashed"
               borderColor="#3A4378"
-              align="center"
-              justify="center"
+              alignItems="center"
+              justifyContent="center"
               color="#5A6399"
-              aria-hidden
+              _hover={{ borderColor: "#5A6399", color: "#9AA1C7" }}
+              aria-label="Add a game"
+              onClick={onEmpty}
             >
               <FiPlus size={22} />
-            </Flex>
+            </chakra.button>
           );
         return (
           <Box
@@ -862,7 +1046,7 @@ function Results({
   return (
     <Box mt={2}>
       <Box
-        maxH="280px"
+        maxH="400px"
         overflowY="auto"
         borderRadius="12px"
         border="1px solid"
@@ -885,7 +1069,7 @@ function Results({
               alignItems="center"
               gap={3}
               px={3}
-              py={2}
+              py={2.5}
               borderTop="1px solid"
               borderColor="rgba(255,255,255,0.05)"
               _hover={{ bg: on ? undefined : "rgba(255,255,255,0.05)" }}
@@ -894,28 +1078,36 @@ function Results({
               disabled={on}
             >
               <Box
-                w="48px"
-                h="28px"
+                w="44px"
+                h="59px"
                 flexShrink={0}
-                borderRadius="6px"
+                borderRadius="8px"
                 bg="#232A52"
                 bgImage={g.cover ? `url(${g.cover})` : undefined}
                 bgSize="cover"
                 bgPos="center"
               />
-              <Text
-                flex="1"
-                minW={0}
-                color="white"
-                fontSize="sm"
-                fontWeight="600"
-                truncate
-              >
-                {g.name}
-              </Text>
-              <Text fontSize="xs" color={MUTED}>
-                {on ? "Picked" : (g.released?.slice(0, 4) ?? "")}
-              </Text>
+              <Box flex="1" minW={0}>
+                <Text
+                  color="white"
+                  fontSize="md"
+                  fontWeight="600"
+                  lineHeight="short"
+                  lineClamp={2}
+                >
+                  {g.name}
+                </Text>
+                {g.released && (
+                  <Text fontSize="sm" color={MUTED} mt="2px">
+                    {g.released.slice(0, 4)}
+                  </Text>
+                )}
+              </Box>
+              {on && (
+                <Text fontSize="xs" color={MUTED} flexShrink={0}>
+                  Picked
+                </Text>
+              )}
             </chakra.button>
           );
         })}

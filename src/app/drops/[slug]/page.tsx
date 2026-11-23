@@ -21,6 +21,7 @@ import EntryCard from "@/components/trends/EntryCard";
 import MostPicked from "@/components/drops/MostPicked";
 import NextDropStrip from "@/components/drops/NextDropStrip";
 import StoreButtons from "@/components/drops/StoreButtons";
+import AppPitch from "@/components/drops/AppPitch";
 import { D, num, shortDate } from "@/components/drops/tokens";
 import {
   fetchTrend,
@@ -297,26 +298,7 @@ export default async function DropPage({ params }: Params) {
           </Stack>
 
           <Stack flex="1 1 380px" minW={0} gap={8}>
-            <Box
-              p={5}
-              borderRadius="18px"
-              border="1px solid rgba(110,139,255,0.45)"
-              bg="linear-gradient(135deg, rgba(59,107,255,0.20), rgba(26,31,71,0.7))"
-            >
-              <Text fontSize="xs" fontWeight="800" color={D.blueSoft}>
-                In the app
-              </Text>
-              <Text fontFamily="title" fontWeight="700" fontSize="2xl" mt={1}>
-                Find your player 2
-              </Text>
-              <Text color={D.dim} fontSize="sm" mt={1.5} lineHeight="1.55">
-                Post your build and see every player who picked the same games.
-                Follow the ones you match, then start a Squad Room together.
-              </Text>
-              <Box mt={4}>
-                <StoreButtons location="drop_page" />
-              </Box>
-            </Box>
+            <AppPitch location="drop_page" title="Get your games in one feed" />
 
             {picks.length > 0 && (
               <Box>

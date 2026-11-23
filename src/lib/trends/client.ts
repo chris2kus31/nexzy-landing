@@ -5,6 +5,7 @@
 
 import type {
   DropMatches,
+  GameStory,
   TrendChoice,
   TrendEntryRow,
 } from "@/lib/trends/types";
@@ -156,4 +157,17 @@ export async function requestGame(body: {
       body: JSON.stringify(body),
     }),
   );
+}
+
+/** The newest Nexzy piece per game, for the builder's "card ready" view. */
+export async function fetchGameStories(
+  ids: string[],
+  signal?: AbortSignal,
+): Promise<Record<string, GameStory>> {
+  const list = ids.slice(0, 9);
+  if (!list.length) return {};
+  const r = await json<{ data: Record<string, GameStory> }>(
+    await fetch(`/api/trends/stories?ids=${list.join(",")}`, { signal }),
+  );
+  return r.data ?? {};
 }

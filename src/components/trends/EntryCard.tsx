@@ -38,11 +38,9 @@ export default function EntryCard({
               alt={`@${entry.author.username}'s #${hashtag}`}
               w="100%"
               h="100%"
-              objectFit="cover"
+              objectFit="contain"
               loading="lazy"
               decoding="async"
-              width={720}
-              height={900}
             />
           ) : (
             <Flex h="100%" align="center" justify="center" px={3}>
@@ -56,10 +54,12 @@ export default function EntryCard({
           <Text color="white" fontSize="sm" fontWeight="700" truncate>
             @{entry.author.username}
           </Text>
-          <Text color="#9AA1C7" fontSize="xs" flexShrink={0}>
-            {entry.likeCount.toLocaleString("en-US")}{" "}
-            {entry.likeCount === 1 ? "heart" : "hearts"}
-          </Text>
+          {entry.likeCount > 0 && (
+            <Text color="#9AA1C7" fontSize="xs" flexShrink={0}>
+              {entry.likeCount.toLocaleString("en-US")}{" "}
+              {entry.likeCount === 1 ? "heart" : "hearts"}
+            </Text>
+          )}
         </Flex>
       </Box>
     </NextLink>

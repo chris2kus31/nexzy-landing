@@ -4,10 +4,16 @@
 // the drop page is the indexed one. Old /t/ links 301 here.
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Box } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import TrendPing from "@/components/trends/TrendPing";
 import BuildView from "@/components/drops/BuildView";
-import { fetchTrend, fetchTrendEntry } from "@/lib/trends/server";
+import { D, num } from "@/components/drops/tokens";
+import {
+  fetchEntryMatches,
+  fetchGameStories,
+  fetchTrend,
+  fetchTrendEntry,
+} from "@/lib/trends/server";
 import { SITE_URL, SLUG_RE, UUID_RE, entryPath } from "@/lib/trends/types";
 
 export const revalidate = 300;
@@ -64,6 +70,32 @@ export default async function DropEntryPage({ params }: Params) {
   if (!r) notFound();
   const { t, e } = r;
   const hearts = e.entry.likeCount;
+  const [m, stories] = await Promise.all([
+    fetchEntryMatches(t.slug, entry),
+    fetchGameStories(e.picks.map((p) => p.id)),
+  ]);
+  // Social proof only when there is some: matches first (that's what makes a
+  // visitor try it), hearts once the build has any. Zeroes stay hidden.
+  const matchLine =
+    m && m.count > 0 ? (
+      <>
+        <Text as="b" color={D.white} fontSize="lg">
+          {num(m.count)}
+        </Text>{" "}
+        {m.count === 1 ? "player shares" : "players share"} {m.threshold} or
+        more of these picks on Nexzy.
+      </>
+    ) : null;
+  const heartLine =
+    hearts > 0 ? `${num(hearts)} ${hearts === 1 ? "heart" : "hearts"}` : null;
+  const proof =
+    matchLine || heartLine ? (
+      <Text>
+        {matchLine}
+        {matchLine && heartLine ? " · " : ""}
+        {heartLine}
+      </Text>
+    ) : null;
   return (
     <Box>
       <TrendPing slug={t.slug} page="entry" />
@@ -72,7 +104,8 @@ export default async function DropEntryPage({ params }: Params) {
         heading={`@${e.entry.author.username}'s #${t.hashtag}`}
         image={e.entry.trend?.images?.portrait ?? null}
         picks={e.picks}
-        proof={`${hearts.toLocaleString("en-US")} ${hearts === 1 ? "heart" : "hearts"} on Nexzy`}
+        stories={stories}
+        proof={proof}
         location="drop_entry"
       />
     </Box>
