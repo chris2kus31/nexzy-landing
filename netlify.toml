@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "https://nexzy.netlify.app/*"
+  to = "https://www.nexzyapp.com/:splat"
+  status = 301
+  force = true
