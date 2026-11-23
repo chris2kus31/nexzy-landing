@@ -56,6 +56,7 @@ import {
 import { D } from "@/components/drops/tokens";
 import SharePanel, {
   canShareFiles,
+  phoneShare,
   type ShareAction,
   type ShareSite,
 } from "@/components/drops/SharePanel";
@@ -331,8 +332,9 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     }
   }
 
-  /** The OS share menu with the image attached (phones, Safari on Mac). */
-  async function shareSheet() {
+  /** Phones: the share menu with the image attached; the person picks the
+   *  app there. Counted under the platform button they tapped. */
+  async function shareSheet(site: ShareSite) {
     if (!image) return;
     const file = new File([image.blob], fileName, { type: "image/jpeg" });
     if (!canShareFiles()) {
@@ -341,7 +343,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
     }
     try {
       await navigator.share({ files: [file], text: caption });
-      countShare("other");
+      countShare(site);
     } catch {
       // closed the menu: nothing to do
     }
@@ -376,9 +378,9 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
   }
 
   function shareTo(a: ShareAction) {
-    if (a === "sheet") void shareSheet();
-    else if (a === "save") save();
+    if (a === "save") save();
     else if (a === "copy") void copyLink();
+    else if (phoneShare()) void shareSheet(a);
     else openSite(a);
   }
 
