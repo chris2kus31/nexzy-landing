@@ -48,6 +48,7 @@ import {
   isRanked,
   pickRange,
   STORY_LABEL,
+  type DropCard,
   type DropMatches,
   type GameStory,
   type TrendChoice,
@@ -102,7 +103,14 @@ function errorText(e: unknown): string {
   return "That didn't work. Try again in a moment.";
 }
 
-export default function TrendBuilder({ trend }: { trend: TrendView }) {
+export default function TrendBuilder({
+  trend,
+  more = [],
+}: {
+  trend: TrendView;
+  /** Other live drops, offered once the card is made ("Make another"). */
+  more?: DropCard[];
+}) {
   const { user } = useAuth();
   const { min, max } = pickRange(trend);
   const ranked = isRanked(trend);
@@ -578,6 +586,7 @@ export default function TrendBuilder({ trend }: { trend: TrendView }) {
               Share it and dare your friends to make theirs.
             </Text>
             <NextSteps matches={matches} count={picks.length} />
+            {more.length > 0 && <MakeAnother drops={more} />}
             {stories && <NewForYourGames picks={picks} stories={stories} />}
           </Stack>
         )}
@@ -782,6 +791,85 @@ function NextSteps({
           </a>
         </Button>
       </HStack>
+    </Box>
+  );
+}
+
+/** Right after the card: the other live drops, one tap to start the next
+ *  build. A swipeable row of covers with the tag and prompt. */
+function MakeAnother({ drops }: { drops: DropCard[] }) {
+  return (
+    <Box>
+      <Flex align="baseline" justify="space-between" gap={3} mb={2}>
+        <Text color="white" fontWeight="800" fontSize="lg">
+          Make another
+        </Text>
+        <NextLink
+          href="/drops"
+          style={{ color: YELLOW, fontWeight: 700, fontSize: 13 }}
+        >
+          All drops
+        </NextLink>
+      </Flex>
+      <Flex
+        gap={2.5}
+        overflowX="auto"
+        scrollSnapType="x mandatory"
+        pb={1}
+        css={{
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+      >
+        {drops.slice(0, 8).map((d) => (
+          <NextLink
+            key={d.slug}
+            href={`${dropPath(d.slug)}#make`}
+            style={{ flex: "0 0 auto", scrollSnapAlign: "start" }}
+            onClick={() =>
+              track("drop_make_another", { from: "builder", to: d.slug })
+            }
+          >
+            <Box
+              w="150px"
+              borderRadius="12px"
+              overflow="hidden"
+              bg={NAVY}
+              border="1px solid"
+              borderColor={LINE}
+              _hover={{ borderColor: YELLOW }}
+              transition="border-color 0.15s"
+            >
+              <Box
+                h="84px"
+                display="grid"
+                gridTemplateColumns="repeat(3, 1fr)"
+                gap="2px"
+                bg={CARD}
+              >
+                {[0, 1, 2].map((i) => (
+                  <Box
+                    key={i}
+                    bg={
+                      d.covers[i]
+                        ? `center / cover no-repeat url(${d.covers[i]})`
+                        : "#232A5C"
+                    }
+                  />
+                ))}
+              </Box>
+              <Box px={2.5} py={2}>
+                <Text color={YELLOW} fontWeight="800" fontSize="sm" truncate>
+                  #{d.hashtag}
+                </Text>
+                <Text color={MUTED} fontSize="xs" lineClamp={2} minH="2.4em">
+                  {d.title}
+                </Text>
+              </Box>
+            </Box>
+          </NextLink>
+        ))}
+      </Flex>
     </Box>
   );
 }

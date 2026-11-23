@@ -22,8 +22,10 @@ import MostPicked from "@/components/drops/MostPicked";
 import NextDropStrip from "@/components/drops/NextDropStrip";
 import StoreButtons from "@/components/drops/StoreButtons";
 import AppPitch from "@/components/drops/AppPitch";
+import MoreDrops, { moreDrops } from "@/components/drops/MoreDrops";
 import { D, num, shortDate } from "@/components/drops/tokens";
 import {
+  fetchDropsPage,
   fetchTrend,
   fetchTrendEntries,
   fetchTrendPicks,
@@ -87,10 +89,13 @@ export default async function DropPage({ params }: Params) {
   const { slug } = await params;
   const t = await load(slug);
   if (!t) notFound();
-  const [picks, entries] = await Promise.all([
+  const [picks, entries, dropsPage] = await Promise.all([
     fetchTrendPicks(slug),
     fetchTrendEntries(slug, "top", 12),
+    // The other drops are extra: a failure just hides that section.
+    fetchDropsPage().catch(() => null),
   ]);
+  const more = moreDrops(dropsPage, t.slug);
   const soon = !!t.startsAt && Date.parse(t.startsAt) > Date.now();
   const builds = t.entryCount + (t.buildCount ?? 0);
   const { max } = pickRange(t);
@@ -274,7 +279,10 @@ export default async function DropPage({ params }: Params) {
                   }}
                 />
               ) : webBuildable(t) ? (
-                <TrendBuilder trend={t} />
+                <TrendBuilder
+                  trend={t}
+                  more={more.filter((d) => d.phase === "live")}
+                />
               ) : (
                 <Box
                   p={5}
@@ -348,6 +356,10 @@ export default async function DropPage({ params }: Params) {
             )}
           </Stack>
         </Flex>
+
+        <Box mt={{ base: 12, md: 16 }}>
+          <MoreDrops drops={more} />
+        </Box>
       </Container>
     </Box>
   );

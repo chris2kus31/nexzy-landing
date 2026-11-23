@@ -8,7 +8,9 @@ import { Box, Text } from "@chakra-ui/react";
 import TrendPing from "@/components/trends/TrendPing";
 import BuildView from "@/components/drops/BuildView";
 import { D, num } from "@/components/drops/tokens";
+import { moreDrops } from "@/components/drops/MoreDrops";
 import {
+  fetchDropsPage,
   fetchEntryMatches,
   fetchGameStories,
   fetchTrend,
@@ -70,9 +72,10 @@ export default async function DropEntryPage({ params }: Params) {
   if (!r) notFound();
   const { t, e } = r;
   const hearts = e.entry.likeCount;
-  const [m, stories] = await Promise.all([
+  const [m, stories, dropsPage] = await Promise.all([
     fetchEntryMatches(t.slug, entry),
     fetchGameStories(e.picks.map((p) => p.id)),
+    fetchDropsPage().catch(() => null),
   ]);
   // Social proof only when there is some: matches first (that's what makes a
   // visitor try it), hearts once the build has any. Zeroes stay hidden.
@@ -107,6 +110,7 @@ export default async function DropEntryPage({ params }: Params) {
         stories={stories}
         proof={proof}
         location="drop_entry"
+        more={moreDrops(dropsPage, t.slug)}
       />
     </Box>
   );

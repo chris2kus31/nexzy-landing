@@ -15,10 +15,12 @@ import {
 import CoverTile from "@/components/drops/CoverTile";
 import AppPitch from "@/components/drops/AppPitch";
 import GameStories from "@/components/drops/GameStories";
+import MoreDrops from "@/components/drops/MoreDrops";
 import { D } from "@/components/drops/tokens";
 import {
   dropPath,
   type BuildPick,
+  type DropCard,
   type GameStory,
   type TrendView,
 } from "@/lib/trends/types";
@@ -31,6 +33,7 @@ export default function BuildView({
   stories,
   proof,
   location,
+  more = [],
 }: {
   drop: TrendView;
   heading: string;
@@ -41,6 +44,8 @@ export default function BuildView({
   /** "312 players share 5+ of these picks" (+ hearts once it has any). */
   proof: React.ReactNode;
   location: string;
+  /** Other drops to build (this one excluded). */
+  more?: DropCard[];
 }) {
   return (
     <Container maxW="1100px" py={{ base: 6, md: 12 }} px={{ base: 4, md: 10 }}>
@@ -150,6 +155,10 @@ export default function BuildView({
           <AppPitch location={location} />
         </Stack>
       </Flex>
+
+      <Box mt={{ base: 12, md: 16 }}>
+        <MoreDrops drops={more} />
+      </Box>
     </Container>
   );
 }

@@ -9,8 +9,10 @@ import { Box, Text } from "@chakra-ui/react";
 import TrendPing from "@/components/trends/TrendPing";
 import BuildView from "@/components/drops/BuildView";
 import { D, num } from "@/components/drops/tokens";
+import { moreDrops } from "@/components/drops/MoreDrops";
 import {
   fetchBuild,
+  fetchDropsPage,
   fetchBuildMatches,
   fetchGameStories,
   fetchTrend,
@@ -72,9 +74,10 @@ export default async function DropBuildPage({ params }: Params) {
   const r = await load(slug, code);
   if (!r) notFound();
   const { t, b } = r;
-  const [m, stories] = await Promise.all([
+  const [m, stories, dropsPage] = await Promise.all([
     fetchBuildMatches(t.slug, b.build.code).catch(() => null),
     fetchGameStories(b.picks.map((p) => p.id)),
+    fetchDropsPage().catch(() => null),
   ]);
   return (
     <Box>
@@ -94,11 +97,10 @@ export default async function DropBuildPage({ params }: Params) {
               {m.count === 1 ? "player shares" : "players share"} {m.threshold}{" "}
               or more of these picks on Nexzy.
             </Text>
-          ) : (
-            "Be one of the first to match these picks on Nexzy."
-          )
+          ) : null
         }
         location="drop_build"
+        more={moreDrops(dropsPage, t.slug)}
       />
     </Box>
   );

@@ -182,7 +182,7 @@ export default function DropCard({
               <Text as="b" color={D.white}>
                 {num(drop.entryCount + drop.buildCount)}
               </Text>{" "}
-              builds
+              {drop.entryCount + drop.buildCount === 1 ? "build" : "builds"}
             </Text>
           )}
           {soon && drop.startsAt ? (
