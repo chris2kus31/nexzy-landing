@@ -141,7 +141,9 @@ export default async function DropPage({ params }: Params) {
   ];
 
   return (
-    <Box position="relative">
+    // overflowX clip: the decorative glow below is wider than a phone; without
+    // it the page grows sideways and phones zoom the whole page out.
+    <Box position="relative" overflowX="clip">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(ld) }}

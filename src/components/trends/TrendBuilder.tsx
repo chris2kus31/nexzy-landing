@@ -897,7 +897,7 @@ function PickGrid({
     <Box
       display="grid"
       gridTemplateColumns={`repeat(${cols}, minmax(0, 1fr))`}
-      gap={2}
+      gap={{ base: 2, md: 3 }}
     >
       {Array.from({ length: max }, (_, i) => {
         const g = picks[i];
@@ -907,7 +907,7 @@ function PickGrid({
               key={`empty-${i}`}
               type="button"
               display="flex"
-              aspectRatio="1"
+              aspectRatio="3 / 4"
               borderRadius="10px"
               border="2px dashed"
               borderColor="#3A4378"
@@ -924,8 +924,9 @@ function PickGrid({
         return (
           <Box
             key={g.id}
+            className="group"
             position="relative"
-            aspectRatio="1"
+            aspectRatio="3 / 4"
             borderRadius="10px"
             overflow="hidden"
             bg="#232A52"
@@ -969,6 +970,12 @@ function PickGrid({
               borderRadius="full"
               bg="rgba(0,0,0,0.6)"
               color="white"
+              css={{
+                "@media (hover: hover)": { opacity: 0 },
+              }}
+              _groupHover={{ opacity: 1 }}
+              _groupFocusWithin={{ opacity: 1 }}
+              transition="opacity 0.15s"
               aria-label={`Remove ${g.name}`}
               onClick={() => onRemove(g.id)}
             >
@@ -978,8 +985,8 @@ function PickGrid({
               position="absolute"
               left={2}
               right={2}
-              bottom={ranked ? 7 : 1.5}
-              fontSize="xs"
+              bottom={ranked ? 8 : 2}
+              fontSize={{ base: "xs", md: "sm" }}
               fontWeight="700"
               color="white"
               lineClamp={2}
@@ -993,6 +1000,12 @@ function PickGrid({
                 right={1}
                 bottom={1}
                 justify="space-between"
+                css={{
+                  "@media (hover: hover)": { opacity: 0 },
+                }}
+                _groupHover={{ opacity: 1 }}
+                _groupFocusWithin={{ opacity: 1 }}
+                transition="opacity 0.15s"
               >
                 <Button
                   size="2xs"
