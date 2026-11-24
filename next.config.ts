@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // EC2 (nexzy-web) builds set NEXT_OUTPUT_STANDALONE=1 in the GitHub workflow
+  // to get a minimal server.js for PM2. Netlify never sets it, so its builds
+  // are unchanged.
+  output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   experimental: {
     optimizePackageImports: ["@chakra-ui/react"],
   },

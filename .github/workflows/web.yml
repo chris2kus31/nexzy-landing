@@ -1,0 +1,101 @@
+# Build the website on GitHub, then ship only the built output to the
+# nexzy-web EC2 box. The box never runs npm or next build.
+#
+#   build (arm64, matches the t4g box) -> web-<sha>.tar.gz -> S3
+#   -> SSM Run Command -> /srv/nexzy-landing/deploy.sh <sha>
+#
+# deploy.sh swaps the release in, reloads PM2, checks /api/health and rolls
+# back on failure. Nothing here touches the API or the database.
+#
+# Repo settings needed:
+#   vars.AWS_DEPLOY_ROLE        github-deploy role ARN (OIDC)
+#   vars.WEB_INSTANCE_ID        i-0da9d31854d2b0c8d
+#   secrets.LANDING_ENV_PRODUCTION  full .env.production (NEXT_PUBLIC_* are
+#                                   baked in at build time)
+name: web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  BUCKET: nexzy-deploy-artifacts-808953421237
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Write build env
+        env:
+          LANDING_ENV_PRODUCTION: ${{ secrets.LANDING_ENV_PRODUCTION }}
+        run: |
+          test -n "$LANDING_ENV_PRODUCTION" || { echo "LANDING_ENV_PRODUCTION is empty"; exit 1; }
+          printf '%s\n' "$LANDING_ENV_PRODUCTION" > .env.production
+
+      - run: npm ci
+
+      - run: npm run build
+        env:
+          NEXT_OUTPUT_STANDALONE: "1"
+
+      - name: Package
+        run: |
+          mkdir -p pkg/.next
+          cp -r .next/standalone/. pkg/
+          cp -r .next/static pkg/.next/static
+          cp -r public pkg/public
+          # Runtime env lives on the box (shared/.env.production), never in the artifact.
+          rm -f pkg/.env pkg/.env.*
+          tar -czf "web-$GITHUB_SHA.tar.gz" -C pkg .
+          ls -lh "web-$GITHUB_SHA.tar.gz"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload artifact
+        run: aws s3 cp "web-$GITHUB_SHA.tar.gz" "s3://$BUCKET/web/web-$GITHUB_SHA.tar.gz"
+
+      - name: Deploy to box
+        env:
+          INSTANCE_ID: ${{ vars.WEB_INSTANCE_ID }}
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "web $GITHUB_SHA" \
+            --parameters "commands=[\"sudo -u ubuntu -H bash /srv/nexzy-landing/deploy.sh $GITHUB_SHA\"]" \
+            --query Command.CommandId --output text)
+          echo "SSM command $CMD_ID"
+          for i in $(seq 1 60); do
+            sleep 5
+            STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" \
+              --instance-id "$INSTANCE_ID" --query Status --output text 2>/dev/null || echo Pending)
+            case "$STATUS" in
+              Pending|InProgress|Delayed) continue ;;
+              *) break ;;
+            esac
+          done
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query '[StandardOutputContent,StandardErrorContent]' --output text
+          echo "Status: $STATUS"
+          test "$STATUS" = "Success"
