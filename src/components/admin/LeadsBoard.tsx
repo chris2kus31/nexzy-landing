@@ -35,6 +35,12 @@ import {
 import { BEATS, beatLabel } from "@/lib/blog/beats";
 import { youtubeId, isYoutubeShort } from "@/lib/blog/youtube";
 import Paginated from "@/components/admin/Paginated";
+import {
+  LeadsFilterBar,
+  applyLeadFilters,
+  DEFAULT_LEAD_FILTERS,
+  type LeadFilters,
+} from "@/components/admin/LeadsFilters";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "unknown";
@@ -1008,6 +1014,7 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [beat, setBeat] = useState<string | null>(null);
   const [writer, setWriter] = useState<string | null>(null);
+  const [filters, setFilters] = useState<LeadFilters>(DEFAULT_LEAD_FILTERS);
   const [msg, setMsg] = useState("");
   const [authors, setAuthors] = useState<string[]>(LEAD_AUTHORS);
   useEffect(() => {
@@ -1223,12 +1230,15 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
 
   const filtered = useMemo(
     () =>
-      (leads || []).filter(
-        (l) =>
-          (!beat || l.beat === beat) &&
-          (!writer || (l.suggestedAuthor || "") === writer),
+      applyLeadFilters(
+        (leads || []).filter(
+          (l) =>
+            (!beat || l.beat === beat) &&
+            (!writer || (l.suggestedAuthor || "") === writer),
+        ),
+        filters,
       ),
-    [leads, beat, writer],
+    [leads, beat, writer, filters],
   );
 
   return (
@@ -1525,6 +1535,16 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
         })}
       </HStack>
 
+      {/* Sort + filters (client-side; the API returns the full fresh set). */}
+      {leads && leads.length > 0 && (
+        <LeadsFilterBar
+          leads={leads}
+          filters={filters}
+          onChange={setFilters}
+          shown={filtered.length}
+        />
+      )}
+
       {/* Tag legend — why a lead is Commodity / Ownable / untagged. */}
       <Box
         border="1px solid"
@@ -1634,11 +1654,16 @@ export default function LeadsBoard({ isOwner = false }: { isOwner?: boolean }) {
         </Flex>
       ) : filtered.length === 0 ? (
         <Text color="nexzy.gray.100" fontSize="sm">
-          No leads right now. Hit “Scan now” to pull fresh stories from the
-          feeds.
+          {leads.length > 0
+            ? "No leads match these filters."
+            : "No leads right now. Hit “Scan now” to pull fresh stories from the feeds."}
         </Text>
       ) : (
-        <Paginated items={filtered} pageSize={20}>
+        <Paginated
+          key={JSON.stringify([beat, writer, filters])}
+          items={filtered}
+          pageSize={20}
+        >
           {(pageLeads) => (
             <VStack gap={3} align="stretch">
               {pageLeads.map((lead) => (
